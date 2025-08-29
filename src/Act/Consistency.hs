@@ -46,14 +46,18 @@ combine lst = combine' lst []
       let xcomb = [ (x, y) | y <- xs] in
       combine' xs (xcomb:acc)
 
+mkOr :: [Exp ABoolean] -> Exp ABoolean
+mkOr = foldr (Or nowhere) (LitBool nowhere False)
+
+mkOrNot :: [Exp ABoolean] -> Exp ABoolean
+mkOrNot = foldr (Or nowhere . Neg nowhere) (LitBool nowhere False)
+
 -- | Checks non-overlapping cases,
 -- For every pair of case conditions we assert that they are true
 -- simultaneously. The query must be unsat.
 mkNonoverlapAssertion :: [Exp ABoolean] -> Exp ABoolean
 mkNonoverlapAssertion caseconds =
   mkOr $ (uncurry $ And nowhere) <$> combine caseconds
-  where
-    mkOr = foldr (Or nowhere) (LitBool nowhere False)
 
 -- | Checks exhaustiveness of cases.
 -- We assert that none of the case conditions are true at the same
@@ -66,18 +70,17 @@ mkExhaustiveAssertion caseconds =
 
 -- | Create a query for cases
 mkCaseQuery :: ([Exp ABoolean] -> Exp ABoolean) -> [Behaviour] -> (Id, SMTExp, (SolverInstance -> IO Model))
-mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) _ _ _ _ _ _):_) =
+mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) _ preconds _ _ _ _):_) =
   (ifaceName, mkSMT, getModel)
   where
-    slocs = nub $ concatMap slocsFromExp (preconds <> caseconds)
-    clocs = nub $ concatMap clocsFromExp (preconds <> caseconds)
+    locs = nub $ concatMap locsFromExp (preconds <> caseconds)
+    (slocs, clocs) = partitionLocs locs
     env = concatMap ethEnvFromBehaviour behvs
-    preconds = concatMap _preconditions behvs
     pres = mkAssert ifaceName <$> preconds
     caseconds = concatMap _caseconditions behvs
 
     mkSMT = SMTExp
-      { _storage = concatMap (declareStorage [Pre]) slocs
+      { _storage = concatMap declareStorageLocation slocs
       , _calldata = (declareArg ifaceName <$> decls) <> (declareCalldataLocation ifaceName <$> clocs)
       , _environment = declareEthEnv <$> env
       , _assertions = (mkAssert ifaceName $ props caseconds) : pres
@@ -153,95 +156,54 @@ mkCalldataBounds :: CalldataLocation -> [Exp ABoolean]
 mkCalldataBounds (CLoc _ (Item _ _ ref)) = mkRefBounds ref
 
 -- TODO: There are locs that don't need to be checked, e.g. assignment locs cannot be out of bounds
-mkConstrArrayBoundsQuery :: Constructor -> (Id, [StorageLocation], [CalldataLocation], SMTExp, SolverInstance -> IO Model)
+mkConstrArrayBoundsQuery :: Constructor -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
 mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) =
-  (ifaceName, arraySLocs, arrayCLocs, mkSMT, getModel)
-  where
-    -- declare vars
-    activeSLocs = slocsFromConstructor constructor
-    arraySLocs = filter isArray activeSLocs
-    activeCLocs = clocsFromConstructor constructor
-    arrayCLocs = filter isCalldataArray activeCLocs
-    boundsExps = concatMap mkStorageBounds arraySLocs
-              <> concatMap mkCalldataBounds arrayCLocs
-
-    localLocs = filter ((==) ifaceName . ctorFromLocation) activeSLocs
-
-    storage = concatMap declareInitialStorage activeSLocs
-    ifaceArgs = declareArg ifaceName <$> decls
-    activeArgs = declareCalldataLocation ifaceName <$> activeCLocs
-    args = nub ifaceArgs <> activeArgs
-    env = ethEnvFromConstructor constructor
-
-    -- constraints
-    pres = mkAssert ifaceName <$> preconds
-    initialStorage' = encodeUpdate ifaceName <$> initialStorage
-
-    assertion = foldr mkOr (LitBool nowhere False) boundsExps
-      where
-        mkOr c r = Or nowhere (Neg nowhere c) r
-
-    mkSMT = SMTExp
-      { _storage = storage
-      , _calldata = args
-      , _environment = declareEthEnv <$> env
-      , _assertions = [mkAssert ifaceName assertion] <> pres <> initialStorage'
-      }
-
-    getModel solver = do
-      prestate <- mapM (getStorageValue solver ifaceName Pre) (activeSLocs \\ localLocs)
-      calldata <- mapM (getCalldataValue solver ifaceName) decls
-      calllocs <- mapM (getCalldataLocValue solver ifaceName) activeCLocs
-      environment <- mapM (getEnvironmentValue solver) env
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = (ifaceName, calldata)
-        , _mcalllocs = calllocs
-        , _menvironment = environment
-        , _minitargs = []
-        }
-
-mkBehvArrayBoundsQuery :: Behaviour -> (Id, [StorageLocation], [CalldataLocation], SMTExp, SolverInstance -> IO Model)
-mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds _ stateUpdates _) =
-  (ifaceName, arraySLocs, arrayCLocs, mkSMT, getModel)
+  (ifaceName, arrayLocs, mkSMT, getModel)
   where
     -- Declare vars
-    activeSLocs = slocsFromBehaviour behv
-    arraySLocs = filter isArray activeSLocs
-    activeCLocs = clocsFromBehaviour behv
-    arrayCLocs = filter isCalldataArray activeCLocs
+    activeLocs = locsFromConstructor constructor
+    envs = ethEnvFromConstructor constructor
+
+    -- Bellow is only for returning, there is redundancy..
+    arrayLocs = filter isArrayLoc activeLocs
+    -- The following is done by mkSMTGenerics as well..
+    (activeSLocs, activeCLocs) = partitionLocs activeLocs
+    arraySLocs = filter (\(SLoc _ item) -> isArray item) activeSLocs
+    arrayCLocs = filter (\(CLoc _ item) -> isArray item) activeCLocs
+    boundsExps = concatMap mkStorageBounds arraySLocs
+              <> concatMap mkCalldataBounds arrayCLocs
+    assertion = mkOrNot boundsExps
+
+    mkSMT = mkSMTGenerics True activeSLocs activeCLocs envs ifaceName decls preconds [] initialStorage assertion
+
+    getModel = getCtorModel constructor 
+
+mkBehvArrayBoundsQuery :: Behaviour -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
+mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds _ stateUpdates _) =
+  (ifaceName, arrayLocs, mkSMT, getModel)
+  where
+    -- Declare vars
+    activeLocs = locsFromBehaviour behv
+    envs = ethEnvFromBehaviour behv
+
+    -- Bellow is only for returning, there is redundancy..
+    arrayLocs = filter isArrayLoc activeLocs
+    -- The following is done by mkSMTGenerics as well..
+    (activeSLocs, activeCLocs) = partitionLocs activeLocs
+    arraySLocs = filter (\(SLoc _ item) -> isArray item) activeSLocs
+    arrayCLocs = filter (\(CLoc _ item) -> isArray item) activeCLocs
     boundsExps = concatMap mkStorageBounds arraySLocs
               <> concatMap mkCalldataBounds arrayCLocs
 
-    storage = concatMap declareStorageLocation activeSLocs
-    ifaceArgs = declareArg ifaceName <$> decls
-    activeArgs = declareCalldataLocation ifaceName <$> activeCLocs
-    args = nub ifaceArgs <> activeArgs
-    env = ethEnvFromBehaviour behv
-    constLocs = (nub activeSLocs) \\ (locFromUpdate <$> stateUpdates)
+    assertion = mkOrNot boundsExps
 
-    -- Constraints
-    pres = mkAssert ifaceName <$> preconds <> caseconds
-    updates = encodeUpdate ifaceName <$> stateUpdates
-    constants = encodeConstant <$> constLocs
-
-    assertion = foldr mkOr (LitBool nowhere False) boundsExps
-      where
-        mkOr c r = Or nowhere (Neg nowhere c) r
-
-    mkSMT = SMTExp
-      { _storage = storage
-      , _calldata = args
-      , _environment = declareEthEnv <$> env
-      , _assertions = [mkAssert ifaceName assertion]  <> pres <> updates <> constants
-      }
+    mkSMT = mkSMTGenerics False activeSLocs activeCLocs envs ifaceName decls preconds caseconds stateUpdates assertion
 
     getModel solver = do
       prestate <- mapM (getStorageValue solver ifaceName Pre) activeSLocs
       calldata <- mapM (getCalldataValue solver ifaceName) decls
       calllocs <- mapM (getCalldataLocValue solver ifaceName) activeCLocs
-      environment <- mapM (getEnvironmentValue solver) env
+      environment <- mapM (getEnvironmentValue solver) envs
       pure $ Model
         { _mprestate = prestate
         , _mpoststate = []
@@ -259,31 +221,30 @@ checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
     let constrQs = mkConstrArrayBoundsQuery constr
     let behvQs = mkBehvArrayBoundsQuery <$> behvs
 
-    r <- (\(name, slocs, clocs, q, getModel) -> do
+    r <- (\(name, locs, q, getModel) -> do
                           res <- checkSat solver getModel q
-                          pure (name, slocs, clocs, res)) constrQs
+                          pure (name, locs, res)) constrQs
     checkRes "Constructor" r
-    r' <- forM behvQs (\(name, slocs, clocs, q, getModel) -> do
+    r' <- forM behvQs (\(name, locs, q, getModel) -> do
                           res <- checkSat solver getModel q
-                          pure (name, slocs, clocs, res))
+                          pure (name, locs, res))
     mapM_ (checkRes "behaviour") r' )
   where
-    checkRes :: String -> (Id, [StorageLocation], [CalldataLocation], SMT.SMTResult) -> IO ()
-    checkRes transition (name, slocs, clocs, res) =
+    checkRes :: String -> (Id, [Location], SMT.SMTResult) -> IO ()
+    checkRes transition (name, locs, res) =
       case res of
         Sat model -> failMsg ("Array indices are not within bounds for " <> transition <> " " <> name <> ".")
-          (prettyAnsi model) (printOutOfBounds model slocs clocs)
+          (prettyAnsi model) (printOutOfBounds model locs)
         Unsat -> pure ()
         Unknown -> errorMsg $ "Solver timeour. Cannot prove that array indices are within bounds for " <> transition <> " " <> name <> "."
         SMT.Error _ err -> errorMsg $ "Solver error: " <> err <> "\nCannot prove that array indices are within bounds for " <> transition <> " " <> name <> "."
 
-    printOutOfBounds :: Model -> [StorageLocation] -> [CalldataLocation] -> DocAnsi
-    printOutOfBounds model slocs clocs =
+    printOutOfBounds :: Model -> [Location] -> DocAnsi
+    printOutOfBounds model locs =
       indent 2 ( underline (string "Out of bounds:"))
-      <> line <> vsep (printedSLocs <> printedCLocs)
+      <> line <> vsep printedLocs
       where
-        printedSLocs = runReader (mapM checkStorageBounds slocs) model
-        printedCLocs = runReader (mapM checkCalldataBounds clocs) model
+        printedLocs = runReader (mapM checkStorageBounds locs) model
 
     failMsg str model oobs = render (red (pretty str) <> line <> model <> line <> oobs <> line) >> exitFailure
     errorMsg str = render (pretty str <> line) >> exitFailure
@@ -299,8 +260,8 @@ checkRefBounds (SMapping _ ref _ _) = checkRefBounds ref
 checkRefBounds (SField _ ref _ _) = checkRefBounds ref
 checkRefBounds _ = pure True
 
-checkStorageBounds :: StorageLocation -> ModelCtx DocAnsi
-checkStorageBounds (SLoc _ item@(Item _ _ ref)) = do
+checkStorageBounds :: Location -> ModelCtx DocAnsi
+checkStorageBounds (Loc _ _ item@(Item _ _ ref)) = do
   cond <- checkRefBounds ref
   if cond then pure $ string ""
   else do
@@ -309,16 +270,16 @@ checkStorageBounds (SLoc _ item@(Item _ _ ref)) = do
   where
     (AlexPn _ l c) = posnFromRef ref
 
-checkCalldataBounds :: CalldataLocation -> ModelCtx DocAnsi
-checkCalldataBounds (CLoc _ item@(Item _ _ ref)) = do
-  cond <- checkRefBounds ref
-  if cond
-    then pure $ string ""
-    else do
-      i <- printOutOfBoundsItem item
-      pure $ indent 4 $ string "Line " <> string (show l) <> string " Column " <> string (show c) <> string ": " <> i
-    where
-      (AlexPn _ l c ) = posnFromRef ref
+--checkCalldataBounds :: CalldataLocation -> ModelCtx DocAnsi
+--checkCalldataBounds (CLoc _ item@(Item _ _ ref)) = do
+--  cond <- checkRefBounds ref
+--  if cond
+--    then pure $ string ""
+--    else do
+--      i <- printOutOfBoundsItem item
+--      pure $ indent 4 $ string "Line " <> string (show l) <> string " Column " <> string (show c) <> string ": " <> i
+--    where
+--      (AlexPn _ l c ) = posnFromRef ref
 
 printIdx :: TypedExp -> Int -> ModelCtx DocAnsi
 printIdx te@(TExp SInteger e) b = do
@@ -355,64 +316,44 @@ printOutOfBoundsItem (Item _ _ ref) = printOutOfBoundsRef ref
 mkEqualityAssertion :: StorageLocation -> StorageLocation -> Exp ABoolean
 mkEqualityAssertion l1 l2 = allEqual
   where
-    ix1 = ixsFromLocation l1
-    ix2 = ixsFromLocation l2
+    ix1 = ixsFromSLocation l1
+    ix2 = ixsFromSLocation l2
 
     eqs = zipWith eqIdx ix1 ix2
     eqIdx :: TypedExp -> TypedExp -> Exp ABoolean
     eqIdx (TExp SInteger e1) (TExp SInteger e2) = Eq nowhere SInteger e1 e2
     eqIdx _ _ = error "Internal error: Expected Integer index expressions"
-
     allEqual = foldr mkAnd (LitBool nowhere True) eqs
     mkAnd r c = And nowhere c r
 
 mkAliasingAssertion :: [StorageLocation] -> Exp ABoolean
 mkAliasingAssertion ls = mkOr $ map (uncurry mkEqualityAssertion) $ combine ls
-  where
-    mkOr = foldr (Or nowhere) (LitBool nowhere False)
 
 mkAliasingQuery :: Behaviour -> (Id, [[StorageLocation]], SMTExp, SolverInstance -> IO Model)
 mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds _ stateUpdates _) =
   (ifaceName, groupedLocs, mkSMT, getModel)
   where
     updatedLocs = locFromUpdate <$> stateUpdates
-    updatedLocsIds = (\l -> Arg (idsFromLocation l) l) <$> updatedLocs
+    updatedLocsIds = (\l@(SLoc _ item) -> Arg (idsFromItem item) l) <$> updatedLocs
     groupedLocs = fmap (\(Arg _ b) -> b) <$> group (sort updatedLocsIds)
 
-    activeSLocs = nub $ concatMap (\(SLoc _ item) -> slocsFromItem SStorage item) updatedLocs
-               <> concatMap slocsFromExp preconds
-               <> concatMap slocsFromExp caseconds
-    activeCLocs = nub $ concatMap (\(SLoc _ item) -> clocsFromItem SStorage item) updatedLocs
-               <> concatMap clocsFromExp preconds
-               <> concatMap clocsFromExp caseconds
+    activeLocs = nub $ concatMap (\(SLoc _ item) -> locsFromItem SStorage item) updatedLocs
+               <> concatMap locsFromExp preconds
+               <> concatMap locsFromExp caseconds
+    (activeSLocs, activeCLocs) = partitionLocs activeLocs
 
-    storage = concatMap declareStorageLocation activeSLocs
-    ifaceArgs = declareArg ifaceName <$> decls
-    activeArgs = declareCalldataLocation ifaceName <$> activeCLocs
-    args = nub ifaceArgs <> activeArgs
-    env = ethEnvFromBehaviour behv
-    constLocs = (nub activeSLocs) \\ (locFromUpdate <$> stateUpdates)
-
-    -- constraints
-    pres = mkAssert ifaceName <$> preconds <> caseconds
-    constants = encodeConstant <$> constLocs
+    envs = ethEnvFromBehaviour behv
 
     assertLocGroupAliasings = mkAliasingAssertion <$> groupedLocs
     assertion = mkOr assertLocGroupAliasings
-      where
-        mkOr = foldr (Or nowhere) (LitBool nowhere False)
 
-    mkSMT = SMTExp
-      { _storage = storage
-      , _calldata = args
-      , _environment = declareEthEnv <$> env
-      , _assertions = [mkAssert ifaceName assertion]  <> pres <> constants
-      }
+    mkSMT = mkSMTGenerics False activeSLocs activeCLocs envs ifaceName decls preconds caseconds [] assertion
+
     getModel solver = do
       prestate <- mapM (getStorageValue solver ifaceName Pre) activeSLocs
       calldata <- mapM (getCalldataValue solver ifaceName) decls
       calllocs <- mapM (getCalldataLocValue solver ifaceName) activeCLocs
-      environment <- mapM (getEnvironmentValue solver) env
+      environment <- mapM (getEnvironmentValue solver) envs
       pure $ Model
         { _mprestate = prestate
         , _mpoststate = []
@@ -463,8 +404,8 @@ checkAliasing (l1, l2) = do
     liftA2 (<>) (indent 2 . vsep <$> sequence [printAliasedLoc l1, printAliasedLoc l2]) $ pure line
   else pure $ string ""
   where
-    ixs1 = ixsFromLocation l1
-    ixs2 = ixsFromLocation l2
+    ixs1 = ixsFromSLocation l1
+    ixs2 = ixsFromSLocation l2
 
 compareIdx :: TypedExp -> TypedExp -> ModelCtx Bool
 compareIdx (TExp SInteger e1) (TExp SInteger e2) =
@@ -536,26 +477,26 @@ modelEval e = case e of
   Create _ _ _ -> error "modelEval of contracts not supported"
   VarRef _ whn SStorage item -> do
     model <- ask
-    case lookup (_SLoc item) $ if whn == Pre then _mprestate model else _mpoststate model of
+    case lookup (_Loc SStorage item) $ if whn == Pre then _mprestate model else _mpoststate model of
       Just (TExp sType e') -> case testEquality (sing @a) sType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
           (ByLit _ s) -> pure s
           _ -> error "modelEval: Model did not return a literal"
-        _ -> error "modelEval: Location given does not match type"
-      _ -> error "modelEval: Location not found in model"
+        _ -> error "modelEval: Storage Location given does not match type"
+      _ -> error $ "modelEval: Storage Location not found in model" <> show item
   VarRef _ _ SCalldata item -> do
     model <- ask
-    case lookup (_CLoc item) $ _mcalllocs model of
+    case lookup (_Loc SCalldata item) $ _mcalllocs model of
       Just (TExp sType e') -> case testEquality (sing @a) sType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
           (ByLit _ s) -> pure s
           _ -> error "modelEval: Model did not return a literal"
-        _ -> error "modelEval: Location given does not match type"
-      _ -> error "modelEval: Location not found in model"
+        _ -> error "modelEval: Calldata Location given does not match type"
+      _ -> error "modelEval: Calldata Location not found in model"
 
   IntEnv _ env     -> do
     model <- ask
@@ -564,6 +505,6 @@ modelEval e = case e of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           _ -> error "modelEval: Model did not return an Integer literal"
-        _ -> error "modelEval: Location given does not match type"
-      _ -> error "modelEval: Location not found in model"
+        _ -> error "modelEval: Environmental variable given does not match type"
+      _ -> error "modelEval: Enviromental variable not found in model"
   _ -> error "modelEval: TODO"

@@ -515,6 +515,96 @@
           {
             "literal": "True",
             "type": "bool"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "indexes": [
+                          [
+                            {
+                              "expression": {
+                                "literal": "2",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            3
+                          ]
+                        ],
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "A",
+                          "field": "ar",
+                          "kind": "Field",
+                          "reference": {
+                            "contract": "B",
+                            "kind": "SVar",
+                            "svar": "x"
+                          }
+                        }
+                      },
+                      "type": "int"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "indexes": [
+                          [
+                            {
+                              "expression": {
+                                "literal": "2",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            3
+                          ]
+                        ],
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "A",
+                          "field": "ar",
+                          "kind": "Field",
+                          "reference": {
+                            "contract": "B",
+                            "kind": "SVar",
+                            "svar": "x"
+                          }
+                        }
+                      },
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
           }
         ]
       },

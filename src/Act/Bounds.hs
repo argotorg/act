@@ -4,7 +4,7 @@
 module Act.Bounds (addBounds) where
 
 import Data.Maybe
-import Data.List (nub, partition)
+import Data.List (nub, (\\), partition)
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit
@@ -36,14 +36,17 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
     where
       pre' = pre
              <> mkCallDataBounds decls
-             <> mkCalldataLocationBounds (concatMap clocsFromExp pre
-                                       <> concatMap clocsFromExp post
-                                       <> concatMap clocsFromInvariant invs
-                                       <> concatMap clocsFromUpdate stateUpdates)
+             <> mkCalldataLocationBounds clocs
              <> mkEthEnvBounds (ethEnvFromConstructor ctor)
-             <> mkStorageBoundsLoc (nub $ concatMap slocsFromExp pre <> concatMap slocsFromUpdateRHS stateUpdates)
+             <> mkStorageBoundsLoc externalSLocs
       invs' = addBoundsInvariant ctor <$> invs
       post' = post <> mkStorageBounds stateUpdates Post
+
+      locs = concatMap locsFromExp (pre <> post)
+            <> concatMap locsFromInvariant invs
+            <> concatMap locsFromUpdate stateUpdates
+      (slocs, clocs) = partitionLocs locs
+      (_, externalSLocs) = partition isLocalLoc slocs
 
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
@@ -52,31 +55,38 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stat
     where
       pre' = pre
              <> mkCallDataBounds decls
-             <> mkCalldataLocationBounds (concatMap clocsFromExp pre
-                                       <> concatMap clocsFromExp post
-                                       <> concatMap clocsFromUpdate stateUpdates)
+             <> mkCalldataLocationBounds clocs
              <> mkStorageBounds stateUpdates Pre
-             <> mkStorageBoundsLoc (nub $ concatMap slocsFromExp (pre <> cases) <> concatMap slocsFromUpdateRHS stateUpdates)
+             <> mkStorageBoundsLoc slocs
              <> mkEthEnvBounds (ethEnvFromBehaviour behv)
       post' = post
-              <> mkStorageBounds stateUpdates Post
+             <> mkStorageBounds stateUpdates Post
+
+      clocs' = concatMap locsFromExp (pre <> post <> cases)
+            <> concatMap locsFromUpdate stateUpdates
+      (_, clocs) = partitionLocs clocs'
+      slocs' = (nub $ concatMap locsFromExp (pre <> post <> cases) <> concatMap locsFromUpdateRHS stateUpdates)
+      (slocs, _) = partitionLocs slocs'
 
 -- | Adds type bounds for calldata, environment vars, and storage vars
 addBoundsInvariant :: Constructor -> Invariant -> Invariant
-addBoundsInvariant (Constructor _ (Interface ifaceName decls) _ _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
+addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ initialStorage) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
   inv { _ipreconditions = preconds', _istoragebounds = storagebounds' }
     where
       preconds' = preconds
                   <> mkCallDataBounds decls
-                  <> mkCalldataLocationBounds (concatMap clocsFromExp preconds
-                                            <> concatMap clocsFromExp storagebounds
-                                            <> clocsFromExp predicate)
+                  <> mkCalldataLocationBounds clocs
                   <> mkEthEnvBounds (ethEnvFromExp predicate)
-                  <> mkStorageBoundsLoc otherLocs
+                  <> mkStorageBoundsLoc externalSLocs
       storagebounds' = storagebounds
-                       <> mkStorageBoundsLoc localLocs
-      locs = slocsFromExp predicate
-      (localLocs, otherLocs) = partition ((==) ifaceName . ctorFromLocation) locs
+                       <> mkStorageBoundsLoc localSLocs
+
+      clocs' = concatMap locsFromExp (preconds <> storagebounds)
+                      <> locsFromExp predicate
+      (_, clocs) = partitionLocs clocs'
+      slocs' = locsFromExp predicate
+      (slocs, _) = partitionLocs slocs'
+      (localSLocs, externalSLocs) = partition isLocalLoc slocs
 
 mkEthEnvBounds :: [EthEnv] -> [Exp ABoolean]
 mkEthEnvBounds vars = catMaybes $ mkBound <$> nub vars

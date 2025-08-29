@@ -13,7 +13,7 @@ import qualified Act.Syntax.Typed as Typed
 import Act.Syntax.Typed (Timing(..),setPre,setPost)
 
 -- Reexports
-import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,StorageUpdate,StorageLocation,CalldataLocation,TItem,Exp,TypedExp,TypedArgument,Ref)
+import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,StorageUpdate,Location,StorageLocation,CalldataLocation,TItem,UItem,Exp,TypedExp,TypedArgument,Ref)
 import Act.Syntax.Typed as Act.Syntax.TypedExplicit (pattern Act, pattern Contract, pattern Invariant, pattern Constructor, pattern Behaviour, pattern Exp)
 
 
@@ -25,10 +25,12 @@ type InvariantPred    = Typed.InvariantPred    Timed
 type Constructor      = Typed.Constructor      Timed
 type Behaviour        = Typed.Behaviour        Timed
 type StorageUpdate    = Typed.StorageUpdate    Timed
+type Location         = Typed.Location         Timed
 type StorageLocation  = Typed.StorageLocation  Timed
 type CalldataLocation = Typed.CalldataLocation Timed
 type Ref            k = Typed.Ref            k Timed
 type TItem        k a = Typed.TItem        k a Timed
+type UItem          k = Typed.UItem          k Timed
 type Exp            a = Typed.Exp            a Timed
 type TypedExp         = Typed.TypedExp         Timed
 type TypedArgument    = Typed.TypedArgument    Timed
@@ -56,6 +58,7 @@ instance Annotatable Typed.InvariantPred where
 instance Annotatable Typed.Constructor where
   annotate ctor@Constructor{..} = ctor
     { _cpreconditions = setPre <$> _cpreconditions
+    , _cpostconditions = setPost <$> _cpostconditions
     , _initialStorage = annotate <$> _initialStorage
     , _invariants  = annotate <$> _invariants
     }

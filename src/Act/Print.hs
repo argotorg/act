@@ -177,8 +177,8 @@ prettyRef = \case
   where
     brackets str = "[" <> str <> "]"
 
-prettyLocation :: StorageLocation t -> String
-prettyLocation (SLoc _ item) = prettyItem item
+prettyLocation :: Location t -> String
+prettyLocation (Loc _ _ item) = prettyItem item
 
 prettyUpdate :: StorageUpdate t -> String
 prettyUpdate (Update _ item e) = prettyItem item <> " => " <> prettyExp e

@@ -18,4 +18,4 @@ creates
 
   A x := a
 
-ensures post(x.ar[2]) * 0 == 0
+ensures x.ar[2] * 0 == 0

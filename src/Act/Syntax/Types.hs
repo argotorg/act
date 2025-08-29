@@ -77,11 +77,11 @@ type family TypeOf a where
 
 -- Given a possibly nested ABI Array Type, returns the
 -- elements' ABI type, as well as the size at each level
-parseAbiArrayType :: AbiType -> Maybe (AbiType, NonEmpty Int)
-parseAbiArrayType (AbiArrayType n t) = case parseAbiArrayType t of
+flattenArrayAbiType :: AbiType -> Maybe (AbiType, NonEmpty Int)
+flattenArrayAbiType (AbiArrayType n t) = case flattenArrayAbiType t of
   Just (bt, li) -> Just (bt, n <| li)
   Nothing -> Just (t, pure n)
-parseAbiArrayType _ = Nothing
+flattenArrayAbiType _ = Nothing
 
 fromAbiType :: AbiType -> ActType
 fromAbiType (AbiUIntType _)     = AInteger

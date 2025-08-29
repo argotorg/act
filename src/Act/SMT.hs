@@ -21,6 +21,7 @@ module Act.SMT (
   stopSolver,
   sendLines,
   runQuery,
+  mkSMTGenerics,
   mkPostconditionQueries,
   mkPostconditionQueriesBehv,
   mkInvariantQueries,
@@ -47,6 +48,7 @@ module Act.SMT (
   declareCalldataLocation,
   encodeUpdate,
   encodeConstant,
+  getCtorModel,
 ) where
 
 import Prelude hiding (GT, LT)
@@ -143,10 +145,10 @@ instance Show CallDataValue where
 --   variable, and the RHS is the concrete value assigned to that variable in the
 --   counterexample
 data Model = Model
-  { _mprestate :: [(StorageLocation, TypedExp)]
-  , _mpoststate :: [(StorageLocation, TypedExp)]
+  { _mprestate :: [(Location, TypedExp)]
+  , _mpoststate :: [(Location, TypedExp)]
   , _mcalldata :: (String, [(Decl, CallDataValue)])
-  , _mcalllocs :: [(CalldataLocation, TypedExp)]
+  , _mcalllocs :: [(Location, TypedExp)]
   , _menvironment :: [(EthEnv, TypedExp)]
   -- invariants always have access to the constructor context
   , _minitargs :: [(Decl, CallDataValue)]
@@ -193,7 +195,7 @@ data SolverInstance = SolverInstance
 -- | For each postcondition in the claim we construct a query that:
 --    - Asserts that the preconditions hold
 --    - Asserts that storage has been updated according to the rewrites in the behaviour
---    - Asserts that the postcondition cannot be reached
+--    - Asserts that the postcondition cannot bereached
 --   If this query is unsatisfiable, then there exists no case where the postcondition can be violated.
 mkPostconditionQueries :: Act -> [Query]
 mkPostconditionQueries (Act _ contr) = concatMap mkPostconditionQueriesContract contr
@@ -201,55 +203,94 @@ mkPostconditionQueries (Act _ contr) = concatMap mkPostconditionQueriesContract 
     mkPostconditionQueriesContract (Contract constr behvs) =
       mkPostconditionQueriesConstr constr <> concatMap mkPostconditionQueriesBehv behvs
 
-mkPostconditionQueriesBehv :: Behaviour -> [Query]
-mkPostconditionQueriesBehv behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds postconds stateUpdates _) =
-    mkQuery <$> postconds
+
+mkEqualityAssertion :: StorageLocation -> StorageLocation -> Exp ABoolean
+mkEqualityAssertion l1 l2 = allEqual
+  where
+    ix1 = ixsFromSLocation l1
+    ix2 = ixsFromSLocation l2
+
+    eqs = zipWith eqIdx ix1 ix2
+    eqIdx :: TypedExp -> TypedExp -> Exp ABoolean
+    eqIdx (TExp SInteger e1) (TExp SInteger e2) = Eq nowhere SInteger e1 e2
+    eqIdx _ _ = error "Internal error: Expected Integer index expressions"
+    allEqual = foldr mkAnd (LitBool nowhere True) eqs
+    mkAnd r c = And nowhere c r
+
+mkConstantAssertion :: Id -> StorageLocation -> [StorageLocation] -> SMT2
+mkConstantAssertion name loc@(SLoc _ item) updates = constancy
+  where
+    currentIds = idsFromLocation loc
+    relevantUpdates = filter ((==) currentIds . idsFromLocation) updates
+    aliasedAssertions = (mkEqualityAssertion loc) <$> relevantUpdates
+    -- Maybe eliminate common equalities for indices for efficiency
+    isConstantAssertion = foldl mkAnd (LitBool nowhere True) aliasedAssertions
+
+    locSMTRep whn = if isIndexed item
+      then withInterface name $ select (nameFromSItem whn item) (NonEmpty.fromList $ ixsFromItem item)
+      else nameFromSItem whn item
+
+    constancy = case relevantUpdates of
+      [] -> "(assert (= "  <> locSMTRep Pre <> " " <> locSMTRep Post <> "))"
+      _  -> "(assert (=> " <> withInterface name (expToSMT2 isConstantAssertion)
+                           <> " (= " <> locSMTRep Pre <> locSMTRep Post <> ")))"
+
+    mkAnd r c = And nowhere (Neg nowhere c) r
+
+hardcoreConstants :: Id -> [StorageLocation] -> [StorageLocation] -> [SMT2]
+hardcoreConstants name updated locs = (uncurry $ mkConstantAssertion name) <$> pairs
+  where
+  pairs = (,updated) <$> locs
+
+
+
+mkSMTGenerics :: Bool -> [StorageLocation] -> [CalldataLocation] -> [EthEnv] -> Id -> [Decl] -> [Exp ABoolean] -> [Exp ABoolean] -> [StorageUpdate] -> Exp ABoolean -> SMTExp
+mkSMTGenerics isCtor activeSLocs activeCLocs envs ifaceName decls preconds extraconds stateUpdates = mksmt
   where
     -- declare vars
-    activeSLocs = slocsFromBehaviour behv
-    storage = concatMap declareStorageLocation activeSLocs
-    activeCLocs = clocsFromBehaviour behv
+    storage = if isCtor
+      then let (newSLocs, otherSLocs) = partition isLocalLoc (activeSLocs) in
+        concatMap declareInitialStorage newSLocs <> concatMap declareStorageLocation otherSLocs
+      else concatMap declareStorageLocation activeSLocs
+
     ifaceArgs = declareArg ifaceName <$> decls
     activeArgs = declareCalldataLocation ifaceName <$> activeCLocs
     args = nub ifaceArgs <> activeArgs
-    envs = declareEthEnv <$> ethEnvFromBehaviour behv
-    constLocs = (nub activeSLocs) \\ (locFromUpdate <$> stateUpdates)
+    env = declareEthEnv <$> envs
+    updatedLocs = locFromUpdate <$> stateUpdates
+    maybeConstSLocs = let unUpdated = (nub activeSLocs) \\ updatedLocs in
+      if isCtor then filter (not . isLocalLoc) unUpdated else unUpdated
 
     -- constraints
-    pres = mkAssert ifaceName <$> preconds <> caseconds
+    pres = mkAssert ifaceName <$> preconds <> extraconds
     updates = encodeUpdate ifaceName <$> stateUpdates
-    constants = encodeConstant <$> constLocs
+    --constants = encodeConstant <$> constSLocs
+    constants = hardcoreConstants ifaceName updatedLocs maybeConstSLocs
 
     mksmt e = SMTExp
       { _storage = storage
       , _calldata = args
-      , _environment = envs
-      , _assertions = [mkAssert ifaceName . Neg nowhere $ e] <> pres <> updates <> constants
+      , _environment = env
+      , _assertions = [mkAssert ifaceName e] <> pres <> updates <> constants
       }
+
+mkPostconditionQueriesBehv :: Behaviour -> [Query]
+mkPostconditionQueriesBehv behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds postconds stateUpdates _) =
+    mkQuery <$> postconds
+  where
+    activeLocs = locsFromBehaviour behv
+    (activeSLocs, activeCLocs) = partitionLocs activeLocs
+    envs = ethEnvFromBehaviour behv
+    mksmt e = mkSMTGenerics False activeSLocs activeCLocs envs ifaceName decls preconds caseconds stateUpdates (Neg nowhere e)
     mkQuery e = Postcondition (Behv behv) e (mksmt e)
 
 mkPostconditionQueriesConstr :: Constructor -> [Query]
 mkPostconditionQueriesConstr constructor@(Constructor _ (Interface ifaceName decls) _ preconds postconds _ initialStorage) = mkQuery <$> postconds
   where
-    -- declare vars
-    activeSLocs = slocsFromConstructor constructor
-    localStorage = concatMap declareInitialStorage activeSLocs
-    activeCLocs = clocsFromConstructor constructor
-    ifaceArgs = declareArg ifaceName <$> decls
-    activeArgs = declareCalldataLocation ifaceName <$> activeCLocs
-    args = nub ifaceArgs <> activeArgs
-    envs = declareEthEnv <$> ethEnvFromConstructor constructor
-
-    -- constraints
-    pres = mkAssert ifaceName <$> preconds
-    initialStorage' = encodeUpdate ifaceName <$> initialStorage
-
-    mksmt e = SMTExp
-      { _storage = localStorage
-      , _calldata = args
-      , _environment = envs
-      , _assertions = [mkAssert ifaceName . Neg nowhere $ e] <> pres <> initialStorage'
-      }
+    activeLocs = locsFromConstructor constructor
+    (activeSLocs, activeCLocs) = partitionLocs activeLocs
+    envs = ethEnvFromConstructor constructor
+    mksmt e = mkSMTGenerics True activeSLocs activeCLocs envs ifaceName decls preconds [] initialStorage (Neg nowhere e)
     mkQuery e = Postcondition (Ctor constructor) e (mksmt e)
 
 -- | For each invariant in the list of input claims, we first gather all the
@@ -279,28 +320,12 @@ mkInvariantQueries (Act _ contracts) = fmap mkQuery gathered
     getInvariants (Contract (c@Constructor{..}) behvs) = fmap (, c, behvs) _invariants
 
     mkInit :: Invariant -> Constructor -> (Constructor, SMTExp)
-    mkInit (Invariant _ invConds _ (PredTimed _ invPost)) ctor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) = (ctor, smt)
+    mkInit (Invariant _ invConds _ (PredTimed _ invPost)) ctor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) = (ctor, mksmt invPost)
       where
-        -- declare vars
-        activeSLocs = slocsFromConstructor ctor
-        localStorage = concatMap declareInitialStorage activeSLocs
-        activeCLocs = clocsFromConstructor ctor
-        ifaceArgs = declareArg ifaceName <$> decls
-        activeArgs = declareCalldataLocation ifaceName <$> activeCLocs
-        args = nub ifaceArgs <> activeArgs
-        envs = declareEthEnv <$> ethEnvFromConstructor ctor
-
-        -- constraints
-        pres = mkAssert ifaceName <$> preconds <> invConds
-        initialStorage' = encodeUpdate ifaceName <$> initialStorage
-        postInv = mkAssert ifaceName $ Neg nowhere invPost
-
-        smt = SMTExp
-          { _storage = localStorage
-          , _calldata = args
-          , _environment = envs
-          , _assertions = postInv : pres <> initialStorage'
-          }
+        activeLocs = locsFromConstructor ctor
+        (activeSLocs, activeCLocs) = partitionLocs activeLocs
+        envs = ethEnvFromConstructor ctor
+        mksmt e = mkSMTGenerics True activeSLocs activeCLocs envs ifaceName decls preconds invConds initialStorage (Neg nowhere e)
 
     mkBehv :: Invariant -> Constructor -> Behaviour -> (Behaviour, SMTExp)
     mkBehv inv@(Invariant _ invConds invStorageBounds (PredTimed invPre invPost)) ctor behv = (behv, smt)
@@ -315,14 +340,13 @@ mkInvariantQueries (Act _ contracts) = fmap mkQuery gathered
         behvEnv = declareEthEnv <$> ethEnvFromBehaviour behv
         initArgs = declareArg ctorIface <$> ctorDecls
         behvArgs = declareArg behvIface <$> behvDecls
-        activeCLocs = clocsFromInvariant inv
+        activeLocs = nub $ locsFromBehaviour behv <> locsFromInvariant inv
+        (activeSLocs, activeCLocs) = partitionLocs activeLocs
+        storage = concatMap declareStorageLocation activeSLocs
         activeArgs = declareCalldataLocation ctorIface <$> activeCLocs
         args = nub initArgs <> behvArgs <> activeArgs
-        activeLocs = nub $ slocsFromBehaviour behv <> slocsFromInvariant inv
         -- storage locs that are mentioned but not explictly updated (i.e., constant)
-        constLocs = ((nub activeLocs) \\ fmap locFromUpdate (_stateUpdates behv))
-
-        storage = concatMap declareStorageLocation activeLocs
+        constLocs = (nub activeSLocs) \\ fmap locFromUpdate (_stateUpdates behv)
 
         -- constraints
         preInv = mkAssert ctorIface invPre
@@ -426,6 +450,7 @@ sendCommand (SolverInstance _ stdin stdout _ _) cmd =
   else do
     hPutStr stdin (cmd <> "\n")
     hFlush stdin
+    --traceM cmd
     hGetLine stdout
 
 
@@ -438,8 +463,8 @@ sendCommand (SolverInstance _ stdin stdout _ _) cmd =
 getPostconditionModel :: Transition -> SolverInstance -> IO Model
 getPostconditionModel (Ctor ctor) solver = getCtorModel ctor solver
 getPostconditionModel (Behv behv) solver = do
-  let slocs = slocsFromBehaviour behv
-      clocs = clocsFromBehaviour behv
+  let locs = locsFromBehaviour behv
+      (slocs, clocs) = partitionLocs locs
       env = ethEnvFromBehaviour behv
       Interface ifaceName decls = _interface behv
   prestate <- mapM (getStorageValue solver ifaceName Pre) slocs
@@ -462,8 +487,8 @@ getPostconditionModel (Behv behv) solver = do
 getInvariantModel :: InvariantPred -> Constructor -> Maybe Behaviour -> SolverInstance -> IO Model
 getInvariantModel _ ctor Nothing solver = getCtorModel ctor solver
 getInvariantModel predicate ctor (Just behv) solver = do
-  let slocs = nub $ slocsFromBehaviour behv <> slocsFromExp (invExp predicate)
-      clocs = clocsFromExp (invExp predicate)
+  let locs = nub $ locsFromBehaviour behv <> locsFromExp (invExp predicate)
+      (slocs, clocs) = partitionLocs locs
       env = nub $ ethEnvFromBehaviour behv <> ethEnvFromExp (invExp predicate)
       Interface behvIface behvDecls = _interface behv
       Interface ctorIface ctorDecls = _cinterface ctor
@@ -486,8 +511,8 @@ getInvariantModel predicate ctor (Just behv) solver = do
 -- | Extracts an assignment for the variables in the given constructor
 getCtorModel :: Constructor -> SolverInstance -> IO Model
 getCtorModel ctor solver = do
-  let slocs = slocsFromConstructor ctor
-      clocs = clocsFromConstructor ctor
+  let locs = locsFromConstructor ctor
+      (slocs, clocs) = partitionLocs locs
       env = ethEnvFromConstructor ctor
       Interface ifaceName decls = _cinterface ctor
   poststate <- mapM (getStorageValue solver ifaceName Post) slocs
@@ -503,37 +528,38 @@ getCtorModel ctor solver = do
     , _minitargs = []
     }
 
+-- TODO: Add typ to UItem for this function, maybe
 -- | Gets a concrete value from the solver for the given storage location
-getStorageValue :: SolverInstance -> Id -> When -> StorageLocation -> IO (StorageLocation, TypedExp)
-getStorageValue solver ifaceName whn loc@(SLoc typ _) = do
+getStorageValue :: SolverInstance -> Id -> When -> StorageLocation -> IO (Location, TypedExp)
+getStorageValue solver ifaceName whn (SLoc _ item@(Item typ _ _))  = do
   output <- getValue solver name
   -- TODO: handle errors here...
-  pure (loc, parseModel typ output)
+  pure (_Loc SStorage item, parseModel typ output)
   where
-    name = if isMapping loc || isArray loc
+    name = if isMapping item || isArray item
             then withInterface ifaceName
                  $ select
-                    (nameFromSLoc whn loc)
-                    (NonEmpty.fromList $ ixsFromLocation loc)
-            else nameFromSLoc whn loc
+                    (nameFromSItem whn item)
+                    (NonEmpty.fromList $ ixsFromItem item)
+            else nameFromSItem whn item
 
-getCalldataLocValue :: SolverInstance -> Id -> CalldataLocation -> IO (CalldataLocation, TypedExp)
-getCalldataLocValue solver ifaceName call@(CLoc typ _) = do
+getCalldataLocValue :: SolverInstance -> Id -> CalldataLocation -> IO (Location, TypedExp)
+getCalldataLocValue solver ifaceName (CLoc _ item@(Item typ _ _)) = do
   output <- getValue solver name
   -- TODO: handle errors here...
-  pure (call, parseModel typ output)
+  pure (_Loc SCalldata item, parseModel typ output)
   where
-    name = if isCalldataMapping call || isCalldataArray call
+    name = if isMapping item || isArray item
             then withInterface ifaceName
                  $ select
-                    (nameFromCLoc ifaceName call)
-                    (NonEmpty.fromList $ ixsFromCalldata call)
-            else nameFromCLoc ifaceName call
+                    (nameFromCItem ifaceName item)
+                    (NonEmpty.fromList $ ixsFromItem item)
+            else nameFromCItem ifaceName item
 
 -- | Gets a concrete value from the solver for the given calldata argument
 getCalldataValue :: SolverInstance -> Id -> Decl -> IO (Decl, CallDataValue)
 getCalldataValue solver ifaceName decl@(Decl vt _) =
-  case parseAbiArrayType vt of
+  case flattenArrayAbiType vt of
     Just (baseTyp, shape) -> do
       array' <- traverse (getTypedExp baseTyp) (nestedListIdcs shape [])
       pure (decl, CallArray array')
@@ -616,7 +642,7 @@ encodeUpdate behvName (Update _ item expr) =
   in "(assert (= " <> postentry <> " " <> expression <> "))"
 
 encodeConstant :: StorageLocation -> SMT2
-encodeConstant loc = "(assert (= " <> nameFromSLoc Pre loc <> " " <> nameFromSLoc Post loc <> "))"
+encodeConstant (SLoc _ item) = "(assert (= " <> nameFromSItem Pre item <> " " <> nameFromSItem Post item <> "))"
 
 -- | declares a storage location with the given timing
 -- TODO: support nested references i.e. array field
@@ -641,7 +667,7 @@ declareCalldataLocation behvName (CLoc _ item@(Item _ _ ref)) = declareRef ref
 -- | declares a storage location that is created by the constructor, these
 --   locations have no prestate, so we declare a post var only
 declareInitialStorage :: StorageLocation -> [SMT2]
-declareInitialStorage loc = declareStorage [Post] loc
+declareInitialStorage item = declareStorage [Post] item
 
 -- | declares a storage location that exists both in the pre state and the post
 --   state (i.e. anything except a loc created by a constructor claim)
@@ -651,7 +677,7 @@ declareStorageLocation item = declareStorage [Pre, Post] item
 -- | produces an SMT2 expression declaring the given decl as a symbolic constant
 declareArg :: Id -> Decl -> SMT2
 declareArg behvName d@(Decl typ _) =
-  case parseAbiArrayType typ of
+  case flattenArrayAbiType typ of
     Just (baseTyp, shape) ->
        array (nameFromDecl behvName d) (length shape) (fromAbiType baseTyp)
     Nothing -> constant (nameFromDecl behvName d) (fromAbiType typ)
@@ -818,11 +844,11 @@ nameFromRef whn (SField _ ref c x) = do
 
 
 -- Construct the smt2 variable name for a given storage location
-nameFromSLoc :: When -> StorageLocation -> Id
-nameFromSLoc whn (SLoc _ item) = nameFromSItem whn item
-
-nameFromCLoc :: Id -> CalldataLocation -> Id
-nameFromCLoc behvName (CLoc _ item) = nameFromCItem behvName item
+--nameFromSLoc :: When -> Location -> Id
+--nameFromSLoc whn (Loc _ _ item) = nameFromSItem whn item
+--
+--nameFromCLoc :: Id -> Location -> Id
+--nameFromCLoc behvName (Loc _ _ item) = nameFromCItem behvName item
 
 -- Construct the smt2 variable name for a given decl
 nameFromDecl :: Id -> Decl -> Id

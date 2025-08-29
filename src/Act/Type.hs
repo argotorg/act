@@ -265,7 +265,7 @@ checkConstructor env (U.Constructor _ contract (Interface _ decls) ptrs iffs (U.
     stateUpdates <- concat <$> traverse (checkAssign env') assigns
     iffs' <- checkIffs envNoStorage iffs
     traverse_ (validStorage env') assigns
-    ensures <- traverse (checkExpr env' SBoolean) postcs
+    ensures :: [Exp a Untimed] <- traverse (checkExpr env' SBoolean) postcs
     invs' <- fmap (Invariant contract [] [] . PredUntimed) <$> traverse (checkExpr env' SBoolean) invs
     pure $ Constructor contract (Interface contract decls) ptrs iffs' ensures invs' stateUpdates
   where
@@ -368,8 +368,8 @@ exprListIdcs typ = map idx [0..(len - 1)]
     (len :| typeAcc) = NonEmpty.scanr (*) 1 typ
     idx e = zipWith (\ x1 x2 -> (e `div` x2) `mod` x1) (toList typ) typeAcc
 
-parseAbiArrayTypeErr :: Pn -> String -> AbiType -> Err (AbiType, NonEmpty Int)
-parseAbiArrayTypeErr p err t = maybe (throw (p,err)) Success $ parseAbiArrayType t
+flattenArrayAbiTypeErr :: Pn -> String -> AbiType -> Err (AbiType, NonEmpty Int)
+flattenArrayAbiTypeErr p err t = maybe (throw (p,err)) Success $ flattenArrayAbiType t
 
 -- Check the initial assignment of a storage variable
 checkAssign :: Env -> U.Assign -> Err [StorageUpdate]
@@ -391,7 +391,7 @@ checkAssign env (U.AssignMapping (U.StorageVar pn (StorageMapping (keyType :| _)
     envNoStorage = env { store = mempty }
 
 checkAssign env@Env{contract} (U.AssignArray (U.StorageVar pn (StorageValue (PrimitiveType abiType)) name) exprs)
-  = liftA2 (,) (checkExprList envNoStorage exprs) (parseAbiArrayTypeErr' abiType) `bindValidation` \((texprs,rhDim),(abiBaseType,stDim)) ->
+  = liftA2 (,) (checkExprList envNoStorage exprs) (flattenArrayAbiTypeErr' abiType) `bindValidation` \((texprs,rhDim),(abiBaseType,stDim)) ->
     let flatTExprs = zip (toList texprs) (exprListIdcs stDim) in
     concat <$> traverse (createUpdates (toList rhDim) $ PrimitiveType abiBaseType) flatTExprs
     <* checkExprListBaseType abiBaseType texprs
@@ -399,8 +399,8 @@ checkAssign env@Env{contract} (U.AssignArray (U.StorageVar pn (StorageValue (Pri
   where
     envNoStorage = env { store = mempty }
 
-    parseAbiArrayTypeErr' :: AbiType -> Err (AbiType, NonEmpty Int)
-    parseAbiArrayTypeErr' = parseAbiArrayTypeErr pn "Cannot assign an array literal to non-array type"
+    flattenArrayAbiTypeErr' :: AbiType -> Err (AbiType, NonEmpty Int)
+    flattenArrayAbiTypeErr' = flattenArrayAbiTypeErr pn "Cannot assign an array literal to non-array type"
 
     compDims :: AbiType -> NonEmpty Int -> NonEmpty Int -> Err ()
     compDims at d1 d2 = if d1 == d2 then pure ()
@@ -455,11 +455,11 @@ checkEntry Env{contract,store,calldata,pointers} kind (U.EVar p name) = case (ki
 checkEntry env kind (U.EIndexed p e args) =
   checkEntry env kind e `bindValidation` \(styp, _, ref) -> case styp of
     StorageValue (PrimitiveType typ) ->
-        parseAbiArrayTypeErr' typ `bindValidation` \(restyp,sizes) ->
+        flattenArrayAbiTypeErr' typ `bindValidation` \(restyp,sizes) ->
         (StorageValue (PrimitiveType restyp), Nothing,) . SArray p ref (PrimitiveType restyp) <$>
           checkArrayIxs env p args (toList sizes)
         where
-          parseAbiArrayTypeErr' = parseAbiArrayTypeErr p "Variable of value type cannot be indexed into"
+          flattenArrayAbiTypeErr' = flattenArrayAbiTypeErr p "Variable of value type cannot be indexed into"
     StorageValue (ContractType _) -> throw (p, "Expression should have a mapping type" <> show e)
     StorageMapping argtyps restyp ->
         (StorageValue restyp, Nothing,) . SMapping p ref restyp <$> checkIxs env p args (NonEmpty.toList argtyps)
@@ -675,16 +675,16 @@ checkCreateArgs env pn args types = if length args /= length types
                               else traverse (uncurry checkArg) (args `zip` types)
   where
     checkArg :: Typeable t => U.Argument -> AbiType -> Err (TypedArgument t)
-    checkArg (U.ValueArg e) at = case parseAbiArrayType at of
+    checkArg (U.ValueArg e) at = case flattenArrayAbiType at of
       Nothing -> TValueArg <$> (checkExprVType env e $ PrimitiveType at)
       _ -> throw (getPosn e, "Expected array argument")
     checkArg (U.ArrayArg nl) at =
-      liftA2 (,) (checkExprList env nl :: Err (TypedExprList t,NonEmpty Int)) (parseAbiArrayTypeErr' at) `bindValidation` \((texprs,rhDim),(abiBaseType,vtDim)) ->
+      liftA2 (,) (checkExprList env nl :: Err (TypedExprList t,NonEmpty Int)) (flattenArrayAbiTypeErr' at) `bindValidation` \((texprs,rhDim),(abiBaseType,vtDim)) ->
       (pure $ TArrayArg texprs)
       <* checkExprListBaseType abiBaseType texprs
       <* compDims abiBaseType vtDim rhDim
       where
-        parseAbiArrayTypeErr' = parseAbiArrayTypeErr (getPosNL nl) "Expected non-array argument"
+        flattenArrayAbiTypeErr' = flattenArrayAbiTypeErr (getPosNL nl) "Expected non-array argument"
 
         compDims :: AbiType -> NonEmpty Int -> NonEmpty Int -> Err ()
         compDims t d1 d2 = if d1 == d2 then pure ()

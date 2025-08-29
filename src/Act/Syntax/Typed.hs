@@ -95,7 +95,7 @@ data Constructor t = Constructor
   , _cinterface :: Interface
   , _cpointers :: [Pointer]
   , _cpreconditions :: [Exp ABoolean t]
-  , _cpostconditions :: [Exp ABoolean Timed]
+  , _cpostconditions :: [Exp ABoolean t]
   , _invariants :: [Invariant t]
   , _initialStorage :: [StorageUpdate t]
   } deriving (Show, Eq)
@@ -126,13 +126,23 @@ instance Eq (StorageUpdate t) where
 _Update :: SingI a => TItem a Storage t -> Exp a t -> StorageUpdate t
 _Update item expr = Update sing item expr
 
+data Location (t :: Timing) where
+  Loc :: SType a -> SRefKind k -> TItem a k t -> Location t
+deriving instance Show (Location t)
+
+instance Eq (Location t) where
+  Loc SType SRefKind i1 == Loc SType SRefKind i2 = eqTypeKind i1 i2
+
+_Loc :: SRefKind k -> TItem a k t -> Location t
+_Loc k item@(Item s _ _) = Loc s k item
+
 data StorageLocation (t :: Timing) where
   SLoc :: SType a -> TItem a Storage t -> StorageLocation t
 deriving instance Show (StorageLocation t)
 
 instance Eq (StorageLocation t) where
   SLoc SType i1 == SLoc SType i2 = eqS' i1 i2
- 
+
 _SLoc :: TItem a Storage t -> StorageLocation t
 _SLoc item@(Item s _ _) = SLoc s item
 
@@ -176,6 +186,21 @@ pattern SRefKind <- Sing
 eqKind :: forall (a :: RefKind) (b :: RefKind) f t t'. (SingI a, SingI b, Eq (f t a t')) => f t a t' -> f t b t' -> Bool
 eqKind fa fb = maybe False (\Refl -> fa == fb) $ testEquality (sing @a) (sing @b)
 
+-- | Compare equality of two Items parametrized by different ActTypes and RefKinds.
+eqTypeKind :: forall (a :: ActType) (b :: ActType) (c :: RefKind)  (d :: RefKind) f t .
+              (SingI a, SingI b, SingI c, SingI d, Eq (f a c t)) => f a c t -> f b d t -> Bool
+eqTypeKind fa fb = maybe False (\Refl ->
+                     maybe False (\Refl -> fa == fb)
+                       $ testEquality (sing @c) (sing @d)) 
+                         $ testEquality (sing @a) (sing @b)
+
+eqKindType :: forall (a :: ActType) (b :: ActType) (c :: RefKind)  (d :: RefKind) f t .
+              (SingI a, SingI b, SingI c, SingI d, Eq (f c a t)) => f c a t -> f d b t -> Bool
+eqKindType fa fb = maybe False (\Refl ->
+                     maybe False (\Refl -> fa == fb)
+                       $ testEquality (sing @c) (sing @d)) 
+                         $ testEquality (sing @a) (sing @b)
+ 
 -- | Reference to an item in storage or a variable. It can be either a
 -- storage or calldata variable, a map lookup, or a field selector.
 -- annotated with two identifiers: the contract that they belong to
@@ -213,6 +238,13 @@ deriving instance Eq (TItem a k t)
 
 _Item :: SingI a => ValueType -> Ref k t -> TItem a k t
 _Item = Item sing
+
+data UItem (k :: RefKind) (t :: Timing) where
+  UItem' :: SRefKind k -> TItem a k t -> UItem k t
+deriving instance Show (UItem k t)
+
+instance Eq (UItem k t) where
+  UItem' SRefKind (i1@(Item SType _ _)) == UItem' SRefKind (i2@(Item SType _ _)) = eqTypeKind i1 i2
 
 -- | Expressions for which the return type is known.
 data TypedExp t
@@ -477,8 +509,8 @@ instance ToJSON (InvariantPred t) where
                                                , "prefpredicate" .= toJSON predpre
                                                , "prefpredicate" .= toJSON predpost ]
 
-instance ToJSON (StorageLocation t) where
-  toJSON (SLoc _ a) = object [ "location" .= toJSON a ]
+instance ToJSON (Location t) where
+  toJSON (Loc _ _ a) = object [ "location" .= toJSON a ]
 
 instance ToJSON (StorageUpdate t) where
   toJSON (Update _ a b) = object [ "location" .= toJSON a ,"value" .= toJSON b ]
