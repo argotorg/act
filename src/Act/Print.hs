@@ -47,7 +47,7 @@ prettyCtor (Constructor name interface ptrs pres posts invs initStore)
     prettyInvs [] = ""
     prettyInvs _ = error "TODO: pretty print invariants"
 
-    prettyUpdate' (Update _ (Item _ v r) e) = prettyValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
+    prettyUpdate' (Update _ _ (Item _ v r) e) = prettyValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
 
 prettyValueType :: ValueType -> String
 prettyValueType = \case
@@ -107,13 +107,13 @@ prettyExp e = case e of
 
   -- booleans
   Or _ a b -> print2 "or" a b
-  Eq _ _ a b -> print2 "==" a b
+  Eq _ _ _ a b -> print2 "==" a b
   LT _ a b -> print2 "<" a b
   GT _ a b -> print2 ">" a b
   LEQ _ a b -> print2 "<=" a b
   GEQ _ a b -> print2 ">=" a b
   And _ a b -> print2 "and" a b
-  NEq _ _ a b -> print2 "=/=" a b
+  NEq _ _ _ a b -> print2 "=/=" a b
   Neg _ a -> "(not " <> prettyExp a <> ")"
   Impl _ a b -> print2 "=>" a b
   LitBool _ b -> if b then "true" else "false"
@@ -140,8 +140,12 @@ prettyExp e = case e of
   ByLit _ a -> toString a
   ByEnv _ a -> prettyEnv a
 
+  List _ [] -> "[]"
+  List _ (h:t) ->
+    "[" <> foldl (\s te -> s <> ", " <> prettyExp te) (prettyExp h) t <> "]"
+
   -- contracts
-  Create _ f ixs -> f <> "(" <> (intercalate "," $ fmap prettyTypedArgument ixs) <> ")"
+  Create _ f ixs -> f <> "(" <> (intercalate "," $ fmap prettyTypedExp ixs) <> ")"
 
   --polymorphic
   ITE _ a b c -> "(if " <> prettyExp a <> " then " <> prettyExp b <> " else " <> prettyExp c <> ")"
@@ -150,12 +154,8 @@ prettyExp e = case e of
   where
     print2 sym a b = "(" <> prettyExp a <> " " <> sym <> " " <> prettyExp b <> ")"
 
-prettyTypedArgument :: TypedArgument t -> String
-prettyTypedArgument (TValueArg te) = prettyTypedExp te
-prettyTypedArgument (TArrayArg nl) = prettyNestedTypedExp nl
-
 prettyTypedExp :: TypedExp t -> String
-prettyTypedExp (TExp _ e) = prettyExp e
+prettyTypedExp (TExp _ _ e) = prettyExp e
 
 prettyNestedTypedExp :: NestedList p (TypedExp t) -> String
 prettyNestedTypedExp (LeafList _ []) = "[]"
@@ -178,10 +178,10 @@ prettyRef = \case
     brackets str = "[" <> str <> "]"
 
 prettyLocation :: Location t -> String
-prettyLocation (Loc _ _ item) = prettyItem item
+prettyLocation (Loc _ _ _ item) = prettyItem item
 
 prettyUpdate :: StorageUpdate t -> String
-prettyUpdate (Update _ item e) = prettyItem item <> " => " <> prettyExp e
+prettyUpdate (Update _ _ item e) = prettyItem item <> " => " <> prettyExp e
 
 prettyEnv :: EthEnv -> String
 prettyEnv e = case e of
@@ -209,12 +209,8 @@ prettyEnv e = case e of
 prettyInvPred :: InvariantPred Timed -> String
 prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
   where
-    untimeArg :: TypedArgument t -> TypedArgument Untimed
-    untimeArg (TValueArg te) = TValueArg $ untimeTyped te
-    untimeArg (TArrayArg nl) = TArrayArg $ untimeTyped <$> nl
-
     untimeTyped :: TypedExp t -> TypedExp Untimed
-    untimeTyped (TExp t e) = TExp t (untime e)
+    untimeTyped (TExp t s e) = TExp t s (untime e)
 
     untimeRef:: Ref k t -> Ref k Untimed
     untimeRef (SVar p c a) = SVar p c a
@@ -228,12 +224,12 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       And p a b   -> And p (untime a) (untime b)
       Or p a b    -> Or p (untime a) (untime b)
       Impl p a b  -> Impl p (untime a) (untime b)
-      Eq p t a b  -> Eq p t (untime a) (untime b)
+      Eq p t s a b  -> Eq p t s (untime a) (untime b)
       LT p a b    -> LT p (untime a) (untime b)
       LEQ p a b   -> LEQ p (untime a) (untime b)
       GT p a b    -> GT p (untime a) (untime b)
       GEQ p a b   -> GEQ p (untime a) (untime b)
-      NEq p t a b -> NEq p t (untime a) (untime b)
+      NEq p t s a b -> NEq p t s (untime a) (untime b)
       Neg p a     -> Neg p (untime a)
       Add p a b   -> Add p (untime a) (untime b)
       Sub p a b   -> Sub p (untime a) (untime b)
@@ -251,7 +247,8 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       UIntMax p a -> UIntMax p a
       InRange p a b -> InRange p a (untime b)
       LitBool p a -> LitBool p a
-      Create p f xs -> Create p f (fmap untimeArg xs)
+      List p l -> List p (fmap untime l)
+      Create p f xs -> Create p f (fmap untimeTyped xs)
       IntEnv p a  -> IntEnv p a
       ByEnv p a   -> ByEnv p a
       ITE p x y z -> ITE p (untime x) (untime y) (untime z)

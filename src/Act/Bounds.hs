@@ -1,14 +1,18 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Act.Bounds (addBounds) where
 
 import Data.Maybe
 import Data.List (nub, (\\), partition)
+import Data.List.NonEmpty (toList)
+import Data.Type.Equality
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit
 import Act.Type (globalEnv)
+import Debug.Trace
 
 
 {-|
@@ -117,7 +121,17 @@ mkStorageBounds :: [StorageUpdate] -> When -> [Exp ABoolean]
 mkStorageBounds refs t = concatMap mkBound refs
   where
     mkBound :: StorageUpdate -> [Exp ABoolean]
-    mkBound (Update SInteger item _) = [mkSItemBounds t item]
+    mkBound (Update SInteger _ item _) = [mkSItemBounds t item]
+    mkBound (Update typ (Shaped _) item@(Item _ (PrimitiveType at) ref) _) = --case flattenAbiType at of
+      maybe [] (\Refl -> mkSItemBounds t <$> expandItem item) $ testEquality (fst $ flattenSType typ) SInteger
+      --(ba@(FromAbi SInteger), Just shape) -> case ref of
+      --  SArray _ r _ i -> (\i' -> mkSItemBounds t $ Item SInteger (PrimitiveType ba) $
+      --    SArray nowhere r (PrimitiveType ba) (i ++ (zip ((TExp SInteger Atomic . LitInt nowhere . fromIntegral) <$> i') $ toList shape)) ) <$> exprListIdcs shape
+      --  r -> (\i' -> mkSItemBounds t $ Item SInteger (PrimitiveType ba) $
+      --    SArray nowhere r (PrimitiveType ba) (zip ((TExp SInteger Atomic . LitInt nowhere . fromIntegral) <$> i') $ toList shape) ) <$> exprListIdcs shape
+
+      --(_, Nothing) -> mkSItemBounds Pre <$> [Item SInteger (PrimitiveType at) ref]
+      --(_, _) -> []
     mkBound _ = []
 
 mkSItemBounds :: When -> TItem AInteger Storage -> Exp ABoolean
@@ -128,7 +142,18 @@ mkStorageBoundsLoc :: [StorageLocation] -> [Exp ABoolean]
 mkStorageBoundsLoc refs = concatMap mkBound refs
   where
     mkBound :: StorageLocation -> [Exp ABoolean]
-    mkBound (SLoc SInteger item) = [mkSItemBounds Pre item]
+    mkBound (SLoc SInteger Atomic item) = [mkSItemBounds Pre item]
+    mkBound (SLoc typ (Shaped _) item@(Item _ (PrimitiveType at) ref)) =
+      maybe [] (\Refl -> mkSItemBounds Pre <$> expandItem item) $ testEquality (fst $ flattenSType typ) SInteger
+
+      --(ba@(FromAbi SInteger), Just shape) -> case ref of
+      --  SArray p r _ i -> (\i' -> mkSItemBounds Pre $ Item SInteger (PrimitiveType ba) $
+      --    SArray p r (PrimitiveType ba) (i ++ (zip ((TExp SInteger Nothing . LitInt nowhere . fromIntegral) <$> i') $ toList shape)) ) <$> exprListIdcs shape
+      --  r -> (\i' -> mkSItemBounds Pre $ Item SInteger (PrimitiveType ba) $
+      --    SArray nowhere r (PrimitiveType ba) (zip ((TExp SInteger Nothing . LitInt nowhere . fromIntegral) <$> i') $ toList shape) ) <$> exprListIdcs shape
+
+      --(_, Nothing) -> mkSItemBounds Pre <$> [Item SInteger (PrimitiveType at) ref]
+      --(_, _) -> []
     mkBound _ = []
 
 mkCItemBounds :: TItem AInteger Calldata -> Exp ABoolean
@@ -139,12 +164,22 @@ mkCalldataLocationBounds :: [CalldataLocation] -> [Exp ABoolean]
 mkCalldataLocationBounds refs = concatMap mkBound refs
   where
     mkBound :: CalldataLocation -> [Exp ABoolean]
-    mkBound (CLoc SInteger item) = [mkCItemBounds item]
+    mkBound (CLoc SInteger Atomic item) = [mkCItemBounds item]
+    mkBound (CLoc typ (Shaped _) item@(Item _ (PrimitiveType at) ref)) = -- case flattenAbiType at of
+      maybe [] (\Refl -> mkCItemBounds <$> expandItem item) $ testEquality (fst $ flattenSType typ) SInteger
+      --(ba@(FromAbi SInteger), Just shape) -> case ref of
+      --  SArray p r _ i -> (\i' -> mkCItemBounds $ Item SInteger (PrimitiveType ba) $
+      --    SArray p r (PrimitiveType ba) (i ++ (zip ((TExp SInteger Nothing . LitInt nowhere . fromIntegral) <$> i') $ toList shape)) ) <$> exprListIdcs shape
+      --  r -> (\i' -> mkCItemBounds $ Item SInteger (PrimitiveType ba) $
+      --    SArray nowhere r (PrimitiveType ba) (zip ((TExp SInteger Nothing . LitInt nowhere . fromIntegral) <$> i') $ toList shape) ) <$> exprListIdcs shape
+
+      --(_, Nothing) -> mkCItemBounds <$> [Item SInteger (PrimitiveType at) ref]
+      --(_, _) -> []
     mkBound _ = []
 
 mkCallDataBounds :: [Decl] -> [Exp ABoolean]
 mkCallDataBounds = concatMap $ \(Decl typ name) -> case typ of
-  -- Array bounds are applied lazily when needed in mkCalldataLocationBounds
+  -- Array element bounds are applied lazily when needed in mkCalldataLocationBounds
   (AbiArrayType _ _) -> []
   _ -> case fromAbiType typ of
         AInteger -> [bound typ (_Var typ name)]

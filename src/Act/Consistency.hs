@@ -36,6 +36,7 @@ import Act.SMT as SMT
 import Act.Print
 
 import qualified EVM.Solvers as Solvers
+import Debug.Trace
 
 -- TODO this is duplicated in hevm Keccak.hs but not exported
 combine :: [a] -> [(a,a)]
@@ -140,7 +141,7 @@ checkCases (Act _ contracts) solver' smttimeout debug = do
 type ModelCtx = Reader Model
 
 mkBounds :: TypedExp -> Int -> [Exp ABoolean]
-mkBounds (TExp SInteger e) b = [LEQ nowhere (LitInt nowhere 0) e, LT nowhere e (LitInt nowhere $ toInteger b)]
+mkBounds (TExp SInteger _ e) b = [LEQ nowhere (LitInt nowhere 0) e, LT nowhere e (LitInt nowhere $ toInteger b)]
 mkBounds _ _ = error "Internal Error: Expected Integral Index"
 
 mkRefBounds :: Ref a -> [Exp ABoolean]
@@ -150,10 +151,10 @@ mkRefBounds (SField _ ref _ _) = mkRefBounds ref
 mkRefBounds _ = []
 
 mkStorageBounds :: StorageLocation -> [Exp ABoolean]
-mkStorageBounds (SLoc _ (Item _ _ ref)) = mkRefBounds ref
+mkStorageBounds (SLoc _ _ (Item _ _ ref)) = mkRefBounds ref
 
 mkCalldataBounds :: CalldataLocation -> [Exp ABoolean]
-mkCalldataBounds (CLoc _ (Item _ _ ref)) = mkRefBounds ref
+mkCalldataBounds (CLoc _ _ (Item _ _ ref)) = mkRefBounds ref
 
 -- TODO: There are locs that don't need to be checked, e.g. assignment locs cannot be out of bounds
 mkConstrArrayBoundsQuery :: Constructor -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
@@ -168,8 +169,8 @@ mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) 
     arrayLocs = filter isArrayLoc activeLocs
     -- The following is done by mkSMTGenerics as well..
     (activeSLocs, activeCLocs) = partitionLocs activeLocs
-    arraySLocs = filter (\(SLoc _ item) -> isArray item) activeSLocs
-    arrayCLocs = filter (\(CLoc _ item) -> isArray item) activeCLocs
+    arraySLocs = filter (\(SLoc _ _ item@(Item _ _ ref)) -> isArray item && posnFromRef ref /= nowhere) activeSLocs
+    arrayCLocs = filter (\(CLoc _ _ item@(Item _ _ ref)) -> isArray item && posnFromRef ref /= nowhere) activeCLocs
     boundsExps = concatMap mkStorageBounds arraySLocs
               <> concatMap mkCalldataBounds arrayCLocs
     assertion = mkOrNot boundsExps
@@ -190,8 +191,8 @@ mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ precond
     arrayLocs = filter isArrayLoc activeLocs
     -- The following is done by mkSMTGenerics as well..
     (activeSLocs, activeCLocs) = partitionLocs activeLocs
-    arraySLocs = filter (\(SLoc _ item) -> isArray item) activeSLocs
-    arrayCLocs = filter (\(CLoc _ item) -> isArray item) activeCLocs
+    arraySLocs = filter (\(SLoc _ _ item@(Item _ _ ref)) -> isArray item && posnFromRef ref /= nowhere) activeSLocs
+    arrayCLocs = filter (\(CLoc _ _ item@(Item _ _ ref)) -> isArray item && posnFromRef ref /= nowhere) activeCLocs
     boundsExps = concatMap mkStorageBounds arraySLocs
               <> concatMap mkCalldataBounds arrayCLocs
 
@@ -250,7 +251,7 @@ checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
     errorMsg str = render (pretty str <> line) >> exitFailure
 
 checkBound :: TypedExp -> Int -> ModelCtx Bool
-checkBound (TExp SInteger e) b =
+checkBound (TExp SInteger _ e) b =
   [ (0 <= toInteger idx) && (toInteger idx < toInteger b) | idx <- modelEval e ]
 checkBound _ _ = error "Internal Error: Expected Integer indices"
 
@@ -261,7 +262,7 @@ checkRefBounds (SField _ ref _ _) = checkRefBounds ref
 checkRefBounds _ = pure True
 
 checkStorageBounds :: Location -> ModelCtx DocAnsi
-checkStorageBounds (Loc _ _ item@(Item _ _ ref)) = do
+checkStorageBounds (Loc _ _ _ item@(Item _ _ ref)) = do
   cond <- checkRefBounds ref
   if cond then pure $ string ""
   else do
@@ -282,7 +283,7 @@ checkStorageBounds (Loc _ _ item@(Item _ _ ref)) = do
 --      (AlexPn _ l c ) = posnFromRef ref
 
 printIdx :: TypedExp -> Int -> ModelCtx DocAnsi
-printIdx te@(TExp SInteger e) b = do
+printIdx te@(TExp SInteger _ e) b = do
   idx <- modelEval e
   if (toInteger idx < toInteger b) && (0 <= toInteger idx)
     then pure $ string "[" <> string (prettyTypedExp te) <> string "]"
@@ -321,7 +322,7 @@ mkEqualityAssertion l1 l2 = allEqual
 
     eqs = zipWith eqIdx ix1 ix2
     eqIdx :: TypedExp -> TypedExp -> Exp ABoolean
-    eqIdx (TExp SInteger e1) (TExp SInteger e2) = Eq nowhere SInteger e1 e2
+    eqIdx (TExp SInteger _ e1) (TExp SInteger _ e2) = Eq nowhere SInteger Atomic e1 e2
     eqIdx _ _ = error "Internal error: Expected Integer index expressions"
     allEqual = foldr mkAnd (LitBool nowhere True) eqs
     mkAnd r c = And nowhere c r
@@ -334,10 +335,10 @@ mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds casec
   (ifaceName, groupedLocs, mkSMT, getModel)
   where
     updatedLocs = locFromUpdate <$> stateUpdates
-    updatedLocsIds = (\l@(SLoc _ item) -> Arg (idsFromItem item) l) <$> updatedLocs
+    updatedLocsIds = (\l@(SLoc _ _ item) -> Arg (idsFromItem item) l) <$> updatedLocs
     groupedLocs = fmap (\(Arg _ b) -> b) <$> group (sort updatedLocsIds)
 
-    activeLocs = nub $ concatMap (\(SLoc _ item) -> locsFromItem SStorage item) updatedLocs
+    activeLocs = nub $ concatMap (\(SLoc _ _ item) -> locsFromItem SStorage item) updatedLocs
                <> concatMap locsFromExp preconds
                <> concatMap locsFromExp caseconds
     (activeSLocs, activeCLocs) = partitionLocs activeLocs
@@ -408,16 +409,16 @@ checkAliasing (l1, l2) = do
     ixs2 = ixsFromSLocation l2
 
 compareIdx :: TypedExp -> TypedExp -> ModelCtx Bool
-compareIdx (TExp SInteger e1) (TExp SInteger e2) =
+compareIdx (TExp SInteger Atomic e1) (TExp SInteger Atomic e2) =
   [ a == b | a <- modelEval e1, b <- modelEval e2 ]
-compareIdx (TExp SBoolean e1) (TExp SBoolean e2) =
+compareIdx (TExp SBoolean Atomic e1) (TExp SBoolean Atomic e2) =
   [ a == b | a <- modelEval e1, b <- modelEval e2 ]
-compareIdx (TExp SByteStr e1) (TExp SByteStr e2) =
+compareIdx (TExp SByteStr Atomic e1) (TExp SByteStr Atomic e2) =
   [ a == b | a <- modelEval e1, b <- modelEval e2 ]
 compareIdx _ _ = pure $ False
 
 printAliased :: TypedExp -> ModelCtx DocAnsi
-printAliased te@(TExp SInteger e) = do
+printAliased te@(TExp SInteger _ e) = do
   e' <- modelEval e
   pure $ string "[(" <> string (prettyTypedExp te) <> string ") = " <> string (show e') <> string "]"
 printAliased _ = error "Internal Error: Expected Integer indices"
@@ -433,7 +434,7 @@ printAliasedRef (SVar _ _ id') = pure $ string id'
 printAliasedRef (CVar _ _ id') = pure $ string id'
 
 printAliasedLoc :: StorageLocation -> ModelCtx DocAnsi
-printAliasedLoc (SLoc _ (Item _ _ ref)) = do
+printAliasedLoc (SLoc _ _ (Item _ _ ref)) = do
   r <- printAliasedRef ref
   pure $ string "Line " <> string (show l) <> string " Column " <> string (show c) <> string ": " <> r
   where
@@ -464,13 +465,13 @@ modelEval e = case e of
   UIntMin _ a   -> pure $ uintmin a
   UIntMax _ a   -> pure $ uintmax a
 
-  Eq _ SInteger x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
-  Eq _ SBoolean x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
-  Eq _ SByteStr x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ SInteger _ x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ SBoolean _ x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ SByteStr _ x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
 
-  NEq _ SInteger x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
-  NEq _ SBoolean x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
-  NEq _ SByteStr x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ SInteger _ x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ SBoolean _ x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ SByteStr _ x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
 
   ITE _ a b c   ->  modelEval a >>= \cond -> if cond then modelEval b else modelEval c
 
@@ -478,7 +479,7 @@ modelEval e = case e of
   VarRef _ whn SStorage item -> do
     model <- ask
     case lookup (_Loc SStorage item) $ if whn == Pre then _mprestate model else _mpoststate model of
-      Just (TExp sType e') -> case testEquality (sing @a) sType of
+      Just (TExp sType _ e') -> case testEquality (sing @a) sType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
@@ -489,7 +490,7 @@ modelEval e = case e of
   VarRef _ _ SCalldata item -> do
     model <- ask
     case lookup (_Loc SCalldata item) $ _mcalllocs model of
-      Just (TExp sType e') -> case testEquality (sing @a) sType of
+      Just (TExp sType _ e') -> case testEquality (sing @a) sType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
@@ -501,7 +502,7 @@ modelEval e = case e of
   IntEnv _ env     -> do
     model <- ask
     case lookup env $ _menvironment model of
-      Just (TExp sType e') -> case testEquality (sing @a) sType of
+      Just (TExp sType _ e') -> case testEquality (sing @a) sType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           _ -> error "modelEval: Model did not return an Integer literal"

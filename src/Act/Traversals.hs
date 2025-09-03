@@ -115,22 +115,26 @@ mapExpM f = \case
   ByLit p a -> f (ByLit p a)
   ByEnv p a -> f (ByEnv p a)
 
+  List p l -> do
+    l' <- mapM f l
+    f (List p l')
+
   --contracts
 
   Create p n as -> do
-    as' <- mapM (mapTypedArgM f) as
+    as' <- mapM (mapTypedExpM f) as
     f (Create p n as')
 
   --polymorphic
 
-  Eq p s a b -> do
+  Eq p t s a b -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (Eq p s a' b')
-  NEq p s a b -> do
+    f (Eq p t s a' b')
+  NEq p t s a b -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (NEq p s a' b')
+    f (NEq p t s a' b')
 
   ITE p a b c -> do
     a' <- mapExpM f a
@@ -141,18 +145,10 @@ mapExpM f = \case
     i' <- mapTItemM f i
     f (VarRef p t k i')
 
-mapTypedArgM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedArgument t -> m (TypedArgument t)
-mapTypedArgM f (TValueArg te) = do
-  te' <- mapTypedExpM f te
-  pure $ TValueArg te'
-mapTypedArgM f (TArrayArg nl) = do
-  nl' <- mapM (mapTypedExpM f) nl
-  pure $ TArrayArg nl'
-
 mapTypedExpM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedExp t -> m (TypedExp t)
-mapTypedExpM f (TExp s e) = do
+mapTypedExpM f (TExp t s e) = do
   e' <- f e
-  pure $ TExp s e'
+  pure $ TExp t s e'
 
 mapTItemM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TItem k b t -> m (TItem k b t)
 mapTItemM f (Item s v r) = do

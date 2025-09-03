@@ -236,7 +236,7 @@ applyUpdates :: Monad m => ContractMap -> ContractMap -> [StorageUpdate] -> ActT
 applyUpdates readMap writeMap upds = foldM (applyUpdate readMap) writeMap upds
 
 applyUpdate :: Monad m => ContractMap -> ContractMap -> StorageUpdate -> ActT m ContractMap
-applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
+applyUpdate readMap writeMap (Update typ _ (Item _ _ ref) e) = do
   caddr' <- baseAddr readMap ref
   (addr, offset, size) <- refOffset readMap ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
@@ -258,6 +258,7 @@ applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
         let prevValue = readStorage addr contract
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
+    SSArray _ -> error "arrays TODO"
 -- TODO test with out of bounds assignments
   where
     storedValue :: EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> Int -> EVM.Expr EVM.EWord
@@ -305,16 +306,16 @@ createContract _ _ _ _ = error "Internal error: constructor call expected"
 
 -- | Substitutions
 
-makeSubstMap :: Interface -> [TypedArgument] -> M.Map Id TypedArgument
+makeSubstMap :: Interface -> [TypedExp] -> M.Map Id TypedExp
 makeSubstMap (Interface _ decls) args =
   M.fromList $ zipWith (\(Decl _ x) texp -> (x, texp)) decls args
 
-substUpds :: M.Map Id TypedArgument -> [StorageUpdate] -> [StorageUpdate]
+substUpds :: M.Map Id TypedExp -> [StorageUpdate] -> [StorageUpdate]
 substUpds subst upds = fmap (substUpd subst) upds
 
-substUpd :: M.Map Id TypedArgument -> StorageUpdate -> StorageUpdate
-substUpd subst (Update s item expr) = case substItem subst item of
-  ETItem SStorage  i -> Update s i (substExp subst expr)
+substUpd :: M.Map Id TypedExp -> StorageUpdate -> StorageUpdate
+substUpd subst (Update t s item expr) = case substItem subst item of
+  ETItem SStorage  i -> Update t s i (substExp subst expr)
   ETItem SCalldata _ -> error "Internal error: expecting storage item"
 
 -- | Existential packages to abstract away from reference kinds. Needed to
@@ -325,14 +326,14 @@ substUpd subst (Update s item expr) = case substItem subst item of
 data ETItem t = forall k. ETItem (SRefKind k) (TItem t k)
 data ERef = forall k. ERef (SRefKind k) (Ref k)
 
-substItem :: M.Map Id TypedArgument -> TItem a k -> ETItem a
+substItem :: M.Map Id TypedExp -> TItem a k -> ETItem a
 substItem subst (Item st vt sref) = case substRef subst sref of
   ERef k ref -> ETItem k (Item st vt ref)
 
-substRef :: M.Map Id TypedArgument -> Ref k -> ERef
+substRef :: M.Map Id TypedExp -> Ref k -> ERef
 substRef _ var@(SVar _ _ _) = ERef SStorage var
 substRef subst (CVar _ _ x) = case M.lookup x subst of
-    Just (TValueArg (TExp _ (VarRef _ _ k (Item _ _ ref)))) -> ERef k ref
+    Just (TExp _ _ (VarRef _ _ k (Item _ _ ref))) -> ERef k ref
     Just _ -> error "Internal error: cannot access fields of non-pointer var"
     Nothing -> error "Internal error: ill-formed substitution"
 substRef subst (SMapping pn sref ts args) = case substRef subst sref of
@@ -341,20 +342,16 @@ substRef subst (SField pn sref x y) = case substRef subst sref of
   ERef k ref -> ERef k $ SField pn ref x y
 substRef _ (SArray _ _ _ _) = error "TODO"
 
-substIdcs :: M.Map Id TypedArgument -> [TypedExp] -> [TypedExp]
+substIdcs :: M.Map Id TypedExp -> [TypedExp] -> [TypedExp]
 substIdcs subst exps = fmap (substTExp subst) exps
 
-substArgs :: M.Map Id TypedArgument -> [TypedArgument] -> [TypedArgument]
-substArgs subst exps = fmap (substArg subst) exps
+substArgs :: M.Map Id TypedExp -> [TypedExp] -> [TypedExp]
+substArgs subst exps = fmap (substTExp subst) exps
 
-substArg :: M.Map Id TypedArgument -> TypedArgument -> TypedArgument
-substArg subst (TValueArg te) = TValueArg $ substTExp subst te
-substArg subst (TArrayArg nl) = TArrayArg $ substTExp subst <$> nl
+substTExp :: M.Map Id TypedExp -> TypedExp -> TypedExp
+substTExp subst (TExp st s expr) = TExp st s (substExp subst expr)
 
-substTExp :: M.Map Id TypedArgument -> TypedExp -> TypedExp
-substTExp subst (TExp st expr) = TExp st (substExp subst expr)
-
-substExp :: M.Map Id TypedArgument -> Exp a -> Exp a
+substExp :: M.Map Id TypedExp -> Exp a -> Exp a
 substExp subst expr = case expr of
   And pn a b -> And pn (substExp subst a) (substExp subst b)
   Or pn a b -> Or pn (substExp subst a) (substExp subst b)
@@ -387,14 +384,15 @@ substExp subst expr = case expr of
   ByLit _ _ -> expr
   ByEnv _ _ -> expr
 
-  Eq pn st a b -> Eq pn st (substExp subst a) (substExp subst b)
-  NEq pn st a b -> NEq pn st (substExp subst a) (substExp subst b)
+  List pn l -> List pn (substExp subst <$> l)
+
+  Eq pn st sh a b -> Eq pn st sh (substExp subst a) (substExp subst b)
+  NEq pn st sh a b -> NEq pn st sh (substExp subst a) (substExp subst b)
 
   ITE pn a b c -> ITE pn (substExp subst a) (substExp subst b) (substExp subst c)
 
   VarRef _ _ SCalldata (Item st _ (CVar _ _ x)) -> case M.lookup x subst of
-    Just (TValueArg (TExp st' exp')) -> maybe (error "Internal error: type missmatch") (\Refl -> exp') $ testEquality st st'
-    Just (TArrayArg _) -> error "TODO"
+    Just (TExp st' _ exp') -> maybe (error "Internal error: type missmatch") (\Refl -> exp') $ testEquality st st'
     Nothing -> error "Internal error: Ill-defined substitution"
   VarRef pn whn _ item -> case substItem subst item of
     ETItem k' item' ->  VarRef pn whn k' item'
@@ -415,15 +413,16 @@ wordToProp w = EVM.PNeg (EVM.PEq w (EVM.Lit 0))
 typedExpToBuf :: Monad m => ContractMap -> TypedExp -> ActT m (EVM.Expr EVM.Buf)
 typedExpToBuf cmap expr =
   case expr of
-    TExp styp e -> expToBuf cmap styp e
+    TExp styp _ e -> expToBuf cmap styp e
 
 typedExpToWord :: Monad m => ContractMap -> TypedExp  -> ActT m (EVM.Expr EVM.EWord)
 typedExpToWord cmap te = do
     case te of
-        TExp styp e -> case styp of
+        TExp styp _ e -> case styp of
             SInteger -> toExpr cmap e
             SBoolean -> toExpr cmap e
             SByteStr -> error "Bytestring in unexpected position"
+            SSArray _ -> error "TODO arrays"
 
 expToBuf :: Monad m => forall a. ContractMap -> SType a -> Exp a  -> ActT m (EVM.Expr EVM.Buf)
 expToBuf cmap styp e = do
@@ -435,6 +434,7 @@ expToBuf cmap styp e = do
       e' <- toExpr cmap e
       pure $ EVM.WriteWord (EVM.Lit 0) (EVM.IsZero $ EVM.IsZero e') (EVM.ConcreteBuf "")
     SByteStr -> toExpr cmap e
+    SSArray _ -> error "TODO arrays"
 
 -- | Get the slot and the offset of a storage variable in storage
 getPosition :: Layout -> Id -> Id -> (Int, Int, Int)
@@ -516,16 +516,16 @@ toProp cmap = \case
   (GEQ _ e1 e2) -> op2 EVM.PGEq e1 e2
   (Act.GT _ e1 e2) -> op2 EVM.PGT e1 e2
   (LitBool _ b) -> pure $ EVM.PBool b
-  (Eq _ SInteger e1 e2) -> op2 EVM.PEq e1 e2
-  (Eq _ SBoolean e1 e2) -> op2 EVM.PEq e1 e2
-  (Eq _ _ _ _) -> error "unsupported"
-  (NEq _ SInteger e1 e2) -> do
+  (Eq _ SInteger _ e1 e2) -> op2 EVM.PEq e1 e2
+  (Eq _ SBoolean _ e1 e2) -> op2 EVM.PEq e1 e2
+  (Eq _ _ _ _ _) -> error "unsupported"
+  (NEq _ SInteger _ e1 e2) -> do
     e <- op2 EVM.PEq e1 e2
     pure $ EVM.PNeg e
-  (NEq _ SBoolean e1 e2) -> do
+  (NEq _ SBoolean _ e1 e2) -> do
     e <- op2 EVM.PEq e1 e2
     pure $ EVM.PNeg e
-  (NEq _ _ _ _) -> error "unsupported"
+  (NEq _ _ _ _ _) -> error "unsupported"
   (ITE _ _ _ _) -> error "Internal error: expecting flat expression"
   (VarRef _ _ _ (Item SBoolean _ ref)) -> EVM.PEq (EVM.Lit 0) <$> EVM.IsZero <$> refToExp cmap ref
   (InRange _ t e) -> toProp cmap (inRange t e)
@@ -597,17 +597,17 @@ toExpr cmap =  fmap stripMods . go
       -- contracts
       (Create _ _ _) -> error "internal error: Create calls not supported in this context"
       -- polymorphic
-      (Eq _ SInteger e1 e2) -> op2 EVM.Eq e1 e2
-      (Eq _ SBoolean e1 e2) -> op2 EVM.Eq e1 e2
-      (Eq _ _ _ _) -> error "unsupported"
+      (Eq _ SInteger _ e1 e2) -> op2 EVM.Eq e1 e2
+      (Eq _ SBoolean _ e1 e2) -> op2 EVM.Eq e1 e2
+      (Eq _ _ _ _ _) -> error "unsupported"
 
-      (NEq _ SInteger e1 e2) -> do
+      (NEq _ SInteger _ e1 e2) -> do
         e <- op2 EVM.Eq e1 e2
         pure $ EVM.Not e
-      (NEq _ SBoolean e1 e2) -> do
+      (NEq _ SBoolean _ e1 e2) -> do
         e <- op2 EVM.Eq e1 e2
         pure $ EVM.Not e
-      (NEq _ _ _ _) -> error "unsupported"
+      (NEq _ _ _ _ _) -> error "unsupported"
 
       (VarRef _ _ _ (Item SInteger _ ref)) -> refToExp cmap ref
       (VarRef _ _ _ (Item SBoolean _ ref)) -> refToExp cmap ref
@@ -666,9 +666,9 @@ checkOp (LitInt _ i) = LitBool nowhere $ i <= (fromIntegral (maxBound :: Word256
 checkOp (VarRef _ _ _ _)  = LitBool nowhere True
 checkOp e@(Add _ e1 _) = LEQ nowhere e1 e -- check for addition overflow
 checkOp e@(Sub _ e1 _) = LEQ nowhere e e1
-checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere SInteger e1 (LitInt nowhere 0))
-                          (Impl nowhere (NEq nowhere SInteger e1 (LitInt nowhere 0))
-                            (Eq nowhere SInteger e2 (Div nowhere (Mul nowhere e1 e2) e1)))
+checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere SInteger Atomic e1 (LitInt nowhere 0))
+                          (Impl nowhere (NEq nowhere SInteger Atomic e1 (LitInt nowhere 0))
+                            (Eq nowhere SInteger Atomic e2 (Div nowhere (Mul nowhere e1 e2) e1)))
 checkOp (Div _ _ _) = LitBool nowhere True
 checkOp (Mod _ _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"

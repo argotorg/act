@@ -63,7 +63,7 @@ data Storage
   = Update Entry Expr
   deriving (Eq, Show)
 
-data Assign = AssignVal StorageVar Expr | AssignMapping StorageVar [Mapping] | AssignArray StorageVar ExprList
+data Assign = AssignVal StorageVar Expr | AssignMapping StorageVar [Mapping]
   deriving (Eq, Show)
 
 data StorageVar = StorageVar Pn SlotType Id
@@ -102,7 +102,8 @@ data Expr
   | EUTEntry Entry
   | EPreEntry Entry
   | EPostEntry Entry
-  | ECreate Pn Id [Argument]
+  | ECreate Pn Id [Expr]
+  | EList Pn [Expr]
   | ListConst Expr
   | ECat Pn Expr Expr
   | ESlice Pn Expr Expr Expr
@@ -116,9 +117,6 @@ data Expr
   | IntLit Pn Integer
   | BoolLit Pn Bool
   | EInRange Pn AbiType Expr
-  deriving (Eq, Show)
-
-data Argument = ValueArg Expr | ArrayArg ExprList
   deriving (Eq, Show)
 
 data ValueType

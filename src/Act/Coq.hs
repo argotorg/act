@@ -193,12 +193,12 @@ contractStore contract store = case M.lookup contract store of
 
 -- | Check is an update update a specific storage reference
 eqRef :: Ref Storage -> StorageUpdate -> Bool
-eqRef r (Update _ (Item _ _ r') _) = r == r'
+eqRef r (Update _ _ (Item _ _ r') _) = r == r'
 
 -- | Check if an update updates a location that has a given storage
 -- reference as a base
 baseRef :: Ref Storage -> StorageUpdate -> Bool
-baseRef baseref (Update _ (Item _ _ r) _) = hasBase r
+baseRef baseref (Update _ _ (Item _ _ r) _) = hasBase r
   where
     hasBase (SVar _ _ _) = False
     hasBase (SArray _ r' _ _) = r' == baseref || hasBase r'
@@ -212,7 +212,7 @@ updateVar store updates handler focus t@(StorageValue (ContractType cid)) =
     -- Only some fields are updated
     ([], updates'@(_:_)) -> parens $ T.unwords $ (T.pack cid <> "." <> stateConstructor) : fmap (\(n, (t', _)) -> updateVar store  updates' handler (focus' n) t') (M.toList store')
     -- No fields are updated, whole contract may be updated with some call to the constructor
-    (updates', []) -> foldl (\ _ (Update _ _ e) -> coqexp e) (handler focus t) updates'
+    (updates', []) -> foldl (\ _ (Update _ _ _ e) -> coqexp e) (handler focus t) updates'
     -- The contract is updated with constructor call and field accessing. Unsupported.
     (_:_, _:_) -> error "Cannot handle multiple updates to contract variable"
   where
@@ -225,8 +225,8 @@ updateVar store updates handler focus t@(StorageValue (ContractType cid)) =
 updateVar _ updates handler focus t@(StorageValue (PrimitiveType _)) =
   foldl updatedVal (handler focus t) (filter (eqRef focus) updates)
     where
-      updatedVal _ (Update SByteStr _ _) = error "bytestrings not supported"
-      updatedVal _ (Update _ _ e) = coqexp e
+      updatedVal _ (Update SByteStr _ _ _) = error "bytestrings not supported"
+      updatedVal _ (Update _ _ _ e) = coqexp e
 
 updateVar _ updates handler focus t@(StorageMapping xs _) = parens $
   lambda n <> foldl updatedMap prestate (filter (baseRef focus) updates)
@@ -234,14 +234,14 @@ updateVar _ updates handler focus t@(StorageMapping xs _) = parens $
       prestate = parens $ handler focus t <> " " <> lambdaArgs n
       n = length xs
 
-      updatedMap _ (Update SByteStr _ _) = error "bytestrings not supported"
-      updatedMap prestate' (Update _ item e) =
+      updatedMap _ (Update SByteStr _ _ _) = error "bytestrings not supported"
+      updatedMap prestate' (Update _ _ item e) =
         let ixs = ixsFromItem item in -- This will not work if the domain is a contract type
         "if " <> boolScope (T.intercalate " && " (map cond (zip ixs ([0..] :: [Int]))))
         <> " then " <> coqexp e
         <> " else " <> prestate'
 
-      cond (TExp argType arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
+      cond (TExp argType _ arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
 
       lambda i = if i >= 0 then "fun " <> lambdaArgs i <> " => " else ""
 
@@ -284,9 +284,9 @@ abiType a = error $ show a
 
 -- | coq syntax for a return type
 returnType :: TypedExp -> T.Text
-returnType (TExp SInteger _) = "Z"
-returnType (TExp SBoolean _) = "bool"
-returnType (TExp SByteStr _) = error "bytestrings not supported"
+returnType (TExp SInteger _ _) = "Z"
+returnType (TExp SBoolean _ _) = "bool"
+returnType (TExp SByteStr _ _) = error "bytestrings not supported"
 
 -- | default value for a given type
 -- this is used in cases where a value is not set in the constructor
@@ -317,8 +317,8 @@ coqexp (LitBool _ False) = "false"
 coqexp (And _ e1 e2)  = parens $ "andb "   <> coqexp e1 <> " " <> coqexp e2
 coqexp (Or _ e1 e2)   = parens $ "orb"     <> coqexp e1 <> " " <> coqexp e2
 coqexp (Impl _ e1 e2) = parens $ "implb"   <> coqexp e1 <> " " <> coqexp e2
-coqexp (Eq _ _ e1 e2)   = parens $ coqexp e1  <> " =? " <> coqexp e2
-coqexp (NEq _ _ e1 e2)  = parens $ "negb " <> parens (coqexp e1  <> " =? " <> coqexp e2)
+coqexp (Eq _ _ _ e1 e2)   = parens $ coqexp e1  <> " =? " <> coqexp e2
+coqexp (NEq _ _ _ e1 e2)  = parens $ "negb " <> parens (coqexp e1  <> " =? " <> coqexp e2)
 coqexp (Neg _ e)      = parens $ "negb " <> coqexp e
 coqexp (LT _ e1 e2)   = parens $ coqexp e1 <> " <? "  <> coqexp e2
 coqexp (LEQ _ e1 e2)  = parens $ coqexp e1 <> " <=? " <> coqexp e2
@@ -361,6 +361,7 @@ coqexp Slice {} = error "bytestrings not supported"
 coqexp ByStr {} = error "bytestrings not supported"
 coqexp ByLit {} = error "bytestrings not supported"
 coqexp ByEnv {} = error "bytestrings not supported"
+coqexp List {} = error "arrays not supported"
 
 -- | coq syntax for a proposition
 coqprop :: Exp a -> T.Text
@@ -370,8 +371,8 @@ coqprop (And _ e1 e2)  = parens $ coqprop e1 <> " /\\ " <> coqprop e2
 coqprop (Or _ e1 e2)   = parens $ coqprop e1 <> " \\/ " <> coqprop e2
 coqprop (Impl _ e1 e2) = parens $ coqprop e1 <> " -> " <> coqprop e2
 coqprop (Neg _ e)      = parens $ "not " <> coqprop e
-coqprop (Eq _ _ e1 e2)   = parens $ coqexp e1 <> " = "  <> coqexp e2
-coqprop (NEq _ _ e1 e2)  = parens $ coqexp e1 <> " <> " <> coqexp e2
+coqprop (Eq _ _ _ e1 e2)   = parens $ coqexp e1 <> " = "  <> coqexp e2
+coqprop (NEq _ _ _ e1 e2)  = parens $ coqexp e1 <> " <> " <> coqexp e2
 coqprop (LT _ e1 e2)   = parens $ coqexp e1 <> " < "  <> coqexp e2
 coqprop (LEQ _ e1 e2)  = parens $ coqexp e1 <> " <= " <> coqexp e2
 coqprop (GT _ e1 e2)   = parens $ coqexp e1 <> " > "  <> coqexp e2
@@ -381,12 +382,8 @@ coqprop (InRange _ t e) = coqprop (bound t e)
 coqprop e = error "ill formed proposition: " <> T.pack (show e)
 
 -- | coq syntax for a typed expression
-typedarg :: TypedArgument -> T.Text
-typedarg (TValueArg e) = typedexp e
-typedarg (TArrayArg _) = error "TODO"
-
 typedexp :: TypedExp -> T.Text
-typedexp (TExp _ e) = coqexp e
+typedexp (TExp _ _ e) = coqexp e
 
 entry :: TItem k a -> T.Text
 entry (Item SByteStr _ _) = error "bytestrings not supported"
@@ -395,17 +392,13 @@ entry (Item _ _ r) = ref r
 ref :: Ref k -> T.Text
 ref (SVar _ _ name) = parens $ T.pack name <> " " <> stateVar
 ref (CVar _ _ name) = T.pack name
-ref (SArray _ r _ ixs) = parens $ ref r <> " " <> coqidcs (fst <$> ixs)
-ref (SMapping _ r _ ixs) = parens $ ref r <> " " <> coqidcs ixs
+ref (SArray _ r _ ixs) = parens $ ref r <> " " <> coqargs (fst <$> ixs)
+ref (SMapping _ r _ ixs) = parens $ ref r <> " " <> coqargs ixs
 ref (SField _ r cid name) = parens $ T.pack cid <> "." <> T.pack name <> " " <> ref r
 
 -- | coq syntax for a list of indices
-coqidcs :: [TypedExp] -> T.Text
-coqidcs es = T.unwords (map typedexp es)
-
--- | coq syntax for a list of arguments
-coqargs :: [TypedArgument] -> T.Text
-coqargs as = T.unwords (map typedarg as)
+coqargs :: [TypedExp] -> T.Text
+coqargs es = T.unwords (map typedexp es)
 
 fresh :: Id -> Fresh T.Text
 fresh name = state $ \s -> (T.pack (name <> show s), s + 1)
