@@ -157,6 +157,7 @@ instance TestEquality SRefKind where
   testEquality SStorage SStorage = Just Refl
   testEquality SCalldata SCalldata = Just Refl
   testEquality _ _ = Nothing
+  
 -- | Helper pattern to retrieve the 'SingI' instances of the type represented by
 -- an 'SKind'.
 pattern SRefKind :: () => (SingI a) => SRefKind a
@@ -197,7 +198,7 @@ instance Eq (Ref k t) where
   SField _ r c x      == SField _ r' c' x'      = r == r' && c == c' && x == x'
   _                   == _                      = False
 
--- | Item is a reference together with its Act type.The type is
+-- | Item is a reference together with its Act type. The type is
 -- parametrized on a timing `t`, a type `a`, and the reference kind
 -- `k`. `t` can be either `Timed` or `Untimed` and indicates whether
 -- any indices that reference items in storage explicitly refer to the
@@ -570,8 +571,8 @@ instance ToJSON (Exp a t) where
                                   , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
                                   , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) ]
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
-                             , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
-                             , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
+                              , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
+                              , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
 
   toJSON v = error $ "todo: json ast for: " <> show v
 
