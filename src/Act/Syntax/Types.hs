@@ -75,6 +75,9 @@ instance SingI 'ABoolean where sing = SBoolean
 instance SingI 'AByteStr where sing = SByteStr
 instance SingI a => SingI ('AArray a) where sing = SSArray (sing @a)
 
+-- | Extracts the base type from an array ActType and returns the type itself
+-- for non-array types. Used when expanding an array expression into
+-- expressions of its elements.
 type family Base (a :: ActType) :: ActType where
   Base (AArray a) = Base a
   Base AInteger = AInteger
@@ -87,14 +90,21 @@ flattenSType SInteger = SInteger
 flattenSType SBoolean = SBoolean
 flattenSType SByteStr = SByteStr
 
+-- | Determines whether an ActType is atomic or can hold a shape.
+-- Used with the 'Shape' datatype to prohibit discrepancies between
+-- 'SType' parameters and the possible shape value.
 type family ActShape (a :: ActType) :: AShape where
   ActShape 'AInteger = 'AAtomic
   ActShape 'ABoolean = 'AAtomic
   ActShape 'AByteStr = 'AAtomic
   ActShape ('AArray a) = 'AShaped
 
+-- | Determines atomicity or not for 'Shape' datatype,
+-- used as promoted constructors.
 data AShape = AAtomic | AShaped
 
+-- | Shape of an array expression. Either atomic or a list
+-- of the array lengths at each level (outer to inner).
 data Shape (a :: AShape) where
   Atomic :: Shape 'AAtomic
   Shaped :: NonEmpty Int -> Shape 'AShaped
@@ -130,7 +140,7 @@ type family TypeOf a where
   TypeOf ('AArray a) = [TypeOf a]
 
 -- Given a possibly nested ABI Array Type, returns the
--- elements' ABI type, as well as the size at each level
+-- elements' ABI type, as well as the size at each level.
 flattenArrayAbiType :: AbiType -> Maybe (AbiType, NonEmpty Int)
 flattenArrayAbiType at = case flattenAbiType at of
   (at', ms) -> (,) at' <$> ms

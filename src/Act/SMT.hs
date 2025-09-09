@@ -730,7 +730,11 @@ expToSMT2 typ expr = case expr of
 
   -- contracts
   Create _ _ _ -> pure "0" -- TODO just a dummy address for now
+
   -- polymorphic
+  --  Expands both arrays to their elements and compares elementwise,
+  --  as SMT's default array equality requires equality for all possible Int values,
+  --  not only indices within defined bounds. Same for Neq.
   Eq p s@(SSArray _) a b -> expToSMT2 SBoolean expanded
     where
       a' = expandArrayExpr s a

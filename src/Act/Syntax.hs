@@ -448,6 +448,11 @@ arrayIdcs typ = map idx [0..(len - 1)]
     (len NonEmpty.:| typeAcc) = NonEmpty.scanr (*) 1 typ
     idx e = zipWith (\ x1 x2 -> (e `div` x2) `mod` x1) (NonEmpty.toList typ) typeAcc
 
+-- | Expand an array item to a list of items of its elements,
+-- or an atomic item to a singleton list of itself.
+-- The returned elements follow increasing numerical order
+-- when interpreting the indices as digits of decreasing
+-- significance from outermost to innermost.
 expandItem :: TItem a k t -> [TItem (Base a) k t]
 expandItem (Item typ (PrimitiveType at) ref) = case flattenAbiType at of
   (ba, Just shape) -> case ref of
@@ -463,6 +468,8 @@ expandItem (Item typ (ContractType at) ref) = [Item btyp (ContractType at) ref]
   where
     btyp = flattenSType typ
 
+-- | Expand an array expression to a list of expressions of its elements,
+-- The order of the returned elements is the same as 'expandItem's
 expandArrayExpr :: SType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)) t]
 expandArrayExpr (SSArray SInteger) (Array _ l) = l
 expandArrayExpr (SSArray SBoolean) (Array _ l) = l
