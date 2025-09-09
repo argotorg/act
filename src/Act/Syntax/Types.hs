@@ -75,7 +75,7 @@ instance SingI 'ABoolean where sing = SBoolean
 instance SingI 'AByteStr where sing = SByteStr
 instance SingI a => SingI ('AArray a) where sing = SSArray (sing @a)
 
--- | Extracts the base type from an array ActType and returns the type itself
+-- | Extracts the base type from an array ActType or returns the type itself
 -- for non-array types. Used when expanding an array expression into
 -- expressions of its elements.
 type family Base (a :: ActType) :: ActType where

@@ -38,6 +38,9 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
       pre' = pre
              <> mkCallDataBounds decls
              <> mkEthEnvBounds (ethEnvFromConstructor ctor)
+              -- The following is sound as values of locations outside local storage
+              -- already exist as the constructor starts executing,
+              -- and the constructor cannot modify non-local locations.
              <> mkLocationBounds nonlocalLocs
       invs' = addBoundsInvariant ctor <$> invs
       post' = post <> mkStorageBounds stateUpdates Post

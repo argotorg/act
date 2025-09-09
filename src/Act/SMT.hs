@@ -181,25 +181,33 @@ data SolverInstance = SolverInstance
 
 --- ** Analysis Passes ** ---
 
-
+-- | Produces an SMT expression in a format that services most SMT passes.
 mkDefaultSMT :: Bool -> [Location] -> [Location] -> [EthEnv] -> Id -> [Decl] -> [Exp ABoolean] -> [Exp ABoolean] -> [StorageUpdate] -> Exp ABoolean -> SMTExp
 mkDefaultSMT isCtor activeSLocs activeCLocs envs ifaceName decls preconds extraconds stateUpdates = mksmt
   where
-    -- declare vars
+    -- If called for a constructor, declare only the post-state for local storage,
+    -- and both states for other locations.
+    -- Otherwise, when called for a behaviour, declare declare both states for all locations.
     storage = if isCtor
-      then let (newSLocs, otherSLocs) = partition isLocalLoc (activeSLocs) in nub $
-        concatMap (declareInitialLocation ifaceName) newSLocs <> concatMap (declareLocation ifaceName) otherSLocs
+      then let (localSLocs, nonlocalSLocs) = partition isLocalLoc (activeSLocs) in nub $
+        concatMap (declareInitialLocation ifaceName) localSLocs <> concatMap (declareLocation ifaceName) nonlocalSLocs
       else nub $ concatMap (declareLocation ifaceName) activeSLocs
 
+    -- Declare calldata arguments and locations, and environmental variables
     ifaceArgs = declareArg ifaceName <$> decls
     activeArgs = concatMap (declareLocation ifaceName) activeCLocs
     args = nub ifaceArgs <> activeArgs
+
     env = declareEthEnv <$> envs
+
+    -- Collect all locations not tautologically equal to the updated locations,
+    -- to encode the conditions under which they stay constant.
+    -- For constructors this should involve only locations not from local storage.
     updatedLocs = locFromUpdate <$> stateUpdates
     maybeConstSLocs = let unUpdated = (nub activeSLocs) \\ updatedLocs in
       if isCtor then filter (not . isLocalLoc) unUpdated else unUpdated
 
-    -- constraints
+    -- Constraints
     pres = mkAssert ifaceName <$> preconds <> extraconds
     updates = encodeUpdate ifaceName <$> stateUpdates
     constants = encodeConstant ifaceName updatedLocs maybeConstSLocs
@@ -732,9 +740,9 @@ expToSMT2 typ expr = case expr of
   Create _ _ _ -> pure "0" -- TODO just a dummy address for now
 
   -- polymorphic
-  --  Expands both arrays to their elements and compares elementwise,
+  --  For array comparisons, expands both arrays to their elements and compares elementwise,
   --  as SMT's default array equality requires equality for all possible Int values,
-  --  not only indices within defined bounds. Same for Neq.
+  --  not only for indices within defined bounds. Same for Neq.
   Eq p s@(SSArray _) a b -> expToSMT2 SBoolean expanded
     where
       a' = expandArrayExpr s a
