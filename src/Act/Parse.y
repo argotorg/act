@@ -297,7 +297,7 @@ Expr : '(' Expr ')'                                   { $2 }
   | 'pre'  '(' Entry ')'                              { EPreEntry $3 }
   | 'post' '(' Entry ')'                              { EPostEntry $3 }
   | 'create' id '(' seplist(Expr, ',') ')'            { ECreate (posn $2) (name $2) $4 }
-  | '[' neseplist(Expr, ',') ']'                      { EList  (posn $1) $ NonEmpty.toList $2 }
+  | '[' neseplist(Expr, ',') ']'                      { EArray  (posn $1) $ NonEmpty.toList $2 }
   | Expr '++' Expr                                    { ECat   (posn $2) $1 $3 }
 --  | id '[' Expr '..' Expr ']'                       { ESlice (posn $2) $1 $3 $5 }
   | 'CALLER'                                          { EnvExp (posn $1) Caller }

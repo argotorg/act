@@ -47,7 +47,7 @@ import Act.Syntax.Timing
 import EVM.ABI (Sig(..))
 import qualified EVM hiding (bytecode)
 import qualified EVM.Types as EVM hiding (FrameState(..))
-import EVM.Expr hiding (op2, inRange, div, xor, readStorage)
+import EVM.Expr hiding (op2, inRange, div, xor, readStorage, Array)
 import EVM.SymExec hiding (isPartial, reachable)
 import EVM.SMT (assertProps)
 import EVM.Solvers
@@ -236,7 +236,7 @@ applyUpdates :: Monad m => ContractMap -> ContractMap -> [StorageUpdate] -> ActT
 applyUpdates readMap writeMap upds = foldM (applyUpdate readMap) writeMap upds
 
 applyUpdate :: Monad m => ContractMap -> ContractMap -> StorageUpdate -> ActT m ContractMap
-applyUpdate readMap writeMap (Update typ _ (Item _ _ ref) e) = do
+applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
   caddr' <- baseAddr readMap ref
   (addr, offset, size) <- refOffset readMap ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
@@ -314,8 +314,8 @@ substUpds :: M.Map Id TypedExp -> [StorageUpdate] -> [StorageUpdate]
 substUpds subst upds = fmap (substUpd subst) upds
 
 substUpd :: M.Map Id TypedExp -> StorageUpdate -> StorageUpdate
-substUpd subst (Update t s item expr) = case substItem subst item of
-  ETItem SStorage  i -> Update t s i (substExp subst expr)
+substUpd subst (Update s item expr) = case substItem subst item of
+  ETItem SStorage  i -> Update s i (substExp subst expr)
   ETItem SCalldata _ -> error "Internal error: expecting storage item"
 
 -- | Existential packages to abstract away from reference kinds. Needed to
@@ -337,13 +337,10 @@ substRef subst (CVar _ _ x) = case M.lookup x subst of
     Just _ -> error "Internal error: cannot access fields of non-pointer var"
     Nothing -> error "Internal error: ill-formed substitution"
 substRef subst (SMapping pn sref ts args) = case substRef subst sref of
-  ERef k ref -> ERef k $ SMapping pn ref ts (substIdcs subst args)
+  ERef k ref -> ERef k $ SMapping pn ref ts (substArgs subst args)
 substRef subst (SField pn sref x y) = case substRef subst sref of
   ERef k ref -> ERef k $ SField pn ref x y
 substRef _ (SArray _ _ _ _) = error "TODO"
-
-substIdcs :: M.Map Id TypedExp -> [TypedExp] -> [TypedExp]
-substIdcs subst exps = fmap (substTExp subst) exps
 
 substArgs :: M.Map Id TypedExp -> [TypedExp] -> [TypedExp]
 substArgs subst exps = fmap (substTExp subst) exps
@@ -384,15 +381,15 @@ substExp subst expr = case expr of
   ByLit _ _ -> expr
   ByEnv _ _ -> expr
 
-  List pn l -> List pn (substExp subst <$> l)
+  Array pn l -> Array pn (substExp subst <$> l)
 
-  Eq pn st sh a b -> Eq pn st sh (substExp subst a) (substExp subst b)
-  NEq pn st sh a b -> NEq pn st sh (substExp subst a) (substExp subst b)
+  Eq pn st a b -> Eq pn st (substExp subst a) (substExp subst b)
+  NEq pn st a b -> NEq pn st (substExp subst a) (substExp subst b)
 
   ITE pn a b c -> ITE pn (substExp subst a) (substExp subst b) (substExp subst c)
 
   VarRef _ _ SCalldata (Item st _ (CVar _ _ x)) -> case M.lookup x subst of
-    Just (TExp st' _ exp') -> maybe (error "Internal error: type missmatch") (\Refl -> exp') $ testEquality st st'
+    Just (TExp st' _ exp') -> maybe (error "Internal error: type mismatch") (\Refl -> exp') $ testEquality st st'
     Nothing -> error "Internal error: Ill-defined substitution"
   VarRef pn whn _ item -> case substItem subst item of
     ETItem k' item' ->  VarRef pn whn k' item'
@@ -516,16 +513,16 @@ toProp cmap = \case
   (GEQ _ e1 e2) -> op2 EVM.PGEq e1 e2
   (Act.GT _ e1 e2) -> op2 EVM.PGT e1 e2
   (LitBool _ b) -> pure $ EVM.PBool b
-  (Eq _ SInteger _ e1 e2) -> op2 EVM.PEq e1 e2
-  (Eq _ SBoolean _ e1 e2) -> op2 EVM.PEq e1 e2
-  (Eq _ _ _ _ _) -> error "unsupported"
-  (NEq _ SInteger _ e1 e2) -> do
+  (Eq _ SInteger e1 e2) -> op2 EVM.PEq e1 e2
+  (Eq _ SBoolean e1 e2) -> op2 EVM.PEq e1 e2
+  (Eq _ _ _ _) -> error "unsupported"
+  (NEq _ SInteger e1 e2) -> do
     e <- op2 EVM.PEq e1 e2
     pure $ EVM.PNeg e
-  (NEq _ SBoolean _ e1 e2) -> do
+  (NEq _ SBoolean e1 e2) -> do
     e <- op2 EVM.PEq e1 e2
     pure $ EVM.PNeg e
-  (NEq _ _ _ _ _) -> error "unsupported"
+  (NEq _ _ _ _) -> error "unsupported"
   (ITE _ _ _ _) -> error "Internal error: expecting flat expression"
   (VarRef _ _ _ (Item SBoolean _ ref)) -> EVM.PEq (EVM.Lit 0) <$> EVM.IsZero <$> refToExp cmap ref
   (InRange _ t e) -> toProp cmap (inRange t e)
@@ -597,17 +594,17 @@ toExpr cmap =  fmap stripMods . go
       -- contracts
       (Create _ _ _) -> error "internal error: Create calls not supported in this context"
       -- polymorphic
-      (Eq _ SInteger _ e1 e2) -> op2 EVM.Eq e1 e2
-      (Eq _ SBoolean _ e1 e2) -> op2 EVM.Eq e1 e2
-      (Eq _ _ _ _ _) -> error "unsupported"
+      (Eq _ SInteger e1 e2) -> op2 EVM.Eq e1 e2
+      (Eq _ SBoolean e1 e2) -> op2 EVM.Eq e1 e2
+      (Eq _ _ _ _) -> error "unsupported"
 
-      (NEq _ SInteger _ e1 e2) -> do
+      (NEq _ SInteger e1 e2) -> do
         e <- op2 EVM.Eq e1 e2
         pure $ EVM.Not e
-      (NEq _ SBoolean _ e1 e2) -> do
+      (NEq _ SBoolean e1 e2) -> do
         e <- op2 EVM.Eq e1 e2
         pure $ EVM.Not e
-      (NEq _ _ _ _ _) -> error "unsupported"
+      (NEq _ _ _ _) -> error "unsupported"
 
       (VarRef _ _ _ (Item SInteger _ ref)) -> refToExp cmap ref
       (VarRef _ _ _ (Item SBoolean _ ref)) -> refToExp cmap ref
@@ -666,9 +663,9 @@ checkOp (LitInt _ i) = LitBool nowhere $ i <= (fromIntegral (maxBound :: Word256
 checkOp (VarRef _ _ _ _)  = LitBool nowhere True
 checkOp e@(Add _ e1 _) = LEQ nowhere e1 e -- check for addition overflow
 checkOp e@(Sub _ e1 _) = LEQ nowhere e e1
-checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere SInteger Atomic e1 (LitInt nowhere 0))
-                          (Impl nowhere (NEq nowhere SInteger Atomic e1 (LitInt nowhere 0))
-                            (Eq nowhere SInteger Atomic e2 (Div nowhere (Mul nowhere e1 e2) e1)))
+checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere SInteger e1 (LitInt nowhere 0))
+                          (Impl nowhere (NEq nowhere SInteger e1 (LitInt nowhere 0))
+                            (Eq nowhere SInteger e2 (Div nowhere (Mul nowhere e1 e2) e1)))
 checkOp (Div _ _ _) = LitBool nowhere True
 checkOp (Mod _ _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"

@@ -25,3 +25,7 @@ case x[5][4][3] < 0:
     x[2][3][5] => 4
 
 returns post(x[pre(a[2])][0][0])
+
+case x[5][4][3] >= 0:
+
+returns 1

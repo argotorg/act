@@ -42,7 +42,6 @@ import Act.Error
 
 import Data.Type.Equality (TestEquality(..))
 import Data.Singletons
-import Debug.Trace
 
 
 type Err = Error String
@@ -321,7 +320,7 @@ checkAssign :: Env -> U.Assign -> Err [StorageUpdate]
 checkAssign env@Env{contract} (U.AssignVal (U.StorageVar pn (StorageValue vt@(FromVType typ)) name) expr)
   = sequenceA [checkExpr envNoStorage typ (shapeFromVT typ vt) expr `bindValidation` \te ->
                findContractType env te `bindValidation` \ctyp ->
-               _Update (shapeFromVT typ vt) (_Item vt (SVar pn contract name)) te <$ validContractType pn vt ctyp]
+               _Update (_Item vt (SVar pn contract name)) te <$ validContractType pn vt ctyp]
   where
     -- type checking environment prior to storage creation of this contract
     envNoStorage = env { store = mempty }
@@ -338,15 +337,11 @@ checkAssign _ (U.AssignVal (U.StorageVar pn (StorageMapping _ _) _) _)
 checkAssign _ (U.AssignMapping (U.StorageVar pn (StorageValue _) _) _)
   = throw (pn, "Cannot assign initializing mapping to a non-mapping slot")
 
---checkAssign _ (U.AssignArray (U.StorageVar pn _  _) _)
---  = throw (pn, "Cannot assign an array literal to a non-array type")
---
-
 -- ensures key and value types match when assigning a defn to a mapping
 -- TODO: handle nested mappings
 checkDefn :: Pn -> Env -> ValueType -> ValueType -> Id -> U.Mapping -> Err StorageUpdate
 checkDefn pn env@Env{contract} keyType vt@(FromVType valType) name (U.Mapping k val) =
-  _Update (shapeFromVT valType vt)
+  _Update
   <$> (_Item vt . SMapping nowhere (SVar pn contract name) vt <$> checkIxs env (getPosn k) [k] [keyType])
   <*> checkExpr env valType (shapeFromVT valType vt) val
 
@@ -373,9 +368,9 @@ checkEntry Env{contract,store,calldata,pointers} kind (U.EVar p name) = case (ki
 checkEntry env kind (U.EIndexed p e args) =
   checkEntry env kind e `bindValidation` \(styp, _, ref) -> case styp of
     StorageValue (PrimitiveType typ) ->
-        flattenArrayAbiTypeErr' typ `bindValidation` \(restyp,sizes) ->
+        flattenArrayAbiTypeErr' typ `bindValidation` \(_,sizes) ->
         checkArrayIxs env p args (toList sizes) `bindValidation` \ixs ->
-        pure $ (StorageValue (PrimitiveType (derefAbiType (length ixs) typ)), Nothing,) . SArray p ref (PrimitiveType restyp) $ ixs
+        pure (StorageValue (PrimitiveType (derefAbiType (length ixs) typ)), Nothing, SArray p ref (PrimitiveType (derefAbiType (length ixs) typ)) ixs)
         where
           flattenArrayAbiTypeErr' = flattenArrayAbiTypeErr p "Variable of value type cannot be indexed into"
           derefAbiType :: Int -> AbiType -> AbiType
@@ -408,7 +403,7 @@ checkStorageExpr env entry expr =
   validateEntry env SStorage entry `bindValidation` \(vt@(FromVType typ), ref) ->
   checkExpr env typ (shapeFromVT typ vt) expr `bindValidation` \te ->
   findContractType env te `bindValidation` \ctyp ->
-  _Update (shapeFromVT typ vt) (_Item vt ref) te <$ validContractType (getPosn expr) vt ctyp
+  _Update (_Item vt ref) te <$ validContractType (getPosn expr) vt ctyp
 
 
 validContractType :: Pn -> ValueType -> Maybe Id -> Err ()
@@ -446,18 +441,18 @@ genInRange _ (ITE _ _ _ _) = error "Internal error: invalid range expression"
 checkExprVType :: forall t. Typeable t => Env -> U.Expr -> ValueType -> Err (TypedExp t)
 checkExprVType env e vt@(FromVType typ) = TExp typ (shapeFromVT typ vt) <$> checkExpr env typ (shapeFromVT typ vt) e
 
-showShapedSType :: SType a -> Shape (TypeShape a) -> String
-showShapedSType (SSArray a) (Shaped l) = show (fst $ flattenSType a) <> concatMap (show . singleton) (reverse $ toList l)
+showShapedSType :: SType a -> Shape (ActShape a) -> String
+showShapedSType (SSArray a) (Shaped l) = show (flattenSType a) <> concatMap (show . singleton) (reverse $ toList l)
 showShapedSType a Atomic = show a
 
-typeMismatchErr :: forall a b res. Pn -> SType a -> Shape (TypeShape a) -> SType b -> Shape (TypeShape b) -> Err res
+typeMismatchErr :: forall a b res. Pn -> SType a -> Shape (ActShape a) -> SType b -> Shape (ActShape b) -> Err res
 typeMismatchErr p t1 s1 t2 s2 = (throw (p, "Type " <> showShapedSType t1 s1 <> " should match type " <> showShapedSType t2 s2))
 
-arrayTypeMismatchErr :: forall a b res. Pn -> SType a -> Shape (TypeShape a) -> SType b -> Shape (TypeShape b) -> Err res
+arrayTypeMismatchErr :: forall a b res. Pn -> SType a -> Shape (ActShape a) -> SType b -> Shape (ActShape b) -> Err res
 arrayTypeMismatchErr p t1 s1 t2 s2 = (throw (p, "Inconsistent array type: Type " <> showShapedSType t1 s1 <> " should match type " <> showShapedSType t2 s2))
 
 -- | Check if the given expression can be typed with the given type
-checkExpr :: forall t a. Typeable t => Env -> SType a -> Shape (TypeShape a) -> U.Expr -> Err (Exp a t)
+checkExpr :: forall t a. Typeable t => Env -> SType a -> Shape (ActShape a) -> U.Expr -> Err (Exp a t)
 checkExpr env t1 s1 e =
     -- No idea why type annotation is required here
     (inferExpr env e :: Err (TypedExp t)) `bindValidation` (\(TExp t2 s2 te) ->
@@ -476,8 +471,8 @@ inferExpr env@Env{calldata, constructors} e = case e of
   U.ELEQ    p v1 v2 -> wrapOp2 (LEQ  p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
   U.EGEQ    p v1 v2 -> wrapOp2 (GEQ  p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
   U.EGT     p v1 v2 -> wrapOp2 (GT   p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
-  U.EEq     p v1 v2 -> TExp SBoolean Atomic <$> polycheck p Eq v1 v2
-  U.ENeq    p v1 v2 -> TExp SBoolean Atomic <$> polycheck p NEq v1 v2
+  U.EEq     p v1 v2 -> TExp SBoolean Atomic <$> polycheck p (\pn t _ te1 te2 -> (Eq  pn t te1 te2)) v1 v2
+  U.ENeq    p v1 v2 -> TExp SBoolean Atomic <$> polycheck p (\pn t _ te1 te2 -> (NEq pn t te1 te2)) v1 v2
   U.BoolLit p v1    -> pure $ TExp SBoolean Atomic (LitBool p v1)
   U.EInRange _ abityp v -> TExp SBoolean Atomic . andExps <$> genInRange abityp <$> checkExpr env SInteger Atomic v -- Arithemetic expressions
   U.EAdd   p v1 v2 -> wrapOp2 (Add p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
@@ -488,33 +483,33 @@ inferExpr env@Env{calldata, constructors} e = case e of
   U.EExp   p v1 v2 -> wrapOp2 (Exp p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
   U.IntLit p v1    -> pure $ TExp SInteger Atomic (LitInt p v1)
 
-  U.EList p l ->  typedList `bindValidation` checkAllTypes
+  U.EArray p l -> typedArray `bindValidation` checkAllTypes
     where
-      typedList :: Err [(Pn, TypedExp t)]
-      typedList = traverse (\e' -> (getPosn e',) <$> inferExpr env e') l
+      typedArray :: Err [(Pn, TypedExp t)]
+      typedArray = traverse (\e' -> (getPosn e',) <$> inferExpr env e') l
 
       checkAllTypes :: [(Pn, TypedExp t)] -> Err (TypedExp t)
       checkAllTypes tl = case tl of
-        (_, TExp styp1 shape1 _ ):_ -> TExp (SSArray styp1) newShape <$> List p <$> traverse (uncurry (cmpType styp1 shape1)) tl 
+        (_, TExp styp1 shape1 _ ):_ -> TExp (SSArray styp1) newShape <$> Array p <$> traverse (uncurry (cmpType styp1 shape1)) tl
           where
             newShape = case shape1 of
               Atomic -> Shaped $ NonEmpty.singleton $ length l
               Shaped l' -> Shaped $ (length l) <| l'
 
-            cmpType :: SType a -> Shape (TypeShape a) -> Pn -> TypedExp t -> Err (Exp a t)
-            cmpType styp shape pn (TExp styp' shape' e') = 
+            cmpType :: SType a -> Shape (ActShape a) -> Pn -> TypedExp t -> Err (Exp a t)
+            cmpType styp shape pn (TExp styp' shape' e') =
               maybe (arrayTypeMismatchErr pn styp shape styp' shape') (\Refl -> pure e') $ if eqShape shape shape' then testEquality styp styp' else Nothing
 
-        [] -> error "TODO: empty array expressions"
+        [] -> error "Empty array expressions not supported"
 
     -- Constructor calls
   U.ECreate p c args -> case Map.lookup c constructors of
     Just sig ->
       let (typs, ptrs) = unzip sig in
       -- check the types of arguments to constructor call
-      checkIxs env p args (PrimitiveType <$> typs) `bindValidation` (\args' ->
+      checkIxs env p args (fmap PrimitiveType typs) `bindValidation` (\args' ->
       -- then check that all arguments that need to be valid pointers to a contract have a contract type
-      (traverse_ (uncurry $ checkContractType env) (zip args' ptrs)) $>
+      traverse_ (uncurry $ checkContractType env) (zip args' ptrs) $>
       TExp SInteger Atomic (Create p c args'))
     Nothing -> throw (p, "Unknown constructor " <> show c)
 
@@ -547,7 +542,7 @@ inferExpr env@Env{calldata, constructors} e = case e of
     wrapOp f s e1 = TExp sing s (f e1) -- use sign to let Haskell automatically derive the type here
     wrapOp2 f s e1 e2 = TExp sing s (f e1 e2)
 
-    polycheck :: forall z. Pn -> (forall y. Pn -> SType y -> Shape (TypeShape y) -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err z
+    polycheck :: forall z. Pn -> (forall y. Pn -> SType y -> Shape (ActShape y) -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err z
     polycheck pn cons e1 e2 =
         inferExpr env e1 `bindValidation` \(TExp (t1 :: SType a1) s1 (te1 :: Exp a1 t)) -> -- I don't know why type annotations are required here
         inferExpr env e2 `bindValidation` \(TExp (t2 :: SType a2) s2 (te2 :: Exp a2 t)) ->

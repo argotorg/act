@@ -8,7 +8,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes, TypeApplications, PolyKinds #-}
 
 {-|
@@ -18,10 +17,11 @@ Description : Types that represent Act types, and functions and patterns to go b
 
 module Act.Syntax.Types (module Act.Syntax.Types) where
 
+import Data.Maybe (isNothing)
 import Data.Singletons
-import Data.ByteString
-import Data.List.NonEmpty
-import qualified Data.List.NonEmpty as NonEmpty (singleton)
+import Data.ByteString hiding (concatMap, singleton, reverse)
+import Data.List.NonEmpty hiding (reverse)
+import qualified Data.List.NonEmpty as NonEmpty (singleton, toList)
 import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import EVM.ABI            as Act.Syntax.Types (AbiType(..))
 
@@ -75,20 +75,51 @@ instance SingI 'ABoolean where sing = SBoolean
 instance SingI 'AByteStr where sing = SByteStr
 instance SingI a => SingI ('AArray a) where sing = SSArray (sing @a)
 
-instance SingKind ActType where
-  type Demote ActType = ActType
+type family Base (a :: ActType) :: ActType where
+  Base (AArray a) = Base a
+  Base AInteger = AInteger
+  Base ABoolean = ABoolean
+  Base AByteStr = AByteStr
 
-  fromSing SInteger = AInteger
-  fromSing SBoolean = ABoolean
-  fromSing SByteStr = AByteStr
-  fromSing (SSArray a) = AArray $ fromSing a
+flattenSType :: SType a -> SType (Base a)
+flattenSType (SSArray s') = flattenSType s'
+flattenSType SInteger = SInteger
+flattenSType SBoolean = SBoolean
+flattenSType SByteStr = SByteStr
 
-  toSing AInteger = SomeSing SInteger
-  toSing ABoolean = SomeSing SBoolean
-  toSing AByteStr = SomeSing SByteStr
-  toSing (AArray a) = case toSing a of
-    SomeSing s -> SomeSing (SSArray s)
+type family ActShape (a :: ActType) :: AShape where
+  ActShape 'AInteger = 'AAtomic
+  ActShape 'ABoolean = 'AAtomic
+  ActShape 'AByteStr = 'AAtomic
+  ActShape ('AArray a) = 'AShaped
 
+data AShape = AAtomic | AShaped
+
+data Shape (a :: AShape) where
+  Atomic :: Shape 'AAtomic
+  Shaped :: NonEmpty Int -> Shape 'AShaped
+deriving instance Eq (Shape a)
+
+instance Show (Shape a) where
+  show Atomic = "Atomic"
+  show (Shaped l) = concatMap (show . singleton) (reverse $ NonEmpty.toList l)
+
+eqShape :: Shape a -> Shape b -> Bool
+eqShape Atomic Atomic = True
+eqShape (Shaped s1) (Shaped s2) | s1 == s2 = True
+eqShape _ _ = False
+
+shapeFromVT :: SType a -> ValueType -> Shape (ActShape a)
+shapeFromVT SInteger (ContractType _) = Atomic
+shapeFromVT SBoolean (ContractType _) = error "Internal Error: shapeFromVT: SBoolean ContractType"
+shapeFromVT SByteStr (ContractType _) = error "Internal Error: shapeFromVT: SByteStr ContractType"
+shapeFromVT (SSArray _) (ContractType _) = error "Internal Error: shapeFromVT: SSArray ContractType"
+shapeFromVT SInteger (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
+shapeFromVT SBoolean (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
+shapeFromVT SByteStr (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
+shapeFromVT (SSArray _) (PrimitiveType a) =
+  maybe (error "Internal Error: shapeFromVT: expected an array ABI Type") (Shaped . snd) $ flattenArrayAbiType a
+shapeFromVT _ (PrimitiveType _) = error "Internal Error: shapeFromVT: expected a non-array ABI Type"
 
 -- | Reflection of an Act type into a haskell type. Used to define the result
 -- type of the evaluation function.
@@ -101,38 +132,14 @@ type family TypeOf a where
 -- Given a possibly nested ABI Array Type, returns the
 -- elements' ABI type, as well as the size at each level
 flattenArrayAbiType :: AbiType -> Maybe (AbiType, NonEmpty Int)
-flattenArrayAbiType (AbiArrayType n t) = case flattenArrayAbiType t of
-  Just (bt, li) -> Just (bt, n <| li)
-  Nothing -> Just (t, pure n)
-flattenArrayAbiType _ = Nothing
+flattenArrayAbiType at = case flattenAbiType at of
+  (at', ms) -> (,) at' <$> ms
 
 flattenAbiType :: AbiType -> (AbiType, Maybe (NonEmpty Int))
 flattenAbiType (AbiArrayType n t) = case flattenAbiType t of
   (a, Nothing) -> (a, Just $ NonEmpty.singleton n)
   (a, l) -> (a, ((<|) n) <$> l)
 flattenAbiType a = (a, Nothing)
-
--- experiment
---class HasBase (a :: Type) where
---  type family BaseOf a :: Type
-type family Base (a :: ActType) :: ActType where
-  Base (AArray a) = Base a
-  Base AInteger = AInteger
-  Base ABoolean = ABoolean
-  Base AByteStr = AByteStr
-
---instance HasBase (SType (a :: ActType)) where
---  type instance BaseOf (SType (AArray a)) = BaseOf (SType a)
---  type instance BaseOf (SType (AArray a)) = BaseOf (SType a)
-
---flattenSType :: forall (a:: ActType) (b :: ActType). SType b ~ Base (SType a) => SType a -> (SType b, Maybe Int)
-flattenSType :: SType a -> (SType (Base a), Maybe Int)
-flattenSType (SSArray s') = case flattenSType s' of
-  (s, Nothing) -> (s, Just 1)
-  (s, Just n) -> (s, Just $ n+1)
-flattenSType SInteger = (SInteger, Nothing)
-flattenSType SBoolean = (SBoolean, Nothing)
-flattenSType SByteStr = (SByteStr, Nothing)
 
 fromAbiType :: AbiType -> ActType
 fromAbiType (AbiUIntType _)     = AInteger

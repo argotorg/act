@@ -15,7 +15,6 @@ import Data.Text qualified as T
 import EVM.ABI (abiTypeSolidity)
 
 import Data.List
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Bifunctor
 
 import Act.Syntax.Typed hiding (annotate)
@@ -47,7 +46,7 @@ prettyCtor (Constructor name interface ptrs pres posts invs initStore)
     prettyInvs [] = ""
     prettyInvs _ = error "TODO: pretty print invariants"
 
-    prettyUpdate' (Update _ _ (Item _ v r) e) = prettyValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
+    prettyUpdate' (Update _ (Item _ v r) e) = prettyValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
 
 prettyValueType :: ValueType -> String
 prettyValueType = \case
@@ -107,13 +106,13 @@ prettyExp e = case e of
 
   -- booleans
   Or _ a b -> print2 "or" a b
-  Eq _ _ _ a b -> print2 "==" a b
+  Eq _ _ a b -> print2 "==" a b
   LT _ a b -> print2 "<" a b
   GT _ a b -> print2 ">" a b
   LEQ _ a b -> print2 "<=" a b
   GEQ _ a b -> print2 ">=" a b
   And _ a b -> print2 "and" a b
-  NEq _ _ _ a b -> print2 "=/=" a b
+  NEq _ _ a b -> print2 "=/=" a b
   Neg _ a -> "(not " <> prettyExp a <> ")"
   Impl _ a b -> print2 "=>" a b
   LitBool _ b -> if b then "true" else "false"
@@ -140,9 +139,9 @@ prettyExp e = case e of
   ByLit _ a -> toString a
   ByEnv _ a -> prettyEnv a
 
-  List _ [] -> "[]"
-  List _ (h:t) ->
-    "[" <> foldl (\s te -> s <> ", " <> prettyExp te) (prettyExp h) t <> "]"
+  Array _ [] -> "[]"
+  Array _ l ->
+    "[" <> (intercalate "," $ fmap prettyExp l) <> "]"
 
   -- contracts
   Create _ f ixs -> f <> "(" <> (intercalate "," $ fmap prettyTypedExp ixs) <> ")"
@@ -156,13 +155,6 @@ prettyExp e = case e of
 
 prettyTypedExp :: TypedExp t -> String
 prettyTypedExp (TExp _ _ e) = prettyExp e
-
-prettyNestedTypedExp :: NestedList p (TypedExp t) -> String
-prettyNestedTypedExp (LeafList _ []) = "[]"
-prettyNestedTypedExp (LeafList _ (h:t)) =
-  "[" <> foldl (\s te -> s <> ", " <> prettyTypedExp te) (prettyTypedExp h) t <> "]"
-prettyNestedTypedExp (NodeList _ (h :| t)) =
-  "[" <> foldl (\s te -> s <> ", " <> prettyNestedTypedExp te) (prettyNestedTypedExp h) t <> "]"
 
 prettyItem :: TItem k a t -> String
 prettyItem (Item _ _ r) = prettyRef r
@@ -178,10 +170,10 @@ prettyRef = \case
     brackets str = "[" <> str <> "]"
 
 prettyLocation :: Location t -> String
-prettyLocation (Loc _ _ _ item) = prettyItem item
+prettyLocation (Loc _ _ item) = prettyItem item
 
 prettyUpdate :: StorageUpdate t -> String
-prettyUpdate (Update _ _ item e) = prettyItem item <> " => " <> prettyExp e
+prettyUpdate (Update _ item e) = prettyItem item <> " => " <> prettyExp e
 
 prettyEnv :: EthEnv -> String
 prettyEnv e = case e of
@@ -224,12 +216,12 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       And p a b   -> And p (untime a) (untime b)
       Or p a b    -> Or p (untime a) (untime b)
       Impl p a b  -> Impl p (untime a) (untime b)
-      Eq p t s a b  -> Eq p t s (untime a) (untime b)
+      Eq p t a b  -> Eq p t (untime a) (untime b)
       LT p a b    -> LT p (untime a) (untime b)
       LEQ p a b   -> LEQ p (untime a) (untime b)
       GT p a b    -> GT p (untime a) (untime b)
       GEQ p a b   -> GEQ p (untime a) (untime b)
-      NEq p t s a b -> NEq p t s (untime a) (untime b)
+      NEq p t a b -> NEq p t (untime a) (untime b)
       Neg p a     -> Neg p (untime a)
       Add p a b   -> Add p (untime a) (untime b)
       Sub p a b   -> Sub p (untime a) (untime b)
@@ -247,7 +239,7 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       UIntMax p a -> UIntMax p a
       InRange p a b -> InRange p a (untime b)
       LitBool p a -> LitBool p a
-      List p l -> List p (fmap untime l)
+      Array p l -> Array p (fmap untime l)
       Create p f xs -> Create p f (fmap untimeTyped xs)
       IntEnv p a  -> IntEnv p a
       ByEnv p a   -> ByEnv p a

@@ -6,7 +6,7 @@ module Act.Syntax.Untyped (module Act.Syntax.Untyped) where
 
 import Data.Aeson
 import Data.List (intercalate)
-import Data.List.NonEmpty (NonEmpty(..), nonEmpty, toList)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Text as T (pack)
 
 import EVM.ABI
@@ -103,7 +103,7 @@ data Expr
   | EPreEntry Entry
   | EPostEntry Entry
   | ECreate Pn Id [Expr]
-  | EList Pn [Expr]
+  | EArray Pn [Expr]
   | ListConst Expr
   | ECat Pn Expr Expr
   | ESlice Pn Expr Expr Expr
@@ -163,33 +163,6 @@ data EthEnv
 
 instance Show Decl where
   show (Decl t a) = show t <> " " <> a
-
-data NestedList p a
-  = LeafList p [a]
-  | NodeList p (NonEmpty (NestedList p a))
-  deriving (Eq)
-
-instance Show a => Show (NestedList p a) where
-  show (LeafList _ l) = show l
-  show (NodeList _ l) = show $ toList l
-
-instance Functor (NestedList p) where
-  fmap f (LeafList p l) = LeafList p $ fmap f l
-  fmap f (NodeList p l) = NodeList p $ (fmap . fmap) f l
-
-instance Foldable (NestedList p) where
-  foldr f c (LeafList _ l) = foldr f c l
-  foldr f c (NodeList p (h:|t)) =
-    case nonEmpty t of
-      Just net -> foldr f (foldr f c (NodeList p net)) h
-      Nothing -> foldr f c h
-
-instance Traversable (NestedList p) where
-  traverse f (LeafList p l) = LeafList p <$> traverse f l
-  traverse f (NodeList p l) = NodeList p <$> traverse (traverse f) l
-
-
-type ExprList = NestedList Pn Expr
 
 
 instance ToJSON SlotType where

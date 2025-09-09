@@ -115,9 +115,9 @@ mapExpM f = \case
   ByLit p a -> f (ByLit p a)
   ByEnv p a -> f (ByEnv p a)
 
-  List p l -> do
+  Array p l -> do
     l' <- mapM f l
-    f (List p l')
+    f (Array p l')
 
   --contracts
 
@@ -127,14 +127,14 @@ mapExpM f = \case
 
   --polymorphic
 
-  Eq p t s a b -> do
+  Eq p s a b -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (Eq p t s a' b')
-  NEq p t s a b -> do
+    f (Eq p s a' b')
+  NEq p s a b -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (NEq p t s a' b')
+    f (NEq p s a' b')
 
   ITE p a b c -> do
     a' <- mapExpM f a

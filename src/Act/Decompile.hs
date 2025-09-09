@@ -276,7 +276,7 @@ mkRewrites cname (DistinctStore writes) = forM (Map.toList writes) $ \(name,(val
           AbiTupleType _ -> Left "cannot decompile methods that write to tuple in storage"
           AbiFunctionType -> Left "cannot decompile methods that store function pointers"
           _ -> do
-            pure (Update SInteger Atomic (Item SInteger v (SVar nowhere (T.unpack cname) (T.unpack name))) val)
+            pure (Update SInteger (Item SInteger v (SVar nowhere (T.unpack cname) (T.unpack name))) val)
         Dynamic -> Left "cannot decompile methods that store dynamically sized types"
       ContractType {} -> Left "cannot decompile contracts that have contract types in storage"
     StorageMapping {} -> Left "cannot decompile contracts that write to mappings"
@@ -325,10 +325,10 @@ simplify e = if (mapTerm go e == e)
              else simplify (mapTerm go e)
   where
     go (Neg _ (Neg _ p)) = p
-    go (Eq _ SInteger _ (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 1)) = go a
-    go (Eq _ SInteger _ (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 0)) = go (Neg nowhere (go a))
-    go (Eq _ SInteger _ (LitInt _ 1) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go a
-    go (Eq _ SInteger _ (LitInt _ 0) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go (Neg nowhere (go a))
+    go (Eq _ SInteger (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 1)) = go a
+    go (Eq _ SInteger (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 0)) = go (Neg nowhere (go a))
+    go (Eq _ SInteger (LitInt _ 1) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go a
+    go (Eq _ SInteger (LitInt _ 0) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go (Neg nowhere (go a))
     -- TODO perhaps normalize before simplification to make rewrites less verbose and more robust
 
     -- this is the condition we get for a non overflowing uint multiplication
@@ -336,7 +336,7 @@ simplify e = if (mapTerm go e == e)
     -- -> ~ (x != 0) | ~ (~ (in_range 256 x))
     -- -> x == 0 | in_range 256 x
     -- -> in_range 256 x
-    go (Neg _ (And _ (Neg _ (Eq _ SInteger _ a (LitInt _ 0))) (Neg _ (InRange _ (AbiUIntType sz) (Mul _ b c)))))
+    go (Neg _ (And _ (Neg _ (Eq _ SInteger a (LitInt _ 0))) (Neg _ (InRange _ (AbiUIntType sz) (Mul _ b c)))))
       | a == b = InRange nowhere (AbiUIntType sz) (Mul nowhere a c)
 
     go x = x
@@ -355,7 +355,7 @@ fromProp l p = simplify <$> go p
   where
     go (EVM.PEq (a :: EVM.Expr t) b) = case eqT @t @EVM.EWord of
          Nothing -> Left $ "cannot decompile props comparing equality of non word terms: " <> T.pack (show p)
-         Just Refl -> liftM2 (Eq nowhere SInteger Atomic) (fromWord l a) (fromWord l b)
+         Just Refl -> liftM2 (Eq nowhere SInteger) (fromWord l a) (fromWord l b)
     go (EVM.PLT a b) = liftM2 (LT nowhere) (fromWord l a) (fromWord l b)
     go (EVM.PGT a b) = liftM2 (GT nowhere) (fromWord l a) (fromWord l b)
     go (EVM.PGEq a b) = liftM2 (GEQ nowhere) (fromWord l a) (fromWord l b)
@@ -394,7 +394,7 @@ fromWord layout w = simplify <$> go w
       | a == b = do
         a' <- go a
         c' <- go c
-        pure $ evmbool $ And nowhere (Neg nowhere (Eq nowhere SInteger Atomic a' (LitInt nowhere 0))) (Neg nowhere $ InRange nowhere (AbiUIntType 256) (Mul nowhere a' c'))
+        pure $ evmbool $ And nowhere (Neg nowhere (Eq nowhere SInteger a' (LitInt nowhere 0))) (Neg nowhere $ InRange nowhere (AbiUIntType 256) (Mul nowhere a' c'))
     -- a == 0 || (a * b) / a == b
     go (EVM.Or (EVM.IsZero a) (EVM.Eq b (EVM.Div (EVM.Mod (EVM.Mul c d) (EVM.Lit MAX_UINT)) e)))
       | a == c
@@ -426,7 +426,7 @@ fromWord layout w = simplify <$> go w
          Right $ evmbool (LT nowhere a' b')
     go (EVM.IsZero a) = do
          a' <- go a
-         Right $ evmbool (Eq nowhere SInteger Atomic a' (LitInt nowhere 0))
+         Right $ evmbool (Eq nowhere SInteger a' (LitInt nowhere 0))
 
     -- arithmetic
 

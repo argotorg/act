@@ -6,4 +6,4 @@ creates
   uint x :=  1
 
 ensures
-  post(x[1]) == 2
+  x[1] == 2

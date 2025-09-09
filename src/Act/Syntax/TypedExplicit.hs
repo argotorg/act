@@ -13,7 +13,7 @@ import qualified Act.Syntax.Typed as Typed
 import Act.Syntax.Typed (Timing(..),setPre,setPost)
 
 -- Reexports
-import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,StorageUpdate,Location,StorageLocation,CalldataLocation,TItem,UItem,Exp,TypedExp,Ref)
+import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,StorageUpdate,Location,TItem,Exp,TypedExp,Ref)
 import Act.Syntax.Typed as Act.Syntax.TypedExplicit (pattern Act, pattern Contract, pattern Invariant, pattern Constructor, pattern Behaviour, pattern Exp)
 
 
@@ -26,11 +26,8 @@ type Constructor      = Typed.Constructor      Timed
 type Behaviour        = Typed.Behaviour        Timed
 type StorageUpdate    = Typed.StorageUpdate    Timed
 type Location         = Typed.Location         Timed
-type StorageLocation  = Typed.StorageLocation  Timed
-type CalldataLocation = Typed.CalldataLocation Timed
 type Ref            k = Typed.Ref            k Timed
 type TItem        k a = Typed.TItem        k a Timed
-type UItem          k = Typed.UItem          k Timed
 type Exp            a = Typed.Exp            a Timed
 type TypedExp         = Typed.TypedExp         Timed
 
@@ -72,4 +69,4 @@ instance Annotatable Typed.Behaviour where
 instance Annotatable Typed.StorageUpdate where
   -- The timing in items only refers to the timing of mapping indices of a
   -- storage update. Hence, it should be Pre
-  annotate (Update typ sh item expr) = Update typ sh (setPre item) (setPre expr)
+  annotate (Update typ item expr) = Update typ (setPre item) (setPre expr)
