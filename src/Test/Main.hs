@@ -155,6 +155,7 @@ genType typ = case typ of
   ABoolean -> return AbiBoolType
   AByteStr -> return AbiStringType
                    --, return AbiBytesDynamicType -- TODO: needs frontend support
+  AArray _ -> error "TODO"
   where
     validIntSize = elements [ x | x <- [8..256], x `mod` 8 == 0 ]
     validBytesSize = elements [1..32]
@@ -162,9 +163,9 @@ genType typ = case typ of
 
 genTypedExp :: Names -> Int -> ExpoGen TypedExp
 genTypedExp names n = oneof
-  [ _TExp <$> genExpInt names n
-  , _TExp <$> genExpBool names n
-  , _TExp <$> genExpBytes names n
+  [ _TExp Atomic <$> genExpInt names n
+  , _TExp Atomic <$> genExpBool names n
+  , _TExp Atomic <$> genExpBytes names n
   ]
 
 
@@ -238,6 +239,7 @@ selectVar typ (Names ints bools bytes) = do
                 SInteger -> ints
                 SBoolean -> bools
                 SByteStr -> bytes
+                SSArray _ -> error "TODO"
   idx <- elements [0..((length names)-1)]
   let (x, at) = names!!idx
   return $ VarRef nowhere Pre SCalldata (Item typ (PrimitiveType at) (CVar nowhere at x))

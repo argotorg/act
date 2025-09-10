@@ -13,23 +13,23 @@ import qualified Act.Syntax.Typed as Typed
 import Act.Syntax.Typed (Timing(..),setPre,setPost)
 
 -- Reexports
-import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,StorageUpdate,StorageLocation,TItem,Exp,TypedExp,Ref)
+import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,StorageUpdate,Location,TItem,Exp,TypedExp,Ref)
 import Act.Syntax.Typed as Act.Syntax.TypedExplicit (pattern Act, pattern Contract, pattern Invariant, pattern Constructor, pattern Behaviour, pattern Exp)
 
 
 -- We shadow all timing-agnostic AST types with explicitly timed versions.
-type Act             = Typed.Act             Timed
-type Contract        = Typed.Contract        Timed
-type Invariant       = Typed.Invariant       Timed
-type InvariantPred   = Typed.InvariantPred   Timed
-type Constructor     = Typed.Constructor     Timed
-type Behaviour       = Typed.Behaviour       Timed
-type StorageUpdate   = Typed.StorageUpdate   Timed
-type StorageLocation = Typed.StorageLocation Timed
-type Ref           k = Typed.Ref           k Timed
-type TItem       k a = Typed.TItem       k a Timed
-type Exp           a = Typed.Exp           a Timed
-type TypedExp        = Typed.TypedExp        Timed
+type Act              = Typed.Act              Timed
+type Contract         = Typed.Contract         Timed
+type Invariant        = Typed.Invariant        Timed
+type InvariantPred    = Typed.InvariantPred    Timed
+type Constructor      = Typed.Constructor      Timed
+type Behaviour        = Typed.Behaviour        Timed
+type StorageUpdate    = Typed.StorageUpdate    Timed
+type Location         = Typed.Location         Timed
+type Ref            k = Typed.Ref            k Timed
+type TItem        k a = Typed.TItem        k a Timed
+type Exp            a = Typed.Exp            a Timed
+type TypedExp         = Typed.TypedExp         Timed
 
 ------------------------------------------
 -- * How to make all timings explicit * --
@@ -54,6 +54,7 @@ instance Annotatable Typed.InvariantPred where
 instance Annotatable Typed.Constructor where
   annotate ctor@Constructor{..} = ctor
     { _cpreconditions = setPre <$> _cpreconditions
+    , _cpostconditions = setPost <$> _cpostconditions
     , _initialStorage = annotate <$> _initialStorage
     , _invariants  = annotate <$> _invariants
     }

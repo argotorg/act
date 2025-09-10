@@ -1,0 +1,276 @@
+{
+  "contracts": [
+    {
+      "behaviours": [
+        {
+          "case": [
+            {
+              "literal": "True",
+              "type": "bool"
+            }
+          ],
+          "contract": "A",
+          "interface": {
+            "args": [
+              {
+                "abitype": {
+                  "arrayType": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "size": "3",
+                    "type": "Array"
+                  },
+                  "size": "2",
+                  "type": "Array"
+                },
+                "id": "\"a\"",
+                "kind": "Declaration"
+              }
+            ],
+            "id": "\"f\"",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "f",
+          "pointers": [],
+          "postConditions": [],
+          "preConditions": [],
+          "returns": null,
+          "stateUpdates": [
+            {
+              "location": {
+                "item": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "x"
+                },
+                "type": "int array array array"
+              },
+              "value": {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "arrayType": {
+                            "arrayType": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "size": "3",
+                            "type": "Array"
+                          },
+                          "size": "2",
+                          "type": "Array"
+                        },
+                        "kind": "Var",
+                        "var": "a"
+                      },
+                      "type": "int array array"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          {
+                            "literal": "0",
+                            "type": "int"
+                          }
+                        ],
+                        "arity": 3,
+                        "symbol": "[]"
+                      },
+                      {
+                        "args": [
+                          {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          {
+                            "literal": "0",
+                            "type": "int"
+                          }
+                        ],
+                        "arity": 3,
+                        "symbol": "[]"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "[]"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "[]"
+              }
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "contract": "A",
+        "initialStorage": [
+          {
+            "location": {
+              "item": {
+                "contract": "A",
+                "kind": "SVar",
+                "svar": "x"
+              },
+              "type": "int array array array"
+            },
+            "value": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 3,
+                      "symbol": "[]"
+                    },
+                    {
+                      "args": [
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 3,
+                      "symbol": "[]"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "[]"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 3,
+                      "symbol": "[]"
+                    },
+                    {
+                      "args": [
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 3,
+                      "symbol": "[]"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "[]"
+                }
+              ],
+              "arity": 2,
+              "symbol": "[]"
+            }
+          }
+        ],
+        "interface": {
+          "args": [],
+          "id": "\"A\"",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "pointers": [],
+        "postConditions": [],
+        "preConditions": []
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "x": [
+          {
+            "kind": "ValueType",
+            "valueType": {
+              "abiType": {
+                "arrayType": {
+                  "arrayType": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "size": "3",
+                    "type": "Array"
+                  },
+                  "size": "2",
+                  "type": "Array"
+                },
+                "size": "2",
+                "type": "Array"
+              },
+              "kind": "AbiType"
+            }
+          },
+          0
+        ]
+      }
+    }
+  }
+}

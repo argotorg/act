@@ -6,7 +6,7 @@ module Act.Syntax.Untyped (module Act.Syntax.Untyped) where
 
 import Data.Aeson
 import Data.List (intercalate)
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Text as T (pack)
 
 import EVM.ABI
@@ -74,7 +74,7 @@ data Decl = Decl AbiType Id
 
 data Entry
   = EVar Pn Id
-  | EMapping Pn Entry [Expr]
+  | EIndexed Pn Entry [Expr]
   | EField Pn Entry Id
   deriving (Eq, Show)
 
@@ -103,6 +103,7 @@ data Expr
   | EPreEntry Entry
   | EPostEntry Entry
   | ECreate Pn Id [Expr]
+  | EArray Pn [Expr]
   | ListConst Expr
   | ECat Pn Expr Expr
   | ESlice Pn Expr Expr Expr
@@ -162,6 +163,7 @@ data EthEnv
 
 instance Show Decl where
   show (Decl t a) = show t <> " " <> a
+
 
 instance ToJSON SlotType where
   toJSON (StorageValue t) = object ["kind" .= String "ValueType"

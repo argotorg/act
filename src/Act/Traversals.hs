@@ -115,6 +115,10 @@ mapExpM f = \case
   ByLit p a -> f (ByLit p a)
   ByEnv p a -> f (ByEnv p a)
 
+  Array p l -> do
+    l' <- mapM f l
+    f (Array p l')
+
   --contracts
 
   Create p n as -> do
@@ -141,11 +145,10 @@ mapExpM f = \case
     i' <- mapTItemM f i
     f (VarRef p t k i')
 
-
 mapTypedExpM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedExp t -> m (TypedExp t)
-mapTypedExpM f (TExp s e) = do
+mapTypedExpM f (TExp t s e) = do
   e' <- f e
-  pure $ TExp s e'
+  pure $ TExp t s e'
 
 mapTItemM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TItem k b t -> m (TItem k b t)
 mapTItemM f (Item s v r) = do
@@ -156,6 +159,10 @@ mapRefM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> Ref k t -> m (Ref k
 mapRefM f = \case
   SVar p a b -> pure (SVar p a b)
   CVar p a b -> pure (CVar p a b)
+  SArray p a ts b -> do
+    a' <- mapRefM f a
+    b' <- mapM (mapTypedExpM f . fst) b
+    pure $ SMapping p a' ts b'
   SMapping p a ts b -> do
     a' <- mapRefM f a
     b' <- mapM (mapTypedExpM f) b

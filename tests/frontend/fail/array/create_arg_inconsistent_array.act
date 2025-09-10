@@ -1,0 +1,9 @@
+constructor of A
+interface constructor(uint[3] u)
+
+
+constructor of B
+interface constructor()
+
+creates
+  A a := create A([1,2,false])

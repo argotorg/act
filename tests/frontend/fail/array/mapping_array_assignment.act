@@ -1,0 +1,6 @@
+constructor of B
+interface constructor()
+
+creates
+
+  mapping(uint => uint) m := [-1,-2]

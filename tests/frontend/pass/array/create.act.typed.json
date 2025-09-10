@@ -1,0 +1,521 @@
+{
+  "contracts": [
+    {
+      "behaviours": [],
+      "constructor": {
+        "contract": "A",
+        "initialStorage": [],
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "size": "256",
+                "type": "Int"
+              },
+              "id": "\"x\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "arrayType": {
+                  "arrayType": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "size": "2",
+                  "type": "Array"
+                },
+                "size": "3",
+                "type": "Array"
+              },
+              "id": "\"y\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "arrayType": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "size": "2",
+                "type": "Array"
+              },
+              "id": "\"z\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "\"A\"",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "pointers": [],
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "-57896044618658097711785492504343953926634992332820282019728792003956564819968",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "Int"
+                        },
+                        "kind": "Var",
+                        "var": "x"
+                      },
+                      "type": "int"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "Int"
+                        },
+                        "kind": "Var",
+                        "var": "x"
+                      },
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "literal": "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [
+        {
+          "case": [
+            {
+              "literal": "True",
+              "type": "bool"
+            }
+          ],
+          "contract": "B",
+          "interface": {
+            "args": [],
+            "id": "\"f\"",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "f",
+          "pointers": [],
+          "postConditions": [
+            {
+              "literal": "True",
+              "type": "bool"
+            }
+          ],
+          "preConditions": [
+            {
+              "literal": "True",
+              "type": "bool"
+            },
+            {
+              "literal": "True",
+              "type": "bool"
+            }
+          ],
+          "returns": null,
+          "stateUpdates": [
+            {
+              "location": {
+                "item": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a"
+                },
+                "type": "int"
+              },
+              "value": {
+                "args": [
+                  {
+                    "fun": "A"
+                  },
+                  [
+                    {
+                      "expression": {
+                        "literal": "2",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "int"
+                    },
+                    {
+                      "expression": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "literal": "1",
+                                "type": "int"
+                              },
+                              {
+                                "literal": "2",
+                                "type": "int"
+                              }
+                            ],
+                            "arity": 2,
+                            "symbol": "[]"
+                          },
+                          {
+                            "args": [
+                              {
+                                "literal": "3",
+                                "type": "int"
+                              },
+                              {
+                                "literal": "4",
+                                "type": "int"
+                              }
+                            ],
+                            "arity": 2,
+                            "symbol": "[]"
+                          },
+                          {
+                            "args": [
+                              {
+                                "literal": "5",
+                                "type": "int"
+                              },
+                              {
+                                "literal": "6",
+                                "type": "int"
+                              }
+                            ],
+                            "arity": 2,
+                            "symbol": "[]"
+                          }
+                        ],
+                        "arity": 3,
+                        "symbol": "[]"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "int array array"
+                    },
+                    {
+                      "expression": {
+                        "timing": "Pre",
+                        "var": {
+                          "item": {
+                            "indexes": [
+                              [
+                                {
+                                  "expression": {
+                                    "literal": "0",
+                                    "type": "int"
+                                  },
+                                  "kind": "TypedExpr",
+                                  "type": "int"
+                                },
+                                1
+                              ]
+                            ],
+                            "kind": "Array",
+                            "reference": {
+                              "contract": "B",
+                              "kind": "SVar",
+                              "svar": "y"
+                            }
+                          },
+                          "type": "int array"
+                        }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "int array"
+                    }
+                  ]
+                ],
+                "arity": 3,
+                "symbol": "create"
+              }
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "contract": "B",
+        "initialStorage": [
+          {
+            "location": {
+              "item": {
+                "contract": "B",
+                "kind": "SVar",
+                "svar": "a"
+              },
+              "type": "int"
+            },
+            "value": {
+              "args": [
+                {
+                  "fun": "A"
+                },
+                [
+                  {
+                    "expression": {
+                      "literal": "-1",
+                      "type": "int"
+                    },
+                    "kind": "TypedExpr",
+                    "type": "int"
+                  },
+                  {
+                    "expression": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "literal": "1",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "2",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "[]"
+                        },
+                        {
+                          "args": [
+                            {
+                              "literal": "3",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "4",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "[]"
+                        },
+                        {
+                          "args": [
+                            {
+                              "literal": "5",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "6",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "[]"
+                        }
+                      ],
+                      "arity": 3,
+                      "symbol": "[]"
+                    },
+                    "kind": "TypedExpr",
+                    "type": "int array array"
+                  },
+                  {
+                    "expression": {
+                      "args": [
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "0",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "[]"
+                    },
+                    "kind": "TypedExpr",
+                    "type": "int array"
+                  }
+                ]
+              ],
+              "arity": 3,
+              "symbol": "create"
+            }
+          },
+          {
+            "location": {
+              "item": {
+                "contract": "B",
+                "kind": "SVar",
+                "svar": "arr"
+              },
+              "type": "int array array"
+            },
+            "value": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "[]"
+                },
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "[]"
+                }
+              ],
+              "arity": 2,
+              "symbol": "[]"
+            }
+          },
+          {
+            "location": {
+              "item": {
+                "contract": "B",
+                "kind": "SVar",
+                "svar": "y"
+              },
+              "type": "int array array"
+            },
+            "value": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "[]"
+                }
+              ],
+              "arity": 1,
+              "symbol": "[]"
+            }
+          }
+        ],
+        "interface": {
+          "args": [],
+          "id": "\"B\"",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "pointers": [],
+        "postConditions": [
+          {
+            "literal": "True",
+            "type": "bool"
+          }
+        ],
+        "preConditions": []
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {},
+      "B": {
+        "a": [
+          {
+            "kind": "ValueType",
+            "valueType": {
+              "kind": "ContractType",
+              "name": "\"A\""
+            }
+          },
+          0
+        ],
+        "arr": [
+          {
+            "kind": "ValueType",
+            "valueType": {
+              "abiType": {
+                "arrayType": {
+                  "arrayType": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "size": "2",
+                  "type": "Array"
+                },
+                "size": "2",
+                "type": "Array"
+              },
+              "kind": "AbiType"
+            }
+          },
+          1
+        ],
+        "y": [
+          {
+            "kind": "ValueType",
+            "valueType": {
+              "abiType": {
+                "arrayType": {
+                  "arrayType": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "size": "2",
+                  "type": "Array"
+                },
+                "size": "1",
+                "type": "Array"
+              },
+              "kind": "AbiType"
+            }
+          },
+          2
+        ]
+      }
+    }
+  }
+}

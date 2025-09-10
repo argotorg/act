@@ -244,7 +244,7 @@ mkBehvs c = concatMapM (\(i, bs) -> mapM (mkbehv i) (Set.toList bs)) (Map.toList
             AbiFunctionType -> Left "cannot decompile methods that return a function pointer"
             _ -> do
               v <- fromWord (invertLayout c.storageLayout) . Expr.readWord (EVM.Lit 0) $ retBuf
-              pure . Just . TExp SInteger $ v
+              pure . Just . TExp SInteger Atomic $ v
           Dynamic -> Left "cannot decompile methods that return dynamically sized types"
         _ -> Left "cannot decompile methods with multiple return types"
       rewrites <- case Map.toList store of

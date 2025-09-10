@@ -201,6 +201,7 @@ baseRef :: Ref Storage -> StorageUpdate -> Bool
 baseRef baseref (Update _ (Item _ _ r) _) = hasBase r
   where
     hasBase (SVar _ _ _) = False
+    hasBase (SArray _ r' _ _) = r' == baseref || hasBase r'
     hasBase (SMapping _ r' _ _) = r' == baseref || hasBase r'
     hasBase (SField _ r' _ _) = r' == baseref || hasBase r'
 
@@ -240,7 +241,7 @@ updateVar _ updates handler focus t@(StorageMapping xs _) = parens $
         <> " then " <> coqexp e
         <> " else " <> prestate'
 
-      cond (TExp argType arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
+      cond (TExp argType _ arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
 
       lambda i = if i >= 0 then "fun " <> lambdaArgs i <> " => " else ""
 
@@ -251,6 +252,7 @@ updateVar _ updates handler focus t@(StorageMapping xs _) = parens $
         SInteger -> " =? "
         SBoolean -> " =?? "
         SByteStr -> error "bytestrings not supported"
+        SSArray _ -> error "arrays not supported"
 
 
 -- | produce a block of declarations from an interface
@@ -283,9 +285,10 @@ abiType a = error $ show a
 
 -- | coq syntax for a return type
 returnType :: TypedExp -> T.Text
-returnType (TExp SInteger _) = "Z"
-returnType (TExp SBoolean _) = "bool"
-returnType (TExp SByteStr _) = error "bytestrings not supported"
+returnType (TExp SInteger _ _) = "Z"
+returnType (TExp SBoolean _ _) = "bool"
+returnType (TExp SByteStr _ _) = error "bytestrings not supported"
+returnType (TExp (SSArray _) _ _) = error "arrays not supported"
 
 -- | default value for a given type
 -- this is used in cases where a value is not set in the constructor
@@ -360,6 +363,7 @@ coqexp Slice {} = error "bytestrings not supported"
 coqexp ByStr {} = error "bytestrings not supported"
 coqexp ByLit {} = error "bytestrings not supported"
 coqexp ByEnv {} = error "bytestrings not supported"
+coqexp Array {} = error "arrays not supported"
 
 -- | coq syntax for a proposition
 coqprop :: Exp a -> T.Text
@@ -381,7 +385,7 @@ coqprop e = error "ill formed proposition: " <> T.pack (show e)
 
 -- | coq syntax for a typed expression
 typedexp :: TypedExp -> T.Text
-typedexp (TExp _ e) = coqexp e
+typedexp (TExp _ _ e) = coqexp e
 
 entry :: TItem k a -> T.Text
 entry (Item SByteStr _ _) = error "bytestrings not supported"
@@ -390,6 +394,7 @@ entry (Item _ _ r) = ref r
 ref :: Ref k -> T.Text
 ref (SVar _ _ name) = parens $ T.pack name <> " " <> stateVar
 ref (CVar _ _ name) = T.pack name
+ref (SArray _ r _ ixs) = parens $ ref r <> " " <> coqargs (fst <$> ixs)
 ref (SMapping _ r _ ixs) = parens $ ref r <> " " <> coqargs ixs
 ref (SField _ r cid name) = parens $ T.pack cid <> "." <> T.pack name <> " " <> ref r
 

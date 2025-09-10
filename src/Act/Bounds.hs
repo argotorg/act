@@ -4,7 +4,8 @@
 module Act.Bounds (addBounds) where
 
 import Data.Maybe
-import Data.List (nub)
+import Data.List (nub, partition)
+import Data.Type.Equality
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit
@@ -37,9 +38,17 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
       pre' = pre
              <> mkCallDataBounds decls
              <> mkEthEnvBounds (ethEnvFromConstructor ctor)
-             <> mkStorageBoundsLoc (nub $ concatMap locsFromExp pre <> concatMap locsFromUpdateRHS stateUpdates)
+              -- The following is sound as values of locations outside local storage
+              -- already exist as the constructor starts executing,
+              -- and the constructor cannot modify non-local locations.
+             <> mkLocationBounds nonlocalLocs
       invs' = addBoundsInvariant ctor <$> invs
       post' = post <> mkStorageBounds stateUpdates Post
+
+      locs = concatMap locsFromExp (pre <> post)
+             <> concatMap locsFromInvariant invs
+             <> concatMap locsFromUpdate stateUpdates
+      nonlocalLocs = filter (not . isLocalLoc) locs
 
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
@@ -49,10 +58,13 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stat
       pre' = pre
              <> mkCallDataBounds decls
              <> mkStorageBounds stateUpdates Pre
-             <> mkStorageBoundsLoc (nub $ concatMap locsFromExp (pre <> cases) <> concatMap locsFromUpdateRHS stateUpdates)
+             <> mkLocationBounds locs
              <> mkEthEnvBounds (ethEnvFromBehaviour behv)
       post' = post
               <> mkStorageBounds stateUpdates Post
+
+      locs = concatMap locsFromExp (pre <> post <> cases)
+             <> concatMap locsFromUpdate stateUpdates
 
 -- | Adds type bounds for calldata, environment vars, and storage vars
 addBoundsInvariant :: Constructor -> Invariant -> Invariant
@@ -62,8 +74,13 @@ addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ _) inv@(Invariant 
       preconds' = preconds
                   <> mkCallDataBounds decls
                   <> mkEthEnvBounds (ethEnvFromExp predicate)
+                  <> mkLocationBounds nonlocalLocs
       storagebounds' = storagebounds
-                       <> mkStorageBoundsLoc (locsFromExp predicate)
+                       <> mkLocationBounds localLocs
+
+      locs = concatMap locsFromExp (preconds <> storagebounds)
+             <> locsFromExp predicate
+      (nonlocalLocs, localLocs) = partition (not . isLocalLoc) locs
 
 mkEthEnvBounds :: [EthEnv] -> [Exp ABoolean]
 mkEthEnvBounds vars = catMaybes $ mkBound <$> nub vars
@@ -94,21 +111,36 @@ mkStorageBounds :: [StorageUpdate] -> When -> [Exp ABoolean]
 mkStorageBounds refs t = concatMap mkBound refs
   where
     mkBound :: StorageUpdate -> [Exp ABoolean]
-    mkBound (Update SInteger item _) = [mkItemBounds t item]
+    mkBound (Update SInteger item _) = [mkSItemBounds t item]
+    mkBound (Update typ item@(Item _ (PrimitiveType at) _) _) | isNothing $ flattenArrayAbiType at =
+      maybe [] (\Refl -> mkSItemBounds t <$> expandItem item) $ testEquality (flattenSType typ) SInteger
     mkBound _ = []
 
-mkItemBounds :: When -> TItem AInteger Storage -> Exp ABoolean
-mkItemBounds whn item@(Item _ (PrimitiveType vt) _) = bound vt (VarRef nowhere whn SStorage item)
-mkItemBounds _ (Item _ (ContractType _) _) = LitBool nowhere True
+mkSItemBounds :: When -> TItem AInteger Storage -> Exp ABoolean
+mkSItemBounds whn item@(Item _ (PrimitiveType vt) _) = bound vt (VarRef nowhere whn SStorage item)
+mkSItemBounds _ (Item _ (ContractType _) _) = LitBool nowhere True
 
-mkStorageBoundsLoc :: [StorageLocation] -> [Exp ABoolean]
-mkStorageBoundsLoc refs = concatMap mkBound refs
+mkCItemBounds :: TItem AInteger Calldata -> Exp ABoolean
+mkCItemBounds item@(Item _ (PrimitiveType vt) _) = bound vt (VarRef nowhere Pre SCalldata item)
+mkCItemBounds (Item _ (ContractType _) _) = LitBool nowhere True
+
+mkLocationBounds :: [Location] -> [Exp ABoolean]
+mkLocationBounds refs = concatMap mkBound refs
   where
-    mkBound :: StorageLocation -> [Exp ABoolean]
-    mkBound (Loc SInteger item) = [mkItemBounds Pre item]
+    mkBound :: Location -> [Exp ABoolean]
+    mkBound (Loc SInteger rk item) = [mkItemBounds rk item]
+    mkBound (Loc typ rk item@(Item _ (PrimitiveType at) _)) | isNothing $ flattenArrayAbiType at =
+      maybe [] (\Refl -> mkItemBounds rk <$> expandItem item) $ testEquality (flattenSType typ) SInteger
     mkBound _ = []
+
+    mkItemBounds :: SRefKind k -> TItem AInteger k -> Exp ABoolean
+    mkItemBounds SStorage = mkSItemBounds Pre
+    mkItemBounds SCalldata = mkCItemBounds
 
 mkCallDataBounds :: [Decl] -> [Exp ABoolean]
-mkCallDataBounds = concatMap $ \(Decl typ name) -> case fromAbiType typ of
-  AInteger -> [bound typ (_Var typ name)]
-  _ -> []
+mkCallDataBounds = concatMap $ \(Decl typ name) -> case typ of
+  -- Array element bounds are applied lazily when needed in mkCalldataLocationBounds
+  (AbiArrayType _ _) -> []
+  _ -> case fromAbiType typ of
+        AInteger -> [bound typ (_Var typ name)]
+        _ -> []

@@ -1,0 +1,13 @@
+constructor of A
+interface constructor()
+
+creates
+
+  uint[3][2][2] x := [ [ [0,0,0], [0,0,0] ], [ [0,0,0], [0,0,0] ] ]
+
+behaviour f of A
+interface f(uint[3][2] a)
+
+storage
+
+  x => [a, [ [0,0,0], [0,0,0] ] ]

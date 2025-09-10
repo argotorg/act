@@ -39,7 +39,6 @@ import qualified Data.Vector as V
 
 import Act.HEVM_utils
 import Act.Syntax.TypedExplicit as Act
-import Act.Syntax.Untyped (makeIface)
 import Act.Syntax
 import Act.Error
 import qualified Act.Syntax.Typed as TA
@@ -48,7 +47,7 @@ import Act.Syntax.Timing
 import EVM.ABI (Sig(..))
 import qualified EVM hiding (bytecode)
 import qualified EVM.Types as EVM hiding (FrameState(..))
-import EVM.Expr hiding (op2, inRange, div, xor, readStorage)
+import EVM.Expr hiding (op2, inRange, div, xor, readStorage, Array)
 import EVM.SymExec hiding (isPartial, reachable)
 import EVM.SMT (assertProps)
 import EVM.Solvers
@@ -259,6 +258,7 @@ applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
         let prevValue = readStorage addr contract
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
+    SSArray _ -> error "arrays TODO"
 -- TODO test with out of bounds assignments
   where
     storedValue :: EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> Int -> EVM.Expr EVM.EWord
@@ -333,19 +333,20 @@ substItem subst (Item st vt sref) = case substRef subst sref of
 substRef :: M.Map Id TypedExp -> Ref k -> ERef
 substRef _ var@(SVar _ _ _) = ERef SStorage var
 substRef subst (CVar _ _ x) = case M.lookup x subst of
-    Just (TExp _ (VarRef _ _ k (Item _ _ ref))) -> ERef k ref
+    Just (TExp _ _ (VarRef _ _ k (Item _ _ ref))) -> ERef k ref
     Just _ -> error "Internal error: cannot access fields of non-pointer var"
     Nothing -> error "Internal error: ill-formed substitution"
 substRef subst (SMapping pn sref ts args) = case substRef subst sref of
   ERef k ref -> ERef k $ SMapping pn ref ts (substArgs subst args)
 substRef subst (SField pn sref x y) = case substRef subst sref of
   ERef k ref -> ERef k $ SField pn ref x y
+substRef _ (SArray _ _ _ _) = error "TODO"
 
 substArgs :: M.Map Id TypedExp -> [TypedExp] -> [TypedExp]
 substArgs subst exps = fmap (substTExp subst) exps
 
 substTExp :: M.Map Id TypedExp -> TypedExp -> TypedExp
-substTExp subst (TExp st expr) = TExp st (substExp subst expr)
+substTExp subst (TExp st s expr) = TExp st s (substExp subst expr)
 
 substExp :: M.Map Id TypedExp -> Exp a -> Exp a
 substExp subst expr = case expr of
@@ -380,13 +381,15 @@ substExp subst expr = case expr of
   ByLit _ _ -> expr
   ByEnv _ _ -> expr
 
+  Array pn l -> Array pn (substExp subst <$> l)
+
   Eq pn st a b -> Eq pn st (substExp subst a) (substExp subst b)
   NEq pn st a b -> NEq pn st (substExp subst a) (substExp subst b)
 
   ITE pn a b c -> ITE pn (substExp subst a) (substExp subst b) (substExp subst c)
 
   VarRef _ _ SCalldata (Item st _ (CVar _ _ x)) -> case M.lookup x subst of
-    Just (TExp st' exp') -> maybe (error "Internal error: type missmatch") (\Refl -> exp') $ testEquality st st'
+    Just (TExp st' _ exp') -> maybe (error "Internal error: type mismatch") (\Refl -> exp') $ testEquality st st'
     Nothing -> error "Internal error: Ill-defined substitution"
   VarRef pn whn _ item -> case substItem subst item of
     ETItem k' item' ->  VarRef pn whn k' item'
@@ -407,15 +410,16 @@ wordToProp w = EVM.PNeg (EVM.PEq w (EVM.Lit 0))
 typedExpToBuf :: Monad m => ContractMap -> TypedExp -> ActT m (EVM.Expr EVM.Buf)
 typedExpToBuf cmap expr =
   case expr of
-    TExp styp e -> expToBuf cmap styp e
+    TExp styp _ e -> expToBuf cmap styp e
 
 typedExpToWord :: Monad m => ContractMap -> TypedExp  -> ActT m (EVM.Expr EVM.EWord)
 typedExpToWord cmap te = do
     case te of
-        TExp styp e -> case styp of
+        TExp styp _ e -> case styp of
             SInteger -> toExpr cmap e
             SBoolean -> toExpr cmap e
             SByteStr -> error "Bytestring in unexpected position"
+            SSArray _ -> error "TODO arrays"
 
 expToBuf :: Monad m => forall a. ContractMap -> SType a -> Exp a  -> ActT m (EVM.Expr EVM.Buf)
 expToBuf cmap styp e = do
@@ -427,6 +431,7 @@ expToBuf cmap styp e = do
       e' <- toExpr cmap e
       pure $ EVM.WriteWord (EVM.Lit 0) (EVM.IsZero $ EVM.IsZero e') (EVM.ConcreteBuf "")
     SByteStr -> toExpr cmap e
+    SSArray _ -> error "TODO arrays"
 
 -- | Get the slot and the offset of a storage variable in storage
 getPosition :: Layout -> Id -> Id -> (Int, Int, Int)
@@ -455,6 +460,7 @@ refOffset _ (SField _ _ cid name) = do
   layout <- getLayout
   let (slot, off, size) = getPosition layout cid name
   pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size)
+refOffset _ (SArray _ _ _ _) = error "TODO"
 
 
 -- | Get the address of the contract whoose storage contrains the given
@@ -468,6 +474,7 @@ baseAddr cmap (SField _ ref _ _) = do
     EVM.WAddr symaddr -> pure symaddr
     e -> error $ "Internal error: did not find a symbolic address: " <> show e
 baseAddr cmap (SMapping _ ref _ _) = baseAddr cmap ref
+baseAddr _ (SArray _ _ _ _) = error "TODO"
 
 
 ethEnvToWord :: Monad m => EthEnv -> ActT m (EVM.Expr EVM.EWord)

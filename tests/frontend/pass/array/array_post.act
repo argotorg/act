@@ -1,0 +1,21 @@
+constructor of A
+interface constructor()
+
+creates
+
+  uint[3] x := [1, 2, 3]
+
+behaviour f of A
+interface f()
+
+iff
+  x == [1,2,3]
+
+storage
+
+  x[0] => 3
+  x[1] => 2
+  x[2] => 1
+
+ensures
+  post(x) == (if pre(x) == [1,2,3] then [3,2,1] else [0,0,0])

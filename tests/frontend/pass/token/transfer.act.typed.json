@@ -666,6 +666,60 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
@@ -712,6 +766,384 @@
                             "kind": "SVar",
                             "svar": "balanceOf"
                           }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "to"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "to"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
                         },
                         "type": "int"
                       }
@@ -804,6 +1236,112 @@
                             "kind": "SVar",
                             "svar": "balanceOf"
                           }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
                         },
                         "type": "int"
                       }
@@ -1383,6 +1921,60 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
@@ -1435,6 +2027,58 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -1527,6 +2171,112 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "value"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "to"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -1922,8 +2672,17 @@
                       "indexes": [
                         {
                           "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
+                            "timing": "Pre",
+                            "var": {
+                              "item": {
+                                "abitype": {
+                                  "type": "Address"
+                                },
+                                "kind": "Var",
+                                "var": "src"
+                              },
+                              "type": "int"
+                            }
                           },
                           "kind": "TypedExpr",
                           "type": "int"
@@ -2522,11 +3281,74 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -2555,8 +3377,17 @@
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -2574,6 +3405,162 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -2666,6 +3653,112 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -2796,6 +3889,164 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
@@ -2860,6 +4111,310 @@
                             "kind": "SVar",
                             "svar": "balanceOf"
                           }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "dst"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "dst"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
                         },
                         "type": "int"
                       }
@@ -3509,8 +5064,17 @@
                       "indexes": [
                         {
                           "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
+                            "timing": "Pre",
+                            "var": {
+                              "item": {
+                                "abitype": {
+                                  "type": "Address"
+                                },
+                                "kind": "Var",
+                                "var": "src"
+                              },
+                              "type": "int"
+                            }
                           },
                           "kind": "TypedExpr",
                           "type": "int"
@@ -4109,11 +5673,74 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -4142,8 +5769,17 @@
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -4161,6 +5797,162 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -4253,6 +6045,378 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "allowance"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "allowance"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -4447,6 +6611,310 @@
                             "kind": "SVar",
                             "svar": "balanceOf"
                           }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "dst"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "dst"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
                         },
                         "type": "int"
                       }
@@ -5204,8 +7672,17 @@
                       "indexes": [
                         {
                           "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
+                            "timing": "Pre",
+                            "var": {
+                              "item": {
+                                "abitype": {
+                                  "type": "Address"
+                                },
+                                "kind": "Var",
+                                "var": "src"
+                              },
+                              "type": "int"
+                            }
                           },
                           "kind": "TypedExpr",
                           "type": "int"
@@ -5912,11 +8389,74 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -5945,8 +8485,17 @@
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -5964,6 +8513,162 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -6056,6 +8761,378 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "allowance"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "allowance"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -6203,6 +9280,220 @@
                               },
                               "kind": "TypedExpr",
                               "type": "int"
+                            },
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "allowance"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            },
+                            {
+                              "expression": {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "allowance"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
                             }
                           ],
                           "kind": "Mapping",
@@ -6250,6 +9541,310 @@
                             "kind": "SVar",
                             "svar": "balanceOf"
                           }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "dst"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            {
+                              "expression": {
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "dst"
+                                  },
+                                  "type": "int"
+                                }
+                              },
+                              "kind": "TypedExpr",
+                              "type": "int"
+                            }
+                          ],
+                          "kind": "Mapping",
+                          "reference": {
+                            "contract": "Token",
+                            "kind": "SVar",
+                            "svar": "balanceOf"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
                         },
                         "type": "int"
                       }
@@ -6709,8 +10304,17 @@
                       "indexes": [
                         {
                           "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
+                            "timing": "Pre",
+                            "var": {
+                              "item": {
+                                "abitype": {
+                                  "type": "Address"
+                                },
+                                "kind": "Var",
+                                "var": "src"
+                              },
+                              "type": "int"
+                            }
                           },
                           "kind": "TypedExpr",
                           "type": "int"
@@ -7125,11 +10729,74 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -7158,8 +10825,17 @@
                           "indexes": [
                             {
                               "expression": {
-                                "ethEnv": "Caller",
-                                "type": "int"
+                                "timing": "Pre",
+                                "var": {
+                                  "item": {
+                                    "abitype": {
+                                      "type": "Address"
+                                    },
+                                    "kind": "Var",
+                                    "var": "src"
+                                  },
+                                  "type": "int"
+                                }
                               },
                               "kind": "TypedExpr",
                               "type": "int"
@@ -7177,6 +10853,162 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -7291,6 +11123,112 @@
                       "timing": "Pre",
                       "var": {
                         "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
                           "indexes": [
                             {
                               "expression": {
@@ -7377,6 +11315,164 @@
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "Var",
+                          "var": "amount"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
                       "type": "int"
                     }
                   ],
@@ -7618,6 +11714,60 @@
             "contract": "Token",
             "kind": "Invariant",
             "preconditions": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "literal": "0",
+                        "type": "int"
+                      },
+                      {
+                        "timing": "Pre",
+                        "var": {
+                          "item": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "Var",
+                            "var": "_totalSupply"
+                          },
+                          "type": "int"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "timing": "Pre",
+                        "var": {
+                          "item": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "Var",
+                            "var": "_totalSupply"
+                          },
+                          "type": "int"
+                        }
+                      },
+                      {
+                        "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                        "type": "int"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "<="
+                  }
+                ],
+                "arity": 2,
+                "symbol": "and"
+              },
               {
                 "args": [
                   {
@@ -8152,6 +12302,222 @@
                   },
                   {
                     "literal": "1461501637330902918203684832716283019655932542975",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "Pre",
+                    "var": {
+                      "item": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "Var",
+                        "var": "_totalSupply"
+                      },
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
                     "type": "int"
                   }
                 ],

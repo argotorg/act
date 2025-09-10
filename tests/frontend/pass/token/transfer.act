@@ -44,7 +44,7 @@ interface transferFrom(address src, address dst, uint amount)
 
 iff
 
-  amount <= balanceOf[CALLER]
+  amount <= balanceOf[src]
   src    =/= dst => balanceOf[dst] + amount < 2^256
   CALLER =/= src => 0 <= allowance[src][CALLER] - amount
   CALLVALUE == 0

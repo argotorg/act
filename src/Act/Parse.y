@@ -158,6 +158,9 @@ list(x) : {- empty -}                                 { []      }
 optblock(label, x) : label nonempty(x)                { $2 }
                    | {- empty -}                      { [] }
 
+neseplist(x, sep) : x                                   { ($1 NonEmpty.:| []) }
+                  | x sep seplist(x, sep)               { ($1 NonEmpty.:|  $3) }
+
 -- rules --
 
 Contract : Constructor list(Transition)              { Contract $1 $2 }
@@ -216,7 +219,7 @@ SimplePrecondition : optblock('iff', Expr)            { $1 }
 Store : Entry '=>' Expr                               { Update $1 $3 }
 
 Entry : id                                            { EVar (posn $1) (name $1) }
-      | Entry '[' Expr ']' list(Index)                { EMapping (posn $2) $1 ($3:$5) }
+      | Entry '[' Expr ']' list(Index)                { EIndexed (posn $2) $1 ($3:$5) }
       | Entry '.' id                                  { EField (posn $2) $1 (name $3) }
 
 Index : '[' Expr ']'                                  { $2 }
@@ -259,7 +262,6 @@ SlotType : 'mapping' '(' MappingArgs ')'              { (uncurry StorageMapping)
 MappingArgs : Type '=>' Type                          { ($1 NonEmpty.:| [], $3) }
             | Type '=>' 'mapping' '(' MappingArgs ')' { (NonEmpty.cons $1 (fst $5), snd $5)  }
 
-
 Expr : '(' Expr ')'                                   { $2 }
 
   -- terminals
@@ -295,6 +297,7 @@ Expr : '(' Expr ')'                                   { $2 }
   | 'pre'  '(' Entry ')'                              { EPreEntry $3 }
   | 'post' '(' Entry ')'                              { EPostEntry $3 }
   | 'create' id '(' seplist(Expr, ',') ')'            { ECreate (posn $2) (name $2) $4 }
+  | '[' neseplist(Expr, ',') ']'                      { EArray  (posn $1) $ NonEmpty.toList $2 }
   | Expr '++' Expr                                    { ECat   (posn $2) $1 $3 }
 --  | id '[' Expr '..' Expr ']'                       { ESlice (posn $2) $1 $3 $5 }
   | 'CALLER'                                          { EnvExp (posn $1) Caller }
