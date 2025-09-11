@@ -22,7 +22,12 @@
         };
         act = (hspkgs.callCabal2nixWithOptions "act" (gitignore ./.) "-fci" {})
           .overrideAttrs (attrs : {
-            buildInputs = attrs.buildInputs ++ [ pkgs.z3 pkgs.cvc5 pkgs.solc ];
+            buildInputs = attrs.buildInputs ++ [
+              pkgs.z3
+              pkgs.cvc5
+              pkgs.solc
+              pkgs.vyper
+            ];
           });
       in rec {
         packages.act = act;
@@ -49,13 +54,14 @@
             pkgs.mdbook-katex
             pkgs.secp256k1
             pkgs.libff
+            pkgs.vyper
           ];
           withHoogle = true;
           shellHook = ''
             export PATH=$(pwd)/bin:$PATH
             export DYLD_LIBRARY_PATH="${libraryPath}"
           '';
-      };
-    }
-  );
+        };
+      }
+    );
 }
