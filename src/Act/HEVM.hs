@@ -55,6 +55,8 @@ import EVM.Effects
 import EVM.Format as Format
 import EVM.Traversals
 
+import Debug.Trace
+
 type family ExprType a where
   ExprType 'AInteger  = EVM.EWord
   ExprType 'ABoolean  = EVM.EWord
@@ -230,15 +232,15 @@ translateBehv cmap cdataprops (Behaviour _ _ _ _ preconds caseconds _ upds ret) 
   ret' <- returnsToExpr cmap ret
   cmap' <- applyUpdates cmap cmap upds
   let acmap = abstractCmap initAddr cmap'
-  pure (EVM.Success (preconds' <> caseconds' <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap)
+  pure (simplify $ EVM.Success (preconds' <> caseconds' <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap)
 
 applyUpdates :: Monad m => ContractMap -> ContractMap -> [StorageUpdate] -> ActT m ContractMap
 applyUpdates readMap writeMap upds = foldM (applyUpdate readMap) writeMap upds
 
 applyUpdate :: Monad m => ContractMap -> ContractMap -> StorageUpdate -> ActT m ContractMap
 applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
-  caddr' <- baseAddr readMap ref
-  (addr, offset, size) <- refOffset readMap ref
+  caddr' <- baseAddr writeMap ref
+  (addr, offset, size) <- refOffset writeMap ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
   case typ of
     SInteger | isCreate e -> do
@@ -299,7 +301,7 @@ createContract readMap writeMap freshAddr (Create _ cid args) = do
       let subst = makeSubstMap iface args
 
       let upds' = substUpds subst upds
-      applyUpdates (M.insert freshAddr (contract, cid) readMap) (M.insert freshAddr (contract, cid) writeMap) upds'
+      applyUpdates readMap (M.insert freshAddr (contract, cid) writeMap) upds'
     Nothing -> error "Internal error: constructor not found"
 createContract _ _ _ _ = error "Internal error: constructor call expected"
 -- TODO needs to propagate up preconditions and check pointer constraints
@@ -792,7 +794,7 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
   let hevmstorage = translateCmap actstorage
   fresh <- getFresh
   actbehvs <- translateBehvs actstorage behvs
-  (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata, sig) -> do
+  (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata,sig) -> do
     let (behvs', fcmaps) = unzip actbehv
 
     solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata fresh
