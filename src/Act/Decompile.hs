@@ -184,13 +184,13 @@ translate :: EVMContract -> Either Text Act
 translate c = do
   ctor <- mkConstructor c
   behvs <- mkBehvs c
-  let contract = Contract ctor behvs
+  let contract = Contract SolidityLayout ctor behvs
   let store = mkStore c
   pure $ Act store [contract]
 
 -- | Build an Act Store from a solc storage layout
 mkStore :: EVMContract -> Store
-mkStore c = Map.singleton (T.unpack c.name) (Map.mapKeys T.unpack $ fmap fromitem c.storageLayout)
+mkStore c = Map.singleton (T.unpack c.name) (SolidityLayout, Map.mapKeys T.unpack $ fmap fromitem c.storageLayout)
   where
     fromitem item = (convslot item.slotType, toInteger item.slot)
 
@@ -457,7 +457,7 @@ fromWord layout w = simplify <$> go w
 verifyDecompilation :: App m => SolverGroup -> ByteString -> ByteString -> Act -> m (Error String ())
 verifyDecompilation solvers creation runtime (Act store spec) = do
   let cmap = case spec of
-               [con@(Contract cnstr _)] ->
+               [con@(Contract _ cnstr _)] ->
                  Map.insert (_cname cnstr) (con, creation, runtime) mempty
                _ -> error "TODO multiple contracts"
   checkContracts solvers store cmap

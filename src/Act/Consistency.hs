@@ -104,7 +104,7 @@ mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"
 -- | Checks nonoverlapping and exhaustiveness of cases
 checkCases :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 checkCases (Act _ contracts) solver' smttimeout debug = do
-  let groups = concatMap (\(Contract _ behvs) -> groupBy sameIface behvs) contracts
+  let groups = concatMap (\(Contract _ _ behvs) -> groupBy sameIface behvs) contracts
   let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
   solver <- spawnSolver config
   let qs = mkCaseQuery mkNonoverlapAssertion <$> groups
@@ -189,7 +189,7 @@ mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ precond
 
 checkArrayBounds :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
-  forM_ contracts (\(Contract constr behvs) -> do
+  forM_ contracts (\(Contract _ constr behvs) -> do
     let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
     solver <- spawnSolver config
     let constrQs = mkConstrArrayBoundsQuery constr
@@ -315,7 +315,7 @@ mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds casec
 
 checkRewriteAliasing :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 checkRewriteAliasing (Act _ contracts)  solver' smttimeout debug =
-  forM_ contracts (\(Contract _ behvs) -> do
+  forM_ contracts (\(Contract _ _ behvs) -> do
     let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
     solver <- spawnSolver config
     let behvQs = mkAliasingQuery <$> behvs

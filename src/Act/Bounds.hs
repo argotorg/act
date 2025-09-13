@@ -25,7 +25,7 @@ and postconditions.
 addBounds :: Act -> Act
 addBounds (Act store contracts) = Act store (addBoundsContract <$> contracts)
   where
-    addBoundsContract (Contract ctors behvs) = Contract (addBoundsConstructor ctors) (addBoundsBehaviour <$> behvs)
+    addBoundsContract (Contract layout ctors behvs) = Contract layout (addBoundsConstructor ctors) (addBoundsBehaviour <$> behvs)
 
 -- | Adds type bounds for calldata, environment vars, and external storage vars
 -- as preconditions
@@ -45,7 +45,7 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
       invs' = addBoundsInvariant ctor <$> invs
       post' = post <> mkStorageBounds stateUpdates Post
 
-      locs = concatMap locsFromExp (pre <> post)
+      locs = nub $ concatMap locsFromExp (pre <> post)
              <> concatMap locsFromInvariant invs
              <> concatMap locsFromUpdate stateUpdates
       nonlocalLocs = filter (not . isLocalLoc) locs
@@ -63,7 +63,7 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stat
       post' = post
               <> mkStorageBounds stateUpdates Post
 
-      locs = concatMap locsFromExp (pre <> post <> cases)
+      locs = nub $ concatMap locsFromExp (pre <> post <> cases)
              <> concatMap locsFromUpdate stateUpdates
 
 -- | Adds type bounds for calldata, environment vars, and storage vars

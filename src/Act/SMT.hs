@@ -228,7 +228,7 @@ mkDefaultSMT isCtor activeSLocs activeCLocs envs ifaceName decls preconds extrac
 mkPostconditionQueries :: Act -> [Query]
 mkPostconditionQueries (Act _ contr) = concatMap mkPostconditionQueriesContract contr
   where
-    mkPostconditionQueriesContract (Contract constr behvs) =
+    mkPostconditionQueriesContract (Contract _ constr behvs) =
       mkPostconditionQueriesConstr constr <> concatMap mkPostconditionQueriesBehv behvs
 
 mkPostconditionQueriesBehv :: Behaviour -> [Query]
@@ -274,7 +274,7 @@ mkInvariantQueries (Act _ contracts) = fmap mkQuery gathered
     mkQuery (inv, ctor, behvs) = Inv inv (mkInit inv ctor) (fmap (mkBehv inv ctor) behvs)
     gathered = concatMap getInvariants contracts
 
-    getInvariants (Contract (c@Constructor{..}) behvs) = fmap (, c, behvs) _invariants
+    getInvariants (Contract _ (c@Constructor{..}) behvs) = fmap (, c, behvs) _invariants
 
     mkInit :: Invariant -> Constructor -> (Constructor, SMTExp)
     mkInit (Invariant _ invConds _ (PredTimed _ invPost)) ctor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) = (ctor, mksmt invPost)

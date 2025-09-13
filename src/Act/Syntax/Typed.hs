@@ -41,6 +41,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.List (genericTake,genericDrop)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as StrictMap (map)
 import Data.String (fromString)
 import Data.Text (pack)
 import Data.Vector (fromList)
@@ -59,12 +60,12 @@ import Act.Syntax.Untyped as Act.Syntax.Typed (Id, Pn, Interface(..), EthEnv(..)
 data Act t = Act Store [Contract t]
   deriving (Show, Eq)
 
-data Contract t = Contract (Constructor t) [Behaviour t]
+data Contract t = Contract LayoutMode (Constructor t) [Behaviour t]
   deriving (Show, Eq)
 
 -- For each contract, it stores the type of a storage variables and
 -- the order in which they are declared
-type Store = Map Id (Map Id (SlotType, Integer))
+type Store = Map Id (LayoutMode, (Map Id (SlotType, Integer)))
 
 
 -- | Represents a contract level invariant. The invariant is defined in the
@@ -102,6 +103,8 @@ data Constructor t = Constructor
   , _initialStorage :: [StorageUpdate t]
   } deriving (Show, Eq)
 
+data LayoutMode = SolidityLayout | VyperLayout
+  deriving (Show, Eq)
 
 -- After typing each behavior may be split to multiple behaviors, one for each case branch.
 -- In this case, only the `_caseconditions`, `_stateUpdates`, and `_returns` fields are different.
@@ -410,13 +413,13 @@ instance ToJSON (Act t) where
                                            , "contracts" .= toJSON contracts ]
 
 instance ToJSON (Contract t) where
-  toJSON (Contract ctor behv) = object [ "kind" .= String "Contract"
+  toJSON (Contract _ ctor behv) = object [ "kind" .= String "Contract"
                                        , "constructor" .= toJSON ctor
                                        , "behaviours" .= toJSON behv ]
 
 storeJSON :: Store -> Value
 storeJSON storages = object [ "kind" .= String "Storages"
-                            , "storages" .= toJSON storages]
+                            , "storages" .= toJSON (StrictMap.map snd storages)]
 
 instance ToJSON (Constructor t) where
   toJSON Constructor{..} = object [ "kind" .= String "Constructor"

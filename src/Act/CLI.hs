@@ -13,13 +13,19 @@
 module Act.CLI (main, compile, proceed, prettyErrs) where
 
 import Data.Aeson hiding (Bool, Number, json, Success)
+import Data.Aeson.Optics
+import Data.Aeson.Key qualified as Key
+import Data.Aeson.KeyMap qualified as KeyMap
 import GHC.Generics
 import System.Exit ( exitFailure )
 import System.IO (hPutStrLn, stderr)
+import System.Process
 import Data.Text (unpack)
+import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import Data.List
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Data.HashMap.Strict qualified as HMap
 import Data.Maybe
 import qualified Data.Text as Text
 import qualified Data.Text.IO as TIO
@@ -28,17 +34,21 @@ import GHC.Conc
 import GHC.Natural
 import Options.Generic
 
+import Optics.Core
+import Optics.Operators.Unsafe
+
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString (ByteString)
 
 import Control.Monad
-import Control.Lens.Getter
+import Control.Lens.Getter as LensGetter
 
 import Act.Error
 import Act.Lex (lexer, AlexPosn(..))
 import Act.Parse
-import Act.Syntax.TypedExplicit
+import Act.Syntax.TypedExplicit hiding (_Array)
 import Act.Bounds
 import Act.SMT as SMT
 import Act.Type
@@ -47,11 +57,12 @@ import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
-import Act.Decompile
+import Act.Decompile hiding (storageLayout)
 
 import qualified EVM.Solvers as Solvers
 import EVM.Solidity
 import EVM.Effects
+import Debug.Trace
 
 --command line options
 data Command w
@@ -259,34 +270,99 @@ hevm actspec sol' code' initcode' solver' timeout debug' = do
   where
     createContractMap :: [Contract] -> IO (Map Id (Contract, BS.ByteString, BS.ByteString))
     createContractMap contracts = do
-      foldM (\cmap spec'@(Contract cnstr _) -> do
+      foldM (\cmap spec'@(Contract layout cnstr _) -> do
                 let cid =  _cname cnstr
-                (initcode'', runtimecode') <- getBytecode cid -- TODO do not reread the file each time
+                (initcode'', runtimecode') <- getBytecode cid layout -- TODO do not reread the file each time
                 pure $ Map.insert cid (spec', initcode'', runtimecode') cmap
             ) mempty contracts
 
-    getBytecode :: Id -> IO (BS.ByteString, BS.ByteString)
-    getBytecode cid =
+    getBytecode :: Id -> LayoutMode -> IO (BS.ByteString, BS.ByteString)
+    getBytecode cid layout =
       case (sol', code', initcode') of
         (Just f, Nothing, Nothing) -> do
           solContents  <- TIO.readFile f
-          bytecodes (Text.pack cid) solContents
+          bytecodes (Text.pack cid) layout solContents
         (Nothing, Just _, Just _) -> render (text "Only Solidity file supported") >> exitFailure -- pure (i, c)
         (Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
         (Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
         (Just _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
-        (Just _, _, Just _) -> render (text "Both Solidity file and initial code are given. Please specify only one." <> line) >> exitFailure
+        (Just _, _, Just _) -> render (text "Both Solidityfile and initial code are given. Please specify only one." <> line) >> exitFailure
 
 
-bytecodes :: Text -> Text -> IO (BS.ByteString, BS.ByteString)
-bytecodes cid src = do
+bytecodes :: Text -> LayoutMode -> Text -> IO (BS.ByteString, BS.ByteString)
+bytecodes cid SolidityLayout src = do
   json <- solc Solidity src False
   let (Contracts sol', _, _) = fromJust $ readStdJSON json
   let err = error $ "Cannot find Solidity contract " <> Text.unpack cid
   pure ((fromMaybe err . Map.lookup ("hevm.sol" <> ":" <> cid) $ sol').creationCode,
         (fromMaybe err . Map.lookup ("hevm.sol" <> ":" <> cid) $ sol').runtimeCode)
+bytecodes cid VyperLayout src = do
+  json <- vyper cid src
+  let contracts = fromJust $ readVyperJSON json
+  let err = error $ "Cannot find Solidity contract " <> Text.unpack cid
+  pure (fromMaybe err . lookup (cid <> ".vy" <> ":" <> cid) $ contracts)
 
+vyper :: Text -> Text -> IO Text
+vyper cid src = Text.pack <$> readProcess "vyper" ["--standard-json"] (Text.unpack $ stdVyperJson cid src) 
 
+stdVyperJson :: Text -> Text -> Text
+stdVyperJson cid src = decodeUtf8 $ BS.toStrict $ encode $ vyperToJSON cid src
+
+vyperToJSON :: Text -> Text -> Value
+vyperToJSON cid src =
+  object [ "language" .= (toJSON :: String -> Value) ("Vyper" :: String)
+         , "sources" .= object [ Key.fromText (cid <> ".vy") .= object ["content" .= src]]
+         , "settings" .=
+           object [ "outputSelection" .=
+                  object ["*" .=
+                    object ["*" .= ((toJSON :: [String] -> Value)
+                            ["metadata" :: String,
+                             "evm.bytecode",
+                             "evm.deployedBytecode",
+                             "abi",
+                             --"storageLayout",
+                             "evm.bytecode.sourceMap",
+                             --"evm.bytecode.linkReferences",
+                             --"evm.bytecode.generatedSources",
+                             "evm.deployedBytecode.sourceMap"
+                             --"evm.deployedBytecode.linkReferences",
+                             --"evm.deployedBytecode.generatedSources",
+                             --"evm.deployedBytecode.immutableReferences"
+                            ]),
+                            "" .= ((toJSON :: [String] -> Value) ["ast" :: String])
+                           ]
+                          ]
+                  ]
+
+         ]
+
+-- | Parses the standard json output from solc
+readVyperJSON :: Text -> Maybe [(Text,(ByteString, ByteString))]
+readVyperJSON json = do
+  contracts <- KeyMap.toHashMapText <$> json ^? key "contracts" % _Object
+  let contractMap = f contracts
+  pure $ Map.toList contractMap
+  where
+    f :: (AsValue s) => HMap.HashMap Text s -> (Map Text (ByteString, ByteString))
+    f x = Map.fromList . (concatMap g) . HMap.toList $ x
+    g (s, x) = h s <$> HMap.toList (KeyMap.toHashMapText (fromMaybe (error "Could not parse json object") (preview _Object x)))
+    h :: Text -> (Text, Value) -> (Text, (ByteString, ByteString))
+    h s (c, x) =
+      let
+        evmstuff = x ^?! key "evm"
+        sc = s <> ":" <> c
+        runtime = evmstuff ^?! key "deployedBytecode"
+        creation =  evmstuff ^?! key "bytecode"
+        theRuntimeCode = (toCode sc) $ fromMaybe "" $ runtime ^? key "object" % _String
+        theCreationCode = (toCode sc) $ fromMaybe "" $ creation ^? key "object" % _String
+      in (sc, (theCreationCode, theRuntimeCode))
+
+toCode :: Text -> Text -> ByteString
+toCode contractName t = case BS16.decodeBase16Untyped (encodeUtf8 (Text.drop 2 t)) of
+  Right d -> d
+  Left e -> if containsLinkerHole t
+            then error $ Text.unpack ("Error toCode: unlinked libraries detected in bytecode, in " <> contractName)
+            else error $ Text.unpack ("Error toCode:" <> e <> ", in " <> contractName)
 
 -------------------
 -- *** Util *** ---
@@ -294,7 +370,7 @@ bytecodes cid src = do
 
 -- | Fail on error, or proceed with continuation
 proceed :: Validate err => String -> err (NonEmpty (Pn, String)) a -> (a -> IO ()) -> IO ()
-proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
+proceed contents comp continue = validation (prettyErrs contents) continue (comp LensGetter.^. revalidate)
 
 compile :: String -> Error String Act
 compile = pure . annotate <==< typecheck <==< parse . lexer
