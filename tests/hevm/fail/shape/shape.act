@@ -68,13 +68,3 @@ iff
 creates
    A a := y.a
    B b := y 
-
-behaviour change of C
-interface change()
-
-iff
-
-  CALLVALUE == 0
-  
-storage
-  a => create A(42)
