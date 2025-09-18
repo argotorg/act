@@ -63,7 +63,7 @@ type family ExprType a where
 
 -- | The storage layout. Maps each contract type to a map that maps storage
 -- variables to their slot, offset, and size in bytes in memory
-type Layout = M.Map Id (M.Map Id (Int, Int,Int))
+type Layout = M.Map Id (LayoutMode, M.Map Id (Int, Int,Int))
 
 type ContractMap = M.Map (EVM.Expr EVM.EAddr) (EVM.Expr EVM.EContract, Id)
 
@@ -81,9 +81,9 @@ slotMap :: Store -> Layout
 slotMap store =
   M.map (\cstore ->
       let vars = sortOn (snd . snd) $ M.toList $ snd cstore
-          layout = fst cstore
+          layoutMode = fst cstore
       in
-      M.fromList $ makeLayout layout vars 0 0
+      (layoutMode, M.fromList $ makeLayout layoutMode vars 0 0)
   ) store
 
 makeLayout :: LayoutMode -> [(String,(SlotType, Integer))] -> Int -> Int -> [(Id, (Int,Int,Int))]
@@ -96,10 +96,8 @@ makeLayout SolidityLayout ((name,(typ,_)):vars) offset slot =
   where
     size = sizeOfSlotType typ
     itFits = size <= 32 - offset
-makeLayout VyperLayout ((name,(typ,_)):vars) _ slot =
+makeLayout VyperLayout ((name,_):vars) _ slot =
   (name, (slot, 0, 32)):makeLayout VyperLayout vars 0 (slot+1)
-  where
-    size = sizeOfSlotType typ
 
 -- size of a storage item in bytes
 sizeOfSlotType :: SlotType -> Int
@@ -185,10 +183,10 @@ getCaller = do
 -- * Act translation
 
 translateConstructor :: Monad m => BS.ByteString -> LayoutMode -> Constructor -> ContractMap -> ActT m ([EVM.Expr EVM.End], Calldata, Sig, ContractMap)
-translateConstructor bytecode layout (Constructor cid iface _ preconds _ _ upds) cmap = do
+translateConstructor bytecode layoutMode (Constructor cid iface _ preconds _ _ upds) cmap = do
   let initmap =  M.insert initAddr (initcontract, cid) cmap
   preconds' <- mapM (toProp initmap) preconds
-  cmap' <- applyUpdates layout initmap initmap upds
+  cmap' <- applyUpdates layoutMode initmap initmap upds
   let acmap = abstractCmap initAddr cmap'
   pure ([simplify $ EVM.Success (snd calldata <> preconds' <> symAddrCnstr acmap) mempty (EVM.ConcreteBuf bytecode) (M.map fst cmap')], calldata, ifaceToSig iface, acmap)
   where
@@ -205,11 +203,11 @@ symAddrCnstr cmap =
     (\(a1, a2) -> EVM.PNeg (EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2))) <$> comb (M.keys cmap)
 
 translateBehvs :: Monad m => ContractMap -> LayoutMode -> [Behaviour] -> ActT m [(Id, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig)]
-translateBehvs cmap layout behvs = do
+translateBehvs cmap layoutMode behvs = do
   let groups = (groupBy sameIface behvs) :: [[Behaviour]]
   mapM (\behvs' -> do
            let calldata = behvCalldata behvs'
-           exprs <- mapM (translateBehv cmap (snd calldata) layout) behvs'
+           exprs <- mapM (translateBehv cmap (snd calldata) layoutMode) behvs'
            pure (behvName behvs', exprs, calldata, behvSig behvs)) groups
   where
     behvCalldata (Behaviour _ _ iface _ _ _ _ _ _:_) = makeCalldata iface
@@ -231,42 +229,21 @@ ifaceToSig (Interface name args) = Sig (T.pack name) (fmap fromdecl args)
     fromdecl (Decl t _) = t
 
 translateBehv :: Monad m => ContractMap -> [EVM.Prop] -> LayoutMode -> Behaviour -> ActT m (EVM.Expr EVM.End, ContractMap)
-translateBehv cmap cdataprops layout (Behaviour _ _ _ _ preconds caseconds _ upds ret)  = do
-  --preconds' <- mapM (toProp cmap) preconds
-  preconds' <- mapM (toProp cmap) $ traceShowId $ filter (Prelude.not . isStorageBound) $ traceShowId preconds
+translateBehv cmap cdataprops layoutMode (Behaviour _ _ _ _ preconds caseconds _ upds ret)  = do
+  preconds' <- mapM (toProp cmap) preconds
   caseconds' <- mapM (toProp cmap) caseconds
   ret' <- returnsToExpr cmap ret
-  cmap' <- applyUpdates layout cmap cmap upds
+  cmap' <- applyUpdates layoutMode cmap cmap upds
   let acmap = abstractCmap initAddr cmap'
   pure (EVM.Success (preconds' <> caseconds' <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap)
-  where
-    isStorageBound :: Exp ABoolean -> Bool
-    isStorageBound (And _ (LEQ _ (LitInt _ 0) e) (LEQ _ e' (UIntMax _ n))) | e == e' =
-      case (e,e') of
-        (VarRef _ Pre SRefKind item@(Item _ (PrimitiveType (AbiUIntType an)) r), VarRef _ _ SRefKind item'@(Item _ (PrimitiveType (AbiUIntType an')) _)) ->
-          (eqKind item item') && (Prelude.not $ isInCalldata r) && n == an && an == an'
-        _ -> False
-    isStorageBound (And _ (LEQ _ (LitInt _ 0) e) (LEQ _ e'  (IntMax _ n))) | e == e' =
-      case (e,e') of
-        (VarRef _ Pre SRefKind item@(Item _ (PrimitiveType (AbiIntType an)) r), VarRef _ _ SRefKind item'@(Item _ (PrimitiveType (AbiIntType an')) _)) ->
-          (eqKind item item') && (Prelude.not $ isInCalldata r) && n == an && an == an'
-        _ -> False
-    isStorageBound _ = False
-
-    isInCalldata :: Ref k -> Bool
-    isInCalldata (CVar _ _ _) = True
-    isInCalldata (SArray _ r _ _) = isInCalldata r
-    isInCalldata (SMapping _ r _ _) = isInCalldata r
-    isInCalldata (SField _ _ _ _) = False
-    isInCalldata (SVar _ _ _) = False
 
 applyUpdates :: Monad m => LayoutMode -> ContractMap -> ContractMap -> [StorageUpdate] -> ActT m ContractMap
-applyUpdates layout readMap writeMap upds = foldM (applyUpdate layout readMap) writeMap upds
+applyUpdates layoutMode readMap writeMap upds = foldM (applyUpdate layoutMode readMap) writeMap upds
 
 applyUpdate :: Monad m => LayoutMode -> ContractMap -> ContractMap -> StorageUpdate -> ActT m ContractMap
-applyUpdate layout readMap writeMap (Update typ (Item _ _ ref) e) = do
+applyUpdate layoutMode readMap writeMap (Update typ (Item _ _ ref) e) = do
   caddr' <- baseAddr readMap ref
-  (addr, offset, size) <- refOffset readMap ref
+  (addr, offset, size, _) <- refOffset readMap ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
   case typ of
     SInteger | isCreate e -> do
@@ -317,7 +294,7 @@ createContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr ->
 createContract readMap writeMap freshAddr (Create _ cid args) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
-    Just (Contract layout (Constructor _ iface _ _ _ _ upds) _, _, bytecode) -> do
+    Just (Contract layoutMode (Constructor _ iface _ _ _ _ upds) _, _, bytecode) -> do
       let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                            , EVM.storage = EVM.ConcreteStore mempty
                            , EVM.tStorage = EVM.ConcreteStore mempty
@@ -327,7 +304,7 @@ createContract readMap writeMap freshAddr (Create _ cid args) = do
       let subst = makeSubstMap iface args
 
       let upds' = substUpds subst upds
-      applyUpdates layout (M.insert freshAddr (contract, cid) readMap) (M.insert freshAddr (contract, cid) writeMap) upds'
+      applyUpdates layoutMode (M.insert freshAddr (contract, cid) readMap) (M.insert freshAddr (contract, cid) writeMap) upds'
     Nothing -> error "Internal error: constructor not found"
 createContract _ _ _ _ = error "Internal error: constructor call expected"
 -- TODO needs to propagate up preconditions and check pointer constraints
@@ -461,33 +438,43 @@ expToBuf cmap styp e = do
     SByteStr -> toExpr cmap e
     SSArray _ -> error "TODO arrays"
 
+getLayoutMode :: Layout -> Id -> LayoutMode
+getLayoutMode layout cid =
+  case M.lookup cid layout of
+    Just (lm, _) -> lm
+    Nothing -> error "Internal error: invalid contract name"
+
 -- | Get the slot and the offset of a storage variable in storage
-getPosition :: Layout -> Id -> Id -> (Int, Int, Int)
+getPosition :: Layout -> Id -> Id -> (Int, Int, Int, LayoutMode)
 getPosition layout cid name =
   case M.lookup cid layout of
-    Just m -> case M.lookup name m of
-      Just pos -> pos
+    Just (lm, m) -> case M.lookup name m of
+      Just (p1,p2,p3) -> (p1,p2,p3,lm)
       Nothing -> error $ "Internal error: invalid variable name: " <> show name
     Nothing -> error "Internal error: invalid contract name"
 
 -- | For the given storage reference, it returs the memory slot, the offset
 -- of the value within the slot, and the size of the value.
-refOffset :: Monad m => ContractMap -> Ref k -> ActT m (EVM.Expr EVM.EWord, EVM.Expr EVM.EWord, Int)
+refOffset :: Monad m => ContractMap -> Ref k -> ActT m (EVM.Expr EVM.EWord, EVM.Expr EVM.EWord, Int, LayoutMode)
 refOffset _ (CVar _ _ _) = error "Internal error: ill-typed entry"
 refOffset _ (SVar _ cid name) = do
   layout <- getLayout
-  let (slot, off, size) = getPosition layout cid name
-  pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size)
+  let (slot, off, size, layoutMode) = getPosition layout cid name
+  pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size, layoutMode)
 refOffset cmap (SMapping _ ref typ ixs) = do
-  (slot, _, _) <- refOffset cmap ref
+  (slot, _, _, layoutMode) <- refOffset cmap ref
   addr <- foldM (\slot' i -> do
             buf <- typedExpToBuf cmap i
-            pure (EVM.keccak (buf <> (wordToBuf slot')))) slot ixs
-  pure (addr, EVM.Lit 0, sizeOfValue typ)
+            let concatenation =
+                  case layoutMode of
+                    SolidityLayout -> buf <> (wordToBuf slot')
+                    VyperLayout -> (wordToBuf slot') <> buf
+            pure (EVM.keccak concatenation)) slot ixs
+  pure (addr, EVM.Lit 0, sizeOfValue typ, layoutMode)
 refOffset _ (SField _ _ cid name) = do
   layout <- getLayout
-  let (slot, off, size) = getPosition layout cid name
-  pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size)
+  let (slot, off, size, layoutMode) = getPosition layout cid name
+  pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size, layoutMode)
 refOffset _ (SArray _ _ _ _) = error "TODO"
 
 
@@ -667,7 +654,7 @@ refToExp _ (CVar _ typ x) = pure $ fromCalldataFramgment $ symAbiArg (T.pack x) 
 
 refToExp cmap r = do
   caddr <- baseAddr cmap r
-  (slot, offset, size) <- refOffset cmap r
+  (slot, offset, size, _) <- refOffset cmap r
   let word = accessStorage cmap slot caddr
   pure $ extractValue word offset size
 
@@ -682,15 +669,6 @@ inRange :: AbiType -> Exp AInteger -> Exp ABoolean
 -- if the type has the type of machine word then check per operation
 inRange (AbiUIntType 256) e = checkOp e
 inRange (AbiIntType 256) _ = error "TODO signed integers"
--- otherwise insert range bounds
-inRange _ (VarRef _ _ _ (Item _ _ r)) | Prelude.not $ isInCalldata r = LitBool nowhere True
-  where
-    isInCalldata :: Ref k -> Bool
-    isInCalldata (CVar _ _ _) = True
-    isInCalldata (SArray _ r' _ _) = isInCalldata r'
-    isInCalldata (SMapping _ r' _ _) = isInCalldata r'
-    isInCalldata (SField _ _ _ _) = False
-    isInCalldata (SVar _ _ _) = False
 inRange t e = bound t e
 
 
@@ -749,7 +727,7 @@ getInitContractState solvers iface pointers preconds cmap = do
       let addr = EVM.SymAddr $ T.pack x
       codemap <- getCodemap
       case M.lookup cid codemap of
-        Just (Contract layout (Constructor _ iface' pointers' preconds' _ _ upds) _, _, bytecode) -> do
+        Just (Contract layoutMode (Constructor _ iface' pointers' preconds' _ _ upds) _, _, bytecode) -> do
           (icmap, check) <- getInitContractState solvers iface' pointers' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty
@@ -758,7 +736,7 @@ getInitContractState solvers iface pointers preconds cmap = do
                                , EVM.nonce = Just 1
                                }
           let icmap' = M.insert addr (contract, cid) icmap
-          cmap' <- localCaddr addr $ applyUpdates layout icmap' icmap' upds
+          cmap' <- localCaddr addr $ applyUpdates layoutMode icmap' icmap' upds
           pure (abstractCmap addr cmap', check)
         Nothing -> error $ "Internal error: Contract " <> cid <> " not found\n" <> show codemap
     getContractState [] = error "Internal error: Cast cannot be empty"
@@ -802,14 +780,13 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract layout ctor@(Constructor _ iface pointers preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract layoutMode ctor@(Constructor _ iface pointers preconds _ _ _)  _) = do
   -- Construct the initial contract state
-  let preconds' = filter (Prelude.not . isStorageBound) preconds
-  (actinitmap, checks) <- getInitContractState solvers iface pointers preconds' M.empty
+  (actinitmap, checks) <- getInitContractState solvers iface pointers preconds M.empty
   let hevminitmap = translateCmap actinitmap
   -- Translate Act constructor to Expr
   fresh <- getFresh
-  (actbehvs, calldata, sig, cmap) <- translateConstructor runtimecode layout ctor actinitmap
+  (actbehvs, calldata, sig, cmap) <- translateConstructor runtimecode layoutMode ctor actinitmap
   -- Symbolically execute bytecode
   -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
   solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata [] fresh
@@ -824,36 +801,24 @@ checkConstructors solvers initcode runtimecode (Contract layout ctor@(Constructo
   where
     removeFails branches = filter isSuccess branches
 
-    isStorageBound :: Exp ABoolean -> Bool
-    isStorageBound (And _ (LEQ _ (LitInt _ 0) e) (LEQ _ e' (UIntMax _ n))) | e == e' =
-      case (e,e') of
-        (VarRef _ Pre SRefKind item@(Item _ (PrimitiveType (AbiUIntType an)) r), VarRef _ _ SRefKind item'@(Item _ (PrimitiveType (AbiUIntType an')) _)) ->
-          (eqKind item item') && (Prelude.not $ isInCalldata r) && n == an && an == an'
-        _ -> False
-    isStorageBound (And _ (LEQ _ (LitInt _ 0) e) (LEQ _ e'  (IntMax _ n))) | e == e' =
-      case (e,e') of
-        (VarRef _ Pre SRefKind item@(Item _ (PrimitiveType (AbiIntType an)) r), VarRef _ _ SRefKind item'@(Item _ (PrimitiveType (AbiIntType an')) _)) ->
-          (eqKind item item') && (Prelude.not $ isInCalldata r) && n == an && an == an'
-        _ -> False
-    isStorageBound _ = False
-
-    isInCalldata :: Ref k -> Bool
-    isInCalldata (CVar _ _ _) = True
-    isInCalldata (SArray _ r _ _) = isInCalldata r
-    isInCalldata (SMapping _ r _ _) = isInCalldata r
-    isInCalldata (SField _ _ _ _) = False
-    isInCalldata (SVar _ _ _) = False
-
+localStorageBounds :: forall m . App m => Constructor -> ContractMap -> ActT m [EVM.Prop]
+localStorageBounds (Constructor _ _ _ _ _ _ initState) contractMap = do
+  mapM (toProp contractMap) $ concatMap updateBound initState
+  where
+    updateBound :: StorageUpdate -> [Exp ABoolean]
+    updateBound (Update SInteger item@(Item _ (PrimitiveType at) _) _) = [bound at (VarRef nowhere Pre SStorage item)]
+    updateBound _ = []
 
 checkBehaviours :: forall m. App m => SolverGroup -> Contract -> ContractMap -> ActT m (Error String ())
-checkBehaviours solvers (Contract layout _ behvs) actstorage = do
+checkBehaviours solvers (Contract layoutMode constr behvs) actstorage = do
   let hevmstorage = translateCmap actstorage
   fresh <- getFresh
-  actbehvs <- translateBehvs actstorage layout behvs
+  actbehvs <- translateBehvs actstorage layoutMode behvs
   (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata, sig) -> do
     let (behvs', fcmaps) = unzip actbehv
 
-    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata fresh
+    localBounds <- localStorageBounds constr actstorage
+    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata localBounds fresh
 
     lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
     -- equivalence check
@@ -861,14 +826,13 @@ checkBehaviours solvers (Contract layout _ behvs) actstorage = do
     res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
     -- input space exhaustiveness check
     lift $ showMsg "\x1b[1mChecking if the input spaces are the same\x1b[m"
-    res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers --solbehvs behvs'
-      (trace (showBehvs solbehvs) solbehvs) (trace (showBehvs behvs') behvs')
+    res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
+      --(trace (showBehvs solbehvs) solbehvs) (trace (showBehvs behvs') behvs')
     pure $ traverse_ (checkStoreIsomorphism actstorage) fcmaps *> res1 *> res2
 
   where
     removeFails branches = filter isSuccess branches
     def = Success ()
-
 
 
 translateCmap :: ContractMap -> [(EVM.Expr EVM.EAddr, EVM.Contract)]
@@ -1041,7 +1005,7 @@ checkAbi solver contract cmap = do
   let hevmstorage = translateCmap cmap
   let txdata = EVM.AbstractBuf "txdata"
   let selectorProps = assertSelector txdata <$> nubOrd (actSigs contract)
-  evmBehvs <- getRuntimeBranches solver hevmstorage (txdata, []) 0 -- TODO what freshAddr goes here?
+  evmBehvs <- getRuntimeBranches solver hevmstorage (txdata, []) [] 0 -- TODO what freshAddr goes here?
   conf <- readConfig
   let queries =  fmap (assertProps conf) $ filter (/= []) $ fmap (checkBehv selectorProps) evmBehvs
   res <- liftIO $ mapConcurrently (checkSat solver Nothing) queries

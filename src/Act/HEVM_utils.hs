@@ -118,9 +118,9 @@ iterConfig = IterConfig
   }
 
 -- | decompiles the given EVM bytecode into a list of Expr branches
-getRuntimeBranches :: App m => SolverGroup -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> Calldata -> Int -> m [EVM.Expr EVM.End]
-getRuntimeBranches solvers contracts calldata fresh = do
-  prestate <- liftIO $ stToIO $ abstractVM contracts calldata fresh
+getRuntimeBranches :: App m => SolverGroup -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> Calldata -> [EVM.Prop] -> Int -> m [EVM.Expr EVM.End]
+getRuntimeBranches solvers contracts calldata precond fresh = do
+  prestate <- liftIO $ stToIO $ abstractVM contracts calldata precond fresh
   expr <- interpret (Fetch.oracle solvers Nothing) iterConfig prestate runExpr
   let simpl = simplify expr
   let nodes = flattenExpr simpl
@@ -145,11 +145,12 @@ abstractInitVM contractCode contracts cd precond fresh = do
   vm <- loadSymVM (EVM.SymAddr "entrypoint", EVM.initialContract code) contracts value cd True fresh
   pure $ vm { constraints = vm.constraints <> precond }
 
-abstractVM :: [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> Int -> ST s (EVM.VM EVM.Symbolic s)
-abstractVM contracts cd fresh = do
+abstractVM :: [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> [EVM.Prop] -> Int -> ST s (EVM.VM EVM.Symbolic s)
+abstractVM contracts cd precond fresh = do
   let value = EVM.TxValue
   let (c, cs) = findInitContract
-  loadSymVM c cs value cd False fresh
+  vm <- loadSymVM c cs value cd False fresh
+  pure $ vm { constraints = vm.constraints <> precond }
 
   where
     findInitContract :: ((EVM.Expr 'EVM.EAddr, EVM.Contract), [(EVM.Expr 'EVM.EAddr, EVM.Contract)])

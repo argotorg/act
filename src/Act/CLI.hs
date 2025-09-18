@@ -62,7 +62,6 @@ import Act.Decompile hiding (storageLayout)
 import qualified EVM.Solvers as Solvers
 import EVM.Solidity
 import EVM.Effects
-import Debug.Trace
 
 --command line options
 data Command w
@@ -303,7 +302,7 @@ bytecodes cid VyperLayout src = do
   pure (fromMaybe err . lookup (cid <> ".vy" <> ":" <> cid) $ contracts)
 
 vyper :: Text -> Text -> IO Text
-vyper cid src = Text.pack <$> readProcess "vyper" ["--standard-json"] (Text.unpack $ stdVyperJson cid src) 
+vyper cid src = Text.pack <$> (readProcess "vyper" ["--standard-json"] (Text.unpack $ stdVyperJson cid src))
 
 stdVyperJson :: Text -> Text -> Text
 stdVyperJson cid src = decodeUtf8 $ BS.toStrict $ encode $ vyperToJSON cid src
