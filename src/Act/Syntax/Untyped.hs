@@ -22,13 +22,10 @@ newtype Act = Main [Contract]
 data Contract = Contract Constructor [Transition]
   deriving (Eq, Show)
 
-data Constructor = Constructor Pn Id [Pragma] Interface [Pointer] Iff Creates Ensures Invariants
+data Constructor = Constructor Pn Id Interface [Pointer] Iff Creates Ensures Invariants
   deriving (Eq, Show)
 
 data Transition = Transition Pn Id Id Interface [Pointer] Iff Cases Ensures
-  deriving (Eq, Show)
-
-data Pragma = LayoutMode Pn String
   deriving (Eq, Show)
 
 type Iff = [Expr]

@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
 
-module Act.Bounds (addBounds) where
+module Act.Bounds (addBounds, mkLocationBounds) where
 
 import Data.Maybe
 import Data.List (nub, partition)
@@ -25,7 +25,7 @@ and postconditions.
 addBounds :: Act -> Act
 addBounds (Act store contracts) = Act store (addBoundsContract <$> contracts)
   where
-    addBoundsContract (Contract layout ctors behvs) = Contract layout (addBoundsConstructor ctors) (addBoundsBehaviour <$> behvs)
+    addBoundsContract (Contract ctors behvs) = Contract (addBoundsConstructor ctors) (addBoundsBehaviour <$> behvs)
 
 -- | Adds type bounds for calldata, environment vars, and external storage vars
 -- as preconditions
@@ -52,7 +52,7 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
 
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
-addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stateUpdates _) =
+addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stateUpdates ret) =
   behv { _preconditions = pre', _postconditions = post' }
     where
       pre' = pre
@@ -65,6 +65,7 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stat
 
       locs = nub $ concatMap locsFromExp (pre <> post <> cases)
              <> concatMap locsFromUpdate stateUpdates
+             <> (maybe [] locsFromTypedExp ret)
 
 -- | Adds type bounds for calldata, environment vars, and storage vars
 addBoundsInvariant :: Constructor -> Invariant -> Invariant
@@ -112,7 +113,7 @@ mkStorageBounds refs t = concatMap mkBound refs
   where
     mkBound :: StorageUpdate -> [Exp ABoolean]
     mkBound (Update SInteger item _) = [mkSItemBounds t item]
-    mkBound (Update typ item@(Item _ (PrimitiveType at) _) _) | isNothing $ flattenArrayAbiType at =
+    mkBound (Update typ item@(Item _ (PrimitiveType at) _) _) | isJust $ flattenArrayAbiType at =
       maybe [] (\Refl -> mkSItemBounds t <$> expandItem item) $ testEquality (flattenSType typ) SInteger
     mkBound _ = []
 
@@ -129,7 +130,7 @@ mkLocationBounds refs = concatMap mkBound refs
   where
     mkBound :: Location -> [Exp ABoolean]
     mkBound (Loc SInteger rk item) = [mkItemBounds rk item]
-    mkBound (Loc typ rk item@(Item _ (PrimitiveType at) _)) | isNothing $ flattenArrayAbiType at =
+    mkBound (Loc typ rk item@(Item _ (PrimitiveType at) _)) | isJust $ flattenArrayAbiType at =
       maybe [] (\Refl -> mkItemBounds rk <$> expandItem item) $ testEquality (flattenSType typ) SInteger
     mkBound _ = []
 

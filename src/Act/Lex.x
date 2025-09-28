@@ -58,9 +58,6 @@ tokens :-
   pre                                   { mk PRE }
   post                                  { mk POST }
 
-  -- pragmas
-  layout                                { mk LAYOUT }
-
   -- builtin types
   uint $digit+                          { \ p s -> L (UINT (read (drop 4 s))) p }
   int  $digit+                          { \ p s -> L (INT  (read (drop 3 s))) p }
@@ -117,7 +114,6 @@ tokens :-
   "_"                                   { mk SCORE }
   "."                                   { mk DOT }
   ","                                   { mk COMMA }
-  "#"                                   { mk HASHTAG }
   "//"                                  [.]* ; -- Toss single line comments
   -- identifiers
   $ident ($ident | $digit)*             { \ p s -> L (ID s) p }
@@ -160,9 +156,6 @@ data LEX =
   | AT
   | PRE
   | POST
-
-  -- pragmas
-  | LAYOUT
 
   -- builtin types
   | UINT  Int
@@ -216,7 +209,6 @@ data LEX =
   | SCORE
   | DOT
   | COMMA
-  | HASHTAG
 
   -- identifiers
   | ID String

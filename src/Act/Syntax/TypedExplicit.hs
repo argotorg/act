@@ -39,7 +39,7 @@ instance Annotatable Typed.Act where
   annotate (Typed.Act store act) = Typed.Act store $ fmap annotate act
 
 instance Annotatable Typed.Contract where
-  annotate (Typed.Contract layout ctor behv) = Typed.Contract layout (annotate ctor) (fmap annotate behv)
+  annotate (Typed.Contract ctor behv) = Typed.Contract (annotate ctor) (fmap annotate behv)
 
 instance Annotatable Typed.Invariant where
   annotate inv@Invariant{..} = inv

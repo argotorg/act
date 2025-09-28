@@ -56,7 +56,7 @@ typecheck' (U.Main contracts) = Act store <$> traverse (checkContract store cons
                              <* noDuplicateContracts
                              <* noDuplicateBehaviourNames
                              <* noDuplicateInterfaces
-                             <* traverse noDuplicateVars [creates | U.Contract (U.Constructor _ _ _ _ _ _ creates _ _) _ <- contracts]
+                             <* traverse noDuplicateVars [creates | U.Contract (U.Constructor _ _ _ _ _ creates _ _) _ <- contracts]
   where
     store = lookupVars contracts
     constructors = lookupConstructors contracts
@@ -64,7 +64,7 @@ typecheck' (U.Main contracts) = Act store <$> traverse (checkContract store cons
     transitions = concatMap (\(U.Contract _ ts) -> ts) contracts
 
     noDuplicateContracts :: Err ()
-    noDuplicateContracts = noDuplicates [(pn,contract) | U.Contract (U.Constructor pn contract _ _ _ _ _ _ _) _ <- contracts]
+    noDuplicateContracts = noDuplicates [(pn,contract) | U.Contract (U.Constructor pn contract _ _ _ _ _ _) _ <- contracts]
                            $ \c -> "Multiple definitions of Contract " <> c
 
     noDuplicateVars :: U.Creates -> Err ()
@@ -129,29 +129,16 @@ topologicalSort (Act store contracts) =
 
     -- map a contract name to the list of contracts that it calls and its code
     findCreates :: Contract -> (Id, ([Id], Contract))
-    findCreates c@(Contract _ (Constructor cname _ _ _ _ _ _) _) = (cname, (createsFromContract c <> pointersFromContract c, c))
+    findCreates c@(Contract (Constructor cname _ _ _ _ _ _) _) = (cname, (createsFromContract c <> pointersFromContract c, c))
 
 --- Finds storage declarations from constructors
 lookupVars :: [U.Contract] -> Store
 lookupVars = foldMap $ \case
-  U.Contract (U.Constructor _ contract pragmas _ _ _ (U.Creates assigns) _ _) _ ->
-    Map.singleton contract . (checkLayout pragmas, ) . Map.fromList $ addSlot $ snd . fromAssign <$> assigns
+  U.Contract (U.Constructor _ contract _ _ _ (U.Creates assigns) _ _) _ ->
+    Map.singleton contract . Map.fromList $ addSlot $ snd . fromAssign <$> assigns
   where
     addSlot :: [(Id, SlotType)] -> [(Id, (SlotType, Integer))]
     addSlot l = zipWith (\(name, typ) slot -> (name, (typ, slot))) l [0..]
-
-    checkLayout :: [U.Pragma] -> LayoutMode
-    checkLayout pragmas = let layouts = filter isLayout pragmas in
-      case layouts of
-        [] -> SolidityLayout
-        [l] -> getLayout l
-        (U.LayoutMode pn _):_ -> error $ (show pn) <>  "Multiple layout pragmas"
-      where
-        isLayout (U.LayoutMode _ _) = True
-        
-        getLayout (U.LayoutMode _ "Vyper") = VyperLayout
-        getLayout (U.LayoutMode _ "Solidity") = SolidityLayout
-        getLayout (U.LayoutMode pn s) = error $ (show pn) <> ": unknown layout: " <> s
 
 -- | A map containing the interfaces of all available constructors together with pointer constraints
 type Constructors = Map Id [(AbiType, Maybe Id)]
@@ -159,7 +146,7 @@ type Constructors = Map Id [(AbiType, Maybe Id)]
 -- | Construct the constructor map for the given spec
 lookupConstructors :: [U.Contract] -> Constructors
 lookupConstructors = foldMap $ \case
-  U.Contract (U.Constructor _ contract _ (Interface _ decls) pointers _ _ _ _) _ ->
+  U.Contract (U.Constructor _ contract (Interface _ decls) pointers _ _ _ _) _ ->
     let ptrs = Map.fromList $ map (\(PointsTo _ x c) -> (x, c)) pointers in
     Map.singleton contract (map (\(Decl t x) -> (t, Map.lookup x ptrs)) decls)
 
@@ -203,7 +190,7 @@ globalEnv =
 mkEnv :: Id -> Store -> Constructors -> Env
 mkEnv contract store constructors = Env
   { contract = contract
-  , store    = Map.map fst $ snd $ fromMaybe (SolidityLayout,mempty) (Map.lookup contract store)
+  , store    = Map.map fst $ fromMaybe mempty (Map.lookup contract store)
   , theirs   = store
   , calldata = mempty
   , pointers = mempty
@@ -224,8 +211,8 @@ addPointers decls env = env{ pointers = ptrs }
 
 -- Type check a contract
 checkContract :: Store -> Constructors -> U.Contract -> Err Contract
-checkContract store constructors (U.Contract constr@(U.Constructor cpn cid pragmas _ _ _ _ _ _) trans) =
-  Contract <$> checkLayout <*> checkConstructor env constr <*> (concat <$> traverse (checkBehavior env) trans) <* namesConsistent
+checkContract store constructors (U.Contract constr@(U.Constructor _ cid _ _ _ _ _ _) trans) =
+  Contract <$> checkConstructor env constr <*> (concat <$> traverse (checkBehavior env) trans) <* namesConsistent
   where
     env :: Env
     env = mkEnv cid store constructors
@@ -235,19 +222,6 @@ checkContract store constructors (U.Contract constr@(U.Constructor cpn cid pragm
       traverse_ (\(U.Transition pn _ cid' _ _ _ _ _) -> assert (errmsg pn cid') (cid == cid')) trans
 
     errmsg pn cid' = (pn, "Behavior must belong to contract " <> show cid <> " but belongs to contract " <> cid')
-
-    checkLayout :: Err LayoutMode
-    checkLayout = let layouts = filter isLayout pragmas in
-      case layouts of
-        [] -> Success SolidityLayout
-        [l] -> getLayout l
-        _ -> throw (cpn, "Multiple layout pragmas")
-      where
-        isLayout (U.LayoutMode _ _) = True
-        
-        getLayout (U.LayoutMode _ "Vyper") = Success VyperLayout
-        getLayout (U.LayoutMode _ "Solidity") = Success SolidityLayout
-        getLayout (U.LayoutMode pn s) = throw (pn, "Unknown layout: " <> s)
 
 
 -- Type check a behavior
@@ -284,9 +258,8 @@ checkBehavior env (U.Transition _ name contract iface@(Interface _ decls) ptrs i
     makeBehv pres posts' (casecond,storage,ret) = Behaviour name contract iface ptrs pres casecond posts' storage ret
 
 checkConstructor :: Env -> U.Constructor -> Err Constructor
-checkConstructor env (U.Constructor _ contract _ (Interface _ decls) ptrs iffs (U.Creates assigns) postcs invs) =
+checkConstructor env (U.Constructor _ contract (Interface _ decls) ptrs iffs (U.Creates assigns) postcs invs) =
   do
-    --layout <- checkLayout
     traverse_ (checkPointer env') ptrs
     stateUpdates <- concat <$> traverse (checkAssign env') assigns
     iffs' <- checkIffs envNoStorage iffs
@@ -298,19 +271,6 @@ checkConstructor env (U.Constructor _ contract _ (Interface _ decls) ptrs iffs (
     env' = addPointers ptrs $ addCalldata decls env
     -- type checking environment prior to storage creation of this contract
     envNoStorage = env'{ store = mempty }
-
-    --checkLayout :: Err LayoutMode
-    --checkLayout = let layouts = filter isLayout pragmas in
-    --  case layouts of
-    --    [] -> Success SolidityLayout
-    --    [l] -> getLayout l
-    --    _ -> throw (pn, "Multiple layout pragmas")
-    --  where
-    --    isLayout (U.LayoutMode _) = True
-    --    
-    --    getLayout (U.LayoutMode "Vyper") = Success VyperLayout
-    --    getLayout (U.LayoutMode "Solidity") = Success SolidityLayout
-    --    getLayout (U.LayoutMode s) = throw (pn, "Unknown layout: " <> s)
 
 -- | Checks that a pointer declaration x |-> A is valid. This consists of
 -- checking that x is a calldata variable that has address type and A is a valid
@@ -422,7 +382,7 @@ checkEntry env kind (U.EIndexed p e args) =
 checkEntry env@Env{theirs} kind (U.EField p e x) =
   checkEntry env kind e `bindValidation` \(_, oc, ref) -> case oc of
     Just c -> case Map.lookup c theirs of
-      Just cenv -> case Map.lookup x (snd cenv) of
+      Just cenv -> case Map.lookup x cenv of
         Just (st@(StorageValue (ContractType c')), _) -> pure (st, Just c', SField p ref c x)
         Just (st, _) -> pure (st, Nothing, SField p ref c x)
         Nothing -> throw (p, "Contract " <> c <> " does not have field " <> x)

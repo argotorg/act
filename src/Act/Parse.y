@@ -47,9 +47,6 @@ import Act.Error
   'pre'                       { L PRE _ }
   'post'                      { L POST _ }
 
-  -- pragmas
-  'layout'                    { L LAYOUT _ }
-
   -- builtin types
   'uint'                      { L (UINT $$) _ }
   'int'                       { L (INT $$) _ }
@@ -104,7 +101,6 @@ import Act.Error
   '_'                         { L SCORE _ }
   '.'                         { L DOT _ }
   ','                         { L COMMA _ }
-  '#'                         { L HASHTAG _ }
 
   id                          { L (ID _) _ }
 
@@ -178,17 +174,14 @@ Transition : 'behaviour' id 'of' id
              Ensures                                  { Transition (posn $1) (name $2) (name $4)
                                                         $5 $6 $7 $8 $9 }
 
-Constructor : list(Pragma)
-              'constructor' 'of' id
+Constructor : 'constructor' 'of' id
               CInterface
               Pointers
               Precondition
               Creation
               Ensures
-              Invariants                              { Constructor (posn $4) (name $4)
-                                                         $1 $5 $6 $7 $8 $9 $10 }
-
-Pragma : '#' 'layout' id                              { LayoutMode (posn $1) (name $3) }
+              Invariants                              { Constructor (posn $3) (name $3)
+                                                         $4 $5 $6 $7 $8 $9 }
 
 Ensures : optblock('ensures', Expr)                   { $1 }
 
@@ -340,6 +333,6 @@ parseError ((L token pn):_) =
     show token])
 
 emptyConstructor :: Transition -> Constructor
-emptyConstructor (Transition _ _ c _ _ _ _ _) = Constructor nowhere c [] ( Interface "constructor" []) [] [] (Creates []) [] []
+emptyConstructor (Transition _ _ c _ _ _ _ _) = Constructor nowhere c (Interface "constructor" []) [] [] (Creates []) [] []
 
 }

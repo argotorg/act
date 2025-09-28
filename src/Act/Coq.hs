@@ -48,7 +48,7 @@ coq (Act store contracts) =
   header <> (T.intercalate "\n\n" $ contractCode store <$> contracts)
 
 contractCode :: Store -> Contract -> T.Text
-contractCode store (Contract _ ctor@Constructor{..} behvs) = T.unlines $
+contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   [ "Module " <> T.pack _cname <> ".\n" ]
   <> [ stateRecord ]
   <> [ base store ctor ]
@@ -187,7 +187,7 @@ stateval store contract handler updates = T.unwords $
 
 contractStore :: Id -> Store -> Map Id (SlotType, Integer)
 contractStore contract store = case M.lookup contract store of
-  Just s -> snd s
+  Just s -> s
   Nothing -> error "Internal error: cannot find constructor in store"
 
 

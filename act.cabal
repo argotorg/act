@@ -20,7 +20,6 @@ common common
     GADTs
   build-depends: base               >= 4.9 && < 5,
                  aeson              >= 1.0,
-                 aeson-optics       >= 1.2.1,
                  containers         >= 0.5,
                  hevm               >= 0.51.3,
                  lens               >= 4.17.1,
@@ -43,9 +42,8 @@ common common
                  data-dword         >= 0.3.2.1,
                  prettyprinter,
                  prettyprinter-ansi-terminal,
-                 unordered-containers,
-                 optics-core,
-                 base16
+                 base16,
+                 filepath
   if flag(ci)
       ghc-options: -O2 -Wall -Werror -Wno-orphans -Wno-unticked-promoted-constructors
   else

@@ -28,7 +28,7 @@ prettyStore :: Store -> String
 prettyStore = show
 
 prettyContract :: Contract t -> String
-prettyContract (Contract _ ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
+prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
 prettyCtor (Constructor name interface ptrs pres posts invs initStore)

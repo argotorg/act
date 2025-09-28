@@ -45,6 +45,8 @@ postcondition_fail=$(wildcard tests/postconditions/fail/*.act)
 hevm_buggy=tests/hevm/pass/transfer/transfer.act
 # supposed to pass
 hevm_pass=$(filter-out $(hevm_buggy), $(wildcard tests/hevm/pass/*/*.act))
+hevm_vy_pass=$(wildcard tests/hevm/pass/vyper/*/*.act)
+hevm_multi_pass=$(wildcard tests/hevm/pass/multisource/*/*.act)
 # supposed to fail
 hevm_fail=$(wildcard tests/hevm/fail/*/*.act)
 # supposed to pass
@@ -68,8 +70,8 @@ test-parse: parser compiler $(parser_pass:=.parse.pass) $(parser_fail:=.parse.fa
 test-type: parser compiler $(typing_pass:=.type.pass) $(typing_fail:=.type.fail)
 test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_fail:=.invariant.fail)
 test-postcondition: parser compiler $(postcondition_pass:=.postcondition.pass) $(postcondition_fail:=.postcondition.fail)
-test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_fail:=.hevm.fail)
-test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_fail:=.hevm.fail)
+test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
+test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_fail:=.hevm.fail)
 test-cabal: src/*.hs
 	cabal v2-run test
 
@@ -108,15 +110,22 @@ tests/%.postcondition.fail:
 
 tests/hevm/pass/%.act.hevm.pass:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --smttimeout 100000000
+	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
+
+tests/hevm/pass/%.act.hevm.vy.pass:
+	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.vy))
+	./bin/act hevm --spec tests/hevm/pass/$*.act --vy tests/hevm/pass/$*.vy --solver bitwuzla --smttimeout 100000000
+
+tests/hevm/pass/%.act.hevm.multi.pass:
+	./bin/act hevm --spec tests/hevm/pass/$*.act --sources tests/hevm/pass/$*.json --solver bitwuzla --smttimeout 100000000
 
 tests/hevm/fail/%.act.hevm.fail:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/fail/$*.sol))
-	./bin/act hevm --spec tests/hevm/fail/$*.act --sol tests/hevm/fail/$*.sol && exit 1 || echo 0
+	./bin/act hevm --spec tests/hevm/fail/$*.act --sol tests/hevm/fail/$*.sol --solver bitwuzla && exit 1 || echo 0
 
 tests/hevm/pass/%.act.hevm.pass.fast:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --smttimeout 100000000
+	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
 test-ci: test-parse test-type test-invariant test-postcondition test-coq test-hevm
 test: test-ci test-cabal

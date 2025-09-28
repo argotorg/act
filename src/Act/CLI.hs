@@ -13,19 +13,17 @@
 module Act.CLI (main, compile, proceed, prettyErrs) where
 
 import Data.Aeson hiding (Bool, Number, json, Success)
-import Data.Aeson.Optics
-import Data.Aeson.Key qualified as Key
-import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types hiding (Success, parse)
 import GHC.Generics
 import System.Exit ( exitFailure )
 import System.IO (hPutStrLn, stderr)
 import System.Process
+import System.FilePath
 import Data.Text (unpack)
-import Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import Data.Text.Encoding (encodeUtf8)
 import Data.List
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.HashMap.Strict qualified as HMap
 import Data.Maybe
 import qualified Data.Text as Text
 import qualified Data.Text.IO as TIO
@@ -34,16 +32,13 @@ import GHC.Conc
 import GHC.Natural
 import Options.Generic
 
-import Optics.Core
-import Optics.Operators.Unsafe
-
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString (ByteString)
 
 import Control.Monad
-import Control.Lens.Getter as LensGetter
+import Control.Lens.Getter
 
 import Act.Error
 import Act.Lex (lexer, AlexPosn(..))
@@ -57,7 +52,7 @@ import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
-import Act.Decompile hiding (storageLayout)
+import Act.Decompile
 
 import qualified EVM.Solvers as Solvers
 import EVM.Solidity
@@ -89,8 +84,10 @@ data Command w
 
   | HEVM            { spec       :: w ::: String               <?> "Path to spec"
                     , sol        :: w ::: Maybe String         <?> "Path to .sol"
+                    , vy         :: w ::: Maybe String         <?> "Path to .vy"
                     , code       :: w ::: Maybe ByteString     <?> "Runtime code"
                     , initcode   :: w ::: Maybe ByteString     <?> "Initial code"
+                    , sources    :: w ::: Maybe String         <?> "Path to sources .json"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
@@ -128,9 +125,9 @@ main = do
       Coq f solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         coq' f solver'' smttimeout' debug'
-      HEVM spec' sol' code' initcode' solver' smttimeout' debug' -> do
+      HEVM spec' sol' vy' code' initcode' sources' solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
-        hevm spec' sol' code' initcode' solver'' smttimeout' debug'
+        hevm spec' sol' vy' code' initcode' sources' solver'' smttimeout' debug'
       Decompile sol' contract' solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         decompile' sol' (Text.pack contract') solver'' smttimeout' debug'
@@ -166,6 +163,7 @@ parseSolver s = case s of
                   Just s' -> case Text.unpack s' of
                               "z3" -> pure Solvers.Z3
                               "cvc5" -> pure Solvers.CVC5
+                              "bitwuzla" -> pure Solvers.Bitwuzla
                               input -> render (text $ "unrecognised solver: " <> Text.pack input) >> exitFailure
 
 prove :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
@@ -254,114 +252,140 @@ decompile' solFile' cid solver' timeout debug' = do
           putStrLn (prettyAct s)
 
 
-hevm :: FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-hevm actspec sol' code' initcode' solver' timeout debug' = do
+hevm :: FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   let config = if debug' then debugActConfig else defaultActConfig
   cores <- liftM fromIntegral getNumProcessors
   specContents <- readFile actspec
+  inputsMap <- processSources
   proceed specContents (addBounds <$> compile specContents) $ \ (Act store contracts) -> do
-    cmap <- createContractMap contracts
+    (cmap, lmap) <- createContractMap contracts inputsMap
     res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
-      checkContracts solvers store cmap
+      checkContracts solvers store lmap cmap
     case res of
       Success _ -> pure ()
       Failure err -> prettyErrs "" err
   where
-    createContractMap :: [Contract] -> IO (Map Id (Contract, BS.ByteString, BS.ByteString))
-    createContractMap contracts = do
-      foldM (\cmap spec'@(Contract layout cnstr _) -> do
+
+    -- Creates maps of storage layout modes and bytecodes, for all contracts contained in the given Act specification
+    createContractMap :: [Contract] -> Map (Maybe Id) (LayoutMode, ByteString, ByteString) -> IO (Map Id (Contract, BS.ByteString, BS.ByteString), Map Id LayoutMode)
+    createContractMap contracts inputsMap | Map.keys inputsMap == [Nothing] =
+      -- Singleton inputsMap with Nothing as contract Id means that '--vy' was given
+      case contracts of
+        [spec'@(Contract cnstr _)] -> do
+          let cid =  _cname cnstr
+              (_, initcode'', runtimecode') = fromJust $ Map.lookup Nothing inputsMap
+          pure (Map.singleton cid (spec', initcode'', runtimecode'), Map.singleton cid VyperLayout)
+        _ -> do
+          render (yellow "Warning: " <> text "Multiple contracts in spec mapped to a single Vyper file" <> line)
+          let (_, initcode'', runtimecode') = fromJust $ Map.lookup Nothing inputsMap
+          pure $ foldr (\spec'@(Contract cnstr _) (cmap, lmap) ->
+                   let cid =  _cname cnstr
+                   in (Map.insert cid (spec', initcode'', runtimecode') cmap, Map.insert cid VyperLayout lmap)
+                 ) (mempty,mempty) contracts
+    createContractMap contracts inputsMap = do
+      pure $ foldr (\spec'@(Contract cnstr _) (cmap, lmap) ->
                 let cid =  _cname cnstr
-                (initcode'', runtimecode') <- getBytecode cid layout -- TODO do not reread the file each time
-                pure $ Map.insert cid (spec', initcode'', runtimecode') cmap
-            ) mempty contracts
+                    (layoutMode, initcode'', runtimecode') = fromMaybe (error $ "Contract " <> cid <> "not found in sources") $ Map.lookup (Just cid) inputsMap
+                in (Map.insert cid (spec', initcode'', runtimecode') cmap, Map.insert cid layoutMode lmap)
+             ) (mempty,mempty) contracts
 
-    getBytecode :: Id -> LayoutMode -> IO (BS.ByteString, BS.ByteString)
-    getBytecode cid layout =
-      case (sol', code', initcode') of
-        (Just f, Nothing, Nothing) -> do
-          solContents  <- TIO.readFile f
-          bytecodes (Text.pack cid) layout solContents
-        (Nothing, Just _, Just _) -> render (text "Only Solidity file supported") >> exitFailure -- pure (i, c)
-        (Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
-        (Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
-        (Just _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
-        (Just _, _, Just _) -> render (text "Both Solidityfile and initial code are given. Please specify only one." <> line) >> exitFailure
+    -- Creates a map of information for contracts available from source code or bytecode arguments
+    processSources :: IO (Map (Maybe Id) (LayoutMode, ByteString, ByteString))
+    processSources =
+      case (sources', sol', vy', code', initcode') of
+        (Just f, Nothing, Nothing, Nothing, Nothing) -> do
+          jsonContents  <- TIO.readFile f
+          let (contractSources, sourceLangs) =
+                case readSourcesJSON jsonContents of
+                  Right res -> res
+                  Left err -> error err
+          let sourceLayouts = checkLanguages sourceLangs
+          bytecodeMap <- compileSources f sourceLayouts
+          pure $ Map.fromList $ map (\(cid,src) ->
+            let src' = Text.unpack src
+                cid' = Text.unpack cid
+                sourceMap = fromMaybe (error $ "Source " <> Text.unpack src <> " of " <> cid' <> " not found in sources") $ Map.lookup src' bytecodeMap
+                layoutMode = fromJust $ Map.lookup src sourceLayouts
+                (initcode'', runtimecode') = case layoutMode of
+                  SolidityLayout -> fromMaybe (error $ "Contract " <> cid' <> " not found in " <> src') $ Map.lookup (Just cid') sourceMap
+                  VyperLayout -> fromJust $ Map.lookup Nothing sourceMap
+            in (Just cid', (layoutMode, initcode'', runtimecode'))) $ Map.toList contractSources
+        (Just _, Just _, _, _, _) -> render (text "Both a sources JSON file and Solidity file are given. Please specify only one.") >> exitFailure
+        (Just _, _, Just _, _, _) -> render (text "Both a sources JSON file and Vyper file are given. Please specify only one.") >> exitFailure
+        (Just _, _, _, Just _, _) -> render (text "Both a sources JSON file and runtime code are given. Please specify only one.") >> exitFailure
+        (Just _, _, _, _, Just _) -> render (text "Both a sources JSON file and initcode code are given. Please specify only one.") >> exitFailure
+        (Nothing, Just f, Nothing, Nothing, Nothing) -> do
+          bcs <- bytecodes f SolidityLayout
+          pure $ Map.map (\(b1,b2) -> (SolidityLayout, b1, b2)) bcs
+        (Nothing, Just _, Just _, _, _) -> render (text "Both Solidity and Vyper file are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, Just _, _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, Just _, _, _, Just _) -> render (text "Both Solidity file and initial code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, Nothing, Just f, Nothing, Nothing) -> do
+          bcs <- bytecodes f VyperLayout
+          pure $ Map.map (\(b1,b2) -> (VyperLayout, b1, b2)) bcs
+        (Nothing, Nothing, Just _, Just _, _) -> render (text "Both Vyper file and runtime code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, Nothing, Just _, _, Just _) -> render (text "Both Vyper file and initial code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, Nothing, Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
+        (Nothing, Nothing, Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
+        (Nothing, Nothing, Nothing, Just _, Just _) -> render (text "Only Solidity or Vyper files supported") >> exitFailure -- TODO pure (i, c)
 
 
-bytecodes :: Text -> LayoutMode -> Text -> IO (BS.ByteString, BS.ByteString)
-bytecodes cid SolidityLayout src = do
+readSourcesJSON :: Text -> Either String (Map Text Text, Map Text Text)
+readSourcesJSON json = case eitherDecode $ BS.fromStrict $ encodeUtf8 json of
+  Left s -> error s
+  Right decoded -> do
+    (contractObjs,sourcesObjs) <- flip parseEither decoded $ \obj -> do
+      contractsObjs <- obj .: "contracts"
+      sourcesObjs <- obj .: "sources"
+      pure (contractsObjs, sourcesObjs)
+    contractSources <- sequence (Map.map (parseEither (.: "source")) contractObjs)
+    sourceLangs  <- sequence (Map.map (parseEither (.: "language")) sourcesObjs)
+    pure (contractSources, sourceLangs)
+
+checkLanguages :: Map Text Text -> Map Text LayoutMode
+checkLanguages = Map.map (fromMaybe (error "Unknown language") . checkLanguage)
+  where
+    checkLanguage :: Text -> Maybe LayoutMode
+    checkLanguage "Solidity" = Just SolidityLayout
+    checkLanguage "Vyper" = Just VyperLayout
+    checkLanguage "Bytecode" = Just SolidityLayout -- TODO maybe give options
+    checkLanguage _ = Nothing
+
+-- Compiles all source files provided in the sources .json file
+-- Returns map from source filepaths to maps from included contract IDs to bytecodes
+compileSources :: FilePath -> Map Text LayoutMode -> IO (Map FilePath (Map (Maybe Id) (BS.ByteString, BS.ByteString)))
+compileSources jsonPath jsonMap =
+  sequence $ Map.fromList $ map (\(src, layoutMode) ->
+    let jsonDir = takeDirectory jsonPath
+        src' = jsonDir </> Text.unpack src
+    in (Text.unpack src, bytecodes src' layoutMode)) $ Map.toList jsonMap
+
+-- Compiles a source file to bytecode. Returns map from included contract IDs to bytecodes.
+-- Mapping from (Maybe Id) to cover the case where a single Vyper file is given, which provides no information on contract names.
+bytecodes :: FilePath -> LayoutMode -> IO (Map (Maybe Id) (BS.ByteString, BS.ByteString))
+bytecodes srcFile SolidityLayout = do
+  src <- TIO.readFile srcFile
   json <- solc Solidity src False
   let (Contracts sol', _, _) = fromJust $ readStdJSON json
-  let err = error $ "Cannot find Solidity contract " <> Text.unpack cid
-  pure ((fromMaybe err . Map.lookup ("hevm.sol" <> ":" <> cid) $ sol').creationCode,
-        (fromMaybe err . Map.lookup ("hevm.sol" <> ":" <> cid) $ sol').runtimeCode)
-bytecodes cid VyperLayout src = do
-  json <- vyper cid src
-  let contracts = fromJust $ readVyperJSON json
-  let err = error $ "Cannot find Solidity contract " <> Text.unpack cid
-  pure (fromMaybe err . lookup (cid <> ".vy" <> ":" <> cid) $ contracts)
+  pure $ Map.fromList $ map (\(fn,c) -> (Just $ Text.unpack $ snd $ Text.breakOnEnd ":" fn, (c.creationCode, c.runtimeCode))) $ Map.toList sol'
+bytecodes srcFile VyperLayout = Map.singleton Nothing <$> vyper srcFile
 
-vyper :: Text -> Text -> IO Text
-vyper cid src = Text.pack <$> (readProcess "vyper" ["--standard-json"] (Text.unpack $ stdVyperJson cid src))
+-- Compile vyper source file
+vyper :: FilePath -> IO (BS.ByteString, BS.ByteString)
+vyper src = do
+  -- Must drop initial "0x" and trailing "\n"
+  bc <- toCode src . Text.dropEnd 1 . Text.drop 2 . Text.pack <$> (readProcess "vyper" ["-f", "bytecode", src] [])
+  bcr <- toCode src . Text.dropEnd 1 . Text.drop 2 . Text.pack <$> (readProcess "vyper" ["-f", "bytecode_runtime", src] [])
+  pure (bc, bcr)
 
-stdVyperJson :: Text -> Text -> Text
-stdVyperJson cid src = decodeUtf8 $ BS.toStrict $ encode $ vyperToJSON cid src
-
-vyperToJSON :: Text -> Text -> Value
-vyperToJSON cid src =
-  object [ "language" .= (toJSON :: String -> Value) ("Vyper" :: String)
-         , "sources" .= object [ Key.fromText (cid <> ".vy") .= object ["content" .= src]]
-         , "settings" .=
-           object [ "outputSelection" .=
-                  object ["*" .=
-                    object ["*" .= ((toJSON :: [String] -> Value)
-                            ["metadata" :: String,
-                             "evm.bytecode",
-                             "evm.deployedBytecode",
-                             "abi",
-                             --"storageLayout",
-                             "evm.bytecode.sourceMap",
-                             --"evm.bytecode.linkReferences",
-                             --"evm.bytecode.generatedSources",
-                             "evm.deployedBytecode.sourceMap"
-                             --"evm.deployedBytecode.linkReferences",
-                             --"evm.deployedBytecode.generatedSources",
-                             --"evm.deployedBytecode.immutableReferences"
-                            ]),
-                            "" .= ((toJSON :: [String] -> Value) ["ast" :: String])
-                           ]
-                          ]
-                  ]
-
-         ]
-
--- | Parses the standard json output from solc
-readVyperJSON :: Text -> Maybe [(Text,(ByteString, ByteString))]
-readVyperJSON json = do
-  contracts <- KeyMap.toHashMapText <$> json ^? key "contracts" % _Object
-  let contractMap = f contracts
-  pure $ Map.toList contractMap
-  where
-    f :: (AsValue s) => HMap.HashMap Text s -> (Map Text (ByteString, ByteString))
-    f x = Map.fromList . (concatMap g) . HMap.toList $ x
-    g (s, x) = h s <$> HMap.toList (KeyMap.toHashMapText (fromMaybe (error "Could not parse json object") (preview _Object x)))
-    h :: Text -> (Text, Value) -> (Text, (ByteString, ByteString))
-    h s (c, x) =
-      let
-        evmstuff = x ^?! key "evm"
-        sc = s <> ":" <> c
-        runtime = evmstuff ^?! key "deployedBytecode"
-        creation =  evmstuff ^?! key "bytecode"
-        theRuntimeCode = (toCode sc) $ fromMaybe "" $ runtime ^? key "object" % _String
-        theCreationCode = (toCode sc) $ fromMaybe "" $ creation ^? key "object" % _String
-      in (sc, (theCreationCode, theRuntimeCode))
-
-toCode :: Text -> Text -> ByteString
-toCode contractName t = case BS16.decodeBase16Untyped (encodeUtf8 (Text.drop 2 t)) of
+-- Convert bytecode from hex string representation to binary
+toCode :: FilePath -> Text -> ByteString
+toCode fromFile t = case BS16.decodeBase16Untyped (encodeUtf8 t) of
   Right d -> d
   Left e -> if containsLinkerHole t
-            then error $ Text.unpack ("Error toCode: unlinked libraries detected in bytecode, in " <> contractName)
-            else error $ Text.unpack ("Error toCode:" <> e <> ", in " <> contractName)
+            then error ("Error toCode: unlinked libraries detected in bytecode, in " <> fromFile)
+            else error ("Error toCode:" <> Text.unpack e <> ", in " <> fromFile)
 
 -------------------
 -- *** Util *** ---
@@ -369,7 +393,7 @@ toCode contractName t = case BS16.decodeBase16Untyped (encodeUtf8 (Text.drop 2 t
 
 -- | Fail on error, or proceed with continuation
 proceed :: Validate err => String -> err (NonEmpty (Pn, String)) a -> (a -> IO ()) -> IO ()
-proceed contents comp continue = validation (prettyErrs contents) continue (comp LensGetter.^. revalidate)
+proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
 
 compile :: String -> Error String Act
 compile = pure . annotate <==< typecheck <==< parse . lexer

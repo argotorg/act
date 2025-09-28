@@ -59,16 +59,16 @@ locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
 ------------------------------------
 
 nameOfContract :: Contract t -> Id
-nameOfContract (Contract _ (Constructor cname _ _ _ _ _ _) _) = cname
+nameOfContract (Contract (Constructor cname _ _ _ _ _ _) _) = cname
 
 behvsFromAct :: Typed.Act t -> [Behaviour t]
 behvsFromAct (Act _ contracts) = behvsFromContracts contracts
 
 behvsFromContracts :: [Contract t] -> [Behaviour t]
-behvsFromContracts contracts = concatMap (\(Contract _ _ b) -> b) contracts
+behvsFromContracts contracts = concatMap (\(Contract _ b) -> b) contracts
 
 constrFromContracts :: [Contract t] -> [Constructor t]
-constrFromContracts contracts = fmap (\(Contract _ c _) -> c) contracts
+constrFromContracts contracts = fmap (\(Contract c _) -> c) contracts
 
 isLocalLoc :: Location t -> Bool
 isLocalLoc (Loc _ SStorage item) = isLocalItem item
@@ -193,7 +193,7 @@ createsFromTypedExp :: TypedExp t -> [Id]
 createsFromTypedExp (TExp _ _ e) = createsFromExp e
 
 createsFromContract :: Contract t -> [Id]
-createsFromContract (Contract _ constr behvs) =
+createsFromContract (Contract constr behvs) =
   createsFromConstructor constr <> concatMap createsFromBehaviour behvs
 
 createsFromConstructor :: Constructor t -> [Id]
@@ -224,7 +224,7 @@ createsFromBehaviour (Behaviour _ _ _ _ _ preconds postconds rewrites returns) =
 
 
 pointersFromContract :: Contract t -> [Id]
-pointersFromContract (Contract _ constr behvs) =
+pointersFromContract (Contract constr behvs) =
   nub $ pointersFromConstructor constr <> concatMap pointersFromBehaviour behvs
 
 pointersFromConstructor :: Constructor t -> [Id]

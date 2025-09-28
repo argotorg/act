@@ -228,7 +228,7 @@ mkDefaultSMT isCtor activeSLocs activeCLocs envs ifaceName decls preconds extrac
 mkPostconditionQueries :: Act -> [Query]
 mkPostconditionQueries (Act _ contr) = concatMap mkPostconditionQueriesContract contr
   where
-    mkPostconditionQueriesContract (Contract _ constr behvs) =
+    mkPostconditionQueriesContract (Contract constr behvs) =
       mkPostconditionQueriesConstr constr <> concatMap mkPostconditionQueriesBehv behvs
 
 mkPostconditionQueriesBehv :: Behaviour -> [Query]
@@ -274,7 +274,7 @@ mkInvariantQueries (Act _ contracts) = fmap mkQuery gathered
     mkQuery (inv, ctor, behvs) = Inv inv (mkInit inv ctor) (fmap (mkBehv inv ctor) behvs)
     gathered = concatMap getInvariants contracts
 
-    getInvariants (Contract _ (c@Constructor{..}) behvs) = fmap (, c, behvs) _invariants
+    getInvariants (Contract (c@Constructor{..}) behvs) = fmap (, c, behvs) _invariants
 
     mkInit :: Invariant -> Constructor -> (Constructor, SMTExp)
     mkInit (Invariant _ invConds _ (PredTimed _ invPost)) ctor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) = (ctor, mksmt invPost)
@@ -373,6 +373,12 @@ solverArgs (SMTConfig solver timeout _) = case solver of
     , "--print-success"
     , "--arrays-exp"
     , "--tlimit-per=" <> show timeout]
+  Bitwuzla ->
+    [ "--lang=smt2"
+    , "--produce-models"
+    , "--time-limit-per=" <> show timeout
+    , "--bv-solver=preprop"
+    ]
   _ -> error "Unsupported solver"
 
 -- | Spawns a solver instance, and sets the various global config options that we use for our queries
