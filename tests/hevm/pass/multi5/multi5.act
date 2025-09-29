@@ -1,0 +1,40 @@
+constructor of A
+interface constructor(uint z1)
+
+iff
+    CALLVALUE == 0
+
+creates
+    uint z := z1
+
+
+behaviour setz of A
+interface setz(uint z1)
+
+iff
+    CALLVALUE == 0
+
+storage
+    z => z1
+
+
+constructor of B
+interface constructor(uint x1)
+
+iff
+    CALLVALUE == 0
+
+creates
+    uint x := x1
+    A a := create A(42)
+
+
+behaviour foo of B
+interface foo()
+
+iff
+    CALLVALUE == 0
+
+storage
+    a => create A(8)
+    a.z => 11
