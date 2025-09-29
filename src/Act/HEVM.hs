@@ -1079,6 +1079,7 @@ toVRes msg res = case res of
   EVM.Qed -> EVM.Qed
   EVM.Error e -> EVM.Error e
 
+
 checkResult :: App m => Calldata -> Maybe Sig -> [EquivResult] -> m (Error String ())
 checkResult calldata sig res =
   case any EVM.isCex res of
