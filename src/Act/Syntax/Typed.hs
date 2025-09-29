@@ -102,6 +102,7 @@ data Constructor t = Constructor
   , _initialStorage :: [StorageUpdate t]
   } deriving (Show, Eq)
 
+
 -- After typing each behavior may be split to multiple behaviors, one for each case branch.
 -- In this case, only the `_caseconditions`, `_stateUpdates`, and `_returns` fields are different.
 data Behaviour t = Behaviour
