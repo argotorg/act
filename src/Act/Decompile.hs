@@ -456,11 +456,11 @@ fromWord layout w = simplify <$> go w
 -- This compiles the generated act spec back down to an Expr and then checks that the two are equivalent
 verifyDecompilation :: App m => SolverGroup -> ByteString -> ByteString -> Act -> m (Error String ())
 verifyDecompilation solvers creation runtime (Act store spec) = do
-  let (cmap,lmap) = case spec of
+  let cmap = case spec of
                [con@(Contract cnstr _)] ->
-                 (Map.insert (_cname cnstr) (con, creation, runtime) mempty, Map.insert (_cname cnstr) SolidityLayout mempty)
+                 (Map.insert (_cname cnstr) (con, creation, runtime, SolidityLayout) mempty)
                _ -> error "TODO multiple contracts"
-  checkContracts solvers store lmap cmap
+  checkContracts solvers store cmap
 
 -- Helpers -----------------------------------------------------------------------------------------
 

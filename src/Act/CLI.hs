@@ -82,7 +82,7 @@ data Command w
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
                     }
 
-  | HEVM            { spec       :: w ::: String               <?> "Path to spec"
+  | HEVM            { spec       :: w ::: Maybe String         <?> "Path to spec"
                     , sol        :: w ::: Maybe String         <?> "Path to .sol"
                     , vy         :: w ::: Maybe String         <?> "Path to .vy"
                     , code       :: w ::: Maybe ByteString     <?> "Runtime code"
@@ -252,96 +252,98 @@ decompile' solFile' cid solver' timeout debug' = do
           putStrLn (prettyAct s)
 
 
-hevm :: FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+hevm :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   let config = if debug' then debugActConfig else defaultActConfig
   cores <- liftM fromIntegral getNumProcessors
-  specContents <- readFile actspec
-  inputsMap <- processSources
-  proceed specContents (addBounds <$> compile specContents) $ \ (Act store contracts) -> do
-    (cmap, lmap) <- createContractMap contracts inputsMap
+  (actspecs, inputsMap) <- processSources
+  specsContents <- intercalate "\n" <$> traverse readFile actspecs
+  proceed specsContents (addBounds <$> compile specsContents) $ \ (Act store contracts) -> do
+    cmap <- createContractMap contracts inputsMap
     res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
-      checkContracts solvers store lmap cmap
+      checkContracts solvers store cmap
     case res of
       Success _ -> pure ()
       Failure err -> prettyErrs "" err
   where
 
     -- Creates maps of storage layout modes and bytecodes, for all contracts contained in the given Act specification
-    createContractMap :: [Contract] -> Map (Maybe Id) (LayoutMode, ByteString, ByteString) -> IO (Map Id (Contract, BS.ByteString, BS.ByteString), Map Id LayoutMode)
+    createContractMap :: [Contract] -> Map (Maybe Id) (LayoutMode, ByteString, ByteString) -> IO (Map Id (Contract, BS.ByteString, BS.ByteString, LayoutMode))
     createContractMap contracts inputsMap | Map.keys inputsMap == [Nothing] =
       -- Singleton inputsMap with Nothing as contract Id means that '--vy' was given
       case contracts of
         [spec'@(Contract cnstr _)] -> do
           let cid =  _cname cnstr
               (_, initcode'', runtimecode') = fromJust $ Map.lookup Nothing inputsMap
-          pure (Map.singleton cid (spec', initcode'', runtimecode'), Map.singleton cid VyperLayout)
-        _ -> do
-          render (yellow "Warning: " <> text "Multiple contracts in spec mapped to a single Vyper file" <> line)
-          let (_, initcode'', runtimecode') = fromJust $ Map.lookup Nothing inputsMap
-          pure $ foldr (\spec'@(Contract cnstr _) (cmap, lmap) ->
-                   let cid =  _cname cnstr
-                   in (Map.insert cid (spec', initcode'', runtimecode') cmap, Map.insert cid VyperLayout lmap)
-                 ) (mempty,mempty) contracts
+          pure (Map.singleton cid (spec', initcode'', runtimecode', VyperLayout))
+        _ -> render (text "Vyper file represents a single contract, while specification contains multiple contracts" <> line) >> exitFailure
     createContractMap contracts inputsMap = do
-      pure $ foldr (\spec'@(Contract cnstr _) (cmap, lmap) ->
+      pure $ foldr (\spec'@(Contract cnstr _) cmap ->
                 let cid =  _cname cnstr
                     (layoutMode, initcode'', runtimecode') = fromMaybe (error $ "Contract " <> cid <> "not found in sources") $ Map.lookup (Just cid) inputsMap
-                in (Map.insert cid (spec', initcode'', runtimecode') cmap, Map.insert cid layoutMode lmap)
-             ) (mempty,mempty) contracts
+                in (Map.insert cid (spec', initcode'', runtimecode', layoutMode) cmap)
+             ) mempty contracts
 
     -- Creates a map of information for contracts available from source code or bytecode arguments
-    processSources :: IO (Map (Maybe Id) (LayoutMode, ByteString, ByteString))
+    processSources :: IO ([FilePath], Map (Maybe Id) (LayoutMode, ByteString, ByteString))
     processSources =
-      case (sources', sol', vy', code', initcode') of
-        (Just f, Nothing, Nothing, Nothing, Nothing) -> do
+      case (sources', actspec, sol', vy', code', initcode') of
+        (Just f, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
           jsonContents  <- TIO.readFile f
-          let (contractSources, sourceLangs) =
+          let (specs, contractSources, sourceLangs) =
                 case readSourcesJSON jsonContents of
                   Right res -> res
                   Left err -> error err
+          let specs' = locateSpecs f specs
           let sourceLayouts = checkLanguages sourceLangs
           bytecodeMap <- compileSources f sourceLayouts
-          pure $ Map.fromList $ map (\(cid,src) ->
-            let src' = Text.unpack src
-                cid' = Text.unpack cid
-                sourceMap = fromMaybe (error $ "Source " <> Text.unpack src <> " of " <> cid' <> " not found in sources") $ Map.lookup src' bytecodeMap
-                layoutMode = fromJust $ Map.lookup src sourceLayouts
-                (initcode'', runtimecode') = case layoutMode of
-                  SolidityLayout -> fromMaybe (error $ "Contract " <> cid' <> " not found in " <> src') $ Map.lookup (Just cid') sourceMap
-                  VyperLayout -> fromJust $ Map.lookup Nothing sourceMap
-            in (Just cid', (layoutMode, initcode'', runtimecode'))) $ Map.toList contractSources
-        (Just _, Just _, _, _, _) -> render (text "Both a sources JSON file and Solidity file are given. Please specify only one.") >> exitFailure
-        (Just _, _, Just _, _, _) -> render (text "Both a sources JSON file and Vyper file are given. Please specify only one.") >> exitFailure
-        (Just _, _, _, Just _, _) -> render (text "Both a sources JSON file and runtime code are given. Please specify only one.") >> exitFailure
-        (Just _, _, _, _, Just _) -> render (text "Both a sources JSON file and initcode code are given. Please specify only one.") >> exitFailure
-        (Nothing, Just f, Nothing, Nothing, Nothing) -> do
+          let contractMap = Map.fromList $ map (\(cid,src) ->
+                      let src' = Text.unpack src
+                          cid' = Text.unpack cid
+                          sourceMap = fromMaybe (error $ "Source " <> Text.unpack src <> " of " <> cid' <> " not found in sources") $ Map.lookup src' bytecodeMap
+                          layoutMode = fromMaybe (error $ "Source " <> Text.unpack src <> " of " <> cid' <> " not found in sources") $ Map.lookup src sourceLayouts
+                          (initcode'', runtimecode') = case layoutMode of
+                            SolidityLayout -> fromMaybe (error $ "Contract " <> cid' <> " not found in " <> src') $ Map.lookup (Just cid') sourceMap
+                            VyperLayout -> fromJust $ Map.lookup Nothing sourceMap
+                      in (Just cid', (layoutMode, initcode'', runtimecode'))) $ Map.toList contractSources
+          pure (specs', contractMap)
+        (Just _, Just _, _, _, _, _) -> render (text "Both a sources JSON file and Act spec file are given. Please specify only one.") >> exitFailure
+        (Just _, _, Just _, _, _, _) -> render (text "Both a sources JSON file and Solidity file are given. Please specify only one.") >> exitFailure
+        (Just _, _, _, Just _, _, _) -> render (text "Both a sources JSON file and Vyper file are given. Please specify only one.") >> exitFailure
+        (Just _, _, _, _, Just _, _) -> render (text "Both a sources JSON file and runtime code are given. Please specify only one.") >> exitFailure
+        (Just _, _, _, _, _, Just _) -> render (text "Both a sources JSON file and initcode code are given. Please specify only one.") >> exitFailure
+        (Nothing, Nothing, _, _, _, _) -> render (text "No Act specification is given" <> line) >> exitFailure
+        (Nothing, Just a, Just f, Nothing, Nothing, Nothing) -> do
           bcs <- bytecodes f SolidityLayout
-          pure $ Map.map (\(b1,b2) -> (SolidityLayout, b1, b2)) bcs
-        (Nothing, Just _, Just _, _, _) -> render (text "Both Solidity and Vyper file are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, Just _, _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, Just _, _, _, Just _) -> render (text "Both Solidity file and initial code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, Nothing, Just f, Nothing, Nothing) -> do
+          pure ([a], Map.map (\(b1,b2) -> (SolidityLayout, b1, b2)) bcs)
+        (Nothing, _, Just _, Just _, _, _) -> render (text "Both Solidity and Vyper file are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, _, Just _, _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, _, Just _, _, _, Just _) -> render (text "Both Solidity file and initial code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, Just a, Nothing, Just f, Nothing, Nothing) -> do
           bcs <- bytecodes f VyperLayout
-          pure $ Map.map (\(b1,b2) -> (VyperLayout, b1, b2)) bcs
-        (Nothing, Nothing, Just _, Just _, _) -> render (text "Both Vyper file and runtime code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, Nothing, Just _, _, Just _) -> render (text "Both Vyper file and initial code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, Nothing, Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
-        (Nothing, Nothing, Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
-        (Nothing, Nothing, Nothing, Just _, Just _) -> render (text "Only Solidity or Vyper files supported") >> exitFailure -- TODO pure (i, c)
+          pure ([a], Map.map (\(b1,b2) -> (VyperLayout, b1, b2)) bcs)
+        (Nothing, _, Nothing, Just _, Just _, _) -> render (text "Both Vyper file and runtime code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, _, Nothing, Just _, _, Just _) -> render (text "Both Vyper file and initial code are given. Please specify only one." <> line) >> exitFailure
+        (Nothing, _, Nothing, Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
+        (Nothing, _, Nothing, Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
+        (Nothing, _, Nothing, Nothing, Just _, Just _) -> render (text "Only Solidity or Vyper files supported") >> exitFailure -- TODO pure (i, c)
 
 
-readSourcesJSON :: Text -> Either String (Map Text Text, Map Text Text)
+readSourcesJSON :: Text -> Either String ([Text], Map Text Text, Map Text Text)
 readSourcesJSON json = case eitherDecode $ BS.fromStrict $ encodeUtf8 json of
   Left s -> error s
   Right decoded -> do
-    (contractObjs,sourcesObjs) <- flip parseEither decoded $ \obj -> do
+    (specs, contractObjs, sourcesObjs) <- flip parseEither decoded $ \obj -> do
+      specs <- obj .: "specifications"
       contractsObjs <- obj .: "contracts"
       sourcesObjs <- obj .: "sources"
-      pure (contractsObjs, sourcesObjs)
+      pure (specs, contractsObjs, sourcesObjs)
     contractSources <- sequence (Map.map (parseEither (.: "source")) contractObjs)
     sourceLangs  <- sequence (Map.map (parseEither (.: "language")) sourcesObjs)
-    pure (contractSources, sourceLangs)
+    pure (specs, contractSources, sourceLangs)
+
+locateSpecs :: FilePath -> [Text] -> [FilePath]
+locateSpecs jsonPath specs = ((</>) (takeDirectory jsonPath) . Text.unpack) <$> specs
 
 checkLanguages :: Map Text Text -> Map Text LayoutMode
 checkLanguages = Map.map (fromMaybe (error "Unknown language") . checkLanguage)

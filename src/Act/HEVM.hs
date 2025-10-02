@@ -206,6 +206,8 @@ translateConstructor bytecode (Constructor cid iface _ preconds _ _ upds) cmap =
   cmap' <- applyUpdates initmap initmap upds
   -- After `addBounds`, `preconds` contains all integer locations that have been constrained in the Act spec.
   -- All must be enforced again to avoid discrepancies. Necessary for Vyper.
+  -- Note that since all locations are already in `preconds`,
+  -- there is no need to look at other fields.
   bounds <- storageBounds cmap $ nub $ concatMap locsFromExp preconds
   let acmap = abstractCmap initAddr cmap'
   pure ([simplify $ EVM.Success (snd calldata <> preconds' <> symAddrCnstr acmap) mempty (EVM.ConcreteBuf bytecode) (M.map fst cmap')], calldata, ifaceToSig iface, acmap, bounds)
@@ -222,13 +224,21 @@ symAddrCnstr :: ContractMap -> [EVM.Prop]
 symAddrCnstr cmap =
     (\(a1, a2) -> EVM.PNeg (EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2))) <$> comb (M.keys cmap)
 
-translateBehvs :: Monad m => ContractMap -> [Behaviour] -> ActT m [(Id, [(EVM.Expr EVM.End, ContractMap, [EVM.Prop])], Calldata, Sig)]
+translateBehvs :: Monad m => ContractMap -> [Behaviour] -> ActT m [(Id, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])]
 translateBehvs cmap behvs = do
   let groups = (groupBy sameIface behvs) :: [[Behaviour]]
   mapM (\behvs' -> do
            let calldata = behvCalldata behvs'
-           exprs <- mapM (translateBehv cmap (snd calldata)) behvs'
-           pure (behvName behvs', exprs, calldata, behvSig behvs)) groups
+           -- We collect all integer bounds from all cases of a given behaviour.
+           -- See `translateConstructor` on why only `_preconditions` are examined.
+           -- These bounds are set as preconditions for all cases of a behaviour,
+           -- even if some are not necessary for all cases, because the input space
+           -- must be compared against that of the symbolic execution. On that side,
+           -- it is not possible to distinguish between cases, so we make no distinction
+           -- here either.
+           bounds <- storageBounds cmap $ nub $ concatMap (concatMap locsFromExp . _preconditions) behvs'
+           exprs <- mapM (translateBehv cmap (snd calldata) bounds) behvs'
+           pure (behvName behvs', exprs, calldata, behvSig behvs, bounds)) groups
   where
     behvCalldata (Behaviour _ _ iface _ _ _ _ _ _:_) = makeCalldata iface
     behvCalldata [] = error "Internal error: behaviour groups cannot be empty"
@@ -248,15 +258,14 @@ ifaceToSig (Interface name args) = Sig (T.pack name) (fmap fromdecl args)
   where
     fromdecl (Decl t _) = t
 
-translateBehv :: Monad m => ContractMap -> [EVM.Prop] -> Behaviour -> ActT m (EVM.Expr EVM.End, ContractMap, [EVM.Prop])
-translateBehv cmap cdataprops (Behaviour _ _ _ _ preconds caseconds _ upds ret)  = do
+translateBehv :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> Behaviour -> ActT m (EVM.Expr EVM.End, ContractMap)
+translateBehv cmap cdataprops bounds (Behaviour _ _ _ _ preconds caseconds _ upds ret)  = do
   preconds' <- mapM (toProp cmap) preconds
   caseconds' <- mapM (toProp cmap) caseconds
   ret' <- returnsToExpr cmap ret
   cmap' <- applyUpdates cmap cmap upds
   let acmap = abstractCmap initAddr cmap'
-  bounds <- storageBounds cmap $ nub $ concatMap locsFromExp preconds
-  pure (simplify $ EVM.Success (preconds' <> caseconds' <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap, bounds)
+  pure (simplify $ EVM.Success (preconds' <> bounds <> caseconds' <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap)
 
 applyUpdates :: Monad m => ContractMap -> ContractMap -> [StorageUpdate] -> ActT m ContractMap
 applyUpdates readMap writeMap upds = foldM (applyUpdate readMap) writeMap upds
@@ -474,7 +483,7 @@ refOffset :: Monad m => ContractMap -> Ref k -> ActT m (EVM.Expr EVM.EWord, EVM.
 refOffset _ (CVar _ _ _) = error "Internal error: ill-typed entry"
 refOffset _ (SVar _ cid name) = do
   layout <- getLayout
-  let (slot, off, size, layoutMode) = getPosition layout cid name 
+  let (slot, off, size, layoutMode) = getPosition layout cid name
   pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size, layoutMode)
 refOffset cmap (SMapping _ ref typ ixs) = do
   (slot, _, _, layoutMode) <- refOffset cmap ref
@@ -491,7 +500,7 @@ refOffset cmap (SMapping _ ref typ ixs) = do
   pure (addr, EVM.Lit 0, size, layoutMode)
 refOffset _ (SField _ _ cid name) = do
   layout <- getLayout
-  let (slot, off, size, layoutMode) = getPosition layout cid name 
+  let (slot, off, size, layoutMode) = getPosition layout cid name
   pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size, layoutMode)
 refOffset _ (SArray _ _ _ _) = error "TODO"
 
@@ -788,7 +797,7 @@ getInitContractState solvers iface pointers preconds cmap = do
     -- currently we check that all symbolic addresses are globaly unique, and fail otherwise
     -- (this is required for aliasing check to be sound when merging graphs
     -- In the future, we should implement an internal renaming of variables to ensure global
-    -- uniqueness of symbolic a)ddresses.
+    -- uniqueness of symbolic addresses.)
 
     checkUniqueAddr :: [ContractMap] -> Error String ()
     checkUniqueAddr cmaps =
@@ -825,10 +834,10 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
   let hevmstorage = translateCmap actstorage
   fresh <- getFresh
   actbehvs <- translateBehvs actstorage behvs
-  (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata,sig) -> do
-    let (behvs', fcmaps, bounds) = unzip3 actbehv
+  (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata,sig,bounds) -> do
+    let (behvs', fcmaps) = unzip actbehv
 
-    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata (concat bounds) fresh
+    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata bounds fresh
 
     lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
     -- equivalence check
@@ -1033,9 +1042,11 @@ checkAbi solver contract cmap = do
 
     msg = "\x1b[1mThe following function selector results in behaviors not covered by the Act spec:\x1b[m"
 
-checkContracts :: forall m. App m => SolverGroup -> Store -> M.Map Id LayoutMode -> M.Map Id (Contract, BS.ByteString, BS.ByteString) -> m (Error String ())
-checkContracts solvers store layoutmap codemap =
-  let actenv = ActEnv codemap 0 (slotMap store layoutmap) (EVM.SymAddr "entrypoint") Nothing in
+checkContracts :: forall m. App m => SolverGroup -> Store -> M.Map Id (Contract, BS.ByteString, BS.ByteString, LayoutMode) -> m (Error String ())
+checkContracts solvers store codeLayoutMap =
+  let codemap = M.map (\(c,b1,b2,_) -> (c,b1,b2)) codeLayoutMap
+      layoutmap = M.map (\(_,_,_,l) -> l) codeLayoutMap
+      actenv = ActEnv codemap 0 (slotMap store layoutmap) (EVM.SymAddr "entrypoint") Nothing in
   fmap (concatError def) $ forM (M.toList codemap) (\(_, (contract, initcode, bytecode)) -> do
     showMsg $ "\x1b[1mChecking contract \x1b[4m" <> nameOfContract contract <> "\x1b[m"
     (res, actenv') <- flip runStateT actenv $ checkConstructors solvers initcode bytecode contract

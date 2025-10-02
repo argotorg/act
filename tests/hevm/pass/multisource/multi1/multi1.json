@@ -1,4 +1,5 @@
 {
+  "specifications" : ["multi1.act"],
   "sources": {
     "file1.sol" : {
       "language" : "Solidity"

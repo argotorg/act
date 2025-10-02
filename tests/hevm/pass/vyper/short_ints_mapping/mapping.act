@@ -1,6 +1,5 @@
 constructor of A
 interface constructor()
-
 iff
   CALLVALUE == 0
 

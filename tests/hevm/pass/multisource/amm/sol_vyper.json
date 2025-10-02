@@ -1,0 +1,12 @@
+{
+  "specifications" : ["amm.act", "../erc20/erc20.act"],
+  "sources" : {
+    "../erc20/erc20.vy" : { "language" : "Vyper" },
+    "amm.sol" : { "language" : "Solidity" }
+  },
+  "contracts" : {
+    "Token" : { "source" : "../erc20/erc20.vy"},
+    "Amm" : { "source" : "amm.sol"}
+  }
+}
+

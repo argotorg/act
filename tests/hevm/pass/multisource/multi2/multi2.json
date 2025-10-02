@@ -1,4 +1,5 @@
 {
+  "specifications" : ["multi2.act"],
   "sources": {
     "file1.vy": { 
       "language" : "Vyper"
