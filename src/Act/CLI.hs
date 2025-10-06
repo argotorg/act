@@ -47,7 +47,7 @@ import Act.Syntax.TypedExplicit hiding (_Array)
 import Act.Bounds
 import Act.SMT as SMT
 import Act.Type
-import Act.Coq hiding (indent)
+import Act.Coq hiding (indent, (<+>))
 import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency

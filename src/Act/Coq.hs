@@ -52,13 +52,20 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   [ "Module " <> T.pack _cname <> ".\n" ]
   <> [ stateRecord ]
   <> [ base store ctor ]
+  <> [ postCondConstr ctor ]
+  <> [ invariantProps ctor ]
+  <> [ invariants ctor ]
   <> (concatMap (evalSeq (transition store)) (groups behvs))
-  <> (filter ((/=) "") $ concatMap (evalSeq retVal) (groups behvs))
+  <> filter ((/=) "") (concatMap (evalSeq retVal) (groups behvs))
+  <> (concatMap (evalSeq postCondBehv) (groups behvs))
   <> [ step (groups behvs)]
   <> [ initPred ctor ]
   <> [ multistep ]
   <> [ reachable ]
   <> [ reachableFromInit ]
+  <> [ invariantInit ctor ]
+  <> [ invariantStep ctor ]
+  <> [ reachableInvariant ]
   <> [ "End " <> T.pack _cname <> "." ]
   where
     groups = groupBy (\b b' -> _name b == _name b')
@@ -93,8 +100,8 @@ stepBehv (Behaviour name _ i _ conds cases _ _ _) =
       <> constructorBody where
 
     constructorBody = (indent 2) . implication $
-      (coqprop <$> cases ++ conds)
-      <> [ stepType <> " " <> stateVar <> " " <> parens (name' <> " " <> envVar <> " " <> stateVar <> " " <> arguments i)]
+      (coqprop stateVar <$> cases ++ conds)
+      <> [ stepType <+> stateVar <+> parens (name' <+> envVar <+> stateVar <+> arguments i)]
 
 
 -- | definition of reachable states
@@ -104,8 +111,8 @@ reachable = definition
   where
     args = parens $ stateVar <> " : " <> stateType
     value = "exists " <> stateVar' <> ", " <> initType <>
-      " " <> stateVar' <> " /\\ " <> multistepType <> " " <>
-      stateVar' <> " " <> stateVar
+      " " <> stateVar' <> " /\\ " <> multistepType <+>
+      stateVar' <+> stateVar
     stateVar' = stateVar <> "'"
 
 -- | specialization of generic multistep
@@ -113,8 +120,8 @@ multistep :: T.Text
 multistep = definition
   multistepType args value
   where
-    args = parens $ stateVar <> " " <> stateVar' <> " : " <> stateType
-    value = multistepType <> " " <> stepType <> " " <> stateVar <> " " <> stateVar'
+    args = parens $ stateVar <+> stateVar' <> " : " <> stateType
+    value = multistepType <+> stepType <+> stateVar <+> stateVar'
     stateVar' = stateVar <> "'"
 
 -- | definition of reachable states from initial state
@@ -122,10 +129,10 @@ reachableFromInit :: T.Text
 reachableFromInit = definition
   reachableFromInitType args value
   where
-    args = parens $ stateVar <> " " <> stateVar' <> " : " <> stateType
+    args = parens $ stateVar <+> stateVar' <> " : " <> stateType
     value = initType <>
-      " " <> stateVar <> " /\\ " <> multistepType <> " " <>
-      stateVar <> " " <> stateVar'
+      " " <> stateVar <> " /\\ " <> multistepType <+>
+      stateVar <+> stateVar'
     stateVar' = stateVar <> "'"
 
 -- | predicate characterizing all initial (post constructor) states
@@ -134,13 +141,13 @@ initPred (Constructor name i@(Interface _ decls) _ conds _ _ _ ) = inductive
   initType "" (stateType <> " -> " <> " Prop") [body]
   where
     body = "Init : " <> universal <> "\n" <> constructorBody
-    baseval = parens $ T.pack name <> " " <> envVar <> " " <> arguments i
+    baseval = parens $ T.pack name <+> envVar <+> arguments i
     constructorBody = (indent 2) . implication . concat $
-      [ coqprop <$> conds
-      , [initType <> " " <> baseval]
+      [ coqprop stateVar <$> conds
+      , [initType <+> baseval]
       ]
     universal =
-      "forall " <> envDecl <> " " <>
+      "forall " <> envDecl <+>
       (if null decls
        then ""
        else interface i) <> ","
@@ -148,14 +155,14 @@ initPred (Constructor name i@(Interface _ decls) _ conds _ _ _ ) = inductive
 -- | definition of a base state
 base :: Store -> Constructor -> T.Text
 base store (Constructor name i _ _ _ _ updates) =
-  definition (T.pack name) (envDecl <> " " <> interface i) $
+  definition (T.pack name) (envDecl <+> interface i) $
     stateval store name (\_ t -> defaultSlotValue t) updates
 
 transition :: Store -> Behaviour -> Fresh T.Text
 transition store (Behaviour name cname i _ _ _ _ rewrites _) = do
   name' <- fresh name
-  return $ definition name' (envDecl <> " " <> stateDecl <> " " <> interface i) $
-    stateval store cname (\r _ -> ref r) rewrites
+  return $ definition name' (envDecl <+> stateDecl <+> interface i) $
+    stateval store cname (\r _ -> ref stateVar r) rewrites
 
 -- | inductive definition of a return claim
 -- ignores claims that do not specify a return value
@@ -164,18 +171,169 @@ retVal (Behaviour name _ i _ conds cases _ _ (Just r)) =
   fresh name >>= continuation where
   continuation name' = return $ inductive
     (name' <> returnSuffix)
-    (envDecl <> " " <> stateDecl <> " " <> interface i)
+    (envDecl <+> stateDecl <+> interface i)
     (returnType r <> " -> Prop")
     [retname <> introSuffix <> " :\n" <> body] where
 
 
     retname = name' <> returnSuffix
     body = indent 2 . implication . concat $
-      [ coqprop <$> conds ++ cases
-      , [retname <> " " <> envVar <> " " <> stateVar <> " " <> arguments i <> " " <> typedexp r]
+      [ coqprop stateVar <$> conds ++ cases
+      , [retname <+> envVar <+> stateVar <+> arguments i <+> typedexp stateVar r]
       ]
 
 retVal _ = return ""
+
+--postCondConstr :: Constructor -> T.Text
+--postCondConstr (Constructor _ _ _ _ [] _ _) = ""
+--postCondConstr (Constructor name i _ conds postcs _ _) =
+--  lemma
+--    (T.pack name <> postSuffix)
+--    (envDecl <+> stateDecl <+> interface i)
+--    body
+--    "Admitted."
+--    where
+--      body = indent 2 . implication . concat $ 
+--        [ --["init STATE"]
+--        coqprop "" <$> conds -- state should no be read here so doesn't matter?
+--        , ["STATE = " <> T.pack name <+> envVar <+> arguments i]
+--        , [T.intercalate " /\\ " $ coqprop stateVar <$> postcs]
+--        ]
+postCondConstr :: Constructor -> T.Text
+postCondConstr (Constructor _ _ _ _ [] _ _) = ""
+postCondConstr (Constructor name i _ conds postcs _ _) =
+  T.intercalate "\n\n" $ evalSeq post postcs
+    where
+      post :: Exp ABoolean -> Fresh T.Text
+      post pc =
+        fresh (name <> T.unpack postSuffix) >>= continuation where
+        continuation postName = return $
+          lemma
+          postName
+          (envDecl <+> stateDecl <+> interface i)
+          body
+          "Admitted."
+        body = indent 2 . implication . concat $
+          [ --["init STATE"]
+          coqprop "" <$> conds -- state should no be read here so doesn't matter?
+          , ["STATE = " <> T.pack name <+> envVar <+> arguments i]
+          , [coqprop stateVar pc]
+          ]
+
+postCondBehv :: Behaviour -> Fresh T.Text
+postCondBehv (Behaviour _ _ _ _ _ _ [] _ _) = return ""
+postCondBehv (Behaviour name _ i _ conds cases postcs _ _) =
+  fresh name >>= continuation where
+  continuation name' = return $ T.intercalate "\n\n" $ evalSeq (post name') postcs
+    where
+      post :: T.Text -> Exp ABoolean -> Fresh T.Text
+      post case_name pc =
+        fresh (T.unpack $ case_name <> postSuffix) >>= continuation' where
+        continuation' postName = return $
+          lemma
+          postName
+          (envDecl <+> stateDecl <+> stateDecl' <+> interface i)
+          body
+          "Admitted."
+        body = indent 2 . implication . concat $
+          [ coqprop stateVar <$> conds ++ cases
+          , ["STATE' = " <> name' <+> envVar <+> stateVar <+> arguments i]
+          , [coqprop stateVar pc]
+          ]
+
+invariantInit :: Constructor -> T.Text
+invariantInit (Constructor name i _ conds _ _ _) =
+  lemma (T.pack name <> invInitSuffix)
+  (envDecl <+> interface i <+> "(P :" <+> envType <+> interfaceTypes i <+> stateType <+> " -> Prop)")
+  claim
+  "Admitted."
+  where
+    claim = indent 2 . implication . concat $
+      [ coqprop "" <$> conds
+      , ["invariant P"]
+      , ["P" <+> envVar <+> arguments i <+> parens (T.pack name <+> envVar <+> arguments i)]
+      ]
+-- invariantConstr :: Constructor -> T.Text
+-- invariantConstr (Constructor name i _ conds _ invs _) =
+--   T.intercalate "\n\n" $ evalSeq inv invs
+--   where
+--     inv :: Invariant-> Fresh T.Text
+--     inv (Invariant _ _ _ (PredTimed p _)) =
+--       fresh (name <> T.unpack invInitSuffix) >>= continuation' where
+--       continuation' name' = return $
+--         lemma
+--         name'
+--         (envDecl <+> stateDecl <+> interface i)
+--         body
+--         "Admitted."
+--       body = indent 2 . implication . concat $ 
+--         [ --["init STATE"]
+--         coqprop "" <$> conds -- state should no be read here so doesn't matter?
+--         , ["STATE = " <> T.pack name <+> envVar <+> arguments i]
+--         , [coqprop stateVar p]
+--         ]
+
+invariantStep :: Constructor -> T.Text
+invariantStep (Constructor name i _ conds _ _ _) =
+  lemma (T.pack name <> invStepSuffix)
+  (envDecl <+> interface i <+> stateDecl <+> stateDecl' <+> "(P :" <+> envType <+> interfaceTypes i <+> stateType <+> " -> Prop)")
+  claim
+  "Admitted."
+  where
+    claim = indent 2 . implication . concat $
+      [ coqprop "" <$> conds
+      , ["step" <+> stateVar <+> stateVar <> "'"]
+      , ["invariant P"]
+      , ["P" <+> envVar <+> arguments i <+> stateVar]
+      , ["P" <+> envVar <+> arguments i <+> stateVar <> "'"]
+      ]
+
+--invariantStep :: Constructor -> T.Text
+--invariantStep (Constructor name i _ conds _ invs _) =
+--  T.intercalate "\n\n" $ evalSeq inv invs
+--  where
+--    inv :: Invariant-> Fresh T.Text
+--    inv (Invariant _ _ _ (PredTimed p _)) =
+--      fresh (name <> T.unpack invStepSuffix) >>= continuation' where
+--      continuation' name' = return $
+--        lemma
+--        name'
+--        (envDecl <+> interface i <+> stateDecl <+> stateDecl')
+--        body
+--        "Admitted."
+--      body = indent 2 . implication . concat $ 
+--        [ --["init STATE"]
+--          coqprop "" <$> conds -- state should no be read here so doesn't matter?
+--        , [stepType <+> stateVar <+> stateVar <> "'"]
+--        , [coqprop stateVar p]
+--        , [coqprop (stateVar <> "'") p]
+--        ]
+
+invariantProps :: Constructor -> T.Text
+invariantProps (Constructor _ i _ _ _ invs _) =
+  T.concat $ evalSeq (invariantProp i) invs
+
+invariantProp :: Interface -> Invariant -> Fresh T.Text
+invariantProp i (Invariant _ _ _ (PredTimed p _)) =
+  fresh "invariantProp" >>= continuation where
+  continuation name' = return $ definition
+    name'
+    (envDecl <+> interface i <+> stateDecl)
+    (coqprop stateVar p)
+
+
+invariants :: Constructor -> T.Text
+invariants (Constructor _ i _ _ _ invs _) =
+  inductive
+  "invariant"
+  ""
+  ("(" <> envType <+> interfaceTypes i <+> stateType <> " -> Prop) -> Prop")
+  (evalSeq inv_constructor invs)
+  where
+    inv_constructor :: Invariant -> Fresh T.Text
+    inv_constructor (Invariant _ _ _ (PredTimed _ _)) =
+      fresh' "invariant" "invariantProp" >>= continuation where
+      continuation (constr, term) = return $ constr <> ": invariant " <> term
 
 -- | produce a state value from a list of storage updates
 -- 'handler' defines what to do in cases where a given name isn't updated
@@ -212,7 +370,7 @@ updateVar store updates handler focus t@(StorageValue (ContractType cid)) =
     -- Only some fields are updated
     ([], updates'@(_:_)) -> parens $ T.unwords $ (T.pack cid <> "." <> stateConstructor) : fmap (\(n, (t', _)) -> updateVar store  updates' handler (focus' n) t') (M.toList store')
     -- No fields are updated, whole contract may be updated with some call to the constructor
-    (updates', []) -> foldl (\ _ (Update _ _ e) -> coqexp e) (handler focus t) updates'
+    (updates', []) -> foldl (\ _ (Update _ _ e) -> coqexp stateVar e) (handler focus t) updates'
     -- The contract is updated with constructor call and field accessing. Unsupported.
     (_:_, _:_) -> error "Cannot handle multiple updates to contract variable"
   where
@@ -226,22 +384,22 @@ updateVar _ updates handler focus t@(StorageValue (PrimitiveType _)) =
   foldl updatedVal (handler focus t) (filter (eqRef focus) updates)
     where
       updatedVal _ (Update SByteStr _ _) = error "bytestrings not supported"
-      updatedVal _ (Update _ _ e) = coqexp e
+      updatedVal _ (Update _ _ e) = coqexp stateVar e
 
 updateVar _ updates handler focus t@(StorageMapping xs _) = parens $
   lambda n <> foldl updatedMap prestate (filter (baseRef focus) updates)
     where
-      prestate = parens $ handler focus t <> " " <> lambdaArgs n
+      prestate = parens $ handler focus t <+> lambdaArgs n
       n = length xs
 
       updatedMap _ (Update SByteStr _ _) = error "bytestrings not supported"
       updatedMap prestate' (Update _ item e) =
         let ixs = ixsFromItem item in -- This will not work if the domain is a contract type
         "if " <> boolScope (T.intercalate " && " (map cond (zip ixs ([0..] :: [Int]))))
-        <> " then " <> coqexp e
+        <> " then " <> coqexp stateVar e
         <> " else " <> prestate'
 
-      cond (TExp argType _ arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
+      cond (TExp argType _ arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp stateVar arg
 
       lambda i = if i >= 0 then "fun " <> lambdaArgs i <> " => " else ""
 
@@ -264,6 +422,10 @@ interface (Interface _ decls) =
 arguments :: Interface -> T.Text
 arguments (Interface _ decls) =
   T.unwords $ map (\(Decl _ name) -> T.pack name) decls
+
+interfaceTypes :: Interface -> T.Text
+interfaceTypes (Interface _ decls) =
+  T.intercalate " -> " (map (\(Decl t _) -> abiType t) decls) <> (T.pack " -> ")
 
 -- | coq syntax for a slot type
 slotType :: SlotType -> T.Text
@@ -312,98 +474,101 @@ abiVal AbiStringType = strMod <> ".EmptyString"
 abiVal _ = error "TODO: missing default values"
 
 -- | coq syntax for an expression
-coqexp :: Exp a -> T.Text
+coqexp :: T.Text -> Exp a -> T.Text
 -- booleans
-coqexp (LitBool _ True)  = "true"
-coqexp (LitBool _ False) = "false"
-coqexp (And _ e1 e2)  = parens $ "andb "   <> coqexp e1 <> " " <> coqexp e2
-coqexp (Or _ e1 e2)   = parens $ "orb"     <> coqexp e1 <> " " <> coqexp e2
-coqexp (Impl _ e1 e2) = parens $ "implb"   <> coqexp e1 <> " " <> coqexp e2
-coqexp (Eq _ _ e1 e2)   = parens $ coqexp e1  <> " =? " <> coqexp e2
-coqexp (NEq _ _ e1 e2)  = parens $ "negb " <> parens (coqexp e1  <> " =? " <> coqexp e2)
-coqexp (Neg _ e)      = parens $ "negb " <> coqexp e
-coqexp (LT _ e1 e2)   = parens $ coqexp e1 <> " <? "  <> coqexp e2
-coqexp (LEQ _ e1 e2)  = parens $ coqexp e1 <> " <=? " <> coqexp e2
-coqexp (GT _ e1 e2)   = parens $ coqexp e2 <> " <? "  <> coqexp e1
-coqexp (GEQ _ e1 e2)  = parens $ coqexp e2 <> " <=? " <> coqexp e1
+coqexp _ (LitBool _ True)  = "true"
+coqexp _ (LitBool _ False) = "false"
+coqexp s (And _ e1 e2)  = parens $ "andb "   <> coqexp s e1 <+> coqexp s e2
+coqexp s (Or _ e1 e2)   = parens $ "orb"     <> coqexp s e1 <+> coqexp s e2
+coqexp s (Impl _ e1 e2) = parens $ "implb"   <> coqexp s e1 <+> coqexp s e2
+coqexp s (Eq _ _ e1 e2)   = parens $ coqexp s e1  <> " =? " <> coqexp s e2
+coqexp s (NEq _ _ e1 e2)  = parens $ "negb " <> parens (coqexp s e1  <> " =? " <> coqexp s e2)
+coqexp s (Neg _ e)      = parens $ "negb " <> coqexp s e
+coqexp s (LT _ e1 e2)   = parens $ coqexp s e1 <> " <? "  <> coqexp s e2
+coqexp s (LEQ _ e1 e2)  = parens $ coqexp s e1 <> " <=? " <> coqexp s e2
+coqexp s (GT _ e1 e2)   = parens $ coqexp s e2 <> " <? "  <> coqexp s e1
+coqexp s (GEQ _ e1 e2)  = parens $ coqexp s e2 <> " <=? " <> coqexp s e1
 
 -- integers
-coqexp (LitInt _ i) = T.pack $ show i
-coqexp (Add _ e1 e2) = parens $ coqexp e1 <> " + " <> coqexp e2
-coqexp (Sub _ e1 e2) = parens $ coqexp e1 <> " - " <> coqexp e2
-coqexp (Mul _ e1 e2) = parens $ coqexp e1 <> " * " <> coqexp e2
-coqexp (Div _ e1 e2) = parens $ coqexp e1 <> " / " <> coqexp e2
-coqexp (Mod _ e1 e2) = parens $ "Z.modulo " <> coqexp e1 <> coqexp e2
-coqexp (Exp _ e1 e2) = parens $ coqexp e1 <> " ^ " <> coqexp e2
-coqexp (IntMin _ n)  = parens $ "INT_MIN "  <> T.pack (show n)
-coqexp (IntMax _ n)  = parens $ "INT_MAX "  <> T.pack (show n)
-coqexp (UIntMin _ n) = parens $ "UINT_MIN " <> T.pack (show n)
-coqexp (UIntMax _ n) = parens $ "UINT_MAX " <> T.pack (show n)
+coqexp _ (LitInt _ i) = T.pack $ show i
+coqexp s (Add _ e1 e2) = parens $ coqexp s e1 <> " + " <> coqexp s e2
+coqexp s (Sub _ e1 e2) = parens $ coqexp s e1 <> " - " <> coqexp s e2
+coqexp s (Mul _ e1 e2) = parens $ coqexp s e1 <> " * " <> coqexp s e2
+coqexp s (Div _ e1 e2) = parens $ coqexp s e1 <> " / " <> coqexp s e2
+coqexp s (Mod _ e1 e2) = parens $ "Z.modulo " <> coqexp s e1 <> coqexp s e2
+coqexp s (Exp _ e1 e2) = parens $ coqexp s e1 <> " ^ " <> coqexp s e2
+coqexp _ (IntMin _ n)  = parens $ "INT_MIN "  <> T.pack (show n)
+coqexp _ (IntMax _ n)  = parens $ "INT_MAX "  <> T.pack (show n)
+coqexp _ (UIntMin _ n) = parens $ "UINT_MIN " <> T.pack (show n)
+coqexp _ (UIntMax _ n) = parens $ "UINT_MAX " <> T.pack (show n)
 
-coqexp (InRange _ t e) = coqexp (bound t e)
+coqexp s (InRange _ t e) = coqexp s (bound t e)
 
 -- polymorphic
-coqexp (VarRef _ _ _ e) = entry e
-coqexp (ITE _ b e1 e2) = parens $ "if "
-                               <> coqexp b
+coqexp s (VarRef _ _ _ e) = entry s e
+coqexp s (ITE _ b e1 e2) = parens $ "if "
+                               <> coqexp s b
                                <> " then "
-                               <> coqexp e1
+                               <> coqexp s e1
                                <> " else "
-                               <> coqexp e2
+                               <> coqexp s e2
 
 -- environment values
 -- Relies on the assumption that Coq record fields have the same name
 -- as the corresponding Haskell constructor
-coqexp (IntEnv _ envVal) = parens $ T.pack (show envVal) <> " " <> envVar
+coqexp _ (IntEnv _ envVal) = parens $ T.pack (show envVal) <+> envVar
 -- Contracts
-coqexp (Create _ cid args) = parens $ T.pack cid <> "." <> T.pack cid <> " " <> envVar <> " " <> coqargs args
+coqexp s (Create _ cid args) = parens $ T.pack cid <> "." <> T.pack cid <+> envVar <+> coqargs s args
 -- unsupported
-coqexp Cat {} = error "bytestrings not supported"
-coqexp Slice {} = error "bytestrings not supported"
-coqexp ByStr {} = error "bytestrings not supported"
-coqexp ByLit {} = error "bytestrings not supported"
-coqexp ByEnv {} = error "bytestrings not supported"
-coqexp Array {} = error "arrays not supported"
+coqexp _ Cat {} = error "bytestrings not supported"
+coqexp _ Slice {} = error "bytestrings not supported"
+coqexp _ ByStr {} = error "bytestrings not supported"
+coqexp _ ByLit {} = error "bytestrings not supported"
+coqexp _ ByEnv {} = error "bytestrings not supported"
+coqexp _ Array {} = error "arrays not supported"
 
 -- | coq syntax for a proposition
-coqprop :: Exp a -> T.Text
-coqprop (LitBool _ True)  = "True"
-coqprop (LitBool _ False) = "False"
-coqprop (And _ e1 e2)  = parens $ coqprop e1 <> " /\\ " <> coqprop e2
-coqprop (Or _ e1 e2)   = parens $ coqprop e1 <> " \\/ " <> coqprop e2
-coqprop (Impl _ e1 e2) = parens $ coqprop e1 <> " -> " <> coqprop e2
-coqprop (Neg _ e)      = parens $ "not " <> coqprop e
-coqprop (Eq _ _ e1 e2)   = parens $ coqexp e1 <> " = "  <> coqexp e2
-coqprop (NEq _ _ e1 e2)  = parens $ coqexp e1 <> " <> " <> coqexp e2
-coqprop (LT _ e1 e2)   = parens $ coqexp e1 <> " < "  <> coqexp e2
-coqprop (LEQ _ e1 e2)  = parens $ coqexp e1 <> " <= " <> coqexp e2
-coqprop (GT _ e1 e2)   = parens $ coqexp e1 <> " > "  <> coqexp e2
-coqprop (GEQ _ e1 e2)  = parens $ coqexp e1 <> " >= " <> coqexp e2
-coqprop (InRange _ t e) = coqprop (bound t e)
+coqprop :: T.Text -> Exp a -> T.Text
+coqprop _ (LitBool _ True)  = "True"
+coqprop _ (LitBool _ False) = "False"
+coqprop s (And _ e1 e2)  = parens $ coqprop s e1 <> " /\\ " <> coqprop s e2
+coqprop s (Or _ e1 e2)   = parens $ coqprop s e1 <> " \\/ " <> coqprop s e2
+coqprop s (Impl _ e1 e2) = parens $ coqprop s e1 <> " -> " <> coqprop s e2
+coqprop s (Neg _ e)      = parens $ "not " <> coqprop s e
+coqprop s (Eq _ _ e1 e2)   = parens $ coqexp s e1 <> " = "  <> coqexp s e2
+coqprop s (NEq _ _ e1 e2)  = parens $ coqexp s e1 <> " <> " <> coqexp s e2
+coqprop s (LT _ e1 e2)   = parens $ coqexp s e1 <> " < "  <> coqexp s e2
+coqprop s (LEQ _ e1 e2)  = parens $ coqexp s e1 <> " <= " <> coqexp s e2
+coqprop s (GT _ e1 e2)   = parens $ coqexp s e1 <> " > "  <> coqexp s e2
+coqprop s (GEQ _ e1 e2)  = parens $ coqexp s e1 <> " >= " <> coqexp s e2
+coqprop s (InRange _ t e) = coqprop s (bound t e)
 
-coqprop e = error "ill formed proposition: " <> T.pack (show e)
+coqprop _ e = error "ill formed proposition: " <> T.pack (show e)
 
 -- | coq syntax for a typed expression
-typedexp :: TypedExp -> T.Text
-typedexp (TExp _ _ e) = coqexp e
+typedexp :: T.Text -> TypedExp -> T.Text
+typedexp s (TExp _ _ e) = coqexp s e
 
-entry :: TItem k a -> T.Text
-entry (Item SByteStr _ _) = error "bytestrings not supported"
-entry (Item _ _ r) = ref r
+entry :: T.Text -> TItem k a -> T.Text
+entry _ (Item SByteStr _ _) = error "bytestrings not supported"
+entry s (Item _ _ r) = ref s r
 
-ref :: Ref k -> T.Text
-ref (SVar _ _ name) = parens $ T.pack name <> " " <> stateVar
-ref (CVar _ _ name) = T.pack name
-ref (SArray _ r _ ixs) = parens $ ref r <> " " <> coqargs (fst <$> ixs)
-ref (SMapping _ r _ ixs) = parens $ ref r <> " " <> coqargs ixs
-ref (SField _ r cid name) = parens $ T.pack cid <> "." <> T.pack name <> " " <> ref r
+ref :: T.Text -> Ref k -> T.Text
+ref s (SVar _ _ name) = parens $ T.pack name <+> s
+ref _ (CVar _ _ name) = T.pack name
+ref s (SArray _ r _ ixs) = parens $ ref s r <+> coqargs s (fst <$> ixs)
+ref s (SMapping _ r _ ixs) = parens $ ref s r <+> coqargs s ixs
+ref s (SField _ r cid name) = parens $ T.pack cid <> "." <> T.pack name <+> ref s r
 
 -- | coq syntax for a list of arguments
-coqargs :: [TypedExp] -> T.Text
-coqargs es = T.unwords (map typedexp es)
+coqargs :: T.Text -> [TypedExp] -> T.Text
+coqargs s es = T.unwords (map (typedexp s) es)
 
 fresh :: Id -> Fresh T.Text
 fresh name = state $ \s -> (T.pack (name <> show s), s + 1)
+
+fresh' :: Id -> Id -> Fresh (T.Text, T.Text)
+fresh' constr term = state $ \s -> ((T.pack (constr <> show s), T.pack (term <> show s)), s + 1)
 
 evalSeq :: Traversable t => (a -> Fresh b) -> t a -> t b
 evalSeq f xs = evalState (sequence (f <$> xs)) 0
@@ -412,16 +577,25 @@ evalSeq f xs = evalState (sequence (f <$> xs)) 0
 
 definition :: T.Text -> T.Text -> T.Text -> T.Text
 definition name args value = T.unlines
-  [ "Definition " <> name <> " " <> args <> " :="
-  , value
-  , "."
+  [ "Definition " <> name <+> args <> " :="
+  , value <> "."
   ]
 
 inductive :: T.Text -> T.Text -> T.Text -> [T.Text] -> T.Text
 inductive name args indices constructors = T.unlines
-  [ "Inductive " <> name <> " " <> args <> " : " <> indices <> " :="
-  , (T.unlines $ ("| " <>) <$> constructors) <> "."
+  [ "Inductive " <> name <+> args <> " : " <> indices <> " :="
+  , (T.concat $ ("| " <>) <$> constructors) <> "."
   ]
+
+lemma :: T.Text -> T.Text -> T.Text -> T.Text -> T.Text
+lemma name args claim proof = T.unlines
+  [ "Lemma " <> name <+> args <> " : "
+  , claim <> "."
+  , proof
+  ]
+
+reachableInvariant :: T.Text
+reachableInvariant = "Theorem inv_reach :\n forall (ENV : Env) (STATE : State) (P : Env -> State -> Prop),\n reachableFromInit (StateMachine ENV) STATE\n -> invariant P\n -> P ENV STATE.\n Proof.\n intros ENV STATE P Hreach HinvP.\n unfold reachableFromInit in Hreach.\n destruct Hreach as [Hinit Hmulti].\n apply step_multi_step with (P := fun s s' => P ENV s  -> P ENV s' ) in Hmulti.\n - apply Hmulti.\n apply StateMachine_invInit.\n + assumption.\n - intros s s' Hstep.\n apply StateMachine_invStep with (STATE := s) (STATE' := s') ; assumption.\n - unfold Relation_Definitions.reflexive.\n intros.\n assumption.\n - unfold Relation_Definitions.transitive.\n intros s1 s2 s3 Ht1 Ht2 Ht3.\n apply Ht2, Ht1.\n assumption.\n Qed."
 
 -- | multiline implication
 implication :: [T.Text] -> T.Text
@@ -459,11 +633,23 @@ nextVar = "NEXT"
 stateDecl :: T.Text
 stateDecl = parens $ stateVar <> " : " <> stateType
 
+stateDecl' :: T.Text
+stateDecl' = parens $ stateVar <> "' : " <> stateType
+
 stateConstructor :: T.Text
 stateConstructor = "state"
 
 returnSuffix :: T.Text
 returnSuffix = "_ret"
+
+postSuffix :: T.Text
+postSuffix = "_post"
+
+invInitSuffix :: T.Text
+invInitSuffix  = "_invInit"
+
+invStepSuffix :: T.Text
+invStepSuffix  = "_invStep"
 
 baseSuffix :: T.Text
 baseSuffix = "_base"
@@ -503,3 +689,7 @@ envDecl = parens $ envVar <> " : " <> envType
 
 anon :: T.Text
 anon = "_binding_"
+
+(<+>) :: T.Text -> T.Text -> T.Text
+t1 <+> t2 = t1 <> " " <> t2
+
