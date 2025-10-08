@@ -59,13 +59,14 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   <> filter ((/=) "") (concatMap (evalSeq retVal) (groups behvs))
   <> (concatMap (evalSeq postCondBehv) (groups behvs))
   <> [ step (groups behvs)]
-  <> [ initPred ctor ]
+  <> [ initState ctor ]
+  <> [ initArgs ctor ]
   <> [ multistep ]
   <> [ reachable ]
-  <> [ reachableFromInit ]
+  <> [ reachableFromInit _cname _cinterface ]
   <> [ invariantInit ctor ]
   <> [ invariantStep ctor ]
-  <> [ reachableInvariant ]
+  <> [ reachableInvariant ctor]
   <> [ "End " <> T.pack _cname <> "." ]
   where
     groups = groupBy (\b b' -> _name b == _name b')
@@ -110,7 +111,7 @@ reachable = definition
   reachableType args value
   where
     args = parens $ stateVar <> " : " <> stateType
-    value = "exists " <> stateVar' <> ", " <> initType <>
+    value = "exists " <> stateVar' <> ", " <> initStateType <>
       " " <> stateVar' <> " /\\ " <> multistepType <+>
       stateVar' <+> stateVar
     stateVar' = stateVar <> "'"
@@ -125,26 +126,41 @@ multistep = definition
     stateVar' = stateVar <> "'"
 
 -- | definition of reachable states from initial state
-reachableFromInit :: T.Text
-reachableFromInit = definition
+reachableFromInit :: Id -> Interface -> T.Text
+reachableFromInit name i = definition
   reachableFromInitType args value
   where
-    args = parens $ stateVar <+> stateVar' <> " : " <> stateType
-    value = initType <>
-      " " <> stateVar <> " /\\ " <> multistepType <+>
-      stateVar <+> stateVar'
-    stateVar' = stateVar <> "'"
+    args = envDecl <+> interface i <+> stateDecl
+    value = initArgsType <>
+      " " <> envVar <+> arguments i <> " /\\ " <> multistepType <+>
+      parens (T.pack name <+> envVar <+> arguments i) <+> stateVar
 
 -- | predicate characterizing all initial (post constructor) states
-initPred :: Constructor -> T.Text
-initPred (Constructor name i@(Interface _ decls) _ conds _ _ _ ) = inductive
-  initType "" (stateType <> " -> " <> " Prop") [body]
+initArgs :: Constructor -> T.Text
+initArgs (Constructor _ i@(Interface _ decls) _ conds _ _ _ ) = inductive
+  initArgsType "" (envType <+> interfaceTypes i <+> "Prop") [body]
   where
-    body = "Init : " <> universal <> "\n" <> constructorBody
+    body = "InitArgs : " <> universal <> "\n" <> constructorBody
+    --baseval = parens $ T.pack name <+> envVar <+> arguments i
+    constructorBody = (indent 2) . implication . concat $
+      [ coqprop stateVar <$> conds
+      , [initArgsType <+> envVar <+> arguments i]
+      ]
+    universal =
+      "forall " <> envDecl <+>
+      (if null decls
+       then ""
+       else interface i) <> ","
+
+initState :: Constructor -> T.Text
+initState (Constructor name i@(Interface _ decls) _ conds _ _ _ ) = inductive
+  initStateType "" (stateType <> " -> " <> " Prop") [body]
+  where
+    body = "InitState : " <> universal <> "\n" <> constructorBody
     baseval = parens $ T.pack name <+> envVar <+> arguments i
     constructorBody = (indent 2) . implication . concat $
       [ coqprop stateVar <$> conds
-      , [initType <+> baseval]
+      , [initStateType <+> baseval]
       ]
     universal =
       "forall " <> envDecl <+>
@@ -333,7 +349,7 @@ invariants (Constructor _ i _ _ _ invs _) =
     inv_constructor :: Invariant -> Fresh T.Text
     inv_constructor (Invariant _ _ _ (PredTimed _ _)) =
       fresh' "invariant" "invariantProp" >>= continuation where
-      continuation (constr, term) = return $ constr <> ": invariant " <> term
+      continuation (constr, term) = return $ constr <> ": invariant " <> term <> "\n"
 
 -- | produce a state value from a list of storage updates
 -- 'handler' defines what to do in cases where a given name isn't updated
@@ -425,7 +441,7 @@ arguments (Interface _ decls) =
 
 interfaceTypes :: Interface -> T.Text
 interfaceTypes (Interface _ decls) =
-  T.intercalate " -> " (map (\(Decl t _) -> abiType t) decls) <> (T.pack " -> ")
+  T.pack "->" <> T.intercalate " -> " (map (\(Decl t _) -> abiType t) decls) <> (if decls == [] then "" else T.pack " -> ")
 
 -- | coq syntax for a slot type
 slotType :: SlotType -> T.Text
@@ -594,8 +610,41 @@ lemma name args claim proof = T.unlines
   , proof
   ]
 
-reachableInvariant :: T.Text
-reachableInvariant = "Theorem inv_reach :\n forall (ENV : Env) (STATE : State) (P : Env -> State -> Prop),\n reachableFromInit (StateMachine ENV) STATE\n -> invariant P\n -> P ENV STATE.\n Proof.\n intros ENV STATE P Hreach HinvP.\n unfold reachableFromInit in Hreach.\n destruct Hreach as [Hinit Hmulti].\n apply step_multi_step with (P := fun s s' => P ENV s  -> P ENV s' ) in Hmulti.\n - apply Hmulti.\n apply StateMachine_invInit.\n + assumption.\n - intros s s' Hstep.\n apply StateMachine_invStep with (STATE := s) (STATE' := s') ; assumption.\n - unfold Relation_Definitions.reflexive.\n intros.\n assumption.\n - unfold Relation_Definitions.transitive.\n intros s1 s2 s3 Ht1 Ht2 Ht3.\n apply Ht2, Ht1.\n assumption.\n Qed."
+reachableInvariant :: Constructor -> T.Text
+reachableInvariant (Constructor name i _ _ _ _ _) =
+  lemma "inv_reach"
+  ""
+  --(envDecl <+> interface i <+> stateDecl <+> "(P :" <+> envType <+> interfaceTypes i <+> stateType <+> " -> Prop)")
+  claim
+  proof
+  where
+    claim = indent 2 . implication . concat $
+      [ ["forall" <+> (envDecl <+> interface i <+> stateDecl <+> "(P :" <+> envType <+> interfaceTypes i <+> stateType <+> " -> Prop)") <> ",\nreachableFromInit " <+> envVar <+> arguments i <+> stateDecl]
+      , ["invariant P"]
+      , ["P" <+> envVar <+> arguments i <+> stateVar]
+      ]
+    proof = indent 2 . T.unlines $
+      [
+       "Proof.",
+       "intros" <+> envVar <+> arguments i <+> stateVar <+> "P Hreach HinvP.",
+       "unfold reachableFromInit in Hreach.",
+       "destruct Hreach as [Hinit Hmulti].",
+       "destruct Hinit.",
+       "apply step_multi_step with (P := fun s s' => P" <+> envVar <+> arguments i <+> "s  -> P" <+> envVar <+> arguments i <+> "s' ) in Hmulti.",
+       "- apply Hmulti.",
+       "apply" <+> T.pack name <> "_invInit; assumption.",
+       "- intros s s' Hstep.",
+       "apply" <+> T.pack name <> "_invStep with (STATE := s) (STATE' := s') ; assumption.",
+       "- unfold Relation_Definitions.reflexive.",
+       "intros.",
+       "assumption.",
+       "- unfold Relation_Definitions.transitive.",
+       "intros s1 s2 s3 Ht1 Ht2 Ht3.",
+       "apply Ht2, Ht1.",
+       "assumption.",
+       "Qed."
+     ]
+-- "Theorem inv_reach :\n forall (ENV : Env) (STATE : State) " <> "(P :" <+> envType <+> interfaceTypes i <+> stateType <+> " -> Prop)" <> ",\n reachableFromInit ("<> name <> " ENV) STATE\n -> invariant P\n -> P ENV STATE.\n Proof.\n intros ENV STATE P Hreach HinvP.\n unfold reachableFromInit in Hreach.\n destruct Hreach as [Hinit Hmulti].\n apply step_multi_step with (P := fun s s' => P ENV s  -> P ENV s' ) in Hmulti.\n - apply Hmulti.\n apply "<> name <>"_invInit.\n + assumption.\n - intros s s' Hstep.\n apply " <> name <> "_invStep with (STATE := s) (STATE' := s') ; assumption.\n - unfold Relation_Definitions.reflexive.\n intros.\n assumption.\n - unfold Relation_Definitions.transitive.\n intros s1 s2 s3 Ht1 Ht2 Ht3.\n apply Ht2, Ht1.\n assumption.\n Qed."
 
 -- | multiline implication
 implication :: [T.Text] -> T.Text
@@ -663,8 +712,11 @@ introSuffix = "_intro"
 stepType :: T.Text
 stepType = "step"
 
-initType :: T.Text
-initType = "init"
+initStateType :: T.Text
+initStateType = "init"
+
+initArgsType :: T.Text
+initArgsType = "initArgs"
 
 multistepType :: T.Text
 multistepType = "multistep"
