@@ -1,45 +1,3 @@
-constructor of Token
-interface constructor(uint _supply)
-
-iff
-    CALLVALUE == 0
-
-creates
-    mapping(address => uint) balanceOf :=  [CALLER := _supply]
-
-behaviour balanceOf of Token
-interface balanceOf(address a)
-
-iff
-
-  CALLVALUE == 0
-
-returns pre(balanceOf[a])
-
-
-behaviour transferFrom of Token
-interface transferFrom(uint256 value, address from, address to)
-
-iff
-
-  CALLVALUE == 0
-  from =/= to => inRange(uint256, balanceOf[to] + value)
-  inRange(uint256,balanceOf[from] - value)
-
-case from =/= to:
-
-  storage
-
-    balanceOf[from]  => balanceOf[from] - value
-    balanceOf[to]    => balanceOf[to] + value
-
-  returns 1
-
-case from == to:
-
-  returns 1
-
-
 constructor of Amm
 interface constructor(address t0, address t1)
 
@@ -64,18 +22,32 @@ iff
     CALLVALUE == 0
     inRange(uint256,token0.balanceOf[CALLER] - amt)
     CALLER =/= THIS => inRange(uint256,token0.balanceOf[THIS] + amt)
+    CALLER =/= THIS => inRange(uint256,token0.allowance[CALLER][THIS] - amt)
 
     inRange(uint256,token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt)))
     CALLER =/= THIS => inRange(uint256,token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt)))
 
     token0.balanceOf[THIS] + amt =/= 0
 
-case CALLER =/= THIS:
+case CALLER =/= THIS and token0.allowance[CALLER][THIS] == 2^256 - 1:
 
 storage
 
     token0.balanceOf[CALLER] => token0.balanceOf[CALLER] - amt
     token0.balanceOf[THIS]   => token0.balanceOf[THIS] + amt
+
+    token1.balanceOf[THIS]   => token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+    token1.balanceOf[CALLER] => token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+
+returns 1
+
+case CALLER =/= THIS and token0.allowance[CALLER][THIS] < 2^256 - 1:
+
+storage
+
+    token0.balanceOf[CALLER] => token0.balanceOf[CALLER] - amt
+    token0.balanceOf[THIS]   => token0.balanceOf[THIS] + amt
+    token0.allowance[CALLER][THIS] => token0.allowance[CALLER][THIS] - amt
 
     token1.balanceOf[THIS]   => token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
     token1.balanceOf[CALLER] => token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
@@ -99,18 +71,32 @@ iff
     CALLVALUE == 0
     inRange(uint256,token1.balanceOf[CALLER] - amt)
     CALLER =/= THIS => inRange(uint256,token1.balanceOf[THIS] + amt)
+    CALLER =/= THIS => inRange(uint256,token1.allowance[CALLER][THIS] - amt)
 
     inRange(uint256,token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt)))
     CALLER =/= THIS => inRange(uint256,token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt)))
 
     token1.balanceOf[THIS] + amt =/= 0
 
-case CALLER =/= THIS:
+case CALLER =/= THIS and token1.allowance[CALLER][THIS] == 2^256 - 1:
 
 storage
 
     token1.balanceOf[CALLER] => token1.balanceOf[CALLER] - amt
     token1.balanceOf[THIS]   => token1.balanceOf[THIS] + amt
+
+    token0.balanceOf[THIS]   => token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
+    token0.balanceOf[CALLER] => token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
+
+returns 1
+
+case CALLER =/= THIS and token1.allowance[CALLER][THIS] < 2^256 - 1:
+
+storage
+
+    token1.balanceOf[CALLER] => token1.balanceOf[CALLER] - amt
+    token1.balanceOf[THIS]   => token1.balanceOf[THIS] + amt
+    token1.allowance[CALLER][THIS] => token1.allowance[CALLER][THIS] - amt
 
     token0.balanceOf[THIS]   => token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
     token0.balanceOf[CALLER] => token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))

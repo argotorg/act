@@ -1,0 +1,12 @@
+{
+  "specifications" : ["amm.act", "../erc20/erc20.act"],
+  "sources" : {
+    "../erc20/erc20.sol" : { "language" : "Solidity" },
+    "amm.sol" : { "language" : "Solidity" }
+  },
+  "contracts" : {
+    "Token" : { "source" : "../erc20/erc20.sol"},
+    "Amm" : { "source" : "amm.sol"}
+  }
+}
+

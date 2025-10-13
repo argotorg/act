@@ -373,6 +373,12 @@ solverArgs (SMTConfig solver timeout _) = case solver of
     , "--print-success"
     , "--arrays-exp"
     , "--tlimit-per=" <> show timeout]
+  Bitwuzla ->
+    [ "--lang=smt2"
+    , "--produce-models"
+    , "--time-limit-per=" <> show timeout
+    , "--bv-solver=preprop"
+    ]
   _ -> error "Unsupported solver"
 
 -- | Spawns a solver instance, and sets the various global config options that we use for our queries

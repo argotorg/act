@@ -42,15 +42,19 @@ postcondition_pass=$(wildcard tests/postconditions/pass/*.act) $(typing_pass)
 postcondition_fail=$(wildcard tests/postconditions/fail/*.act)
 
 # supposed to pass, but timeout
-hevm_buggy=tests/hevm/pass/transfer/transfer.act
+hevm_buggy=tests/hevm/pass/transfer/transfer.act tests/hevm/pass/multisource/amm/sol_vyper.json tests/hevm/pass/multisource/amm/vyper_sol.json
 # supposed to pass
 hevm_pass=$(filter-out $(hevm_buggy), $(wildcard tests/hevm/pass/*/*.act))
+hevm_vy_pass=$(wildcard tests/hevm/pass/vyper/*/*.act)
+hevm_multi_pass=$(filter-out $(hevm_buggy), $(wildcard tests/hevm/pass/multisource/*/*.json))
 # supposed to fail
 hevm_fail=$(wildcard tests/hevm/fail/*/*.act)
 # supposed to pass
 hevm_slow=tests/hevm/pass/amm/amm.act tests/hevm/pass/amm-2/amm-2.act
+hevm_multi_slow=$(wildcard tests/hevm/pass/multisource/amm/*.json) $(wildcard tests/hevm/pass/multisource/erc20/*.json)
 # supposed to pass, no slow tests
 hevm_fast=$(filter-out $(hevm_slow), $(hevm_pass))
+hevm_multi_fast=$(filter-out $(hevm_multi_slow), $(hevm_multi_pass))
 
 # supposed to pass
 failing_typing=tests/frontend/pass/dss/vat.act tests/frontend/pass/creation/createMultiple.act tests/frontend/pass/staticstore/staticstore.act
@@ -68,8 +72,8 @@ test-parse: parser compiler $(parser_pass:=.parse.pass) $(parser_fail:=.parse.fa
 test-type: parser compiler $(typing_pass:=.type.pass) $(typing_fail:=.type.fail)
 test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_fail:=.invariant.fail)
 test-postcondition: parser compiler $(postcondition_pass:=.postcondition.pass) $(postcondition_fail:=.postcondition.fail)
-test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_fail:=.hevm.fail)
-test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_fail:=.hevm.fail)
+test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
+test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_fast:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
 test-cabal: src/*.hs
 	cabal v2-run test
 
@@ -108,15 +112,22 @@ tests/%.postcondition.fail:
 
 tests/hevm/pass/%.act.hevm.pass:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --smttimeout 100000000
+	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
+
+tests/hevm/pass/%.act.hevm.vy.pass:
+	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.vy))
+	./bin/act hevm --spec tests/hevm/pass/$*.act --vy tests/hevm/pass/$*.vy --solver bitwuzla --smttimeout 100000000
+
+tests/hevm/pass/%.json.hevm.multi.pass:
+	./bin/act hevm --sources tests/hevm/pass/$*.json --solver bitwuzla --smttimeout 100000000
 
 tests/hevm/fail/%.act.hevm.fail:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/fail/$*.sol))
-	./bin/act hevm --spec tests/hevm/fail/$*.act --sol tests/hevm/fail/$*.sol && exit 1 || echo 0
+	./bin/act hevm --spec tests/hevm/fail/$*.act --sol tests/hevm/fail/$*.sol --solver bitwuzla && exit 1 || echo 0
 
 tests/hevm/pass/%.act.hevm.pass.fast:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --smttimeout 100000000
+	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
 test-ci: test-parse test-type test-invariant test-postcondition test-coq test-hevm
 test: test-ci test-cabal

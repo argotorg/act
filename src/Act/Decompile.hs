@@ -458,7 +458,7 @@ verifyDecompilation :: App m => SolverGroup -> ByteString -> ByteString -> Act -
 verifyDecompilation solvers creation runtime (Act store spec) = do
   let cmap = case spec of
                [con@(Contract cnstr _)] ->
-                 Map.insert (_cname cnstr) (con, creation, runtime) mempty
+                 (Map.insert (_cname cnstr) (con, creation, runtime, SolidityLayout) mempty)
                _ -> error "TODO multiple contracts"
   checkContracts solvers store cmap
 

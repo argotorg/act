@@ -1,0 +1,19 @@
+{
+  "specifications" : ["multi1.act"],
+  "sources": {
+    "file1.sol" : {
+      "language" : "Solidity"
+    },
+    "file2.vy" : {
+      "language" : "Vyper"
+    }
+  },
+  "contracts" : {
+    "A1" : {
+      "source" : "file2.vy"
+    },
+    "A2" : {
+      "source" : "file1.sol"
+    }
+  }
+}

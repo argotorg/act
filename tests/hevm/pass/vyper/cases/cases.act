@@ -1,0 +1,34 @@
+constructor of A
+interface constructor()
+
+iff
+  CALLVALUE == 0
+
+creates
+  uint128 x := 0
+  mapping(uint128 => uint128) m := []
+
+
+behaviour f of A
+interface f()
+
+iff
+  CALLVALUE == 0
+
+case x > 2:
+
+  storage
+
+    x => m[2]
+
+case 1 <= x and x <= 2:
+
+  storage
+
+    x => m[3]
+
+case x < 1:
+
+  storage
+
+    x => m[x]

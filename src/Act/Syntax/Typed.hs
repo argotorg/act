@@ -150,7 +150,7 @@ type instance Sing = SRefKind
 
 instance Show (SRefKind a) where
   show = \case
-    SStorage -> "SSTorage"
+    SStorage -> "SStorage"
     SCalldata -> "SCalldata"
 
 instance TestEquality SRefKind where

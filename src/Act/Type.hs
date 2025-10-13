@@ -134,7 +134,7 @@ topologicalSort (Act store contracts) =
 --- Finds storage declarations from constructors
 lookupVars :: [U.Contract] -> Store
 lookupVars = foldMap $ \case
-  U.Contract (U.Constructor  _ contract _ _ _ (U.Creates assigns) _ _) _ ->
+  U.Contract (U.Constructor _ contract _ _ _ (U.Creates assigns) _ _) _ ->
     Map.singleton contract . Map.fromList $ addSlot $ snd . fromAssign <$> assigns
   where
     addSlot :: [(Id, SlotType)] -> [(Id, (SlotType, Integer))]
