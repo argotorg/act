@@ -273,31 +273,33 @@ invariantReachable (Constructor _ i _ _ _ _ _) =
   where
     claim = indent 2 $ T.unlines
       [ forAll (envDecl <+> interface i <+> stateDecl <+> invPropDecl i
-        <+> parens ("HIPinvInit :" <+> invInitType <+> invPropVar) <+> parens ("HPinvStep :" <+> invStepType <+> invPropVar))
+        <+> parens ("HIPinvInit :" <+> invInitType <+> invPropVar) <+> parens ("HIPinvStep :" <+> invStepType <+> invPropVar))
       , implication . concat $
         [ [reachableFromInitType <+> envVar <+> arguments i <+> stateDecl]
         , [invPropVar <+> envVar <+> arguments i <+> stateVar]
         ]
       ]
-    proof = indent 2 . T.unlines $
+    proof = T.unlines $
       [
-       "Proof.",
-       "intros" <+> envVar <+> arguments i <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach.",
-       "unfold reachableFromInit in Hreach.",
-       "destruct Hreach as [Hinit Hmulti].",
-       "apply step_multi_step with (P := fun s s' =>" <+> invPropVar <+> envVar <+> arguments i <+> "s ->" <+> invPropVar <+> envVar <+> arguments i <+> "s' ) in Hmulti.",
-       "- apply Hmulti.",
-       "  apply HIPinvInit; assumption.",
-       "- intros s s' Hstep.",
-       "  apply HIPinvStep with (STATE := s) (STATE' := s') ; assumption.",
-       "- unfold Relation_Definitions.reflexive.",
-       "  intros.",
-       "  assumption.",
-       "- unfold Relation_Definitions.transitive.",
-       "  intros s1 s2 s3 Ht1 Ht2 Ht3.",
-       "  apply Ht2, Ht1.",
-       "  assumption.",
-       "Qed."
+        "Proof."
+      , indent 2 . T.unlines $
+        [ "intros" <+> envVar <+> arguments i <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach."
+        , "unfold reachableFromInit in Hreach."
+        , "destruct Hreach as [Hinit Hmulti]."
+        , "apply step_multi_step with (P := fun s s' =>" <+> invPropVar <+> envVar <+> arguments i <+> "s ->" <+> invPropVar <+> envVar <+> arguments i <+> "s' ) in Hmulti."
+        , "- apply Hmulti."
+        , "  apply HIPinvInit; assumption."
+        , "- intros s s' Hstep."
+        , "  apply HIPinvStep with (STATE := s) (STATE' := s') ; assumption."
+        , "- unfold Relation_Definitions.reflexive."
+        , "  intros."
+        , "  assumption."
+        , "- unfold Relation_Definitions.transitive."
+        , "  intros s1 s2 s3 Ht1 Ht2 Ht3."
+        , "  apply Ht2, Ht1."
+        , "  assumption."
+        ]
+     , "Qed."
      ]
 
 -- | produce a state value from a list of storage updates
