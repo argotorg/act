@@ -190,7 +190,7 @@ Theorem constant_balanceOf : forall BASE STATE,
 Proof.
   intros BASE S.
   eapply step_multi_step with (P := fun s1 s2 => balanceOf_sum s1 = balanceOf_sum s2).
-  - intros. induction H; destructAnds.
+  - intros. induction H; destruct H; destructAnds.
     + eapply (balances_after_transfer ENV); eauto.
     + reflexivity.
     + eapply (balances_after_transfer ENV); eauto.

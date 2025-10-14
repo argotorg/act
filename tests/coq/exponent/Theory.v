@@ -17,28 +17,50 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma invariant : forall base s,
-  reachableFromInit base s -> (r s) * (b s) ^ ((e s) - 1) = (b base) ^ (e base).
+Definition invariantProp (ENV : Env) (b0 : Z) (e0 : Z) (STATE : State) :=
+  (r STATE) * (b STATE) ^ ((e STATE) - 1) = b0 ^ e0.
+
+Lemma invInitProof : invariantInit invariantProp.
 Proof.
-  intros base s Hreach. destruct Hreach as [ Hinit Hmulti ]. induction Hmulti as [ | s s' Hstep ].
-  - simpl. induction Hinit.
-    rewrite Z.sub_1_r.
-    apply pow_pred.
+  unfold invariantProp.
+  intros env _b _e Hinit .
+  simpl.
+  rewrite Z.sub_1_r.
+  rewrite pow_pred.
+  - reflexivity.
+  - destruct Hinit.
     apply Z.gt_lt.
     assumption.
-  - simpl.
-    rewrite <- IHHmulti.
-    rewrite Z.sub_1_r.
-    rewrite <- (pow_pred (b s) (e s - 1)).
-    + induction Hstep.
-      rewrite Z.mul_assoc. reflexivity.
-    + induction Hstep. lia. 
 Qed.
 
-Theorem exp_correct : forall base s,
-  reachableFromInit base s -> e s = 1 -> r s = (b base) ^ (e base).
+Lemma invStepProof : invariantStep invariantProp.
 Proof.
-  intros base s H He.
+  unfold invariantProp.
+  intros env _b _e s s' Hinit Hstep HinvPre.
+  destruct Hstep as [ENV STATE HstepConds].
+  simpl.
+  rewrite Z.sub_1_r.
+  rewrite <- Z.mul_assoc.
+  rewrite pow_pred with (a := b STATE) (e := e STATE - 1).
+  - assumption.
+  - destruct HstepConds.
+    lia.
+Qed.
+
+Lemma invariant : forall env b0 e0 s,
+  reachableFromInit env b0 e0 s -> (r s) * (b s) ^ ((e s) - 1) = b0 ^ e0.
+Proof.
+  intros env b0 e0 s Hreach.
+  apply invariantReachable with (IP := invariantProp) (ENV := env).
+  - exact invInitProof.
+  - exact invStepProof.
+  - assumption.
+Qed.
+
+Theorem exp_correct : forall env b0 e0 s,
+  reachableFromInit env b0 e0 s -> e s = 1 -> r s = b0 ^ e0.
+Proof.
+  intros env b0 e0 s H He.
   apply invariant in H.
   rewrite He in H. simpl in H.
   rewrite (Z.mul_1_r (r s)) in H.
