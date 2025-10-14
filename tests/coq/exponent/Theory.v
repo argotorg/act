@@ -1,6 +1,7 @@
 Require Import Exponent.Exponent.
 Require Import ActLib.ActLib.
-Require Import Coq.ZArith.ZArith Lia.
+Require Import Stdlib.ZArith.ZArith.
+From Stdlib Require Import Lia.
 Open Scope Z_scope.
 
 Import Exponent.

@@ -1,6 +1,6 @@
 Require Import SafeMath.SafeMath.
 Require Import ActLib.ActLib.
-Require Import Coq.ZArith.ZArith.
+Require Import Stdlib.ZArith.ZArith.
 Open Scope Z_scope.
 
 Import SafeMath.

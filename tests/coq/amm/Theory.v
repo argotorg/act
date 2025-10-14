@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
+Require Import Stdlib.ZArith.ZArith.
 Require Import ActLib.ActLib.
-Require Coq.Strings.String.
-Require Import Lia.
+Require Stdlib.Strings.String.
+From Stdlib Require Import Lia.
 
 
 Require Import AMM.AMM.
