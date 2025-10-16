@@ -35,7 +35,7 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
        , _cpostconditions = post'
        , _invariants = invs' }
     where
-      pre' = pre
+      pre' = nub $ pre
              <> mkCallDataBounds decls
              <> mkEthEnvBounds (ethEnvFromConstructor ctor)
               -- The following is sound as values of locations outside local storage
@@ -55,7 +55,7 @@ addBoundsBehaviour :: Behaviour -> Behaviour
 addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stateUpdates ret) =
   behv { _preconditions = pre', _postconditions = post' }
     where
-      pre' = pre
+      pre' = nub $ pre
              <> mkCallDataBounds decls
              <> mkStorageBounds stateUpdates Pre
              <> mkLocationBounds locs
@@ -72,14 +72,14 @@ addBoundsInvariant :: Constructor -> Invariant -> Invariant
 addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
   inv { _ipreconditions = preconds', _istoragebounds = storagebounds' }
     where
-      preconds' = preconds
+      preconds' = nub $ preconds
                   <> mkCallDataBounds decls
                   <> mkEthEnvBounds (ethEnvFromExp predicate)
                   <> mkLocationBounds nonlocalLocs
       storagebounds' = storagebounds
                        <> mkLocationBounds localLocs
 
-      locs = concatMap locsFromExp (preconds <> storagebounds)
+      locs = nub $ concatMap locsFromExp (preconds <> storagebounds)
              <> locsFromExp predicate
       (nonlocalLocs, localLocs) = partition (not . isLocalLoc) locs
 
