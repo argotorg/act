@@ -140,10 +140,6 @@
               "type": "bool"
             },
             {
-              "literal": "True",
-              "type": "bool"
-            },
-            {
               "args": [
                 {
                   "args": [
