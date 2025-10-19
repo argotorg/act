@@ -146,6 +146,7 @@ locsFromExp = nub . go
       Create _ _ es -> concatMap locsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
       VarRef _ _ k a -> locsFromItem k a
+      CastDown _ e' -> locsFromExp e'
 
 createsFromExp :: Exp a t -> [Id]
 createsFromExp = nub . go
@@ -185,6 +186,7 @@ createsFromExp = nub . go
       Create _ f es -> [f] <> concatMap createsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
       VarRef _ _ _ a -> createsFromItem a
+      CastDown _ e' -> createsFromExp e'
 
 createsFromItem :: TItem k a t -> [Id]
 createsFromItem item = concatMap createsFromTypedExp (ixsFromItem item)
@@ -306,6 +308,7 @@ ethEnvFromExp = nub . go
       ByEnv _ a -> [a]
       Create _ _ ixs -> concatMap ethEnvFromTypedExp ixs
       VarRef _ _ _ a -> ethEnvFromItem a
+      CastDown _ e' -> ethEnvFromExp e'
 
 idFromItem :: TItem a k t -> Id
 idFromItem (Item _ _ ref) = idFromRef ref
@@ -428,6 +431,7 @@ posnFromExp e = case e of
   NEq p _ _ _ -> p
   ITE p _ _ _ -> p
   VarRef p _ _ _ -> p
+  CastDown _ e' -> posnFromExp e'
 
 posnFromItem :: TItem a k t -> Pn
 posnFromItem (Item _ _ ref) = posnFromRef ref
@@ -474,6 +478,7 @@ expandArrayExpr :: SType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)
 expandArrayExpr (SSArray SInteger) (Array _ l) = l
 expandArrayExpr (SSArray SBoolean) (Array _ l) = l
 expandArrayExpr (SSArray SByteStr) (Array _ l) = l
+expandArrayExpr (SSArray SContract) (Array _ l) = l
 expandArrayExpr (SSArray s@(SSArray _)) (Array _ l) = concatMap (expandArrayExpr s) l
 expandArrayExpr _ (VarRef pn t k item) = VarRef pn t k <$> expandItem item
 expandArrayExpr typ (ITE pn tbool e1 e2) =

@@ -61,6 +61,7 @@ type family ExprType a where
   ExprType 'AInteger  = EVM.EWord
   ExprType 'ABoolean  = EVM.EWord
   ExprType 'AByteStr  = EVM.Buf
+  ExprType 'AContract = EVM.EWord
 
 -- | The storage layout. Maps each contract type to a map that maps storage
 -- variables to their slot, offset, and size in bytes in memory
@@ -279,6 +280,11 @@ applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
     SInteger | isCreate e -> do
         fresh <- getFreshIncr
         let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
+        writeMap' <- localCaddr freshAddr $ createCastedContract readMap writeMap freshAddr e
+        pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
+    SContract | isCreate e -> do
+        fresh <- getFreshIncr
+        let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
         writeMap' <- localCaddr freshAddr $ createContract readMap writeMap freshAddr e
         pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
     SByteStr -> error "Bytestrings not supported"
@@ -289,7 +295,11 @@ applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
     SBoolean -> do
         e' <- toExpr readMap e
-
+        let prevValue = readStorage addr contract
+        let e'' = storedValue e' prevValue offset size
+        pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
+    SContract -> do
+        e' <- toExpr readMap e
         let prevValue = readStorage addr contract
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
@@ -318,9 +328,15 @@ applyUpdate readMap writeMap (Update typ (Item _ _ ref) e) = do
     updateNonce (EVM.GVar _) = error "Internal error: contract cannot be a global variable"
 
     isCreate (Create _ _ _) = True
+    isCreate (CastDown _ (Create _ _ _)) = True
     isCreate _ = False
 
-createContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActT m ContractMap
+createCastedContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActT m ContractMap
+createCastedContract readMap writeMap freshAddr (CastDown _ (Create pn cid args)) =
+ createContract readMap writeMap freshAddr (Create pn cid args)
+createCastedContract _ _ _ _ = error "Internal error: constructor call expected"
+
+createContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AContract -> ActT m ContractMap
 createContract readMap writeMap freshAddr (Create _ cid args) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
@@ -431,6 +447,8 @@ substExp subst expr = case expr of
 
   Create pn a b -> Create pn a (substArgs subst b)
 
+  CastDown c x -> CastDown c (substExp subst x)
+
 
 returnsToExpr :: Monad m => ContractMap -> Maybe TypedExp -> ActT m (EVM.Expr EVM.Buf)
 returnsToExpr _ Nothing = pure $ EVM.ConcreteBuf ""
@@ -454,6 +472,7 @@ typedExpToWord cmap te = do
             SInteger -> toExpr cmap e
             SBoolean -> toExpr cmap e
             SByteStr -> error "Bytestring in unexpected position"
+            SContract -> toExpr cmap e
             SSArray _ -> error "TODO arrays"
 
 expToBuf :: Monad m => forall a. ContractMap -> SType a -> Exp a  -> ActT m (EVM.Expr EVM.Buf)
@@ -466,6 +485,9 @@ expToBuf cmap styp e = do
       e' <- toExpr cmap e
       pure $ EVM.WriteWord (EVM.Lit 0) (EVM.IsZero $ EVM.IsZero e') (EVM.ConcreteBuf "")
     SByteStr -> toExpr cmap e
+    SContract -> do
+      e' <- toExpr cmap e
+      pure $ EVM.WriteWord (EVM.Lit 0) e' (EVM.ConcreteBuf "")
     SSArray _ -> error "TODO arrays"
 
 -- | Get the slot and the offset of a storage variable in storage
@@ -710,6 +732,7 @@ checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere SInteger e1 (LitInt nowhere 0))
                             (Eq nowhere SInteger e2 (Div nowhere (Mul nowhere e1 e2) e1)))
 checkOp (Div _ _ _) = LitBool nowhere True
 checkOp (Mod _ _ _) = LitBool nowhere True
+checkOp (CastDown _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"
 checkOp (IntMin _ _)  = error "Internal error: invalid in range expression"
 checkOp (IntMax _ _)  = error "Internal error: invalid in range expression"
@@ -717,7 +740,6 @@ checkOp (UIntMin _ _) = error "Internal error: invalid in range expression"
 checkOp (UIntMax _ _) = error "Internal error: invalid in range expression"
 checkOp (ITE _ _ _ _) = error "Internal error: invalid in range expression"
 checkOp (IntEnv _ _) = error "Internal error: invalid in range expression"
-checkOp (Create _ _ _) = error "Internal error: invalid in range expression"
 
 
 -- Equivalence checking

@@ -5,6 +5,7 @@ module Act.Bounds (addBounds, mkLocationBounds) where
 
 import Data.Maybe
 import Data.List (nub, partition)
+import qualified Data.Map as M
 import Data.Type.Equality
 
 import Act.Syntax
@@ -30,13 +31,13 @@ addBounds (Act store contracts) = Act store (addBoundsContract <$> contracts)
 -- | Adds type bounds for calldata, environment vars, and external storage vars
 -- as preconditions
 addBoundsConstructor :: Constructor -> Constructor
-addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs stateUpdates) =
+addBoundsConstructor ctor@(Constructor _ (Interface _ decls) ptrs pre post invs stateUpdates) =
   ctor { _cpreconditions = pre'
        , _cpostconditions = post'
        , _invariants = invs' }
     where
-      pre' = pre
-             <> mkCallDataBounds decls
+      pre' = nub $ pre
+             <> mkCallDataBounds pointers decls
              <> mkEthEnvBounds (ethEnvFromConstructor ctor)
               -- The following is sound as values of locations outside local storage
               -- already exist as the constructor starts executing,
@@ -50,13 +51,15 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
              <> concatMap locsFromUpdate stateUpdates
       nonlocalLocs = filter (not . isLocalLoc) locs
 
+      pointers = M.fromList $ map (\(PointsTo _ x c) -> (x, c)) ptrs
+
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
-addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stateUpdates ret) =
+addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) ptrs pre cases post stateUpdates ret) =
   behv { _preconditions = pre', _postconditions = post' }
     where
-      pre' = pre
-             <> mkCallDataBounds decls
+      pre' = nub $ pre
+             <> mkCallDataBounds pointers decls
              <> mkStorageBounds stateUpdates Pre
              <> mkLocationBounds locs
              <> mkEthEnvBounds (ethEnvFromBehaviour behv)
@@ -67,21 +70,25 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stat
              <> concatMap locsFromUpdate stateUpdates
              <> (maybe [] locsFromTypedExp ret)
 
+      pointers = M.fromList $ map (\(PointsTo _ x c) -> (x, c)) ptrs
+
 -- | Adds type bounds for calldata, environment vars, and storage vars
 addBoundsInvariant :: Constructor -> Invariant -> Invariant
-addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
+addBoundsInvariant (Constructor _ (Interface _ decls) ptrs _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
   inv { _ipreconditions = preconds', _istoragebounds = storagebounds' }
     where
-      preconds' = preconds
-                  <> mkCallDataBounds decls
+      preconds' = nub $ preconds
+                  <> mkCallDataBounds pointers decls
                   <> mkEthEnvBounds (ethEnvFromExp predicate)
                   <> mkLocationBounds nonlocalLocs
       storagebounds' = storagebounds
                        <> mkLocationBounds localLocs
 
-      locs = concatMap locsFromExp (preconds <> storagebounds)
+      locs = nub $ concatMap locsFromExp (preconds <> storagebounds)
              <> locsFromExp predicate
       (nonlocalLocs, localLocs) = partition (not . isLocalLoc) locs
+
+      pointers = M.fromList $ map (\(PointsTo _ x c) -> (x, c)) ptrs
 
 mkEthEnvBounds :: [EthEnv] -> [Exp ABoolean]
 mkEthEnvBounds vars = catMaybes $ mkBound <$> nub vars
@@ -138,10 +145,12 @@ mkLocationBounds refs = concatMap mkBound refs
     mkItemBounds SStorage = mkSItemBounds Pre
     mkItemBounds SCalldata = mkCItemBounds
 
-mkCallDataBounds :: [Decl] -> [Exp ABoolean]
-mkCallDataBounds = concatMap $ \(Decl typ name) -> case typ of
+mkCallDataBounds :: M.Map Id Id -> [Decl] -> [Exp ABoolean]
+mkCallDataBounds ps = concatMap $ \(Decl typ name) -> case typ of
   -- Array element bounds are applied lazily when needed in mkCalldataLocationBounds
   (AbiArrayType _ _) -> []
   _ -> case fromAbiType typ of
-        AInteger -> [bound typ (_Var typ name)]
+        AInteger -> case M.lookup name ps of
+          Nothing -> [bound typ (_Var typ name)]
+          Just cid -> [bound typ (CastDown cid (_Var typ name))]
         _ -> []

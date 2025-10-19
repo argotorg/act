@@ -42,6 +42,7 @@ import Act.Error
 
 import Data.Type.Equality (TestEquality(..))
 import Data.Singletons
+import Debug.Trace
 
 
 type Err = Error String
@@ -345,16 +346,21 @@ checkDefn pn env@Env{contract} keyType vt@(FromVType valType) name (U.Mapping k 
   <$> (_Item vt . SMapping nowhere (SVar pn contract name) vt <$> checkIxs env (getPosn k) [k] [keyType])
   <*> checkExpr env valType (shapeFromVT valType vt) val
 
--- | Type checks a postcondition, returning typed versions of its storage updates and return expression.
+-- | Type checks a cases actions, returning typed versions of its storage updates and return expression.
 checkPost :: Env -> U.Post -> Err ([StorageUpdate], Maybe (TypedExp Timed))
 checkPost env (U.Post storage maybeReturn) = do
   returnexp <- traverse (inferExpr env) maybeReturn
   storage' <- checkEntries storage
-  pure (storage', returnexp)
+  pure (storage', castRet <$> returnexp)
   where
     checkEntries :: [U.Storage] -> Err [StorageUpdate]
     checkEntries entries = for entries $ \case
       U.Update loc val -> checkStorageExpr env loc val
+
+    castRet :: TypedExp t -> TypedExp t
+    castRet (TExp SContract _ e) =
+      TExp SInteger Atomic $ CastDown (fromJust $ orElse (findContractType env e) (error "Internal error: castRet")) e
+    castRet t = t
 
 checkEntry :: forall t k. Typeable t => Env -> SRefKind k -> U.Entry -> Err (SlotType, Maybe Id, Ref k t)
 checkEntry Env{contract,store,calldata,pointers} kind (U.EVar p name) = case (kind, Map.lookup name store, Map.lookup name calldata) of
@@ -429,7 +435,7 @@ genInRange t e@(Div _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genIn
 genInRange t e@(Mod _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(Exp _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(IntEnv _ _) = [InRange nowhere t e]
-genInRange _ (Create _ _ _) = []
+genInRange t e@(CastDown _ _) = [InRange nowhere t e]
 genInRange _ (IntMin _ _)  = error "Internal error: invalid range expression"
 genInRange _ (IntMax _ _)  = error "Internal error: invalid range expression"
 genInRange _ (UIntMin _ _) = error "Internal error: invalid range expression"
@@ -456,7 +462,12 @@ checkExpr :: forall t a. Typeable t => Env -> SType a -> Shape (ActShape a) -> U
 checkExpr env t1 s1 e =
     -- No idea why type annotation is required here
     (inferExpr env e :: Err (TypedExp t)) `bindValidation` (\(TExp t2 s2 te) ->
-    maybe (typeMismatchErr (getPosn e) t1 s1 t2 s2) (\Refl -> pure te) $ if eqShape s1 s2 then testEquality t1 t2 else Nothing)
+    maybe (maybeCast (getPosn e) t1 s1 t2 s2 te) (\Refl -> pure te) $ if eqShape s1 s2 then testEquality t1 t2 else Nothing)
+    where
+      maybeCast :: Pn -> SType a -> Shape (ActShape a) -> SType b -> Shape (ActShape b) -> Exp b t -> Err (Exp a t)
+      maybeCast _ SInteger Atomic SContract Atomic te = findContractType env te `bindValidation` (\c -> pure $ CastDown (fromJust c) te)
+      -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array?
+      maybeCast pn t1' s1' t2 s2 _ = typeMismatchErr pn t1' s1' t2 s2
 
 -- | Attempt to infer a type of an expression. If succesfull returns an
 -- existential package of the infered typed together with the typed expression.
@@ -505,12 +516,17 @@ inferExpr env@Env{calldata, constructors} e = case e of
     -- Constructor calls
   U.ECreate p c args -> case Map.lookup c constructors of
     Just sig ->
-      let (typs, ptrs) = unzip sig in
+      let ptrs = snd <$> sig in
       -- check the types of arguments to constructor call
-      checkIxs env p args (fmap PrimitiveType typs) `bindValidation` (\args' ->
+      checkIxs env p args (fmap castArgType sig) `bindValidation` (\args' ->
       -- then check that all arguments that need to be valid pointers to a contract have a contract type
       traverse_ (uncurry $ checkContractType env) (zip args' ptrs) $>
-      TExp SInteger Atomic (Create p c args'))
+      TExp SContract Atomic (Create p c args'))
+        where
+          castArgType :: (AbiType, Maybe Id) -> ValueType
+          castArgType (AbiAddressType, (Just cid)) = ContractType cid
+          castArgType (at, _) = PrimitiveType at
+
     Nothing -> throw (p, "Unknown constructor " <> show c)
 
    -- Control
@@ -549,6 +565,13 @@ inferExpr env@Env{calldata, constructors} e = case e of
         maybe (typeMismatchErr pn t1 s1 t2 s2) (\Refl -> pure $ cons pn t1 s1 te1 te2) $ if eqShape s1 s2 then testEquality t1 t2 else Nothing
 
     checkVar :: forall t0. Typeable t0 => Time t0 -> U.Entry -> Err (TypedExp t0)
+    --checkVar whn entry =
+    --    (\(vt@(FromVType typ)) -> case (vt, cast) of
+    --          (ContractType cid, True) -> TExp SInteger Atomic $ CastDown cid $ VarRef (getPosEntry entry) whn SCalldata (Item SInteger vt ref)
+    --          _ -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) whn SCalldata (Item typ vt ref)
+    --    ) <$> (validateEntry env SCalldata entry)
+    --checkVar True whn entry =
+    --    (\(vt@(ContractType cid), ref) -> TExp SInteger Atomic $ CastDown cid $ VarRef (getPosEntry entry) whn SCalldata (Item SInteger vt ref)) <$> (validateEntry env SCalldata entry)
     checkVar whn entry =
         (\(vt@(FromVType typ), ref) -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) whn SCalldata (Item typ vt ref)) <$> (validateEntry env SCalldata entry)
 
@@ -558,6 +581,10 @@ inferExpr env@Env{calldata, constructors} e = case e of
         -- check that the timing is correct
        checkTime (getPosEntry entry) <*>
        ((\(vt@(FromVType typ), ref) -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) time SStorage (Item typ vt ref)) <$> validateEntry env SStorage entry)
+    --    ((\(vt@(FromVType typ), ref) -> case (vt, cast) of
+    --          (ContractType cid, True) -> TExp SInteger Atomic $ CastDown cid $ VarRef (getPosEntry entry) time SStorage (Item SInteger vt ref)
+    --          _ -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) time SStorage (Item typ vt ref)
+    --    ) <$> (validateEntry env SStorage entry))
 
     -- Check that an expression is typed with the right timing
     checkTime :: forall t0. Typeable t0 => Pn -> Err (TypedExp t0 -> TypedExp t)

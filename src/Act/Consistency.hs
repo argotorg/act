@@ -391,6 +391,7 @@ modelExpand :: SType (AArray a) -> Exp (AArray a) -> ModelCtx [Exp (Base (AArray
 modelExpand (SSArray SInteger) (Array _ l) = pure l
 modelExpand (SSArray SBoolean) (Array _ l) = pure l
 modelExpand (SSArray SByteStr) (Array _ l) = pure l
+modelExpand (SSArray SContract) (Array _ l) = pure l
 modelExpand (SSArray s@(SSArray _)) (Array _ l) = concat <$> mapM (modelExpand s) l
 modelExpand typ (VarRef _ whn SStorage item) = do
   model <- ask

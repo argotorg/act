@@ -21,7 +21,25 @@ Record Env : Set :=
     This : address;
     Origin : address;
     Nonce : Z;
-    Calldepth : Z }.
+    Calldepth : Z;
+    NextAddr : address }.
+
+Definition NextEnv (ENV : Env) : Env :=
+  {| Callvalue := Callvalue ENV;
+     Caller := Caller ENV;
+     Blockhash := Blockhash ENV;
+     Blocknumber := Blocknumber ENV;
+     Difficulty := Difficulty ENV;
+     Timestamp := Timestamp ENV;
+     Gaslimit := Gaslimit ENV;
+     Coinbase := Coinbase ENV;
+     Chainid := Chainid ENV;
+     This := This ENV;
+     Origin := Origin ENV;
+     Nonce := Nonce ENV;
+     Calldepth := Calldepth ENV;
+     NextAddr := (NextAddr ENV + 1)%Z |}.
+
 
 (** * integer bounds *)
 Definition UINT_MIN (n : Z) := 0.

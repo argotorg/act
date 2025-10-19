@@ -576,6 +576,7 @@ parseModel = \case
   SInteger -> _TExp Atomic . LitInt  nowhere . read       . parseSMTModel
   SBoolean -> _TExp Atomic . LitBool nowhere . readBool   . parseSMTModel
   SByteStr -> _TExp Atomic . ByLit   nowhere . fromString . parseSMTModel
+  SContract -> _TExp Atomic . LitInt   nowhere . read . parseSMTModel
   SSArray _ -> error "TODO"
   where
     readBool "true" = True
@@ -741,6 +742,7 @@ expToSMT2 typ expr = case expr of
           defaultConst SInteger = "0"
           defaultConst SBoolean = "false"
           defaultConst SByteStr = error "TODO"
+          defaultConst SContract = "0"
 
   -- contracts
   Create _ _ _ -> pure "0" -- TODO just a dummy address for now
@@ -769,6 +771,7 @@ expToSMT2 typ expr = case expr of
 
   ITE _ a b c -> triop "ite" SBoolean typ typ a b c
   VarRef _ whn _ item -> entry whn item
+  CastDown _ e -> expToSMT2 SContract e
   where
     unop :: String -> SType a -> Exp a -> Ctx SMT2
     unop op t a = [ "(" <> op <> " " <> a' <> ")" | a' <- expToSMT2 t a]
@@ -835,6 +838,7 @@ sType :: ActType -> SMT2
 sType AInteger = "Int"
 sType ABoolean = "Bool"
 sType AByteStr = "String"
+sType AContract = "Int"
 sType (AArray a) = "(Array " <> sType AInteger <> " " <> sType a <> ")"
 
 -- | act -> smt2 type translation
