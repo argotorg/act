@@ -20,12 +20,13 @@ module Act.Coq where
 import Prelude hiding (GT, LT)
 
 import Data.Map.Strict (Map)
-import Data.Tuple.Extra
 import Data.Maybe
+import Data.Tuple.Extra
 import qualified Data.Map.Strict    as M
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text          as T
 import Data.List (groupBy, find)
+import Data.List.Extra (snoc, unsnoc)
 import Control.Monad.State
 
 import EVM.ABI
@@ -54,6 +55,9 @@ contractCode :: Store -> Contract -> T.Text
 contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   [ "Module " <> T.pack _cname <> ".\n" ]
   <> [ stateRecord ]
+  <> [ addressIn _cname store ]
+  <> [ noAliasing _cname store ]
+  <> [ envStateConstraint ]
   <> [ base store ctor ]
   <> [ initPrecs ctor ]
   <> (filter ((/=) "") [ postCondConstr ctor ])
@@ -63,7 +67,8 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   <> (filter ((/=) "") $ concatMap (evalSeq retVal) (groups behvs))
   <> (filter ((/=) "") $ concatMap (evalSeq postCondBehv) (groups behvs))
   <> [ localStep _cname (groups behvs)]
-  <> [ step _cname store ]
+  <> [ extStep _cname store ]
+  <> [ step ]
   <> [ initState ctor ]
   <> [ multistep ]
   <> [ reachable ]
@@ -110,26 +115,126 @@ localStep contract behvs = inductive
             [ name' <> "_conds" <+> envVar <+> arguments i <+> stateVar
             , (localStepType contract) <+> stateVar <+> parens ( "snd" <+> parens ( name' <+> envVar <+> stateVar <+> arguments i))]
 
-step :: Id -> Store -> T.Text
-step main store = inductive
-  stepType "" (stateType <+> "->" <+> stateType <+> "-> Prop") body
+envStateConstraint :: T.Text
+envStateConstraint = definition
+  envStateConstraintType (envDecl <+> stateDecl) body
+    where
+      body = indent 2 $ forAll (parens ("p : address")) <+> 
+        (addressInType <+> "p" <+> stateVar) <+> "->" <+> ("NextAddr" <+> envVar <+> "> p")
+
+envInterfaceConstraint :: Interface -> [Pointer] -> [T.Text]
+envInterfaceConstraint (Interface _ decls) pointers = mapMaybe decl decls
+  where
+  decl :: Decl -> Maybe T.Text
+  decl (Decl AbiAddressType name) = case pointerLookup name pointers of
+    Just cid -> Just $ T.pack cid <> "." <> envStateConstraintType <+> envVar <+> T.pack name
+    Nothing -> Just $ "NextAddr" <+> envVar <+> ">" <+> T.pack name
+  decl _ = Nothing
+
+
+extStep :: Id -> Store -> T.Text
+extStep main store = inductive
+  extStepType "" (envType <+> "->" <+> stateType <+> "->" <+> stateType <+> "-> Prop") body
   where
     body =
-      [ (stepType <> "_" <> T.pack main, Just $ (stateDecl <+> stateDecl'), indent 2 $ implication [localStepType main <+> stateVar <+> stateVar', stepType <+> stateVar <+> stateVar']) ]
-      <> (M.elems $ M.mapMaybeWithKey substep localStore)
+      (extStepType <> "_" <> T.pack main, Just $ (envDecl <+> stateDecl <+> stateDecl'), indent 2 $ implication [localStepType main <+> stateVar <+> stateVar', extStepType <+> envVar <+> stateVar <+> stateVar'])
+      : (M.elems $ M.mapMaybeWithKey substep localStore)
 
     localStore = contractStore main store
 
     substep :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    substep var (StorageValue (ContractType cid), _) = Just (stepType <> "_" <> varp, Just (stateDecl <+> stateDecl'), body')
+    substep var (StorageValue (ContractType cid), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> stateDecl'), body')
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
-          [ [ T.pack cid <> "." <> stepType <+> parens (varp <+> stateVar) <+> parens (varp <+> stateVar') ]
+          [ [ envStateConstraintType <+> envVar <+> stateVar ]
+          , [ T.pack cid <> "." <> extStepType <+> envVar <+> parens (varp <+> stateVar) <+> parens (varp <+> stateVar') ]
           , (\var' -> parens (T.pack var' <+> stateVar) <+> "=" <+> parens (T.pack var' <+> stateVar')) <$> (filter (var /=) $ M.keys localStore)
-          , [ stepType <+> stateVar <+> stateVar' ]
+          , [ extStepType <+> envVar <+> stateVar <+> stateVar' ]
           ]
     substep _ _ = Nothing
+
+step :: T.Text
+step =
+  definition stepType (stateDecl <+> stateDecl') $
+    "exists" <+> envDecl <> "," <+> extStepType <+> envVar <+> stateVar <+> stateVar'
+
+combine :: [a] -> [(a,a)]
+combine lst = combine' lst []
+  where
+    combine' [] acc = concat acc
+    combine' (x:xs) acc =
+      let xcomb = [ (x, y) | y <- xs] in
+      combine' xs (xcomb:acc)
+
+addressIn :: Id -> Store -> T.Text
+addressIn name store = inductive
+  addressInType "" ("Z" <+> "->" <+> stateType <+> "-> Prop") body
+  where
+    body = ("address_addr", Just stateDecl, indent 5 $ addressInType <+> parens ("addr" <+> stateVar) <+> stateVar)
+           : M.elems (M.mapMaybeWithKey subAddr localStore)
+
+    localStore = contractStore name store
+
+    subAddr :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
+    -- TODO: check if name `p` can cause conflicts here
+    subAddr var (StorageValue (ContractType cid), _) = Just ("address_" <> varp, Just $ parens ("p : address") <+> stateDecl, body')
+      where
+        varp = T.pack var
+        body' = indent 2 . implication $
+          [ T.pack cid <> "." <> addressInType <+> "p" <+> parens (varp <+> stateVar)
+          , addressInType <+> "p" <+> stateVar
+          ]
+    subAddr var (StorageValue (PrimitiveType AbiAddressType), _) =
+      let varp = T.pack var in
+      Just ("address_" <> varp, Just stateDecl, indent 5 $ addressInType <+>  parens (varp <+> stateVar) <+> stateVar)
+    subAddr _ _ = Nothing
+
+isAddressSlot :: SlotType -> Bool
+isAddressSlot (StorageValue (PrimitiveType AbiAddressType)) = True
+isAddressSlot _ = False
+
+slotContractName :: SlotType -> Maybe Id
+slotContractName (StorageValue (ContractType cid)) = Just cid
+slotContractName _ = Nothing
+
+noAliasing :: Id -> Store -> T.Text
+noAliasing name store = definition
+  noAliasingType stateDecl body
+  where
+    body = indent 2 . conjuction $
+      (addressPairAliasing <$> addressPairs)
+      <> (addressContractAliasing <$> addressContractPairs)
+      <> (contractPairAliasing <$> contractPairs)
+      <> (subContractAliasing <$> storeContracts)
+
+    localStore = contractStore name store
+    storeAddresses = "addr" : M.keys (M.filter (isAddressSlot . fst) localStore)
+    addressPairs = filter (not . uncurry (==)) $ combine storeAddresses
+    storeContracts = M.toList $ M.mapMaybe (slotContractName . fst) localStore
+    addressContractPairs = liftA2 (,) storeContracts storeAddresses
+    contractPairs = filter (not. uncurry (==)) $ combine storeContracts
+ 
+    addressPairAliasing :: (Id, Id) -> T.Text
+    addressPairAliasing (a1, a2) = parens (T.pack a1 <+> stateVar) <+> "<>" <+> parens (T.pack a2 <+> stateVar)
+
+    -- TODO: check if name `p` can cause conflicts here
+    addressContractAliasing :: ((Id, Id), Id) -> T.Text
+    addressContractAliasing ((cvar, cid), a) =
+      parens $ forAll (parens ("p : address")) <+> 
+        ( T.pack cid <> "." <> addressInType <+> "p" <+> parens (T.pack cvar <+> stateVar)) <+> "->" 
+        <+> (parens (T.pack a <+> stateVar) <+> "<>" <+> "p")
+
+    contractPairAliasing :: ((Id, Id), (Id, Id)) -> T.Text
+    contractPairAliasing ((cvar1, cid1), (cvar2, cid2)) =
+      parens $ forAll (parens ("p p' : address")) <+> 
+        ( T.pack cid1 <> "." <> addressInType <+> "p" <+> parens (T.pack cvar1 <+> stateVar)) <+> "->" 
+        <+> ( T.pack cid2 <> "." <> addressInType <+> "p'" <+> parens (T.pack cvar2 <+> stateVar)) <+> "->" 
+        <+> ("p" <+> "<>" <+> "p'")
+
+    subContractAliasing :: (Id, Id) -> T.Text
+    subContractAliasing (cvar, cid) = T.pack cid <> "." <> noAliasingType <+> parens (T.pack cvar <+> stateVar)
+
 
 -- | definition of reachable states
 reachable :: T.Text
@@ -163,7 +268,10 @@ initPrecs :: Constructor -> T.Text
 initPrecs (Constructor _ i ps conds _ _ _ ) = definition
   initPrecsType (envDecl <+> interface i ps) body
   where
-    body = indent 2 . conjuction . concat $ [coqprop <$> conds]
+    body = indent 2 . conjuction . concat $
+      [ coqprop <$> conds
+      , envInterfaceConstraint i ps
+      ]
 
 -- | definition of behaviour-case conditions
 behvConds :: Behaviour -> Fresh T.Text
@@ -172,7 +280,12 @@ behvConds (Behaviour name _ i ps conds casecs _ _ _) = do
   pure $ definition
     (name' <> "_conds") (envDecl <+> interface i ps <+> stateDecl) body
   where
-    body = (indent 2) (conjuction . concat $ [coqprop <$> (conds <> casecs)])
+    body = indent 2 $ conjuction . concat $
+      [ coqprop <$> (conds <> casecs)
+      , [ envStateConstraintType <+> envVar <+> stateVar ]
+      , envInterfaceConstraint i ps
+      ]
+
 -- | predicate characterizing all initial (post constructor) states
 initState :: Constructor -> T.Text
 initState (Constructor name i ps _ _ _ _ ) = inductive
@@ -195,7 +308,7 @@ base store (Constructor name i ps _ _ _ updates) =
 transition :: Store -> Behaviour -> Fresh T.Text
 transition store (Behaviour name cname i ps _ _ _ rewrites _) = do
   name' <- fresh name
-  let (s, bindings, finalI) = stateval store cname (\r _ -> ref Pre r) rewrites
+  let (s, bindings, finalI) = stateval store cname (\r _ -> ref stateVar r) rewrites
   return $ definition name' (envDecl <+> stateDecl <+> interface i ps) $ foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple ("NextEnv" <+> iEnv finalI) s) bindings
 
 -- | inductive definition of a return claim
@@ -338,7 +451,7 @@ stateval :: Store -> Id -> (Ref Storage -> SlotType -> T.Text) -> [StorageUpdate
 stateval store contract handler updates =
   let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar store updates handler (SVar nowhere contract n) t) (M.toList store')
       (vals, bindings) = unzip texts
-      bindings' = concat $ reverse <$> bindings
+      bindings' = concat bindings
   in
   (T.unwords $ stateConstructor : parens ("NextAddr" <+> iEnv finalI) : vals, bindings', finalI)
   where
@@ -377,13 +490,13 @@ updateExp :: Exp a -> Fresh (T.Text, [T.Text])
 updateExp (Create _ cid args) = do
   (args', argBindings) <- unzip <$> mapM updateExpTyped args
   i <- getIncr
-  let bindings = (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <> "." <> T.pack cid <+> iEnv i <+> T.unwords args') : concat argBindings
+  let bindings = snoc (concat argBindings) (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <> "." <> T.pack cid <+> iEnv i <+> T.unwords args')
   pure (iState (i+1), bindings)
-updateExp (CastDown _ (Create _ cid args)) = do
+updateExp (Address _ (Create _ cid args)) = do
   (args', argBindings) <- unzip <$> mapM updateExpTyped args
   i <- getIncr
-  let bindings = (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <> "." <> T.pack cid <+> iEnv i <+> T.unwords args') : concat argBindings
-  pure (iState (i+1), bindings)
+  let bindings = snoc (concat argBindings) (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <> "." <> T.pack cid <+> iEnv i <+> T.unwords args')
+  pure (parens $ T.pack cid <> ".addr" <+> iState (i+1), bindings)
 updateExp e = pure (coqexp e, [])
 
 updateExpTyped :: TypedExp -> Fresh (T.Text, [T.Text])
@@ -391,21 +504,34 @@ updateExpTyped (TExp _ _ te) = updateExp te
 
 updateVar :: Store -> [StorageUpdate] -> (Ref Storage -> SlotType -> T.Text) -> Ref Storage -> SlotType -> Fresh (T.Text, [T.Text])
 updateVar store updates handler focus t@(StorageValue (ContractType cid)) =
-  case (constructorUpdates, fieldUpdates) of
-    -- Only some fields are updated
-    ([], updates'@(_:_)) -> do
-      t' <- traverse (\(n, (t', _)) -> fst <$> updateVar store updates' handler (focus' n) t') (M.toList store')
-      pure (parens $ T.unwords $ (T.pack cid <> "." <> stateConstructor) : parens (T.pack cid <> ".addr" <+> ref Pre focus) : t', [])
-    -- No fields are updated, whole contract may be updated with some call to the constructor
-    (updates', []) -> foldl (\ _ (Update _ _ e) -> updateExp e) (pure (handler focus t, [])) updates'
-    -- The contract is updated with constructor call and field accessing. Unsupported.
-    (_:_, _:_) -> error "Cannot handle multiple updates to contract variable"
+  case unsnoc groupedUpdates of
+    Nothing -> pure (handler focus t, [])
+    Just (_, (firstU@(Update _ _ e) NE.:| [])) | eqRef focus firstU->
+      updateExp e
+    Just (_, (firstU@(Update _ _ e) NE.:| nextUpdates)) | eqRef focus firstU-> do
+      (newState, bindings) <- updateExp e
+      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store nextUpdates (\r _ -> ref newState r) (refocus n) t') (M.toList store')
+      pure (parens $ T.unwords $ (T.pack cid <> "." <> stateConstructor) : parens (T.pack cid <> ".addr" <+> newState) : t', bindings ++ concat bindings')
+    Just (_, fieldUpdates) -> do
+      t' <- traverse (\(n, (t', _)) -> fst <$> updateVar store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
+      pure (parens $ T.unwords $ (T.pack cid <> "." <> stateConstructor) : parens (T.pack cid <> ".addr" <+> ref stateVar focus) : t', [])
   where
     focus' x = SField nowhere focus cid x
+    refocus x = SVar nowhere cid x
     store' = contractStore cid store
 
-    fieldUpdates = filter (baseRef focus) updates
-    constructorUpdates = filter (eqRef focus) updates
+    focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
+    groupedUpdates = NE.groupBy (\_ b -> not $ eqRef focus b) focusUpdates
+
+    --fieldUpdates = filter (baseRef focus) updates
+    --constructorUpdates = filter (eqRef focus) updates
+
+updateVar _ updates handler focus t@(StorageValue (PrimitiveType AbiAddressType)) =
+  case unsnoc focusUpdates of
+    Nothing -> pure (handler focus t, [])
+    Just (_, (Update _ _ e)) -> updateExp e
+  where
+    focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
 
 updateVar _ updates handler focus t@(StorageValue (PrimitiveType _)) =
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
@@ -552,7 +678,7 @@ coqexp (IntEnv _ envVal) = parens $ T.pack (show envVal) <+> envVar
 -- Contracts
 coqexp Create {} = error "Internal error: coqexp called for creation expression"
 -- unsupported
-coqexp (CastDown cid e) = parens $ T.pack cid <> ".addr" <+> coqexp e
+coqexp (Address cid e) = parens $ T.pack cid <> ".addr" <+> coqexp e
 coqexp Cat {} = error "bytestrings not supported"
 coqexp Slice {} = error "bytestrings not supported"
 coqexp ByStr {} = error "bytestrings not supported"
@@ -584,15 +710,15 @@ typedexp (TExp _ _ e) = coqexp e
 
 entry :: Time 'Timed -> TItem k a -> T.Text
 entry _ (Item SByteStr _ _) = error "bytestrings not supported"
-entry whn (Item _ _ r) = ref whn r
+entry Pre  (Item _ _ r) = ref stateVar r
+entry Post (Item _ _ r) = ref stateVar' r
 
-ref :: Time 'Timed -> Ref k -> T.Text
-ref Pre (SVar _ _ name) = parens $ T.pack name <+> stateVar
-ref Post (SVar _ _ name) = parens $ T.pack name <+> stateVar'
+ref :: T.Text -> Ref k -> T.Text
+ref refState (SVar _ cid name) = parens $ T.pack cid <> "." <> T.pack name <+> refState
 ref _ (CVar _ _ name) = T.pack name
-ref whn (SArray _ r _ ixs) = parens $ ref whn r <+> coqargs (fst <$> ixs)
-ref whn (SMapping _ r _ ixs) = parens $ ref whn r <+> coqargs ixs
-ref whn (SField _ r cid name) = parens $ T.pack cid <> "." <> T.pack name <+> ref whn r
+ref refState (SArray _ r _ ixs) = parens $ ref refState r <+> coqargs (fst <$> ixs)
+ref refState (SMapping _ r _ ixs) = parens $ ref refState r <+> coqargs ixs
+ref refState (SField _ r cid name) = parens $ T.pack cid <> "." <> T.pack name <+> ref refState r
 
 -- | coq syntax for a list of arguments
 coqargs :: [TypedExp] -> T.Text
@@ -729,6 +855,18 @@ localStepType name = T.pack name <> "_step"
 
 stepType :: T.Text
 stepType = "step"
+
+extStepType :: T.Text
+extStepType = "extStep"
+
+addressInType :: T.Text
+addressInType = "addressIn"
+
+noAliasingType :: T.Text
+noAliasingType = "noAliasing"
+
+envStateConstraintType :: T.Text
+envStateConstraintType = "envStateConstraint"
 
 initStateType :: T.Text
 initStateType = "init"

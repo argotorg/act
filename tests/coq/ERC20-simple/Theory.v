@@ -67,9 +67,9 @@ Proof.
       { eapply leb_correct_conv. lia. }
       rewrite Hbeq. rewrite Hyp. reflexivity. eauto.
 
-  - destruct (Z.to_nat x <=? S addr)%nat eqn:Hleq.
+  - destruct (Z.to_nat x <=? S addr0)%nat eqn:Hleq.
     + eapply Nat.leb_le in Hleq.
-      destruct (Z.of_nat (S addr) =? x) eqn:Heqb.
+      destruct (Z.of_nat (S addr0) =? x) eqn:Heqb.
       * eapply Z.eqb_eq in Heqb. simpl. rewrite Heqb.
         erewrite balanceOf_sum_f_eq with (f' := f').
         rewrite !balanceOf_sum_acc. lia.
@@ -77,7 +77,7 @@ Proof.
         intros. eapply Hyp. lia.
 
       * simpl.
-        destruct ((Z.to_nat x <=? addr)%nat) eqn:Hleq'.
+        destruct ((Z.to_nat x <=? addr0)%nat) eqn:Hleq'.
         -- rewrite IHaddr; eauto. rewrite Hyp. reflexivity.
            intros Heq; subst. lia.
         -- eapply Z.eqb_neq in Heqb.
@@ -167,7 +167,7 @@ Lemma balances_after_transfer ENV STATE src dst amount :
   0 <= dst <= MAX_ADDRESS ->
   src <> dst ->
   balanceOf_sum STATE =
-  balanceOf_sum (transferFrom0 ENV STATE src dst amount).
+  balanceOf_sum (snd (transferFrom0 ENV STATE src dst amount)).
 Proof.
   intros. unfold balanceOf_sum; simpl.
   erewrite <- transfer_thm.
@@ -190,12 +190,12 @@ Theorem constant_balanceOf : forall BASE STATE,
 Proof.
   intros BASE S.
   eapply step_multi_step with (P := fun s1 s2 => balanceOf_sum s1 = balanceOf_sum s2).
-  - intros. induction H; destruct H; destructAnds.
-    + eapply (balances_after_transfer ENV); eauto.
+  - intros. induction H; destruct H; destruct H; destruct H; destructAnds.
+    + apply (balances_after_transfer ENV0); eauto.
     + reflexivity.
-    + eapply (balances_after_transfer ENV); eauto.
-    + eapply (balances_after_transfer ENV); eauto.
-    + assert (Hthm := balances_after_transfer ENV STATE).
+    + eapply (balances_after_transfer ENV0); eauto.
+    + eapply (balances_after_transfer ENV0); eauto.
+    + assert (Hthm := balances_after_transfer ENV0 STATE).
       unfold balanceOf_sum, transferFrom0, transferFrom2 in *.
       apply Hthm; eauto.
     + reflexivity.

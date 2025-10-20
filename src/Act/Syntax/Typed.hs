@@ -277,7 +277,7 @@ data Exp (a :: ActType) (t :: Timing) where
   -- Note that the timing annotation does not make a difference 
   -- when the variable refers to calldata
   VarRef :: Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
-  CastDown :: Id -> Exp AContract t -> Exp AInteger t
+  Address :: Id -> Exp AContract t -> Exp AInteger t
 
 deriving instance Show (Exp a t)
 
@@ -380,7 +380,7 @@ instance Timable (Exp a) where
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
     VarRef p _ k item -> VarRef p time k (go item)
-    CastDown c e -> CastDown c (go e) 
+    Address c e -> Address c (go e) 
     where
       go :: Timable c => c Untimed -> c Timed
       go = setTime time
@@ -575,7 +575,7 @@ instance ToJSON (Exp a t) where
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
                               , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
                               , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
-  toJSON (CastDown _ x) = object [ "symbol" .= pack "addr"
+  toJSON (Address _ x) = object [ "symbol" .= pack "addr"
                                  , "arity" .= Data.Aeson.Types.Number 1
                                  , "arg" .= toJSON x ]
 
@@ -636,7 +636,7 @@ eval e = case e of
   Array _ l -> mapM eval l
 
   Create _ _ _ -> error "eval of contracts not supported"
-  CastDown _ _ -> error "eval of contracts not supported"
+  Address _ _ -> error "eval of contracts not supported"
   _              -> empty
 
 intmin :: Int -> Integer

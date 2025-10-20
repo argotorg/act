@@ -359,7 +359,7 @@ checkPost env (U.Post storage maybeReturn) = do
 
     castRet :: TypedExp t -> TypedExp t
     castRet (TExp SContract _ e) =
-      TExp SInteger Atomic $ CastDown (fromJust $ orElse (findContractType env e) (error "Internal error: castRet")) e
+      TExp SInteger Atomic $ Address (fromJust $ orElse (findContractType env e) (error "Internal error: castRet")) e
     castRet t = t
 
 checkEntry :: forall t k. Typeable t => Env -> SRefKind k -> U.Entry -> Err (SlotType, Maybe Id, Ref k t)
@@ -435,7 +435,7 @@ genInRange t e@(Div _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genIn
 genInRange t e@(Mod _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(Exp _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(IntEnv _ _) = [InRange nowhere t e]
-genInRange t e@(CastDown _ _) = [InRange nowhere t e]
+genInRange t e@(Address _ _) = [InRange nowhere t e]
 genInRange _ (IntMin _ _)  = error "Internal error: invalid range expression"
 genInRange _ (IntMax _ _)  = error "Internal error: invalid range expression"
 genInRange _ (UIntMin _ _) = error "Internal error: invalid range expression"
@@ -465,7 +465,7 @@ checkExpr env t1 s1 e =
     maybe (maybeCast (getPosn e) t1 s1 t2 s2 te) (\Refl -> pure te) $ if eqShape s1 s2 then testEquality t1 t2 else Nothing)
     where
       maybeCast :: Pn -> SType a -> Shape (ActShape a) -> SType b -> Shape (ActShape b) -> Exp b t -> Err (Exp a t)
-      maybeCast _ SInteger Atomic SContract Atomic te = findContractType env te `bindValidation` (\c -> pure $ CastDown (fromJust c) te)
+      maybeCast _ SInteger Atomic SContract Atomic te = findContractType env te `bindValidation` (\c -> pure $ Address (fromJust c) te)
       -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array?
       maybeCast pn t1' s1' t2 s2 _ = typeMismatchErr pn t1' s1' t2 s2
 
@@ -482,8 +482,8 @@ inferExpr env@Env{calldata, constructors} e = case e of
   U.ELEQ    p v1 v2 -> wrapOp2 (LEQ  p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
   U.EGEQ    p v1 v2 -> wrapOp2 (GEQ  p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
   U.EGT     p v1 v2 -> wrapOp2 (GT   p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
-  U.EEq     p v1 v2 -> TExp SBoolean Atomic <$> polycheck p (\pn t _ te1 te2 -> (Eq  pn t te1 te2)) v1 v2
-  U.ENeq    p v1 v2 -> TExp SBoolean Atomic <$> polycheck p (\pn t _ te1 te2 -> (NEq pn t te1 te2)) v1 v2
+  U.EEq     p v1 v2 -> TExp SBoolean Atomic <$> polycheck p eqCons v1 v2
+  U.ENeq    p v1 v2 -> TExp SBoolean Atomic <$> polycheck p neqCons v1 v2
   U.BoolLit p v1    -> pure $ TExp SBoolean Atomic (LitBool p v1)
   U.EInRange _ abityp v -> TExp SBoolean Atomic . andExps <$> genInRange abityp <$> checkExpr env SInteger Atomic v -- Arithemetic expressions
   U.EAdd   p v1 v2 -> wrapOp2 (Add p) Atomic <$> checkExpr env SInteger Atomic v1 <*> checkExpr env SInteger Atomic v2
@@ -558,20 +558,31 @@ inferExpr env@Env{calldata, constructors} e = case e of
     wrapOp f s e1 = TExp sing s (f e1) -- use sign to let Haskell automatically derive the type here
     wrapOp2 f s e1 e2 = TExp sing s (f e1 e2)
 
+    eqCons :: Pn -> SType a -> Shape (ActShape a) -> Exp a t -> Exp a t -> Exp ABoolean t
+    eqCons pn SContract _ te1 te2 = Eq pn SInteger (Address (unsafeFindContractType te1) te1) (Address (unsafeFindContractType te2) te2)
+    eqCons pn t _ te1 te2 = Eq pn t te1 te2
+
+    neqCons :: Pn -> SType a -> Shape (ActShape a) -> Exp a t -> Exp a t -> Exp ABoolean t
+    neqCons pn SContract _ te1 te2 = NEq pn SInteger (Address (unsafeFindContractType te1) te1) (Address (unsafeFindContractType te2) te2)
+    neqCons pn t _ te1 te2 = NEq pn t te1 te2
+
     polycheck :: forall z. Pn -> (forall y. Pn -> SType y -> Shape (ActShape y) -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err z
     polycheck pn cons e1 e2 =
         inferExpr env e1 `bindValidation` \(TExp (t1 :: SType a1) s1 (te1 :: Exp a1 t)) -> -- I don't know why type annotations are required here
         inferExpr env e2 `bindValidation` \(TExp (t2 :: SType a2) s2 (te2 :: Exp a2 t)) ->
-        maybe (typeMismatchErr pn t1 s1 t2 s2) (\Refl -> pure $ cons pn t1 s1 te1 te2) $ if eqShape s1 s2 then testEquality t1 t2 else Nothing
+        maybe (maybeCast pn cons t1 s1 te1 t2 s2 te2) (\Refl -> pure $ cons pn t1 s1 te1 te2) $ if eqShape s1 s2 then testEquality t1 t2 else Nothing
+      where
+        maybeCast :: Pn -> (forall y. Pn -> SType y -> Shape (ActShape y) -> Exp y t -> Exp y t -> z)
+          -> SType a -> Shape (ActShape a) -> Exp a t
+          -> SType b -> Shape (ActShape b) -> Exp b t -> Err z
+        maybeCast pn' cons' SInteger Atomic te1 SContract Atomic te2 =
+          findContractType env te2 `bindValidation` (\c -> pure $ cons' pn' SInteger Atomic te1 $ Address (fromJust c) te2)
+        maybeCast pn' cons' SContract Atomic te1 SInteger Atomic te2 =
+          findContractType env te1 `bindValidation` (\c -> pure $ cons' pn' SInteger Atomic (Address (fromJust c) te1) te2)
+        -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array?
+        maybeCast pn' _ t1' s1' _ t2 s2 _ = typeMismatchErr pn' t1' s1' t2 s2
 
     checkVar :: forall t0. Typeable t0 => Time t0 -> U.Entry -> Err (TypedExp t0)
-    --checkVar whn entry =
-    --    (\(vt@(FromVType typ)) -> case (vt, cast) of
-    --          (ContractType cid, True) -> TExp SInteger Atomic $ CastDown cid $ VarRef (getPosEntry entry) whn SCalldata (Item SInteger vt ref)
-    --          _ -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) whn SCalldata (Item typ vt ref)
-    --    ) <$> (validateEntry env SCalldata entry)
-    --checkVar True whn entry =
-    --    (\(vt@(ContractType cid), ref) -> TExp SInteger Atomic $ CastDown cid $ VarRef (getPosEntry entry) whn SCalldata (Item SInteger vt ref)) <$> (validateEntry env SCalldata entry)
     checkVar whn entry =
         (\(vt@(FromVType typ), ref) -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) whn SCalldata (Item typ vt ref)) <$> (validateEntry env SCalldata entry)
 
@@ -581,10 +592,6 @@ inferExpr env@Env{calldata, constructors} e = case e of
         -- check that the timing is correct
        checkTime (getPosEntry entry) <*>
        ((\(vt@(FromVType typ), ref) -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) time SStorage (Item typ vt ref)) <$> validateEntry env SStorage entry)
-    --    ((\(vt@(FromVType typ), ref) -> case (vt, cast) of
-    --          (ContractType cid, True) -> TExp SInteger Atomic $ CastDown cid $ VarRef (getPosEntry entry) time SStorage (Item SInteger vt ref)
-    --          _ -> TExp typ (shapeFromVT typ vt) $ VarRef (getPosEntry entry) time SStorage (Item typ vt ref)
-    --    ) <$> (validateEntry env SStorage entry))
 
     -- Check that an expression is typed with the right timing
     checkTime :: forall t0. Typeable t0 => Pn -> Err (TypedExp t0 -> TypedExp t)
@@ -603,6 +610,12 @@ andExps :: [Exp ABoolean t] -> Exp ABoolean t
 andExps [] = LitBool nowhere True
 andExps (c:cs) = foldr (And nowhere) c cs
 
+unsafeFindContractType :: Exp a t -> Id
+unsafeFindContractType (ITE _ _ a _) =
+  unsafeFindContractType a
+unsafeFindContractType (Create _ c _) = c
+unsafeFindContractType (VarRef _ _ _ (Item _ (ContractType c) _)) = c
+unsafeFindContractType _ = error "Internal error: unsafeFindContractType called for non contract expression"
 
 -- | Find the contract id of an expression with contract type
 findContractType :: Env -> Exp a t -> Err (Maybe Id)

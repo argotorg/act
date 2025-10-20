@@ -144,9 +144,9 @@ mapExpM f = \case
   VarRef p t k i -> do
     i' <- mapTItemM f i
     f (VarRef p t k i')
-  CastDown c x -> do
+  Address c x -> do
     x' <- mapExpM f x
-    f (CastDown c x')
+    f (Address c x')
 
 mapTypedExpM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedExp t -> m (TypedExp t)
 mapTypedExpM f (TExp t s e) = do

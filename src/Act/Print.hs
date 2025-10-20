@@ -150,7 +150,7 @@ prettyExp e = case e of
   ITE _ a b c -> "(if " <> prettyExp a <> " then " <> prettyExp b <> " else " <> prettyExp c <> ")"
   VarRef _ t SStorage a -> timeParens t $ prettyItem a
   VarRef _ _ SCalldata a -> prettyItem a
-  CastDown _ c  -> prettyExp c
+  Address _ c  -> prettyExp c
   where
     print2 sym a b = "(" <> prettyExp a <> " " <> sym <> " " <> prettyExp b <> ")"
 
@@ -247,7 +247,7 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       ITE p x y z -> ITE p (untime x) (untime y) (untime z)
       Slice p a b c -> Slice p (untime a) (untime b) (untime c)
       VarRef p _  k (Item t vt a) -> VarRef p Neither k (Item t vt (untimeRef a))
-      CastDown c a -> CastDown c (untime a)
+      Address c a -> Address c (untime a)
 
 -- | Doc type for terminal output
 type DocAnsi = Doc Term.AnsiStyle

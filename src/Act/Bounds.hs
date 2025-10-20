@@ -152,5 +152,5 @@ mkCallDataBounds ps = concatMap $ \(Decl typ name) -> case typ of
   _ -> case fromAbiType typ of
         AInteger -> case M.lookup name ps of
           Nothing -> [bound typ (_Var typ name)]
-          Just cid -> [bound typ (CastDown cid (_Var typ name))]
+          Just cid -> [bound typ (Address cid (_Var typ name))]
         _ -> []

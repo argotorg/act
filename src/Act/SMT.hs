@@ -771,7 +771,7 @@ expToSMT2 typ expr = case expr of
 
   ITE _ a b c -> triop "ite" SBoolean typ typ a b c
   VarRef _ whn _ item -> entry whn item
-  CastDown _ e -> expToSMT2 SContract e
+  Address _ e -> expToSMT2 SContract e
   where
     unop :: String -> SType a -> Exp a -> Ctx SMT2
     unop op t a = [ "(" <> op <> " " <> a' <> ")" | a' <- expToSMT2 t a]
