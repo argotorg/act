@@ -7,10 +7,7 @@ creates
 ///////////////////////////////////////////////////////////////////////////////////
 
 constructor of B
-interface constructor(address pa1, address p2, address pa3, address p4)
-pointers
-  pa1 |-> A
-  pa3 |-> A
+interface constructor(address<A> pa1, address p2, address<A> pa3, address p4)
 
 iff
   pa1 =/= p2
@@ -29,10 +26,7 @@ creates
 ///////////////////////////////////////////////////////////////////////////////////
 
 constructor of C
-interface constructor(address pa1, address pa2)
-pointers
-  pa1 |-> A
-  pa2 |-> A
+interface constructor(address<A> pa1, address<A> pa2)
 
 iff
   pa1 =/= pa2
@@ -46,10 +40,7 @@ creates
 
 
 behaviour f of C
-interface f(address pa1, address pa2)
-pointers
-  pa1 |-> A
-  pa2 |-> A
+interface f(address<A> pa1, address<A> pa2)
 
 iff
   pa1 =/= pa2

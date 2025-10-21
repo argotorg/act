@@ -232,7 +232,7 @@ mkPostconditionQueries (Act _ contr) = concatMap mkPostconditionQueriesContract 
       mkPostconditionQueriesConstr constr <> concatMap mkPostconditionQueriesBehv behvs
 
 mkPostconditionQueriesBehv :: Behaviour -> [Query]
-mkPostconditionQueriesBehv behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds postconds stateUpdates _) =
+mkPostconditionQueriesBehv behv@(Behaviour _ _ (Interface ifaceName decls) preconds caseconds postconds stateUpdates _) =
     mkQuery <$> postconds
   where
     activeLocs = locsFromBehaviour behv
@@ -242,7 +242,7 @@ mkPostconditionQueriesBehv behv@(Behaviour _ _ (Interface ifaceName decls) _ pre
     mkQuery e = Postcondition (Behv behv) e (mksmt e)
 
 mkPostconditionQueriesConstr :: Constructor -> [Query]
-mkPostconditionQueriesConstr constructor@(Constructor _ (Interface ifaceName decls) _ preconds postconds _ initialStorage) = mkQuery <$> postconds
+mkPostconditionQueriesConstr constructor@(Constructor _ (Interface ifaceName decls) preconds postconds _ initialStorage) = mkQuery <$> postconds
   where
     activeLocs = locsFromConstructor constructor
     (activeSLocs, activeCLocs) = partitionLocs activeLocs
@@ -277,7 +277,7 @@ mkInvariantQueries (Act _ contracts) = fmap mkQuery gathered
     getInvariants (Contract (c@Constructor{..}) behvs) = fmap (, c, behvs) _invariants
 
     mkInit :: Invariant -> Constructor -> (Constructor, SMTExp)
-    mkInit (Invariant _ invConds _ (PredTimed _ invPost)) ctor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) = (ctor, mksmt invPost)
+    mkInit (Invariant _ invConds _ (PredTimed _ invPost)) ctor@(Constructor _ (Interface ifaceName decls) preconds _ _ initialStorage) = (ctor, mksmt invPost)
       where
         activeLocs = locsFromConstructor ctor
         (activeSLocs, activeCLocs) = partitionLocs activeLocs
@@ -544,7 +544,7 @@ getLocationValue solver ifaceName whn loc@(Loc styp _ item@(Item _ (ContractType
 
 -- | Gets a concrete value from the solver for the given calldata argument
 getCalldataValue :: SolverInstance -> Id -> Decl -> IO (Decl, TypedExp)
-getCalldataValue solver ifaceName decl@(Decl vt _) =
+getCalldataValue solver ifaceName decl@(Decl (argToAbiType -> vt) _) =
   case flattenArrayAbiType vt of
     Just (FromAbi baseType, shape) -> do
       array' <- getArrayExp solver baseType name shape []
@@ -677,7 +677,7 @@ declareLocation ifaceName item = declareLoc ifaceName [Pre, Post] item
 
 -- | produces an SMT2 expression declaring the given decl as a symbolic constant
 declareArg :: Id -> Decl -> SMT2
-declareArg ifaceName d@(Decl typ _) =
+declareArg ifaceName d@(Decl (argToAbiType -> typ) _) =
   case flattenArrayAbiType typ of
     Just (baseTyp, shape) ->
        array (nameFromDecl ifaceName d) (length shape) (fromAbiType baseTyp)

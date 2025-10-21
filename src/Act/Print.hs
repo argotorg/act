@@ -31,10 +31,9 @@ prettyContract :: Contract t -> String
 prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
-prettyCtor (Constructor name interface ptrs pres posts invs initStore)
+prettyCtor (Constructor name interface pres posts invs initStore)
   =   "constructor of " <> name
   >-< "interface " <> show interface
-  <> prettyPtrs ptrs
   <> prettyPre pres
   <> prettyCreates initStore
   <> prettyPost posts
@@ -55,10 +54,9 @@ prettyValueType = \case
 
 
 prettyBehaviour :: Behaviour t -> String
-prettyBehaviour (Behaviour name contract interface ptrs preconditions cases postconditions stateUpdates returns)
+prettyBehaviour (Behaviour name contract interface preconditions cases postconditions stateUpdates returns)
   =   "behaviour " <> name <> " of " <> contract
   >-< "interface " <> (show interface)
-  <> prettyPtrs ptrs
   <> prettyPre preconditions
   <> prettyCases cases
   <> prettyStorage stateUpdates
@@ -72,12 +70,6 @@ prettyBehaviour (Behaviour name contract interface ptrs preconditions cases post
     prettyRet Nothing = ""
 
 
-
-prettyPtrs :: [Pointer] -> String
-prettyPtrs [] = ""
-prettyPtrs ptrs = header "pointers" >-< block (prettyPtr <$> ptrs)
-  where
-    prettyPtr (PointsTo _ x c) = x <> " |-> " <> c
 
 prettyPre :: [Exp ABoolean t] -> String
 prettyPre [] = ""

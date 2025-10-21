@@ -14,11 +14,14 @@
             "args": [
               {
                 "abitype": {
-                  "arrayType": {
-                    "type": "Address"
+                  "abitype": {
+                    "arrayType": {
+                      "type": "Address"
+                    },
+                    "size": "2",
+                    "type": "Array"
                   },
-                  "size": "2",
-                  "type": "Array"
+                  "kind": "AbiArgument"
                 },
                 "id": "\"xs\"",
                 "kind": "Declaration"
@@ -29,7 +32,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -175,7 +177,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [],
         "preConditions": []
       },

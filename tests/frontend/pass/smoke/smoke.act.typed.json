@@ -14,8 +14,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"x\"",
                 "kind": "Declaration"
@@ -26,7 +29,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -105,7 +107,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [],
         "preConditions": []
       },

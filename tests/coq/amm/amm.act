@@ -214,11 +214,7 @@ iff
 returns pre(allowance[idx1][idx2])
 
 constructor of Amm
-interface constructor(address t0, address t1)
-
-pointers
-   t0 |-> Token
-   t1 |-> Token
+interface constructor(address<Token> t0, address<Token> t1)
 
 iff
 

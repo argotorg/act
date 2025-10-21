@@ -201,7 +201,7 @@ storageBounds contractMap locs = do
     refInCalldata (SField _ _ _ _) = False
 
 translateConstructor :: Monad m => BS.ByteString -> Constructor -> ContractMap -> ActT m ([EVM.Expr EVM.End], Calldata, Sig, ContractMap, [EVM.Prop])
-translateConstructor bytecode (Constructor cid iface _ preconds _ _ upds) cmap = do
+translateConstructor bytecode (Constructor cid iface preconds _ _ upds) cmap = do
   let initmap = M.insert initAddr (initcontract, cid) cmap
   preconds' <- mapM (toProp initmap) preconds
   cmap' <- applyUpdates initmap initmap upds
@@ -241,26 +241,26 @@ translateBehvs cmap behvs = do
            exprs <- mapM (translateBehv cmap (snd calldata) bounds) behvs'
            pure (behvName behvs', exprs, calldata, behvSig behvs, bounds)) groups
   where
-    behvCalldata (Behaviour _ _ iface _ _ _ _ _ _:_) = makeCalldata iface
+    behvCalldata (Behaviour _ _ iface _ _ _ _ _:_) = makeCalldata iface
     behvCalldata [] = error "Internal error: behaviour groups cannot be empty"
 
-    behvSig (Behaviour _ _ iface _ _ _ _ _ _:_) = ifaceToSig iface
+    behvSig (Behaviour _ _ iface _ _ _ _ _:_) = ifaceToSig iface
     behvSig [] = error "Internal error: behaviour groups cannot be empty"
 
     -- TODO remove reduntant name in behaviors
-    sameIface (Behaviour _ _ iface  _ _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _ _) =
+    sameIface (Behaviour _ _ iface  _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _) =
       makeIface iface == makeIface iface'
 
-    behvName (Behaviour _ _ (Interface name _) _ _ _ _ _ _:_) = name
+    behvName (Behaviour _ _ (Interface name _) _ _ _ _ _:_) = name
     behvName [] = error "Internal error: behaviour groups cannot be empty"
 
 ifaceToSig :: Interface -> Sig
 ifaceToSig (Interface name args) = Sig (T.pack name) (fmap fromdecl args)
   where
-    fromdecl (Decl t _) = t
+    fromdecl (Decl argtype _) = argToAbiType argtype
 
 translateBehv :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> Behaviour -> ActT m (EVM.Expr EVM.End, ContractMap)
-translateBehv cmap cdataprops bounds (Behaviour _ _ _ _ preconds caseconds _ upds ret)  = do
+translateBehv cmap cdataprops bounds (Behaviour _ _ _ preconds caseconds _ upds ret)  = do
   preconds' <- mapM (toProp cmap) preconds
   caseconds' <- mapM (toProp cmap) caseconds
   ret' <- returnsToExpr cmap ret
@@ -340,7 +340,7 @@ createContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr ->
 createContract readMap writeMap freshAddr (Create _ cid args) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
-    Just (Contract (Constructor _ iface _ _ _ _ upds) _, _, bytecode) -> do
+    Just (Contract (Constructor _ iface _ _ _ upds) _, _, bytecode) -> do
       let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                            , EVM.storage = EVM.ConcreteStore mempty
                            , EVM.tStorage = EVM.ConcreteStore mempty
@@ -671,10 +671,12 @@ toExpr cmap =  fmap stripMods . go
       (NEq _ _ _ _) -> error "unsupported"
 
       (VarRef _ _ _ (Item SInteger _ ref)) -> refToExp cmap ref
+      (VarRef _ _ _ (Item SContract _ ref)) -> refToExp cmap ref
       (VarRef _ _ _ (Item SBoolean _ ref)) -> refToExp cmap ref
 
       e@(ITE _ _ _ _) -> error $ "Internal error: expecting flat expression. got: " <> show e
 
+      (Address _ e') -> toExpr cmap e'
       e ->  error $ "TODO: " <> show e
 
     op2 :: Monad m => forall b c. (EVM.Expr (ExprType c) -> EVM.Expr (ExprType c) -> b) -> Exp c -> Exp c -> ActT m b
@@ -759,9 +761,10 @@ checkEquiv solvers l1 l2 = do
 
 -- | Create the initial contract state before analysing a contract
 -- | Assumes that all calldata variables have unique names
-getInitContractState :: App m => SolverGroup -> Interface -> [Pointer] -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
-getInitContractState solvers iface pointers preconds cmap = do
-  let casts = (\(PointsTo _ x c) -> (x, c)) <$> pointers
+getInitContractState :: App m => SolverGroup -> Interface -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
+getInitContractState solvers iface preconds cmap = do
+  --let casts = (\(PointsTo _ x c) -> (x, c)) <$> pointers
+  let casts = castsFromIFace iface
   let casts' = groupBy (\x y -> fst x == fst y) casts
   (cmaps, checks) <- mapAndUnzipM getContractState (fmap nub casts')
 
@@ -771,14 +774,19 @@ getInitContractState solvers iface pointers preconds cmap = do
   pure (finalmap, check <* sequenceA_ checks <* checkUniqueAddr (cmap:cmaps))
 
   where
+    castsFromIFace :: Interface -> [(Id, Id)]
+    castsFromIFace (Interface _ decls) = mapMaybe castingDecl decls
+      where
+      castingDecl (Decl (ContractArg _ cid) name) = Just (name, cid)
+      castingDecl _ = Nothing
 
     getContractState :: App m => [(Id, Id)] -> ActT m (ContractMap, Error String ())
     getContractState [(x, cid)] = do
       let addr = EVM.SymAddr $ T.pack x
       codemap <- getCodemap
       case M.lookup cid codemap of
-        Just (Contract (Constructor _ iface' pointers' preconds' _ _ upds) _, _, bytecode) -> do
-          (icmap, check) <- getInitContractState solvers iface' pointers' preconds' M.empty
+        Just (Contract (Constructor _ iface' preconds' _ _ upds) _, _, bytecode) -> do
+          (icmap, check) <- getInitContractState solvers iface' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty
                                , EVM.tStorage = EVM.ConcreteStore mempty
@@ -830,9 +838,9 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface pointers preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface preconds _ _ _)  _) = do
   -- Construct the initial contract state
-  (actinitmap, checks) <- getInitContractState solvers iface pointers preconds M.empty
+  (actinitmap, checks) <- getInitContractState solvers iface preconds M.empty
   let hevminitmap = translateCmap actinitmap
   -- Translate Act constructor to Expr
   fresh <- getFresh
@@ -1052,7 +1060,7 @@ checkAbi solver contract cmap = do
   checkResult (txdata, []) Nothing (fmap (toVRes msg) res)
 
   where
-    actSig (Behaviour _ _ iface _ _ _ _ _ _) = T.pack $ makeIface iface
+    actSig (Behaviour _ _ iface _ _ _ _ _) = T.pack $ makeIface iface
     actSigs (Contract _ behvs) = actSig <$> behvs
 
     checkBehv :: [EVM.Prop] -> EVM.Expr EVM.End -> [EVM.Prop]

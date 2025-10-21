@@ -68,7 +68,7 @@ makeCalldata :: Interface -> Calldata
 makeCalldata iface@(Interface _ decls) =
   let
     mkArg :: Decl -> CalldataFragment
-    mkArg (Decl typ x) = symAbiArg (T.pack x) typ
+    mkArg (Decl argtype x) = symAbiArg (T.pack x) $ argToAbiType argtype
     makeSig = T.pack $ makeIface iface
     calldatas = fmap mkArg decls
     (cdBuf, props) = combineFragments calldatas (EVM.ConcreteBuf "")
@@ -82,7 +82,7 @@ makeCtrCalldata :: Interface -> Calldata
 makeCtrCalldata (Interface _ decls) =
   let
     mkArg :: Decl -> CalldataFragment
-    mkArg (Decl typ x) = symAbiArg (T.pack x) typ
+    mkArg (Decl argtype x) = symAbiArg (T.pack x) $ argToAbiType argtype
     calldatas = fmap mkArg decls
     -- We need to use a concrete buf as a base here because hevm bails when trying to execute with an abstract buf
     -- This is because hevm ends up trying to execute a codecopy with a symbolic size, which is unsupported atm

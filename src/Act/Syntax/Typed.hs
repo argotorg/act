@@ -53,7 +53,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import Act.Parse          as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Id, Pn, Interface(..), EthEnv(..), Decl(..), SlotType(..), ValueType(..), Pointer(..), makeIface)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Id, Pn, Interface(..), EthEnv(..), Decl(..), ArgType(..), SlotType(..), ValueType(..), Pointer(..), makeIface, argToAbiType)
 
 -- AST post typechecking
 data Act t = Act Store [Contract t]
@@ -95,7 +95,6 @@ deriving instance Eq (InvariantPred t)
 data Constructor t = Constructor
   { _cname :: Id
   , _cinterface :: Interface
-  , _cpointers :: [Pointer]
   , _cpreconditions :: [Exp ABoolean t]
   , _cpostconditions :: [Exp ABoolean t]
   , _invariants :: [Invariant t]
@@ -109,7 +108,6 @@ data Behaviour t = Behaviour
   { _name :: Id
   , _contract :: Id
   , _interface :: Interface
-  , _pointers :: [Pointer]
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
   , _caseconditions :: [Exp ABoolean t] -- if preconditions are satisfied and the case conditions are not, some other instance of the behavior should apply
   , _postconditions :: [Exp ABoolean Timed]
@@ -424,7 +422,6 @@ instance ToJSON (Constructor t) where
   toJSON Constructor{..} = object [ "kind" .= String "Constructor"
                                   , "contract" .= _cname
                                   , "interface" .= toJSON _cinterface
-                                  , "pointers" .= toJSON _cpointers
                                   , "preConditions" .= toJSON _cpreconditions
                                   , "postConditions" .= toJSON _cpostconditions
                                   , "invariants" .= listValue toJSON _invariants
@@ -435,7 +432,6 @@ instance ToJSON (Behaviour t) where
                                 , "name" .= _name
                                 , "contract" .= _contract
                                 , "interface" .= toJSON _interface
-                                , "pointers" .= toJSON _pointers
                                 , "preConditions" .= toJSON _preconditions
                                 , "case" .= toJSON _caseconditions
                                 , "postConditions" .= toJSON _postconditions

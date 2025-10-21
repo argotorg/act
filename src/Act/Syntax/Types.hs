@@ -162,6 +162,7 @@ flattenAbiType (AbiArrayType n t) = case flattenAbiType t of
   (a, l) -> (a, ((<|) n) <$> l)
 flattenAbiType a = (a, Nothing)
 
+
 fromAbiType :: AbiType -> ActType
 fromAbiType (AbiUIntType _)     = AInteger
 fromAbiType (AbiIntType  _)     = AInteger

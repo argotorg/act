@@ -7,11 +7,7 @@ creates
 
 
 constructor of B
-interface constructor(address a)
-
-pointers
-
-  a |-> A
+interface constructor(address<A> a)
 
 iff
 

@@ -34,8 +34,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -46,7 +49,6 @@
           },
           "kind": "Behaviour",
           "name": "bar",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -279,108 +281,6 @@
               ],
               "arity": 2,
               "symbol": "=="
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "Var",
-                          "var": "z"
-                        },
-                        "type": "int"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "Var",
-                          "var": "z"
-                        },
-                        "type": "int"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "contract": "C",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "contract": "C",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
             },
             {
               "args": [
@@ -579,8 +479,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -591,7 +494,6 @@
           },
           "kind": "Behaviour",
           "name": "bar",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -824,108 +726,6 @@
               ],
               "arity": 2,
               "symbol": "=="
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "Var",
-                          "var": "z"
-                        },
-                        "type": "int"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "Var",
-                          "var": "z"
-                        },
-                        "type": "int"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "contract": "C",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "contract": "C",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
             },
             {
               "args": [
@@ -1134,8 +934,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -1146,7 +949,6 @@
           },
           "kind": "Behaviour",
           "name": "bar",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -1491,108 +1293,6 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "Var",
-                          "var": "z"
-                        },
-                        "type": "int"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "Var",
-                          "var": "z"
-                        },
-                        "type": "int"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "contract": "C",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "Pre",
-                      "var": {
-                        "item": {
-                          "contract": "C",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
                       "ethEnv": "Callvalue",
                       "type": "int"
                     }
@@ -1683,7 +1383,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [

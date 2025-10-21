@@ -25,7 +25,7 @@ import Data.Tuple.Extra
 import qualified Data.Map.Strict    as M
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text          as T
-import Data.List (groupBy, find)
+import Data.List (groupBy)
 import Data.List.Extra (snoc, unsnoc)
 import Control.Monad.State
 
@@ -81,21 +81,14 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
     groups = groupBy (\b b' -> _name b == _name b')
 
     stateRecord = T.unlines
-
       [ "Record" <+> stateType <+> ": Set :=" <+> stateConstructor
-      , "{" <+> T.intercalate ("\n" <> "; ") ("addr : address" : map (decl _cpointers) (M.toList store'))
+      , "{ " <> T.intercalate ("\n" <> "; ") ("addr : address" : map decl (M.toList store'))
       , "}."
       ]
 
-    decl :: [Pointer] -> (Id, (SlotType, Integer)) -> T.Text
-    decl pointers (n, (s, _)) = case pointerLookup n pointers of
-      Just cid -> (T.pack n) <+> ":" <+> T.pack cid <> ".State"
-      Nothing -> (T.pack n) <+> ":" <+> slotType s
+    decl (n, (s, _)) = (T.pack n) <> " : " <> slotType s
 
     store' = contractStore _cname store
-
-pointerLookup :: Id -> [Pointer] -> Maybe Id
-pointerLookup var pointers = (\(PointsTo _ _ c) -> c) <$> find (\(PointsTo _ v _) -> v == var) pointers
 
 -- | inductive definition of step relation of 2 states
 localStep :: Id -> [[Behaviour]] -> T.Text
@@ -106,10 +99,10 @@ localStep contract behvs = inductive
 
     -- | constructor for the step relation
     stepBehv :: Behaviour -> Fresh (T.Text, Maybe T.Text, T.Text)
-    stepBehv (Behaviour name _ i ps _ _ _ _ _) =
+    stepBehv (Behaviour name _ i _ _ _ _ _) =
       fresh name >>= continuation where
       continuation name' =
-        return (name' <> stepSuffix, Just $ envDecl <+> interface i ps <+> stateDecl, constructorBody)
+        return (name' <> stepSuffix, Just $ envDecl <+> interface i <+> stateDecl, constructorBody)
         where
           constructorBody = (indent 2) . implication $
             [ name' <> "_conds" <+> envVar <+> arguments i <+> stateVar
@@ -122,13 +115,12 @@ envStateConstraint = definition
       body = indent 2 $ forAll (parens ("p : address")) <+> 
         (addressInType <+> "p" <+> stateVar) <+> "->" <+> ("NextAddr" <+> envVar <+> "> p")
 
-envInterfaceConstraint :: Interface -> [Pointer] -> [T.Text]
-envInterfaceConstraint (Interface _ decls) pointers = mapMaybe decl decls
+envInterfaceConstraint :: Interface -> [T.Text]
+envInterfaceConstraint (Interface _ decls) = mapMaybe decl decls
   where
   decl :: Decl -> Maybe T.Text
-  decl (Decl AbiAddressType name) = case pointerLookup name pointers of
-    Just cid -> Just $ T.pack cid <> "." <> envStateConstraintType <+> envVar <+> T.pack name
-    Nothing -> Just $ "NextAddr" <+> envVar <+> ">" <+> T.pack name
+  decl (Decl (AbiArg AbiAddressType) name) = Just $ "NextAddr" <+> envVar <+> ">" <+> T.pack name
+  decl (Decl (ContractArg _ cid) name) = Just $ T.pack cid <> "." <> envStateConstraintType <+> envVar <+> T.pack name
   decl _ = Nothing
 
 
@@ -255,41 +247,41 @@ multistep = definition
 
 -- | definition of reachable states from initial constructor parameters
 reachableFromInit :: Constructor -> T.Text
-reachableFromInit (Constructor name i ps _ _ _ _ ) = definition
+reachableFromInit (Constructor name i _ _ _ _ ) = definition
   reachableFromInitType args value
   where
-    args = envDecl <+> interface i ps <+> stateDecl
+    args = envDecl <+> interface i <+> stateDecl
     value = initPrecsType <+>
       envVar <+> arguments i <+> "/\\" <+> multistepType <+>
       parens ("snd" <+> parens (T.pack name <+> envVar <+> arguments i)) <+> stateVar
 
 -- | definition of constructor preconditions
 initPrecs :: Constructor -> T.Text
-initPrecs (Constructor _ i ps conds _ _ _ ) = definition
-  initPrecsType (envDecl <+> interface i ps) body
+initPrecs (Constructor _ i conds _ _ _ ) = definition
+  initPrecsType (envDecl <+> interface i) body
   where
     body = indent 2 . conjuction . concat $
       [ coqprop <$> conds
-      , envInterfaceConstraint i ps
+      , envInterfaceConstraint i
       ]
 
 -- | definition of behaviour-case conditions
 behvConds :: Behaviour -> Fresh T.Text
-behvConds (Behaviour name _ i ps conds casecs _ _ _) = do
+behvConds (Behaviour name _ i conds casecs _ _ _) = do
   name' <- fresh name
   pure $ definition
-    (name' <> "_conds") (envDecl <+> interface i ps <+> stateDecl) body
+    (name' <> "_conds") (envDecl <+> interface i <+> stateDecl) body
   where
     body = indent 2 $ conjuction . concat $
       [ coqprop <$> (conds <> casecs)
       , [ envStateConstraintType <+> envVar <+> stateVar ]
-      , envInterfaceConstraint i ps
+      , envInterfaceConstraint i
       ]
 
 -- | predicate characterizing all initial (post constructor) states
 initState :: Constructor -> T.Text
-initState (Constructor name i ps _ _ _ _ ) = inductive
-  initStateType "" (stateType <> " -> " <> " Prop") [("InitState", Just $ envDecl <+> interface i ps, constructorBody)]
+initState (Constructor name i _ _ _ _) = inductive
+  initStateType "" (stateType <> " -> " <> " Prop") [("InitState", Just $ envDecl <+> interface i, constructorBody)]
   where
     baseval = parens $ "snd" <+> parens (T.pack name <+> envVar <+> arguments i)
     constructorBody = (indent 2) . implication . concat $
@@ -299,26 +291,26 @@ initState (Constructor name i ps _ _ _ _ ) = inductive
 
 -- | definition of a base state
 base :: Store -> Constructor -> T.Text
-base store (Constructor name i ps _ _ _ updates) =
+base store (Constructor name i _ _ _ updates) =
   let (s, bindings, finalI) = stateval store name (\_ t -> defaultSlotValue t) updates
   in
-  definition (T.pack name) (envDecl <+> interface i ps)
+  definition (T.pack name) (envDecl <+> interface i)
   (foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple ("NextEnv" <+> iEnv finalI) s) bindings)
 
 transition :: Store -> Behaviour -> Fresh T.Text
-transition store (Behaviour name cname i ps _ _ _ rewrites _) = do
+transition store (Behaviour name cname i _ _ _ rewrites _) = do
   name' <- fresh name
   let (s, bindings, finalI) = stateval store cname (\r _ -> ref stateVar r) rewrites
-  return $ definition name' (envDecl <+> stateDecl <+> interface i ps) $ foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple ("NextEnv" <+> iEnv finalI) s) bindings
+  return $ definition name' (envDecl <+> stateDecl <+> interface i) $ foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple ("NextEnv" <+> iEnv finalI) s) bindings
 
 -- | inductive definition of a return claim
 -- ignores claims that do not specify a return value
 retVal :: Behaviour -> Fresh T.Text
-retVal (Behaviour name _ i ps _ cases _ _ (Just r)) =
+retVal (Behaviour name _ i _ cases _ _ (Just r)) =
   fresh name >>= continuation where
   continuation name' = return $ inductive
     (name' <> returnSuffix)
-    (envDecl <+> stateDecl <+> interface i ps)
+    (envDecl <+> stateDecl <+> interface i)
     (returnType r <> " -> Prop")
     [(retname <> introSuffix, Nothing, body)] where
 
@@ -333,8 +325,8 @@ retVal _ = return ""
 
 -- | Definition of postcondition claim for constructor
 postCondConstr :: Constructor -> T.Text
-postCondConstr (Constructor _ _ _ _ [] _ _) = ""
-postCondConstr (Constructor name i ps _ postcs _ _) =
+postCondConstr (Constructor _ _ _ [] _ _) = ""
+postCondConstr (Constructor name i _ postcs _ _) =
   T.intercalate "\n\n" $ evalSeq post postcs
     where
     post :: Exp ABoolean -> Fresh T.Text
@@ -342,7 +334,7 @@ postCondConstr (Constructor name i ps _ postcs _ _) =
       fresh (name <> T.unpack postSuffix) >>= continuation where
       continuation postName = return $ definition postName "" body
       body = indent 2 $ T.unlines
-        [ forAll $ envDecl <+> interface i ps <+> stateDecl'
+        [ forAll $ envDecl <+> interface i <+> stateDecl'
         , implication . concat $
           [ [initPrecsType <+> envVar <+> arguments i]
           , [stateVar' <+> "=" <+> "snd" <+> parens (T.pack name <+> envVar <+> arguments i)]
@@ -352,8 +344,8 @@ postCondConstr (Constructor name i ps _ postcs _ _) =
 
 -- | Definition of postcondition claim for behaviour cases
 postCondBehv :: Behaviour -> Fresh T.Text
-postCondBehv (Behaviour _ _ _ _ _ _ [] _ _) = return ""
-postCondBehv (Behaviour name _ i ps _ _ postcs _ _) =
+postCondBehv (Behaviour _ _ _ _ _ [] _ _) = return ""
+postCondBehv (Behaviour name _ i _ _ postcs _ _) =
   fresh name >>= continuation where
   continuation name' = return $ T.intercalate "\n\n" $ evalSeq (post name') postcs
     where
@@ -362,7 +354,7 @@ postCondBehv (Behaviour name _ i ps _ _ postcs _ _) =
         fresh (T.unpack $ case_name <> postSuffix) >>= continuation' where
         continuation' postName = return $ definition postName "" body
         body = indent 2 $ T.unlines
-          [ forAll $ envDecl <+> stateDecl <+> stateDecl' <+> interface i ps
+          [ forAll $ envDecl <+> stateDecl <+> stateDecl' <+> interface i
           , implication . concat $
             [ [name' <> "_conds" <+> envVar <+> arguments i <+> stateVar]
             , [stateVar' <+> "=" <+> "snd" <+> parens (name' <+> envVar <+> stateVar <+> arguments i)]
@@ -372,9 +364,9 @@ postCondBehv (Behaviour name _ i ps _ _ postcs _ _) =
 
 -- | Definition of invariant proposition
 invariants :: Constructor -> T.Text
-invariants (Constructor _ _ _ _ _ [] _) = ""
-invariants (Constructor _ i ps _ _ invs _) =
-  definition "invariants" (envDecl <+> interface i ps <+> stateDecl) $ indent 2 . conjuction $ invariantProp <$> invs
+invariants (Constructor _ _ _ _ [] _) = ""
+invariants (Constructor _ i _ _ invs _) =
+  definition "invariants" (envDecl <+> interface i <+> stateDecl) $ indent 2 . conjuction $ invariantProp <$> invs
   where
     invariantProp :: Invariant -> T.Text
     invariantProp (Invariant _ _ _ (PredTimed p _)) = coqprop p
@@ -382,11 +374,11 @@ invariants (Constructor _ i ps _ _ invs _) =
 
 -- | Definition of invariant claim at constructor poststate
 invariantInit :: Constructor -> T.Text
-invariantInit (Constructor name i ps _ _ _ _) =
-  definition invInitType (invPropDecl i ps) claim
+invariantInit (Constructor name i _ _ _ _) =
+  definition invInitType (invPropDecl i) claim
   where
     claim = indent 2 $ T.unlines
-      [ forAll $ envDecl <+> interface i ps
+      [ forAll $ envDecl <+> interface i
       , implication . concat $
         [ [initPrecsType <+> envVar <+> arguments i]
         , [invPropVar <+> envVar <+> arguments i <+> parens ("snd" <+> parens (T.pack name <+> envVar <+> arguments i))]
@@ -395,11 +387,11 @@ invariantInit (Constructor name i ps _ _ _ _) =
 
 -- | Definition of invariant claim for behaviour cases
 invariantStep :: Constructor -> T.Text
-invariantStep (Constructor _ i ps _ _ _ _) =
-  definition invStepType (invPropDecl i ps) claim
+invariantStep (Constructor _ i _ _ _ _) =
+  definition invStepType (invPropDecl i) claim
   where
     claim = indent 2 $ T.unlines
-      [ forAll $ envDecl <+> interface i ps <+> stateDecl <+> stateDecl'
+      [ forAll $ envDecl <+> interface i <+> stateDecl <+> stateDecl'
       , implication . concat $
         [ [initPrecsType <+> envVar <+> arguments i]
         , [stepType <+> stateVar <+> stateVar']
@@ -411,11 +403,11 @@ invariantStep (Constructor _ i ps _ _ _ _) =
 -- | Lemma extending invariant properties' hold to reachable states,
 -- given proof of init and step invariance
 invariantReachable :: Constructor -> T.Text
-invariantReachable (Constructor _ i ps _ _ _ _) =
+invariantReachable (Constructor _ i _ _ _ _) =
   lemma invReachType "" claim proof
   where
     claim = indent 2 $ T.unlines
-      [ forAll (envDecl <+> interface i ps <+> stateDecl <+> invPropDecl i ps
+      [ forAll (envDecl <+> interface i <+> stateDecl <+> invPropDecl i
         <+> parens ("HIPinvInit :" <+> invInitType <+> invPropVar) <+> parens ("HIPinvStep :" <+> invStepType <+> invPropVar))
       , implication . concat $
         [ [reachableFromInitType <+> envVar <+> arguments i <+> stateDecl]
@@ -568,13 +560,12 @@ updateVar _ updates handler focus t@(StorageMapping xs _) = pure (parens $
 
 
 -- | produce a block of declarations from an interface
-interface :: Interface -> [Pointer] -> T.Text
-interface (Interface _ decls) pointers =
+interface :: Interface -> T.Text
+interface (Interface _ decls) =
   T.unwords $ map decl decls where
-  decl (Decl AbiAddressType name) = case pointerLookup name pointers of
-    Just cid -> parens $ T.pack name <+> ":" <+> T.pack cid <> ".State"
-    Nothing -> parens $ T.pack name <+> ":" <+> abiType AbiAddressType
-  decl (Decl t name) = parens $ T.pack name <+> ":" <+> abiType t
+  decl (Decl (AbiArg AbiAddressType) name) = parens $ T.pack name <+> ":" <+> abiType AbiAddressType
+  decl (Decl (ContractArg _ cid) name) = parens $ T.pack name <+> ":" <+> T.pack cid <> ".State"
+  decl (Decl (AbiArg t) name) = parens $ T.pack name <+> ":" <+> abiType t
 
 arguments :: Interface -> T.Text
 arguments (Interface _ decls) =
@@ -874,15 +865,14 @@ initStateType = "init"
 invPropVar :: T.Text
 invPropVar = "IP"
 
-invPropType :: Interface -> [Pointer] -> T.Text
-invPropType (Interface _ decls) pointers = T.intercalate " -> " $ concat [[envType], map decl' decls, [stateType, "Prop"]]
+invPropType :: Interface -> T.Text
+invPropType (Interface _ decls) = T.intercalate " -> " $ concat [[envType], map decl' decls, [stateType, "Prop"]]
   where
-  decl' (Decl t n) = case pointerLookup n pointers of
-    Just cid ->  T.pack cid <> ".State"
-    Nothing -> abiType t
+  decl' (Decl (ContractArg _ cid) _) = T.pack cid <> ".State"
+  decl' (Decl (AbiArg t) _) = abiType t
 
-invPropDecl :: Interface -> [Pointer] -> T.Text
-invPropDecl i pointers = parens $ invPropVar <+> ":" <+> invPropType i pointers
+invPropDecl :: Interface -> T.Text
+invPropDecl i = parens $ invPropVar <+> ":" <+> invPropType i
 
 initPrecsType :: T.Text
 initPrecsType = "initPreconds"
