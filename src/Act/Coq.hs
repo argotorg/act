@@ -65,7 +65,6 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   <> (concatMap (evalSeq behvConds) (groups behvs))
   <> (concatMap (evalSeq (transition store)) (groups behvs))
   <> (filter ((/=) "") $ concatMap (evalSeq retVal) (groups behvs))
-  <> (filter ((/=) "") $ concatMap (evalSeq postCondBehv) (groups behvs))
   <> [ localStep _cname (groups behvs)]
   <> [ extStep _cname store ]
   <> [ step ]
@@ -73,6 +72,7 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
   <> [ multistep ]
   <> [ reachable ]
   <> [ reachableFromInit ctor]
+  <> (filter ((/=) "") $ concatMap (evalSeq postCondBehv) (groups behvs))
   <> [ invariantInit ctor ]
   <> [ invariantStep ctor ]
   <> [ invariantReachable ctor]
@@ -357,6 +357,7 @@ postCondBehv (Behaviour name _ i _ _ postcs _ _) =
           [ forAll $ envDecl <+> stateDecl <+> stateDecl' <+> interface i
           , implication . concat $
             [ [name' <> "_conds" <+> envVar <+> arguments i <+> stateVar]
+            , [reachableType <+> stateVar]
             , [stateVar' <+> "=" <+> "snd" <+> parens (name' <+> envVar <+> stateVar <+> arguments i)]
             , [coqprop pc]
             ]
