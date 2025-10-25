@@ -127,13 +127,13 @@ extStep main store = inductive
   extStepType "" (envType <+> "->" <+> stateType <+> "->" <+> stateType <+> "-> Prop") body
   where
     body =
-      (extStepType <.> T.pack main, Just $ (envDecl <+> stateDecl <+> stateDecl'), indent 2 $ implication [localStepType main <+> envVar <+> stateVar <+> stateVar', extStepType <+> envVar <+> stateVar <+> stateVar'])
+      (extStepType <> "_" <> T.pack main, Just $ (envDecl <+> stateDecl <+> stateDecl'), indent 2 $ implication [localStepType main <+> envVar <+> stateVar <+> stateVar', extStepType <+> envVar <+> stateVar <+> stateVar'])
       : (M.elems $ M.mapMaybeWithKey substep localStore)
 
     localStore = contractStore main store
 
     substep :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    substep var (StorageValue (ContractType cid), _) = Just (extStepType <.> varp, Just (envDecl <+> stateDecl <+> stateDecl'), body')
+    substep var (StorageValue (ContractType cid), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> stateDecl'), body')
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
@@ -795,7 +795,7 @@ indent n = T.unlines . fmap (T.replicate n " " <>) . T.lines
 (<+>) :: T.Text -> T.Text -> T.Text
 "" <+> t2 = t2
 t1 <+> "" = t1
-t1 <+> t2 = t1 <.> t2
+t1 <+> t2 = t1 <> " " <> t2
 
 (<.>) :: T.Text -> T.Text -> T.Text
 t1 <.> t2 = t1 <> "." <> t2
