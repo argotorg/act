@@ -4,26 +4,31 @@ interface constructor()
 creates
   uint x := 0
 
-///////////////////////////////////////////////////////////////////////////////////
+
 
 constructor of B
 interface constructor(address<A> pa1, address p2, address<A> pa3, address p4)
 
 iff
-  pa1 =/= p2
   pa1 =/= pa3
-  pa1 =/= p4
-  p2 =/= pa3
-  p2 =/= p4
-  pa3 =/= p4
 
 creates
-  A pba := pa1
+  A a := pa1
   uint y := 0
   address bu1 := p2
   address bu2 := p4
 
-///////////////////////////////////////////////////////////////////////////////////
+
+behaviour g of B
+interface f(address<A> pa1)
+
+iff
+  pa1 =/= a
+
+storage
+  a => create A()
+
+
 
 constructor of C
 interface constructor(address<A> pa1, address<A> pa2)
@@ -38,7 +43,6 @@ creates
   address cu2 := create A()
 
 
-
 behaviour f of C
 interface f(address<A> pa1, address<A> pa2)
 
@@ -48,19 +52,14 @@ iff
   pa2 =/= a1
   pa1 =/= b1
   pa2 =/= b1
-  pa1 =/= b1.pba
-  pa2 =/= b1.pba
-  pa1 =/= cu1
-  pa2 =/= cu1
-  pa1 =/= cu2
-  pa2 =/= cu2
-
+  pa1 =/= b1.a
+  pa2 =/= b1.a
 
 storage
   b1 => create B(pa1, pa2, create A(), create A())
   b1.y => 42
-  b1.pba => create A()
-  b1.pba.x => 17
+  b1.a => create A()
+  b1.a.x => 17
   
 
 

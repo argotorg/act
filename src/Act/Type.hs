@@ -335,7 +335,7 @@ checkDefn pn env@Env{contract} keyType vt@(FromVType valType) name (U.Mapping k 
   <$> (_Item vt . SMapping nowhere (SVar pn contract name) vt <$> checkIxs env (getPosn k) [k] [keyType])
   <*> checkExpr env valType (shapeFromVT valType vt) val
 
--- | Type checks a cases actions, returning typed versions of its storage updates and return expression.
+-- | Type checks a case's actions, returning typed versions of its storage updates and return expression.
 checkPost :: Env -> U.Post -> Err ([StorageUpdate], Maybe (TypedExp Timed))
 checkPost env (U.Post storage maybeReturn) = do
   returnexp <- traverse (inferExpr env) maybeReturn
@@ -348,7 +348,7 @@ checkPost env (U.Post storage maybeReturn) = do
 
     castRet :: TypedExp t -> TypedExp t
     castRet (TExp SContract _ e) =
-      TExp SInteger Atomic $ Address (fromJust $ orElse (findContractType env e) (error "Internal error: castRet")) e
+      TExp SInteger Atomic $ Address (unsafeFindContractType e) e
     castRet t = t
 
 checkEntry :: forall t k. Typeable t => Env -> SRefKind k -> U.Entry -> Err (SlotType, Maybe Id, Ref k t)
@@ -456,7 +456,7 @@ checkExpr env t1 s1 e =
     where
       maybeCast :: Pn -> SType a -> Shape (ActShape a) -> SType b -> Shape (ActShape b) -> Exp b t -> Err (Exp a t)
       maybeCast _ SInteger Atomic SContract Atomic te = findContractType env te `bindValidation` (\c -> pure $ Address (fromJust c) te)
-      -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array?
+      -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array of contracts?
       maybeCast pn t1' s1' t2 s2 _ = typeMismatchErr pn t1' s1' t2 s2
 
 -- | Attempt to infer a type of an expression. If succesfull returns an
@@ -573,7 +573,7 @@ inferExpr env@Env{calldata, constructors} e = case e of
           findContractType env te2 `bindValidation` (\c -> pure $ cons' pn' SInteger Atomic te1 $ Address (fromJust c) te2)
         maybeCast pn' cons' SContract Atomic te1 SInteger Atomic te2 =
           findContractType env te1 `bindValidation` (\c -> pure $ cons' pn' SInteger Atomic (Address (fromJust c) te1) te2)
-        -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array?
+        -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array of contracts?
         maybeCast pn' _ t1' s1' _ t2 s2 _ = typeMismatchErr pn' t1' s1' t2 s2
 
     checkVar :: forall t0. Typeable t0 => Time t0 -> U.Entry -> Err (TypedExp t0)

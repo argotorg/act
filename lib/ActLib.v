@@ -18,7 +18,6 @@ Record Env : Set :=
     Gaslimit : Z;
     Coinbase : address;
     Chainid : Z;
-    This : address;
     Origin : address;
     Nonce : Z;
     Calldepth : Z;
@@ -34,7 +33,6 @@ Definition NextEnv (ENV : Env) : Env :=
      Gaslimit := Gaslimit ENV;
      Coinbase := Coinbase ENV;
      Chainid := Chainid ENV;
-     This := This ENV;
      Origin := Origin ENV;
      Nonce := Nonce ENV;
      Calldepth := Calldepth ENV;

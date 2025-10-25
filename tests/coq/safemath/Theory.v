@@ -16,33 +16,21 @@ Proof.
 Qed.
 
 Theorem mul_correct : forall e s x y,
-  envStateConstraint e s ->
+  nextAddrConstraint e s ->
   range256 x /\ range256 y /\ range256 (x * y) <-> mul0_ret e s x y (x * y).
 Proof.
   intros.
   split. {
     intros.
     destruct H0 as [Hx [Hy Hxy]].
+    unfold range256 in *.
     apply mul0_ret_intro.
-    - split. split. assumption.
-      split. assumption.
-      assumption.
-      split. assumption. split. assumption. split.
-      trivial.
+    - constructor;
+      repeat split; try lia.
       assumption.
     - trivial.
-
-
-      (*
-      [ assumption | ].
-      split; assumption.
-    - assumption.
-    - assumption.
-    - assumption.
-    - assumption.
-         - eauto.*)
   } {
-    intros. destruct H0. unfold mul0_conds in H0.
+    intros Hmul_ret. destruct Hmul_ret. destruct H0.
     split; unfold range256;  lia.
   }
 Qed.

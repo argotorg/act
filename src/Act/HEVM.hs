@@ -763,7 +763,6 @@ checkEquiv solvers l1 l2 = do
 -- | Assumes that all calldata variables have unique names
 getInitContractState :: App m => SolverGroup -> Interface -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
 getInitContractState solvers iface preconds cmap = do
-  --let casts = (\(PointsTo _ x c) -> (x, c)) <$> pointers
   let casts = castsFromIFace iface
   let casts' = groupBy (\x y -> fst x == fst y) casts
   (cmaps, checks) <- mapAndUnzipM getContractState (fmap nub casts')

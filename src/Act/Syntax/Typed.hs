@@ -378,7 +378,7 @@ instance Timable (Exp a) where
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
     VarRef p _ k item -> VarRef p time k (go item)
-    Address c e -> Address c (go e) 
+    Address c e -> Address c (go e)
     where
       go :: Timable c => c Untimed -> c Timed
       go = setTime time

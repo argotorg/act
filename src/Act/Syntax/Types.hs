@@ -136,7 +136,7 @@ shapeFromVT (SSArray _) (ContractType _) = error "Internal Error: shapeFromVT: S
 shapeFromVT SInteger (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
 shapeFromVT SBoolean (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
 shapeFromVT SByteStr (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
-shapeFromVT SContract (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic -- ??
+shapeFromVT SContract (PrimitiveType a) | isNothing $ flattenArrayAbiType a = Atomic
 shapeFromVT (SSArray _) (PrimitiveType a) =
   maybe (error "Internal Error: shapeFromVT: expected an array ABI Type") (Shaped . snd) $ flattenArrayAbiType a
 shapeFromVT _ (PrimitiveType _) = error "Internal Error: shapeFromVT: expected a non-array ABI Type"

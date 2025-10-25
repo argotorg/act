@@ -101,7 +101,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop; lia.
 Qed.
@@ -113,7 +113,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop; lia.
 Qed.
@@ -124,7 +124,7 @@ Lemma swap00_post2_witness : swap00_post2.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -144,7 +144,7 @@ Lemma swap00_post4_witness : swap00_post4.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -166,7 +166,7 @@ Lemma swap01_post0_witness : swap01_post0.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop; lia.
 Qed.
@@ -178,7 +178,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop; lia.
 Qed.
@@ -190,7 +190,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -223,7 +223,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -235,7 +235,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop2; lia.
 Qed.
@@ -247,7 +247,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop2; lia.
 Qed.
@@ -259,7 +259,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -281,7 +281,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -303,7 +303,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop2; lia.
 Qed.
@@ -315,7 +315,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop2; lia.
 Qed.
@@ -327,7 +327,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
@@ -360,7 +360,7 @@ Proof.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.

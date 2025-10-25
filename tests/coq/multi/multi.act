@@ -49,4 +49,4 @@ interface setxw(address i)
 storage
 
   b.a.x => 1
-  b.x => 1
+  w => 1

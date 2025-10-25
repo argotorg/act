@@ -307,8 +307,11 @@ Proof.
   destruct Hreach as [ BASE Hreach ], Hreach as [ Hinit Hmulti ].
 
   induction Hmulti as [ | STATE NEXT Hstep ].
-  - destruct Hinit.
-    apply initialSupply. destruct H. destruct H. destructAnds. split; assumption.
+  - destruct Hinit as [ENV ? Hprecs].
+    apply initialSupply.
+    destruct Hprecs.
+    unfold MAX_ADDRESS.
+    split; lia.
 
   - assert ( forall a b, a - (a - b) = b) as Ha1. lia.
     assert ( forall a b c,
@@ -317,38 +320,39 @@ Proof.
     assert ( forall a b c,
       a - b = -c <-> a + c = b) as Ha4. lia.
 
-    destruct Hstep as [ENV Hextstep]. induction Hextstep; induction H; [ | assumption | | | | assumption | assumption | assumption | assumption
-                       | | | | | | assumption | assumption | assumption ];
-    (apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H; destructAnds ]).
+    destruct Hstep as [ENV Hextstep].
+    destruct Hextstep as [ENV STATE STATE' Hstep];
+    destruct Hstep; [ | assumption | | | | assumption | assumption | assumption | assumption | | | | | | assumption | assumption | assumption ];
+    (apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ]).
     + rewrite Z.sub_diag with (n := totalSupply STATE);
       apply Zeq_minus;
-      apply (balances_after_transfer ENV0); auto.
+      apply (balances_after_transfer ENV); unfold MAX_ADDRESS; try split; lia.
     + rewrite Z.sub_diag with (n := totalSupply STATE).
       apply Zeq_minus.
-      apply (balances_after_transfer ENV0); auto.
+      apply (balances_after_transfer ENV); unfold MAX_ADDRESS; try split; lia.
     + rewrite Z.sub_diag with (n := totalSupply STATE).
       apply Zeq_minus.
-      apply (balances_after_transfer ENV0); auto.
+      apply (balances_after_transfer ENV); unfold MAX_ADDRESS; try split; lia.
     + rewrite Z.sub_diag with (n := totalSupply STATE).
       apply Zeq_minus.
-      assert (Hthm := balances_after_transfer ENV0 STATE).
+      assert (Hthm := balances_after_transfer ENV STATE).
       unfold balanceOf_sum, transferFrom0, transferFrom2 in *.
-      apply Hthm; auto.
+      apply Hthm; unfold MAX_ADDRESS; try split; lia.
     + rewrite Ha1.
       apply Ha2.
-      apply (balances_after_burn ENV0). split; auto.
+      apply (balances_after_burn ENV). unfold MAX_ADDRESS; split; lia.
     + rewrite Ha1.
       apply Ha2.
-      apply (balances_after_burn ENV0). split; auto.
+      apply (balances_after_burn ENV). unfold MAX_ADDRESS; split; lia.
     + rewrite Ha1.
       apply Ha2.
-      assert (Hthm := balances_after_burn ENV0 STATE).
+      assert (Hthm := balances_after_burn ENV STATE).
       unfold balanceOf_sum, burnFrom0, burnFrom1 in *.
-      apply Hthm. split; eauto.
+      apply Hthm. unfold MAX_ADDRESS; split; lia.
     + rewrite Ha1.
       apply Ha2.
-      apply (balances_after_burn ENV0). split; auto.
+      apply (balances_after_burn ENV). unfold MAX_ADDRESS. split; lia.
     + rewrite Ha3.
       apply Ha4.
-      apply (balances_after_mint ENV0). split; auto.
+      apply (balances_after_mint ENV). unfold MAX_ADDRESS. split; lia.
 Qed.
