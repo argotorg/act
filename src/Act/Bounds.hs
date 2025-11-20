@@ -10,6 +10,7 @@ import Data.Type.Equality
 import Act.Syntax
 import Act.Syntax.TypedExplicit
 import Act.Type (globalEnv)
+import Debug.Trace
 
 
 {-|
@@ -41,7 +42,7 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) pre post invs state
               -- The following is sound as values of locations outside local storage
               -- already exist as the constructor starts executing,
               -- and the constructor cannot modify non-local locations.
-             <> mkLocationBounds nonlocalLocs
+             <> mkLocationBounds (toPrestate stateUpdates <$> nonlocalLocs)
       invs' = addBoundsInvariant ctor <$> invs
       post' = post <> mkStorageBounds stateUpdates Post
 
@@ -49,6 +50,39 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) pre post invs state
              <> concatMap locsFromInvariant invs
              <> concatMap locsFromUpdate stateUpdates
       nonlocalLocs = filter (not . isLocalLoc) locs
+
+
+changeBase :: Location -> StorageUpdate -> Maybe Location
+changeBase _ (Update _ (Item _ _ _) e) | isCreate e = Nothing
+  -- TODO: suppport!
+  where
+    isCreate :: Exp a -> Bool
+    isCreate (Address _ (Create _ _ _)) = True
+    isCreate (Create _ _ _) = True
+    isCreate _ = False
+changeBase (Loc st SStorage (Item _ vt baseref)) (Update _ (Item _ _ updatedRef) (VarRef _ _ sk' (Item _ _ ru'))) =
+  Loc st sk' . Item st vt <$> hasBase baseref ru'
+  where
+    hasBase :: Ref Storage -> Ref k -> Maybe (Ref k)
+    hasBase r''@(SVar _ _ _) ru =
+      if updatedRef == r'' then Just ru else Nothing
+    hasBase r''@(SArray pn r' vt' ixs) ru =
+      if updatedRef == r'' then Just ru
+      else (\_r -> SArray pn _r vt' ixs) <$> hasBase r' ru
+    hasBase r''@(SMapping pn r' vt' ixs) ru =
+      if updatedRef == r'' then Just ru
+      else (\_r -> SMapping pn _r vt' ixs) <$> hasBase r' ru
+    hasBase r''@(SField pn r' id' id'') ru =
+      if updatedRef == r'' then Just ru
+      else (\_r -> SField pn _r id' id'') <$> hasBase r' ru
+changeBase _ _ = Nothing
+
+toPrestate :: [StorageUpdate] -> Location -> Location
+toPrestate _ loc@(Loc _ SCalldata _) = loc
+toPrestate updates loc@(Loc _ SStorage _) =
+  case mapMaybe (changeBase loc) updates of
+    [] -> loc
+    l -> last l
 
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
@@ -58,7 +92,7 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) pre cases post stateU
       pre' = nub $ pre
              <> mkCallDataBounds decls
              <> mkStorageBounds stateUpdates Pre
-             <> mkLocationBounds locs
+             <> mkLocationBounds (toPrestate stateUpdates <$> locs)
              <> mkEthEnvBounds (ethEnvFromBehaviour behv)
       post' = post
               <> mkStorageBounds stateUpdates Post
