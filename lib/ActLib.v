@@ -11,6 +11,7 @@ Definition address := Z.
 Record Env : Set :=
   { Callvalue : Z;
     Caller : address;
+    This : address;
     Blockhash : Z;
     Blocknumber : Z;
     Difficulty : Z;
@@ -26,6 +27,7 @@ Record Env : Set :=
 Definition NextEnv (ENV : Env) : Env :=
   {| Callvalue := Callvalue ENV;
      Caller := Caller ENV;
+     This := This ENV;
      Blockhash := Blockhash ENV;
      Blocknumber := Blocknumber ENV;
      Difficulty := Difficulty ENV;
