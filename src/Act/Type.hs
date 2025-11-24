@@ -623,7 +623,7 @@ unsafeFindContractType :: Exp a t -> Id
 unsafeFindContractType (ITE _ _ a _) =
   unsafeFindContractType a
 unsafeFindContractType (Create _ c _) = c
-unsafeFindContractType (VarRef _ _ _ (Item _ (ContractType c) _)) = c
+unsafeFindContractType (VarRef _ _ _ (Item (TContract c) _)) = c
 unsafeFindContractType _ = error "Internal error: unsafeFindContractType called for non contract expression"
 
 -- | Find the contract id of an expression with contract type
