@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
+Require Import Stdlib.ZArith.ZArith.
 Require Import ActLib.ActLib.
-Require Coq.Strings.String.
-Require Import Lia.
+Require Stdlib.Strings.String.
+From Stdlib Require Import Lia.
 
 
 Require Import ERC20.ERC20.
@@ -190,7 +190,7 @@ Theorem constant_balanceOf : forall BASE STATE,
 Proof.
   intros BASE S.
   eapply step_multi_step with (P := fun s1 s2 => balanceOf_sum s1 = balanceOf_sum s2).
-  - intros. induction H; destructAnds.
+  - intros. induction H; destruct H; destructAnds.
     + eapply (balances_after_transfer ENV); eauto.
     + reflexivity.
     + eapply (balances_after_transfer ENV); eauto.

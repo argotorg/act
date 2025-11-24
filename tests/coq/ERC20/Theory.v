@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
+Require Import Stdlib.ZArith.ZArith.
 Require Import ActLib.ActLib.
-Require Coq.Strings.String.
-Require Import Lia.
+Require Stdlib.Strings.String.
+From Stdlib Require Import Lia.
 
 
 Require Import ERC20.ERC20.
@@ -308,7 +308,7 @@ Proof.
 
   induction Hmulti as [ | STATE NEXT Hstep ].
   - destruct Hinit.
-    apply initialSupply. destructAnds. split; assumption.
+    apply initialSupply. destruct H. destructAnds. split; assumption.
 
   - assert ( forall a b, a - (a - b) = b) as Ha1. lia.
     assert ( forall a b c,
@@ -319,7 +319,7 @@ Proof.
 
     induction Hstep; [ | assumption | | | | assumption | assumption | assumption | assumption
                        | | | | | | assumption | assumption | assumption ];
-    (apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destructAnds ]).
+    (apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H; destructAnds ]).
     + rewrite Z.sub_diag with (n := totalSupply STATE);
       apply Zeq_minus;
       apply (balances_after_transfer ENV); auto.

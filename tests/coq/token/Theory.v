@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
+Require Import Stdlib.ZArith.ZArith.
 Require Import ActLib.ActLib.
-Require Coq.Strings.String.
-Require Import Lia.
+Require Stdlib.Strings.String.
+From Stdlib Require Import Lia.
 
 
 Require Import Token.Token.
@@ -12,6 +12,10 @@ Import Token.
 
 Definition MAX_ADDRESS := UINT_MAX 160.
 
+Ltac destructAnds :=
+  repeat match goal with
+    [ H : _ /\ _ |- _ ] => destruct H
+  end.
 
 Fixpoint balances_sum' (balances : address -> Z) (n : nat) (acc : Z) : Z :=
     match n with
@@ -155,24 +159,30 @@ Proof.
   intros B S.
   eapply step_multi_step with (P := fun s1 s2 => balances_sum s1 = balances_sum s2).
   - intros s s' Hstep.
-    induction Hstep. unfold transfer0.
-    unfold balances_sum. simpl.
+    induction Hstep.
+    destruct H. (* X as [Hpc1 Hpc2 Hpc3 Hpc4 Hpc5 Hpc6 Hpc7 Hpc8 Hpc9 Hpc10 Hpc11 Hpc12].*)
+    destructAnds.
+    + unfold transfer0.
+      unfold balances_sum. simpl.
 
-    erewrite <- transfer_thm.
+      erewrite <- transfer_thm.
 
-    + unfold transfer, transfer_to, transfer_from.
-      eapply not_eq_sym in H. eapply Z.eqb_neq in H.
-      rewrite H. reflexivity.
+      * unfold transfer, transfer_to, transfer_from. simpl.
+        assert (to =? Caller ENV = false) as HifCond. lia.
+        rewrite HifCond.
+        reflexivity.
 
-    + eauto.
-    + rewrite Z2Nat.id. assumption.
-      unfold MAX_ADDRESS. unfold UINT_MAX. lia.
+      * eauto.
+      * rewrite Z2Nat.id.
+        -- split; assumption.
+        -- unfold MAX_ADDRESS. lia.
 
-    + rewrite Z2Nat.id. assumption.
-      unfold MAX_ADDRESS. unfold UINT_MAX. lia.
+      * rewrite Z2Nat.id.
+        -- split; assumption.
+        -- unfold MAX_ADDRESS. lia.
 
     + unfold transfer1.
-    reflexivity.
+      reflexivity.
 
   - unfold Relation_Definitions.reflexive. reflexivity.
   - unfold Relation_Definitions.transitive. lia.
