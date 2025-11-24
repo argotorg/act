@@ -2,7 +2,7 @@
 -- for printing informative error messages.
 {-# LANGUAGE OverloadedStrings #-}
 
-module Act.Syntax.Untyped (module Act.Syntax.Untyped) where
+module Act.Syntax.Untyped (module Act.Syntax.Untyped, module Act.Syntax.Types) where
 
 import Data.Aeson
 import Data.List (intercalate)
@@ -11,10 +11,9 @@ import Data.Text as T (pack)
 
 import EVM.ABI
 import Act.Lex
+import Act.Syntax.Types
 
 type Pn = AlexPosn
-
-type Id = String
 
 newtype Act = Main [Contract]
   deriving (Eq, Show)
@@ -122,14 +121,14 @@ data Expr
   | EInRange Pn AbiType Expr
   deriving (Eq, Show)
 
-data ValueType
-  = ContractType Id
-  | PrimitiveType AbiType
-  deriving Eq
-
-instance Show ValueType where
-  show (ContractType c) = c
-  show (PrimitiveType t) = show t
+--data ValueType
+--  = ContractType Id
+--  | PrimitiveType AbiType
+--  deriving Eq
+--
+--instance Show ValueType where
+--  show (ContractType c) = c
+--  show (PrimitiveType t) = show t
 
 data SlotType
   = StorageMapping (NonEmpty ValueType) ValueType
@@ -176,11 +175,24 @@ instance ToJSON SlotType where
                                                    , "resType" .= toJSON resType]
 
 
+instance ToJSON (TValueType a) where
+  toJSON (TInteger n Signed)      = object [ "type" .= String "Int"
+                                           , "size" .= String (T.pack $ show n) ]
+  toJSON (TInteger n Unsigned)    = object [ "type" .= String "UInt"
+                                           , "size" .= String (T.pack $ show n) ]
+  toJSON TAddress                 = object [ "type" .= String "Address" ]
+  toJSON TBoolean                 = object [ "type" .= String "Bool" ]
+  toJSON TByteStr                 = object [ "type" .= String "Bytes" ]
+  toJSON (TStruct fs)             = object [ "type" .= String "Tuple"
+                                           , "elemTypes" .= toJSON fs ]
+
+  toJSON (TContract cid)          = object [ "type" .= String "Contract"
+                                           , "name" .= cid ]
+  toJSON (TArray n t)             = object [ "type" .= String "Array"
+                                           , "arrayType" .= toJSON t
+                                           , "size" .= String (T.pack $ show n) ]
 instance ToJSON ValueType where
-  toJSON (ContractType c) = object [ "kind" .= String "ContractType"
-                                   , "name" .= c ]
-  toJSON (PrimitiveType abiType) = object [ "kind" .= String "AbiType"
-                                          , "abiType" .= toJSON abiType ]
+  toJSON (ValueType vt)           = toJSON vt
 
 instance ToJSON ArgType where
   toJSON (AbiArg abiType) = object [ "kind" .= String "AbiArgument"

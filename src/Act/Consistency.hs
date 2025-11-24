@@ -140,7 +140,7 @@ checkCases (Act _ contracts) solver' smttimeout debug = do
 type ModelCtx = Reader Model
 
 mkBounds :: TypedExp -> Int -> [Exp ABoolean]
-mkBounds (TExp SInteger _ e) b = [LEQ nowhere (LitInt nowhere 0) e, LT nowhere e (LitInt nowhere $ toInteger b)]
+mkBounds (TExp (TInteger _ _) e) b = [LEQ nowhere (LitInt nowhere 0) e, LT nowhere e (LitInt nowhere $ toInteger b)]
 mkBounds _ _ = error "Internal Error: Expected Integral Index"
 
 mkRefBounds :: Ref a -> [Exp ABoolean]
@@ -150,7 +150,7 @@ mkRefBounds (SField _ ref _ _) = mkRefBounds ref
 mkRefBounds _ = []
 
 mkStorageBounds :: Location -> [Exp ABoolean]
-mkStorageBounds (Loc _ _ (Item _ _ ref)) = mkRefBounds ref
+mkStorageBounds (Loc _ _ (Item _ ref)) = mkRefBounds ref
 
 -- TODO: There are locs that don't need to be checked, e.g. assignment locs cannot be out of bounds
 mkConstrArrayBoundsQuery :: Constructor -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
@@ -224,7 +224,7 @@ checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
     errorMsg str = render (pretty str <> line) >> exitFailure
 
 checkBound :: TypedExp -> Int -> ModelCtx Bool
-checkBound (TExp SInteger _ e) b =
+checkBound (TExp (TInteger _ _) e) b =
   [ (0 <= toInteger idx) && (toInteger idx < toInteger b) | idx <- modelEval e ]
 checkBound _ _ = error "Internal Error: Expected Integer indices"
 
@@ -235,7 +235,7 @@ checkRefBounds (SField _ ref _ _) = checkRefBounds ref
 checkRefBounds _ = pure True
 
 checkLocationBounds :: Location -> ModelCtx DocAnsi
-checkLocationBounds (Loc _ _ item@(Item _ _ ref)) = do
+checkLocationBounds (Loc _ _ item@(Item _ ref)) = do
   cond <- checkRefBounds ref
   if cond then pure $ string ""
   else do
@@ -245,7 +245,7 @@ checkLocationBounds (Loc _ _ item@(Item _ _ ref)) = do
     (AlexPn _ l c) = posnFromRef ref
 
 printIdx :: TypedExp -> Int -> ModelCtx DocAnsi
-printIdx te@(TExp SInteger _ e) b = do
+printIdx te@(TExp (TInteger _ _) e) b = do
   idx <- modelEval e
   if (toInteger idx < toInteger b) && (0 <= toInteger idx)
     then pure $ string "[" <> string (prettyTypedExp te) <> string "]"
@@ -271,7 +271,7 @@ printOutOfBoundsRef (SVar _ _ id') = pure $ string id'
 printOutOfBoundsRef (CVar _ _ id') = pure $ string id'
 
 printOutOfBoundsItem :: TItem a k-> ModelCtx DocAnsi
-printOutOfBoundsItem (Item _ _ ref) = printOutOfBoundsRef ref
+printOutOfBoundsItem (Item _ ref) = printOutOfBoundsRef ref
 
 
 --- ** No rewrite aliasing ** ---
@@ -356,16 +356,16 @@ checkAliasing (l1, l2) = do
     ixs2 = ixsFromLocation l2
 
 compareIdx :: TypedExp -> TypedExp -> ModelCtx Bool
-compareIdx (TExp SInteger Atomic e1) (TExp SInteger Atomic e2) =
+compareIdx (TExp (TInteger _ _) e1) (TExp (TInteger _ _) e2) =
   [ a == b | a <- modelEval e1, b <- modelEval e2 ]
-compareIdx (TExp SBoolean Atomic e1) (TExp SBoolean Atomic e2) =
+compareIdx (TExp TBoolean e1) (TExp TBoolean e2) =
   [ a == b | a <- modelEval e1, b <- modelEval e2 ]
-compareIdx (TExp SByteStr Atomic e1) (TExp SByteStr Atomic e2) =
+compareIdx (TExp TByteStr e1) (TExp TByteStr e2) =
   [ a == b | a <- modelEval e1, b <- modelEval e2 ]
 compareIdx _ _ = pure False
 
 printAliased :: TypedExp -> ModelCtx DocAnsi
-printAliased te@(TExp SInteger _ e) = do
+printAliased te@(TExp (TInteger _ _) e) = do
   e' <- modelEval e
   pure $ string "[(" <> string (prettyTypedExp te) <> string ") = " <> string (show e') <> string "]"
 printAliased _ = error "Internal Error: Expected Integer indices"
@@ -381,29 +381,31 @@ printAliasedRef (SVar _ _ id') = pure $ string id'
 printAliasedRef (CVar _ _ id') = pure $ string id'
 
 printAliasedLoc :: Location -> ModelCtx DocAnsi
-printAliasedLoc (Loc _ _ (Item _ _ ref)) = do
+printAliasedLoc (Loc _ _ (Item _ ref)) = do
   r <- printAliasedRef ref
   pure $ string "Line " <> string (show l) <> string " Column " <> string (show c) <> string ": " <> r
   where
     (AlexPn _ l c ) = posnFromRef ref
 
-modelExpand :: SType (AArray a) -> Exp (AArray a) -> ModelCtx [Exp (Base (AArray a))]
-modelExpand (SSArray SInteger) (Array _ l) = pure l
-modelExpand (SSArray SBoolean) (Array _ l) = pure l
-modelExpand (SSArray SByteStr) (Array _ l) = pure l
-modelExpand (SSArray SContract) (Array _ l) = pure l
-modelExpand (SSArray s@(SSArray _)) (Array _ l) = concat <$> mapM (modelExpand s) l
+modelExpand :: TValueType (AArray a) -> Exp (AArray a) -> ModelCtx [Exp (Base (AArray a))]
+modelExpand (TArray _ (TInteger _ _)) (Array _ l) = pure l
+modelExpand (TArray _ TAddress) (Array _ l) = pure l
+modelExpand (TArray _ TBoolean) (Array _ l) = pure l
+modelExpand (TArray _ TByteStr) (Array _ l) = pure l
+modelExpand (TArray _ (TContract _)) (Array _ l) = pure l
+modelExpand (TArray _ (TStruct _)) (Array _ l) = pure l
+modelExpand (TArray _ t@(TArray _ _)) (Array _ l) = concat <$> mapM (modelExpand t) l
 modelExpand typ (VarRef _ whn SStorage item) = do
   model <- ask
   case lookup (_Loc SStorage item) $ if whn == Pre then _mprestate model else _mpoststate model of
-    Just (TExp sType _ e') -> case testEquality typ sType of
+    Just (TExp sType e') -> case testEquality typ sType of
       Just Refl -> pure $ expandArrayExpr sType e'
       _ -> error "modelEval: Storage Location given does not match type"
     _ -> error $ "modelEval: Storage Location not found in model" <> show item
 modelExpand typ (VarRef _ _ SCalldata item) = do
   model <- ask
   case lookup (_Loc SCalldata item) $ _mcalllocs model of
-    Just (TExp sType _ e') -> case testEquality typ sType of
+    Just (TExp sType e') -> case testEquality typ sType of
       Just Refl -> pure $ expandArrayExpr sType e'
       _ -> error "modelEval: Storage Location given does not match type"
     _ -> error $ "modelEval: Storage Location not found in model" <> show item
@@ -436,23 +438,30 @@ modelEval e = case e of
   UIntMin _ a   -> pure $ uintmin a
   UIntMax _ a   -> pure $ uintmax a
 
-  Eq _ SInteger x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
-  Eq _ SBoolean x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
-  Eq _ SByteStr x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
-  Eq p s@(SSArray _) a b -> do
+  Eq _ (TInteger _ _) x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ TAddress x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ TBoolean x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ TByteStr x y -> [ x' == y' | x' <- modelEval x, y' <- modelEval y]
+  Eq _ (TStruct _) _ _ -> error "modelEval: TODO: Structs"
+  Eq _ (TContract _) _ _ -> error "modelEval: TODO: Structs"
+  Eq p s@(TArray _ _) a b -> do
     a' <- modelExpand s a
     b' <- modelExpand s b
-    let s' = flattenSType s
+    let s' = fst $ flattenValueType s
         eqs = (uncurry $ Eq p s') <$> zip a' b'
         expanded = foldr (And nowhere) (LitBool nowhere True) eqs
     modelEval expanded
-  NEq _ SInteger x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
-  NEq _ SBoolean x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
-  NEq _ SByteStr x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
-  NEq p s@(SSArray _) a b -> do
+
+  NEq _ (TInteger _ _) x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ TAddress x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ TBoolean x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ TByteStr x y -> [ x' /= y' | x' <- modelEval x, y' <- modelEval y]
+  NEq _ (TStruct _) _ _ -> error "modelEval: TODO: Structs"
+  NEq _ (TContract _) _ _ -> error "modelEval: TODO: Structs"
+  NEq p s@(TArray _ _) a b -> do
     a' <- modelExpand s a
     b' <- modelExpand s b
-    let s' = flattenSType s
+    let s' = fst $ flattenValueType s
         eqs = (uncurry $ NEq p s') <$> zip a' b'
         expanded = foldr (Or nowhere) (LitBool nowhere False) eqs
     modelEval expanded
@@ -463,10 +472,10 @@ modelEval e = case e of
     SSArray SType -> mapM modelEval l
 
   Create _ _ _ -> error "modelEval of contracts not supported"
-  VarRef _ whn SStorage item -> do
+  VarRef _ whn SStorage item@(Item vt _) -> do
     model <- ask
     case lookup (_Loc SStorage item) $ if whn == Pre then _mprestate model else _mpoststate model of
-      Just (TExp sType _ e') -> case testEquality (sing @a) sType of
+      Just (TExp vType e') -> case testEquality vt vType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
@@ -475,10 +484,10 @@ modelEval e = case e of
           _ -> error "modelEval: Model did not return a literal"
         _ -> error "modelEval: Storage Location given does not match type"
       _ -> error $ "modelEval: Storage Location not found in model" <> show item
-  VarRef _ _ SCalldata item -> do
+  VarRef _ _ SCalldata item@(Item vt _) -> do
     model <- ask
     case lookup (_Loc SCalldata item) $ _mcalllocs model of
-      Just (TExp sType _ e') -> case testEquality (sing @a) sType of
+      Just (TExp vType e') -> case testEquality vt vType of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
@@ -491,7 +500,7 @@ modelEval e = case e of
   IntEnv _ env     -> do
     model <- ask
     case lookup env $ _menvironment model of
-      Just (TExp sType _ e') -> case testEquality (sing @a) sType of
+      Just (TExp sType e') -> case testEquality (sing @a) (toSType sType) of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           _ -> error "modelEval: Model did not return an Integer literal"

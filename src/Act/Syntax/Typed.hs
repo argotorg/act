@@ -14,6 +14,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {-|
 Module      : Syntax.Typed
@@ -53,7 +54,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import Act.Parse          as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Id, Pn, Interface(..), EthEnv(..), Decl(..), ArgType(..), SlotType(..), ValueType(..), Pointer(..), makeIface, argToAbiType)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Pn, Interface(..), EthEnv(..), Decl(..), SlotType(..), Pointer(..), makeIface)
 
 -- AST post typechecking
 data Act t = Act Store [Contract t]
@@ -116,25 +117,25 @@ data Behaviour t = Behaviour
   } deriving (Show, Eq)
 
 data StorageUpdate (t :: Timing) where
-  Update :: SType a -> TItem a Storage t -> Exp a t -> StorageUpdate t
+  Update :: TValueType a -> TItem a Storage t -> Exp a t -> StorageUpdate t
 deriving instance Show (StorageUpdate t)
 
 instance Eq (StorageUpdate t) where
   (==) :: StorageUpdate t -> StorageUpdate t -> Bool
-  Update SType i1 e1 == Update SType i2 e2 = eqS' i1 i2 && eqS e1 e2
+  Update vt1@VType i1 e1 == Update vt2@VType i2 e2 = eqS'' vt1 vt2 && eqS' i1 i2 && eqS e1 e2
 
-_Update :: SingI a => TItem a Storage t -> Exp a t -> StorageUpdate t
-_Update item expr = Update sing item expr
+_Update :: TItem a Storage t -> Exp a t -> StorageUpdate t
+_Update item@(Item t@VType _) expr = Update t item expr
 
 data Location (t :: Timing) where
-  Loc :: SType a -> SRefKind k -> TItem a k t -> Location t
+  Loc :: TValueType a -> SRefKind k -> TItem a k t -> Location t
 deriving instance Show (Location t)
 
 instance Eq (Location t) where
-  Loc SType SRefKind i1 == Loc SType SRefKind i2 = eqTypeKind i1 i2
+  Loc vt1@VType SRefKind i1 == Loc vt2@VType SRefKind i2 = eqS'' vt1 vt2 && eqTypeKind i1 i2
 
 _Loc :: SRefKind k -> TItem a k t -> Location t
-_Loc k item@(Item t _ _) = Loc t k item
+_Loc k item@(Item t@VType _) = Loc t k item
 
 -- | Distinguish the type of Refs to calldata variables and storage
 data RefKind = Storage | Calldata
@@ -205,25 +206,24 @@ instance Eq (Ref k t) where
 -- that carries more precise type information (e.g., the exact
 -- contract type).
 data TItem (a :: ActType) (k :: RefKind) (t :: Timing) where
-  Item :: SType a -> ValueType -> Ref k t -> TItem a k t
+  Item :: TValueType a -> Ref k t -> TItem a k t
 deriving instance Show (TItem a k t)
 deriving instance Eq (TItem a k t)
 
-_Item :: SingI a => ValueType -> Ref k t -> TItem a k t
-_Item = Item sing
+--_Item :: SingI a => ValueType -> Ref k t -> TItem a k t
+--_Item = Item sing
 
 -- | Expressions for which the return type is known.
 data TypedExp t
-  = forall a. TExp (SType a) (Shape (ActShape a)) (Exp a t)
+  = forall (a :: ActType). SingI a => TExp (TValueType a) (Exp a t)
 deriving instance Show (TypedExp t)
 
 instance Eq (TypedExp t) where
   (==) :: TypedExp t -> TypedExp t -> Bool
-  TExp (SSArray SType) s1 e1 == TExp (SSArray SType) s2 e2 = eqS e1 e2 && s1 == s2
-  TExp SType _ e1 == TExp SType _ e2 = eqS e1 e2
+  TExp vt1 e1 == TExp vt2 e2 = eqS'' vt1 vt2 && eqS e1 e2
 
-_TExp :: SingI a => Shape (ActShape a) -> Exp a t -> TypedExp t
-_TExp shape expr = TExp sing shape expr
+--_TExp :: SingI a => Exp a t -> TypedExp t
+--_TExp expr = TExp sing expr
 
 -- | Expressions parametrized by a timing `t` and a type `a`. `t` can be either `Timed` or `Untimed`.
 -- All storage entries within an `Exp a t` contain a value of type `Time t`.
@@ -256,7 +256,7 @@ data Exp (a :: ActType) (t :: Timing) where
   IntMax :: Pn -> Int -> Exp AInteger t
   UIntMin :: Pn -> Int -> Exp AInteger t
   UIntMax :: Pn -> Int -> Exp AInteger t
-  InRange :: Pn -> AbiType -> Exp AInteger t -> Exp ABoolean t
+  InRange :: Pn -> TValueType AInteger -> Exp AInteger t -> Exp ABoolean t
   -- bytestrings
   Cat :: Pn -> Exp AByteStr t -> Exp AByteStr t -> Exp AByteStr t
   Slice :: Pn -> Exp AByteStr t -> Exp AInteger t -> Exp AInteger t -> Exp AByteStr t
@@ -268,12 +268,13 @@ data Exp (a :: ActType) (t :: Timing) where
   -- contracts
   Create   :: Pn -> Id -> [TypedExp t] -> Exp AContract t
   -- polymorphic
-  Eq  :: Pn -> SType a -> Exp a t -> Exp a t -> Exp ABoolean t
-  NEq :: Pn -> SType a -> Exp a t -> Exp a t -> Exp ABoolean t
+  Eq  :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
+  NEq :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
   ITE :: Pn -> Exp ABoolean t -> Exp a t -> Exp a t -> Exp a t
   -- Calldata references and storage variable references. 
   -- Note that the timing annotation does not make a difference 
   -- when the variable refers to calldata
+  --VarRef :: SingI a => Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
   VarRef :: Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
   Address :: Id -> Exp AContract t -> Exp AInteger t
 
@@ -313,8 +314,8 @@ instance Eq (Exp a t) where
   ByLit _ a == ByLit _ b = a == b
   ByEnv _ a == ByEnv _ b = a == b
 
-  Eq _ SType a b == Eq _ SType c d = eqS a c && eqS b d
-  NEq _ SType a b == NEq _ SType c d = eqS a c && eqS b d
+  Eq _ vt1@VType a b == Eq _ vt2@VType c d = eqS'' vt1 vt2 && eqS a c && eqS b d
+  NEq _ vt1@VType a b == NEq _ vt2@VType c d = eqS'' vt1 vt2 && eqS a c && eqS b d
 
   ITE _ a b c == ITE _ d e f = a == d && b == e && c == f
   VarRef _ a SRefKind t == VarRef _ b SRefKind u = a == b && eqKind t u
@@ -331,7 +332,7 @@ instance Monoid (Exp ABoolean t) where
 
 instance Timable TypedExp where
   setTime :: When -> TypedExp Untimed -> TypedExp Timed
-  setTime time (TExp t s expr) = TExp t s $ setTime time expr
+  setTime time (TExp t expr) = TExp t $ setTime time expr
 
 instance Timable (Exp a) where
   setTime :: When -> Exp a Untimed -> Exp a Timed
@@ -386,7 +387,7 @@ instance Timable (Exp a) where
 
 instance Timable (TItem a k) where
    setTime :: When -> TItem a k Untimed -> TItem a k Timed
-   setTime time (Item t vt ref) = Item t vt $ setTime time ref
+   setTime time (Item t ref) = Item t $ setTime time ref
 
 instance Timable (Ref k) where
   setTime :: When -> Ref k Untimed -> Ref k Timed
@@ -476,7 +477,7 @@ instance ToJSON (StorageUpdate t) where
   toJSON (Update _ a b) = object [ "location" .= toJSON a ,"value" .= toJSON b ]
 
 instance ToJSON (TItem a k t) where
-  toJSON (Item t _ a) = object [ "item" .= toJSON a
+  toJSON (Item t a) = object [ "item" .= toJSON a
                                , "type" .=  show t
                                ]
 
@@ -510,7 +511,7 @@ field a c x = object [ "kind"      .= pack "Field"
 
 
 instance ToJSON (TypedExp t) where
-  toJSON (TExp typ _ a) = object [ "kind"       .= pack "TypedExpr"
+  toJSON (TExp typ a) = object [ "kind"       .= pack "TypedExpr"
                                  , "type"       .= pack (show typ)
                                  , "expression" .= toJSON a ]
 
@@ -620,13 +621,13 @@ eval e = case e of
   ByLit _ s     -> pure s
 
   -- TODO better way to write these?
-  Eq _ SInteger x y -> [ x' == y' | x' <- eval x, y' <- eval y]
-  Eq _ SBoolean x y -> [ x' == y' | x' <- eval x, y' <- eval y]
-  Eq _ SByteStr x y -> [ x' == y' | x' <- eval x, y' <- eval y]
+  Eq _ (TInteger _ _) x y -> [ x' == y' | x' <- eval x, y' <- eval y]
+  Eq _ TBoolean x y -> [ x' == y' | x' <- eval x, y' <- eval y]
+  Eq _ TByteStr x y -> [ x' == y' | x' <- eval x, y' <- eval y]
 
-  NEq _ SInteger x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
-  NEq _ SBoolean x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
-  NEq _ SByteStr x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
+  NEq _ (TInteger _ _) x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
+  NEq _ TBoolean x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
+  NEq _ TByteStr x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
   ITE _ a b c   -> eval a >>= \cond -> if cond then eval b else eval c
 
   Array _ l -> mapM eval l
@@ -647,8 +648,8 @@ uintmin _ = 0
 uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
-_Var :: SingI a => AbiType -> Id -> Exp a Timed
-_Var at x = VarRef nowhere Pre SCalldata (Item sing (PrimitiveType at) (CVar nowhere at x))
+_Var :: SingI a => TValueType a -> Id -> Exp a Timed
+_Var vt x = VarRef nowhere Pre SCalldata (Item vt (CVar nowhere (toAbiType vt) x))
 
-_Array :: SingI a => AbiType -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
-_Array at x ix = VarRef nowhere Pre SCalldata (Item sing (PrimitiveType at) (SArray nowhere (CVar nowhere at x) (PrimitiveType at) ix))
+_Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
+_Array vt x ix = VarRef nowhere Pre SCalldata (Item vt (SArray nowhere (CVar nowhere (toAbiType vt) x) (fromAbiType' (toAbiType vt)) ix))

@@ -13,6 +13,7 @@
 {-# Language RecordWildCards #-}
 {-# LANGUAGE GADTs #-}
 {-# Language DataKinds #-}
+{-# Language ViewPatterns #-}
 
 
 module Act.Coq where
@@ -616,12 +617,12 @@ contractStore contract store = case M.lookup contract store of
 
 -- | Check is an update update a specific storage reference
 eqRef :: Ref Storage -> StorageUpdate -> Bool
-eqRef r (Update _ (Item _ _ r') _) = r == r'
+eqRef r (Update _ (Item _ r') _) = r == r'
 
 -- | Check if an update updates a location that has a given storage
 -- reference as a base
 baseRef :: Ref Storage -> StorageUpdate -> Bool
-baseRef baseref (Update _ (Item _ _ r) _) = hasBase r
+baseRef baseref (Update _ (Item _ r) _) = hasBase r
   where
     hasBase (SVar _ _ _) = False
     hasBase (SArray _ r' _ _) = r' == baseref || hasBase r'
@@ -690,7 +691,7 @@ updateVar _ updates handler focus t@(StorageValue (PrimitiveType AbiAddressType)
 updateVar _ updates handler focus t@(StorageValue (PrimitiveType _)) =
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
     where
-      updatedVal _ (Update SByteStr _ _) = error "bytestrings not supported"
+      updatedVal _ (Update TByteStr _ _) = error "bytestrings not supported"
       updatedVal _ (Update _ _ e) = coqexp e
 
 updateVar _ updates handler focus t@(StorageMapping xs _) = pure (parens $
@@ -706,26 +707,28 @@ updateVar _ updates handler focus t@(StorageMapping xs _) = pure (parens $
       prestate = parens $ handler focus t <+> lambdaArgs n
       n = length xs
 
-      updatedMap _ (Update SByteStr _ _) = error "bytestrings not supported"
+      updatedMap _ (Update TByteStr _ _) = error "bytestrings not supported"
       updatedMap prestate' (Update _ item e) =
         let ixs = ixsFromItem item in
         "if" <+> boolScope (T.intercalate " && " (map cond (zip ixs ([0..] :: [Int]))))
         <+> "then" <+> coqexp e
         <+> "else" <+> prestate'
 
-      cond (TExp argType _ arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
+      cond (TExp argType arg, i) = parens $ anon <> T.pack (show i) <> eqsym argType <> coqexp arg
 
       lambda i = if i >= 0 then "fun" <+> lambdaArgs i <+> "=>" else ""
 
       lambdaArgs i = T.unwords $ map (\a -> anon <> T.pack (show a)) ([0..i-1] :: [Int])
 
-      eqsym :: SType a -> T.Text
+      eqsym :: TValueType a -> T.Text
       eqsym argType = case argType of
-        SInteger -> "=?"
-        SBoolean -> "=??"
-        SByteStr -> error "bytestrings not supported"
-        SContract -> error "contract as mapping idx: should be cast to address"
-        SSArray _ -> error "arrays not supported"
+        TInteger _ _ -> "=?"
+        TAddress -> "=?"
+        TBoolean -> "=??"
+        TByteStr -> error "bytestrings not supported"
+        TArray _ _ -> error "arrays not supported"
+        TStruct _ -> error "structs not supported"
+        TContract _ -> error "contracts not supported" --TODO
 
 
 -- | produce a block of declarations from an interface
@@ -747,8 +750,8 @@ slotType (StorageMapping xs t) =
 slotType (StorageValue val) = valueType val
 
 valueType :: ValueType -> T.Text
-valueType (PrimitiveType t) = abiType t
-valueType (ContractType cid) = T.pack cid <.> "State" -- the type of a contract is its state record
+valueType (ValueType (TContract cid)) = T.pack cid <> "." <> "State" -- the type of a contract is its state record
+valueType (ValueType t) = abiType $ toAbiType t
 
 mappingIdxType :: ValueType -> T.Text
 mappingIdxType (PrimitiveType t) = abiType t
@@ -764,11 +767,13 @@ abiType a = error $ show a
 
 -- | coq syntax for a return type
 returnType :: TypedExp -> T.Text
-returnType (TExp SInteger _ _) = "Z"
-returnType (TExp SBoolean _ _) = "bool"
-returnType (TExp SByteStr _ _) = error "bytestrings not supported"
-returnType (TExp SContract _ _) = error "Contracts cannot be returned"
-returnType (TExp (SSArray _) _ _) = error "arrays not supported"
+returnType (TExp (TInteger _ _) _) = "Z"
+returnType (TExp TAddress _) = "Z"
+returnType (TExp TBoolean _) = "bool"
+returnType (TExp TByteStr _) = error "bytestrings not supported"
+returnType (TExp (TStruct _) _) = error "structs not supported"
+returnType (TExp (TContract _) _) = error "contracts not allowed as return types"
+returnType (TExp (TArray _ _) _) = error "arrays not supported"
 
 -- | default value for a given type
 -- this is used in cases where a value is not set in the constructor
@@ -781,8 +786,8 @@ defaultSlotValue (StorageMapping xs t) = parens $
 defaultSlotValue (StorageValue t) = defaultVal t
 
 defaultVal :: ValueType -> T.Text
-defaultVal (PrimitiveType t) = abiVal t
-defaultVal (ContractType _) = error "Contracts must be explicitly initialized"
+defaultVal (ValueType (TContract _)) = error "Contracts must be explicitly initialized"
+defaultVal (ValueType t) = abiVal $ toAbiType t
 
 abiVal :: AbiType -> T.Text
 abiVal (AbiUIntType _) = "0"
@@ -820,7 +825,7 @@ coqexp (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
 coqexp (UIntMin _ n) = parens $ "UINT_MIN" <+> T.pack (show n)
 coqexp (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
 
-coqexp (InRange _ t e) = coqexp (bound t e)
+coqexp (InRange _ vt e) = coqexp (bound vt e)
 
 -- polymorphic
 coqexp (VarRef _ whn _ i) = entry whn i
@@ -867,12 +872,11 @@ coqprop e = error "ill formed proposition:" <+> T.pack (show e)
 
 -- | coq syntax for a typed expression
 typedexp :: TypedExp -> T.Text
-typedexp (TExp _ _ e) = coqexp e
+typedexp (TExp _ e) = coqexp e
 
 entry :: Time 'Timed -> TItem k a -> T.Text
-entry _ (Item SByteStr _ _) = error "bytestrings not supported"
-entry Pre  (Item _ _ r) = ref stateVar r
-entry Post (Item _ _ r) = ref stateVar' r
+entry _ (Item TByteStr _) = error "bytestrings not supported"
+entry whn (Item _ r) = ref whn r
 
 ref :: T.Text -> Ref k -> T.Text
 ref refState (SVar _ cid name) = parens $ T.pack cid <.> T.pack name <+> refState

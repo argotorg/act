@@ -3,6 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {-|
 Module      : Syntax
@@ -76,7 +77,7 @@ isLocalLoc (Loc _ SStorage item) = isLocalItem item
 isLocalLoc (Loc _ SCalldata _) = False
 
 isLocalItem :: TItem a k t -> Bool
-isLocalItem (Item _ _ ref) = isLocalRef ref
+isLocalItem (Item _ ref) = isLocalRef ref
 
 isLocalRef :: Ref k t -> Bool
 isLocalRef (SVar _ _ _) = True
@@ -104,10 +105,10 @@ locFromUpdate :: StorageUpdate t -> Location t
 locFromUpdate (Update typ item _) = Loc typ SStorage item
 
 locsFromItem :: SRefKind k -> TItem a k t -> [Location t]
-locsFromItem k item = _Loc k item : concatMap locsFromTypedExp (ixsFromItem item)
+locsFromItem k item@(Item (toSType -> SType) _) = _Loc k item : concatMap locsFromTypedExp (ixsFromItem item)
 
 locsFromTypedExp :: TypedExp t -> [Location t]
-locsFromTypedExp (TExp _ _ e) = locsFromExp e
+locsFromTypedExp (TExp _ e) = locsFromExp e
 
 locsFromExp :: Exp a t -> [Location t]
 locsFromExp = nub . go
@@ -193,7 +194,7 @@ createsFromItem :: TItem k a t -> [Id]
 createsFromItem item = concatMap createsFromTypedExp (ixsFromItem item)
 
 createsFromTypedExp :: TypedExp t -> [Id]
-createsFromTypedExp (TExp _ _ e) = createsFromExp e
+createsFromTypedExp (TExp _ e) = createsFromExp e
 
 createsFromContract :: Contract t -> [Id]
 createsFromContract (Contract constr behvs) =
@@ -273,7 +274,7 @@ ethEnvFromItem :: TItem k a t -> [EthEnv]
 ethEnvFromItem = nub . concatMap ethEnvFromTypedExp . ixsFromItem
 
 ethEnvFromTypedExp :: TypedExp t -> [EthEnv]
-ethEnvFromTypedExp (TExp _ _ e) = ethEnvFromExp e
+ethEnvFromTypedExp (TExp _ e) = ethEnvFromExp e
 
 ethEnvFromExp :: Exp a t -> [EthEnv]
 ethEnvFromExp = nub . go
@@ -316,7 +317,7 @@ ethEnvFromExp = nub . go
       Address _ e' -> ethEnvFromExp e'
 
 idFromItem :: TItem a k t -> Id
-idFromItem (Item _ _ ref) = idFromRef ref
+idFromItem (Item _ ref) = idFromRef ref
 
 idFromRef :: Ref k t -> Id
 idFromRef (SVar _ _ x) = x
@@ -336,7 +337,7 @@ idsFromLocation :: Location t -> [String]
 idsFromLocation (Loc _ _ item) = idsFromItem item
 
 idsFromItem :: TItem a k t -> [String]
-idsFromItem (Item _ _ ref) = idsFromRef ref
+idsFromItem (Item _ ref) = idsFromRef ref
 
 idsFromRef :: Ref k t -> [String]
 idsFromRef (SVar _ _ x) = [x]
@@ -346,7 +347,7 @@ idsFromRef (SMapping _ e _ _) = idsFromRef e
 idsFromRef (SField _ e _ f) = f : idsFromRef e
 
 ixsFromItem :: TItem a k t -> [TypedExp t]
-ixsFromItem (Item _ _ item) = ixsFromRef item
+ixsFromItem (Item _ item) = ixsFromRef item
 
 ixsFromLocation :: Location t -> [TypedExp t]
 ixsFromLocation (Loc _ _ item) = ixsFromItem item
@@ -361,8 +362,8 @@ ixsFromRef (SField _ ref _ _) = ixsFromRef ref
 ixsFromUpdate :: StorageUpdate t -> [TypedExp t]
 ixsFromUpdate (TypedExplicit.Update _ item _) = ixsFromItem item
 
-itemType :: TItem a k t -> ActType
-itemType (Item t _ _) = actType t
+itemType :: TItem a k t -> TValueType a
+itemType (Item t _) = t -- fromAbiType $ toAbiType t -- TODO: cleanup, residue from STYPEs
 
 isIndexed :: TItem a k t -> Bool
 isIndexed item = isArrayItem item || isMappingItem item
@@ -371,7 +372,7 @@ isArrayLoc :: Location t -> Bool
 isArrayLoc (Loc _ _ item) = isArrayItem item
 
 isArrayItem :: TItem a k t -> Bool
-isArrayItem (Item _ _ ref) = isArrayRef ref
+isArrayItem (Item _ ref) = isArrayRef ref
 
 isArrayRef :: Ref k t -> Bool
 isArrayRef (SVar _ _ _) = False
@@ -384,7 +385,7 @@ isMappingLoc :: Location t -> Bool
 isMappingLoc (Loc _ _ item) = isMappingItem item
 
 isMappingItem :: TItem a k t -> Bool
-isMappingItem (Item _ _ ref) = isMappingRef ref
+isMappingItem (Item _ ref) = isMappingRef ref
 
 isMappingRef :: Ref k t -> Bool
 isMappingRef (SVar _ _ _) = False
@@ -439,7 +440,7 @@ posnFromExp e = case e of
   Address _ e' -> posnFromExp e'
 
 posnFromItem :: TItem a k t -> Pn
-posnFromItem (Item _ _ ref) = posnFromRef ref
+posnFromItem (Item _ ref) = posnFromRef ref
 
 posnFromRef :: Ref a k -> Pn
 posnFromRef (CVar p _ _) = p
@@ -463,28 +464,30 @@ arrayIdcs typ = map idx [0..(len - 1)]
 -- when interpreting the indices as digits of decreasing
 -- significance from outermost to innermost.
 expandItem :: TItem a k t -> [TItem (Base a) k t]
-expandItem (Item typ (PrimitiveType at) ref) = case flattenAbiType at of
-  (ba, Just shape) -> case ref of
-    SArray p r _ i -> (\i' -> Item btyp (PrimitiveType ba) $
-      SArray p r (PrimitiveType ba) (i ++ (zip ((TExp SInteger Atomic . LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape)) ) <$> arrayIdcs shape
-    r -> (\i' -> Item btyp (PrimitiveType ba) $
-      SArray nowhere r (PrimitiveType ba) (zip ((TExp SInteger Atomic . LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape) ) <$> arrayIdcs shape
-
-  (_, Nothing) -> [Item btyp (PrimitiveType at) ref]
-  where
-    btyp = flattenSType typ
-expandItem (Item typ (ContractType at) ref) = [Item btyp (ContractType at) ref]
-  where
-    btyp = flattenSType typ
+expandItem (Item typ@(TArray _ _) ref) =
+  let fvt = flattenValueType typ in
+  case fvt of
+  (btyp@(toSType -> SType), Just shape) -> 
+    case ref of
+      SArray p r _ i -> (\i' -> Item btyp $
+        SArray p r (ValueType btyp) (i ++ (zip ((TExp (TInteger 256 Unsigned). LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape)) ) <$> arrayIdcs shape
+      r -> (\i' -> Item btyp $
+        SArray nowhere r (ValueType btyp) (zip ((TExp (TInteger 256 Unsigned). LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape) ) <$> arrayIdcs shape
+  (btyp@(toSType -> SType), Nothing) -> [Item btyp ref]
+expandItem (Item (TStruct _) _) = error "TODO: expand structs"
+expandItem (Item typ r) =  [Item btyp r]
+  where (btyp, _) = flattenValueType typ
 
 -- | Expand an array expression to a list of expressions of its elements,
 -- The order of the returned elements is the same as 'expandItem's
-expandArrayExpr :: SType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)) t]
-expandArrayExpr (SSArray SInteger) (Array _ l) = l
-expandArrayExpr (SSArray SBoolean) (Array _ l) = l
-expandArrayExpr (SSArray SByteStr) (Array _ l) = l
-expandArrayExpr (SSArray SContract) (Array _ l) = l
-expandArrayExpr (SSArray s@(SSArray _)) (Array _ l) = concatMap (expandArrayExpr s) l
+expandArrayExpr :: TValueType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)) t]
+expandArrayExpr (TArray _ (TInteger _ _)) (Array _ l) = l
+expandArrayExpr (TArray _ TAddress) (Array _ l) = l
+expandArrayExpr (TArray _ TBoolean) (Array _ l) = l
+expandArrayExpr (TArray _ TByteStr) (Array _ l) = l
+expandArrayExpr (TArray _ (TStruct _)) (Array _ l) = l
+expandArrayExpr (TArray _ (TContract _)) (Array _ l) = l
+expandArrayExpr (TArray _ s@(TArray _ _)) (Array _ l) = concatMap (expandArrayExpr s) l
 expandArrayExpr _ (VarRef pn t k item) = VarRef pn t k <$> expandItem item
 expandArrayExpr typ (ITE pn tbool e1 e2) =
   (uncurry $ ITE pn tbool) <$> zip (expandArrayExpr typ e1) (expandArrayExpr typ e2)
@@ -602,18 +605,16 @@ isWild :: Case -> Bool
 isWild (Case _ (WildExp _) _) = True
 isWild _                      = False
 
-bound :: AbiType -> Exp AInteger t -> Exp ABoolean t
+bound :: TValueType AInteger -> Exp AInteger t -> Exp ABoolean t
 bound typ e = And nowhere (LEQ nowhere (lowerBound typ) e) $ LEQ nowhere e (upperBound typ)
 
-lowerBound :: forall t. AbiType -> Exp AInteger t
-lowerBound (AbiIntType a) = IntMin nowhere a
--- todo: other negatives?
+lowerBound :: forall t. TValueType AInteger -> Exp AInteger t
+lowerBound (TInteger a Signed) = IntMin nowhere a
+-- TODO: other negatives?
 lowerBound _ = LitInt nowhere 0
 
--- todo, the rest
-upperBound :: forall t. AbiType -> Exp AInteger t
-upperBound (AbiUIntType  n) = UIntMax nowhere n
-upperBound (AbiIntType   n) = IntMax nowhere n
-upperBound AbiAddressType   = UIntMax nowhere 160
-upperBound (AbiBytesType n) = UIntMax nowhere (8 * n)
-upperBound typ = error $ "upperBound not implemented for " ++ show typ
+-- TODO, the rest
+upperBound :: forall t. TValueType AInteger -> Exp AInteger t
+upperBound (TInteger n Unsigned) = UIntMax nowhere n
+upperBound (TInteger n Signed) = IntMax nowhere n
+upperBound TAddress   = UIntMax nowhere 160

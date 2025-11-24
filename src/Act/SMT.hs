@@ -6,6 +6,8 @@
 {-# Language RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Act.SMT (
   Solver(..),
@@ -58,7 +60,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Reader
 import Control.Monad
 
-import Data.List.NonEmpty (NonEmpty(..), (<|))
+import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe
 import Data.List
@@ -73,6 +75,7 @@ import Act.Type (globalEnv)
 
 import EVM.Solvers (Solver(..))
 import Data.Type.Equality ((:~:)(..), testEquality)
+import Debug.Trace
 
 --- ** Data ** ---
 
@@ -414,6 +417,7 @@ sendCommand (SolverInstance _ stdin stdout _ _) cmd =
   if null cmd || ";" `isPrefixOf` cmd then pure "success" -- blank lines and comments do not produce any output from the solver
   else do
     hPutStr stdin (cmd <> "\n")
+    --traceM cmd
     hFlush stdin
     hGetLine stdout
 
@@ -494,19 +498,17 @@ getCtorModel ctor solver = do
 
 collectArrayExps :: [TypedExp] -> TypedExp
 collectArrayExps tl = case tl of
-  (TExp styp1 shape1 _ ):_ -> TExp (SSArray styp1) newShape $ Array nowhere $ map (cmpType styp1) tl
+  (TExp styp1 _ ):_ -> TExp newType $ Array nowhere $ map (cmpType styp1) tl
     where
-      newShape = case shape1 of
-        Atomic -> Shaped $ NonEmpty.singleton $ length tl
-        Shaped tl' -> Shaped $ (length tl) <| tl'
+      newType = TArray (length tl) styp1
 
-      cmpType :: SType a -> TypedExp -> Exp a
-      cmpType styp (TExp styp' _ e') =
+      cmpType :: TValueType a -> TypedExp -> Exp a
+      cmpType styp (TExp styp' e') =
         maybe (error "Internal error: unreachable after typing") (\Refl -> e') $ testEquality styp styp'
   [] -> error "Internal error: cannot type empty array"
 
 -- | Gets a concrete value from the solver for all elements of an array
-getArrayExp :: SolverInstance -> SType a -> Id -> NonEmpty Int -> [Int] -> IO (TypedExp)
+getArrayExp :: SolverInstance -> TValueType a -> Id -> NonEmpty Int -> [Int] -> IO (TypedExp)
 getArrayExp solver typ name (h:|[]) idcs = collectArrayExps <$> typedExps
   where
     typedExps = mapM getArrayElement (map ((++) idcs . singleton)  [0..(h-1)])
@@ -521,10 +523,10 @@ getArrayExp solver typ name (h:|t) idcs = collectArrayExps <$> typedExps
 
 -- | Gets a concrete value from the solver for the given location
 getLocationValue :: SolverInstance -> Id -> When -> Location -> IO (Location, TypedExp)
-getLocationValue solver ifaceName whn loc@(Loc (flattenSType -> baseType) _ item@(Item _ (PrimitiveType at) _)) = do
-  output <- case flattenArrayAbiType at of
-    Nothing -> (parseModel baseType) <$> getValue solver name
-    Just (_, shape) -> getArrayExp solver baseType name shape []
+getLocationValue solver ifaceName whn loc@(Loc (flattenValueType -> (baseType, _)) _ item@(Item vt _)) = do
+  output <- case flattenValueType vt of
+    (_, Nothing) -> (parseModel baseType) <$> getValue solver name
+    (_, Just shape) -> getArrayExp solver baseType name shape []
   -- TODO: handle errors here...
   pure (loc, output)
   where
@@ -532,28 +534,28 @@ getLocationValue solver ifaceName whn loc@(Loc (flattenSType -> baseType) _ item
             if isIndexed item
             then select whn item (NonEmpty.fromList $ ixsFromItem item)
             else nameFromItem whn item
-getLocationValue solver ifaceName whn loc@(Loc styp _ item@(Item _ (ContractType _) _)) = do
-  output <- (parseModel styp) <$> getValue solver name
-  -- TODO: handle errors here...
-  pure (loc, output)
-  where
-    name = withInterface ifaceName $
-            if isIndexed item
-            then select whn item (NonEmpty.fromList $ ixsFromItem item)
-            else nameFromItem whn item
+--getLocationValue solver ifaceName whn loc@(Loc styp _ item@(Item _ (ContractType _) _)) = do
+--  output <- (parseModel styp) <$> getValue solver name
+--  -- TODO: handle errors here...
+--  pure (loc, output)
+--  where
+--    name = withInterface ifaceName $
+--            if isIndexed item
+--            then select whn item (NonEmpty.fromList $ ixsFromItem item)
+--            else nameFromItem whn item
 
 -- | Gets a concrete value from the solver for the given calldata argument
 getCalldataValue :: SolverInstance -> Id -> Decl -> IO (Decl, TypedExp)
 getCalldataValue solver ifaceName decl@(Decl (argToAbiType -> vt) _) =
   case flattenArrayAbiType vt of
-    Just (FromAbi baseType, shape) -> do
+    Just (fromAbiType' -> ValueType baseType, shape) -> do
       array' <- getArrayExp solver baseType name shape []
       pure (decl, array')
       where
         name = nameFromDecl ifaceName decl
     Nothing ->
       case vt of
-        (FromAbi tp) -> do
+        (fromAbiType' -> ValueType tp) -> do
           val <- parseModel tp <$> getValue solver (nameFromDecl ifaceName decl)
           pure (decl, val)
 
@@ -562,7 +564,7 @@ getEnvironmentValue :: SolverInstance -> EthEnv -> IO (EthEnv, TypedExp)
 getEnvironmentValue solver env = do
   output <- getValue solver (prettyEnv env)
   let val = case lookup env globalEnv of
-        Just (FromAct typ) -> parseModel typ output
+        Just t -> parseModel t output -- TODO: is this type accurate ?
         _ -> error $ "Internal Error: could not determine a type for" <> show env
   pure (env, val)
 
@@ -571,13 +573,15 @@ getValue :: SolverInstance -> String -> IO String
 getValue solver name = sendCommand solver $ "(get-value (" <> name <> "))"
 
 -- | Parse the result of a call to getValue as the supplied type.
-parseModel :: SType a -> String -> TypedExp
+parseModel :: TValueType a -> String -> TypedExp
 parseModel = \case
-  SInteger -> _TExp Atomic . LitInt  nowhere . read       . parseSMTModel
-  SBoolean -> _TExp Atomic . LitBool nowhere . readBool   . parseSMTModel
-  SByteStr -> _TExp Atomic . ByLit   nowhere . fromString . parseSMTModel
-  SContract -> _TExp Atomic . LitInt   nowhere . read . parseSMTModel
-  SSArray _ -> error "TODO"
+  t@(TInteger _ _) -> TExp t . LitInt  nowhere . read       . parseSMTModel
+  TBoolean -> TExp TBoolean . LitBool nowhere . readBool   . parseSMTModel
+  TByteStr -> TExp TByteStr . ByLit   nowhere . fromString . parseSMTModel
+  TAddress -> TExp TAddress . LitInt   nowhere . read . parseSMTModel
+  (TArray _ _) -> error "TODO array parse model"
+  (TStruct _) -> error "TODO struct parse model"
+  (TContract c) -> error "TODO contract parse model"
   where
     readBool "true" = True
     readBool "false" = False
@@ -614,7 +618,9 @@ mkEqualityAssertion l1 l2 = foldr mkAnd (LitBool nowhere True) (zipWith eqIdx ix
     ix2 = ixsFromLocation l2
 
     eqIdx :: TypedExp -> TypedExp -> Exp ABoolean
-    eqIdx (TExp SInteger _ e1) (TExp SInteger _ e2) = Eq nowhere SInteger e1 e2
+    -- TODO: check if integer type matters here, maybe not if all equalities are translated the same, hopefully
+    eqIdx (TExp (TInteger _ _) e1) (TExp (TInteger _ _) e2) = Eq nowhere (TInteger 256 Signed) e1 e2
+    eqIdx (TExp TAddress e1) (TExp TAddress e2) = Eq nowhere (TInteger 256 Signed) e1 e2
     eqIdx _ _ = error "Internal error: Expected Integer index expressions"
 
     mkAnd r c = And nowhere c r
@@ -634,7 +640,7 @@ mkConstantAssertion name updates loc@(Loc _ _ item) = constancy
 
     constancy = case updates of
       [] -> "(assert (= "  <> locSMTRep Pre <> " " <> locSMTRep Post <> "))"
-      _  -> "(assert (=> " <> withInterface name (expToSMT2 SBoolean isConstantAssertion)
+      _  -> "(assert (=> " <> withInterface name (expToSMT2 TBoolean isConstantAssertion)
                            <> " (= " <> locSMTRep Pre <> " " <> locSMTRep Post <> ")))"
 
     mkAnd r c = And nowhere (Neg nowhere c) r
@@ -653,7 +659,7 @@ encodeUpdate ifaceName (Update typ item expr) =
   in "(assert (= " <> postentry <> " " <> expression <> "))"
 
 declareLoc :: Id -> [When] -> Location -> [SMT2]
-declareLoc ifaceName times (Loc _ rk item@(Item _ _ ref)) = (flip declareRef ref) <$> names
+declareLoc ifaceName times (Loc _ rk item@(Item _ ref)) = (flip declareRef ref) <$> names
   where
     names = case rk of
       SStorage -> flip nameFromSItem item <$> times
@@ -677,11 +683,11 @@ declareLocation ifaceName item = declareLoc ifaceName [Pre, Post] item
 
 -- | produces an SMT2 expression declaring the given decl as a symbolic constant
 declareArg :: Id -> Decl -> SMT2
-declareArg ifaceName d@(Decl (argToAbiType -> typ) _) =
-  case flattenArrayAbiType typ of
-    Just (baseTyp, shape) ->
-       array (nameFromDecl ifaceName d) (length shape) (fromAbiType baseTyp)
-    Nothing -> constant (nameFromDecl ifaceName d) (fromAbiType typ)
+declareArg ifaceName d@(Decl atyp@((fromAbiType' . argToAbiType) -> ValueType typ) _) =
+  case flattenArrayAbiType atyp of
+    Just (fromAbiType' -> ValueType baseTyp, shape) ->
+       array (nameFromDecl ifaceName d) (length shape) baseTyp
+    Nothing -> constant (nameFromDecl ifaceName d) typ
 
 -- | produces an SMT2 expression declaring the given EthEnv as a symbolic constant
 declareEthEnv :: EthEnv -> SMT2
@@ -690,28 +696,28 @@ declareEthEnv env = constant (prettyEnv env) tp
 
 -- | encodes a typed expression as an smt2 expression
 typedExpToSMT2 :: TypedExp -> Ctx SMT2
-typedExpToSMT2 (TExp typ _ e) = expToSMT2 typ e
+typedExpToSMT2 (TExp typ e) = expToSMT2 typ e
 
 -- | encodes the given Exp as an smt2 expression
-expToSMT2 :: SType a -> Exp a -> Ctx SMT2
+expToSMT2 :: forall (a :: ActType). TValueType a -> Exp a -> Ctx SMT2
 expToSMT2 typ expr = case expr of
   -- booleans
-  And _ a b -> binop "and" SBoolean SBoolean a b
-  Or _ a b -> binop "or" SBoolean SBoolean a b
-  Impl _ a b -> binop "=>" SBoolean SBoolean a b
-  Neg _ a -> unop "not" SBoolean a
-  LT _ a b -> binop "<" SInteger SInteger a b
-  LEQ _ a b -> binop "<=" SInteger SInteger a b
-  GEQ _ a b -> binop ">=" SInteger SInteger a b
-  GT _ a b -> binop ">" SInteger SInteger a b
+  And _ a b -> binop "and" TBoolean TBoolean a b
+  Or _ a b -> binop "or" TBoolean TBoolean a b
+  Impl _ a b -> binop "=>" TBoolean TBoolean a b
+  Neg _ a -> unop "not" TBoolean a
+  LT _ a b -> binop "<" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  LEQ _ a b -> binop "<=" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  GEQ _ a b -> binop ">=" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  GT _ a b -> binop ">" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
   LitBool _ a -> pure $ if a then "true" else "false"
 
   -- integers
-  Add _ a b -> binop "+" SInteger SInteger a b
-  Sub _ a b -> binop "-" SInteger SInteger a b
-  Mul _ a b -> binop "*" SInteger SInteger a b
-  Div _ a b -> binop "div" SInteger SInteger a b
-  Mod _ a b -> binop "mod" SInteger SInteger a b
+  Add _ a b -> binop "+" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  Sub _ a b -> binop "-" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  Mul _ a b -> binop "*" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  Div _ a b -> binop "div" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
+  Mod _ a b -> binop "mod" (TInteger 256 Unsigned) (TInteger 256 Unsigned) a b
   Exp _ a b -> expToSMT2 typ $ simplifyExponentiation a b
   LitInt _ a -> pure $ if a >= 0
                       then show a
@@ -726,23 +732,25 @@ expToSMT2 typ expr = case expr of
   InRange _ t e -> expToSMT2 typ (bound t e)
 
   -- bytestrings
-  Cat _ a b -> binop "str.++" SByteStr SByteStr a b
-  Slice p a start end -> triop "str.substr" SByteStr SInteger SInteger a start (Sub p end start)
+  Cat _ a b -> binop "str.++" TByteStr TByteStr a b
+  Slice p a start end -> triop "str.substr" TByteStr (TInteger 256 Unsigned) (TInteger 256 Unsigned) a start (Sub p end start)
   ByStr _ a -> pure a
   ByLit _ a -> pure $ show a
   ByEnv _ a -> pure $ prettyEnv a
 
   Array _ l -> case typ of
-    (SSArray typ') ->
+    (TArray _ typ') ->
       [ foldr (\s1 s2 -> "(store " <> s2 <> " " <> show (fst s1 :: Integer) <> " " <> snd s1 <> ")" )
             (defaultConst typ) $ zip [0..] l' | l' <- mapM (expToSMT2 typ') l ]
         where
-          defaultConst :: SType a -> SMT2
-          defaultConst t@(SSArray t') = "((as const " <> (sType $ actType t) <> ") " <> (defaultConst t') <> ")"
-          defaultConst SInteger = "0"
-          defaultConst SBoolean = "false"
-          defaultConst SByteStr = error "TODO"
-          defaultConst SContract = "0"
+          defaultConst :: TValueType a -> SMT2
+          defaultConst t@(TArray _ t') = "((as const " <> (vType t) <> ") " <> (defaultConst t') <> ")"
+          defaultConst (TInteger _ _) = "0"
+          defaultConst TBoolean = "false"
+          defaultConst TByteStr = error "TODO"
+          defaultConst TAddress = error "TODO"
+          defaultConst (TContract _) = error "TODO"
+          defaultConst (TStruct _) = error "TODO"
 
   -- contracts
   Create _ _ _ -> pure "0" -- TODO just a dummy address for now
@@ -751,36 +759,36 @@ expToSMT2 typ expr = case expr of
   --  For array comparisons, expands both arrays to their elements and compares elementwise,
   --  as SMT's default array equality requires equality for all possible Int values,
   --  not only for indices within defined bounds. Same for Neq.
-  Eq p s@(SSArray _) a b -> expToSMT2 SBoolean expanded
+  Eq p s@(TArray _ _) a b -> expToSMT2 TBoolean expanded
     where
       a' = expandArrayExpr s a
       b' = expandArrayExpr s b
-      s' = flattenSType s
+      s' = fst $ flattenValueType s
       eqs = (uncurry $ Eq p s') <$> zip a' b'
       expanded = foldr (And nowhere) (LitBool nowhere True) eqs
   Eq _ s a b -> binop "=" s s a b
 
-  NEq p s@(SSArray _) a b -> expToSMT2 SBoolean expanded
+  NEq p s@(TArray _ _) a b -> expToSMT2 TBoolean expanded
     where
       a' = expandArrayExpr s a
       b' = expandArrayExpr s b
-      s' = flattenSType s
+      s' = fst $ flattenValueType s
       eqs = (uncurry $ NEq p s') <$> zip a' b'
       expanded = foldr (Or nowhere) (LitBool nowhere False) eqs
-  NEq p s a b -> unop "not" SBoolean (Eq p s a b)
+  NEq p s a b -> unop "not" TBoolean (Eq p s a b)
 
-  ITE _ a b c -> triop "ite" SBoolean typ typ a b c
+  ITE _ a b c -> triop "ite" TBoolean typ typ a b c
   VarRef _ whn _ item -> entry whn item
   Address _ e -> expToSMT2 SContract e
   where
-    unop :: String -> SType a -> Exp a -> Ctx SMT2
+    unop :: String -> TValueType a -> Exp a -> Ctx SMT2
     unop op t a = [ "(" <> op <> " " <> a' <> ")" | a' <- expToSMT2 t a]
 
-    binop :: String -> SType a -> SType b -> Exp a -> Exp b -> Ctx SMT2
+    binop :: String -> TValueType a -> TValueType b -> Exp a -> Exp b -> Ctx SMT2
     binop op t1 t2 a b = [ "(" <> op <> " " <> a' <> " " <> b' <> ")"
                        | a' <- expToSMT2 t1 a, b' <- expToSMT2 t2 b]
 
-    triop :: String -> SType a -> SType b -> SType c -> Exp a -> Exp b -> Exp c -> Ctx SMT2
+    triop :: String -> TValueType a -> TValueType b -> TValueType c -> Exp a -> Exp b -> Exp c -> Ctx SMT2
     triop op t1 t2 t3 a b c = [ "(" <> op <> " " <> a' <> " " <> b' <> " " <> c' <> ")"
                          | a' <- expToSMT2 t1 a, b' <- expToSMT2 t2 b, c' <- expToSMT2 t3 c]
 
@@ -801,25 +809,25 @@ simplifyExponentiation a b = fromMaybe (error "Internal Error: no support for sy
     evalb = eval b -- TODO is this actually necessary to prevent double evaluation?
 
 -- | declare a constant in smt2
-constant :: Id -> ActType -> SMT2
-constant name tp = "(declare-const " <> name <> " " <> sType tp <> ")"
+constant :: Id -> TValueType a -> SMT2
+constant name tp = "(declare-const " <> name <> " " <> vType tp <> ")"
 
 -- | encode the given boolean expression as an assertion in smt2
 mkAssert :: Id -> Exp ABoolean -> SMT2
-mkAssert c e = "(assert " <> withInterface c (expToSMT2 SBoolean e) <> ")"
+mkAssert c e = "(assert " <> withInterface c (expToSMT2 TBoolean e) <> ")"
 
 -- | declare a (potentially nested) array in smt2
-array :: Id -> Int -> ActType -> SMT2
+array :: Id -> Int -> TValueType a -> SMT2
 array name argNum ret = "(declare-const " <> name <> " " <> valueDecl argNum <> ")"
   where
-    valueDecl n | n <= 0 = sType ret
+    valueDecl n | n <= 0 = vType ret
     valueDecl n = "(Array " <> sType AInteger <> " " <> valueDecl (n-1) <> ")"
 
 -- | declare a (potentially nested) array representing a mapping in smt2
-mappingArray :: Id -> [TypedExp] -> ActType -> SMT2
+mappingArray :: Id -> [TypedExp] -> TValueType a -> SMT2
 mappingArray name args ret = "(declare-const " <> name <> valueDecl args <> ")"
   where
-    valueDecl [] = sType ret
+    valueDecl [] = vType ret
     valueDecl (h : t) = "(Array " <> sType' h <> " " <> valueDecl t <> ")"
 
 -- | encode an array lookup with Integer indices in smt2
@@ -838,18 +846,29 @@ sType :: ActType -> SMT2
 sType AInteger = "Int"
 sType ABoolean = "Bool"
 sType AByteStr = "String"
-sType AContract = "Int"
+sType AStruct = error "TODO"
+sType AContract = error "TODO"
 sType (AArray a) = "(Array " <> sType AInteger <> " " <> sType a <> ")"
+
+vType :: TValueType a -> SMT2
+vType (TInteger _ _) = "Int"
+vType TBoolean = "Bool"
+vType TByteStr = "String"
+vType TAddress = "Int"
+vType (TContract _) = "Int"
+vType (TStruct _) = error "TODO"
+vType (TArray _ a) = "(Array " <> sType AInteger <> " " <> vType a <> ")"
+
 
 -- | act -> smt2 type translation
 sType' :: TypedExp -> SMT2
-sType' (TExp t _ _) = sType $ actType t
+sType' (TExp t _) = vType t
 
 --- ** Variable Names ** ---
 
 -- Construct the smt2 variable name for a given storage item
 nameFromSItem :: When -> TItem a Storage -> Id
-nameFromSItem whn (Item _ _ ref) = nameFromSRef whn ref
+nameFromSItem whn (Item _ ref) = nameFromSRef whn ref
 
 nameFromSRef :: When -> Ref Storage -> Id
 nameFromSRef whn (SVar _ c name) = c @@ name @@ show whn
@@ -858,7 +877,7 @@ nameFromSRef whn (SMapping _ e _ _) = nameFromSRef whn e
 nameFromSRef whn (SField _ ref c x) = nameFromSRef whn ref @@ c @@ x
 
 nameFromCItem :: Id -> TItem a Calldata -> Id
-nameFromCItem behvName (Item _ _ ref) = nameFromCRef behvName ref
+nameFromCItem behvName (Item _ ref) = nameFromCRef behvName ref
 
 nameFromCRef :: Id -> Ref Calldata -> Id
 nameFromCRef behvName (CVar _ _ name) = behvName @@ name
@@ -867,7 +886,7 @@ nameFromCRef behvName (SMapping _ e _ _) = nameFromCRef behvName e
 nameFromCRef behvName (SField _ ref c x) = nameFromCRef behvName ref @@ c @@ x
 
 nameFromItem ::When ->  TItem k a -> Ctx Id
-nameFromItem whn (Item _ _ ref) = nameFromRef whn ref
+nameFromItem whn (Item _ ref) = nameFromRef whn ref
 
 nameFromRef :: When -> Ref k -> Ctx Id
 nameFromRef _ (CVar _ _ name) = nameFromVarId name

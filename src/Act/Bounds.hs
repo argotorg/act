@@ -122,50 +122,50 @@ mkEthEnvBounds vars = catMaybes $ mkBound <$> nub vars
   where
     mkBound :: EthEnv -> Maybe (Exp ABoolean)
     mkBound e = case lookup e globalEnv of
-      Just AInteger -> Just $ bound (toAbiType e) (IntEnv nowhere e)
+      Just t -> Just $ bound t (IntEnv nowhere e)
       _ -> Nothing
 
-    toAbiType :: EthEnv -> AbiType
-    toAbiType env = case env of
-      Caller -> AbiAddressType
-      Callvalue -> AbiUIntType 256
-      Calldepth -> AbiUIntType 10
-      Origin -> AbiAddressType
-      Blockhash -> AbiBytesType 32
-      Blocknumber -> AbiUIntType 256
-      Difficulty -> AbiUIntType 256
-      Chainid -> AbiUIntType 256
-      Gaslimit -> AbiUIntType 256
-      Coinbase -> AbiAddressType
-      Timestamp -> AbiUIntType 256
-      This -> AbiAddressType
-      Nonce -> AbiUIntType 256
+--    toValueType :: EthEnv -> TValueType AInteger
+--    toValueType env = case env of
+--      Caller -> TAddress
+--      Callvalue -> TInteger 256 Unsigned
+--      Calldepth -> TInteger 80 Unsigned
+--      Origin -> TAddress
+--      Blockhash -> TInteger 256 Unsigned --AbiBytesType 32
+--      Blocknumber -> TInteger 256 Unsigned
+--      Difficulty -> TInteger 256 Unsigned
+--      Chainid -> TInteger 256 Unsigned
+--      Gaslimit -> TInteger 256 Unsigned
+--      Coinbase -> TAddress
+--      Timestamp -> TInteger 256 Unsigned
+--      This -> TAddress
+--      Nonce -> TInteger 256 Unsigned
 
 -- | Extracts bounds from the AbiTypes of Integer variables in storage
 mkStorageBounds :: [StorageUpdate] -> When -> [Exp ABoolean]
 mkStorageBounds refs t = concatMap mkBound refs
   where
     mkBound :: StorageUpdate -> [Exp ABoolean]
-    mkBound (Update SInteger item _) = [mkSItemBounds t item]
-    mkBound (Update typ item@(Item _ (PrimitiveType at) _) _) | isJust $ flattenArrayAbiType at =
-      maybe [] (\Refl -> mkSItemBounds t <$> expandItem item) $ testEquality (flattenSType typ) SInteger
+    mkBound (Update (TInteger _ _) item _) = [mkSItemBounds t item]
+    mkBound (Update TAddress item _) = [mkSItemBounds t item]
+    mkBound (Update typ item@(Item (TArray _ _) _) _) =
+      maybe [] (\Refl -> mkSItemBounds t <$> expandItem item) $ testEquality (toSType $ fst $ flattenValueType typ) SInteger
     mkBound _ = []
 
 mkSItemBounds :: When -> TItem AInteger Storage -> Exp ABoolean
-mkSItemBounds whn item@(Item _ (PrimitiveType vt) _) = bound vt (VarRef nowhere whn SStorage item)
-mkSItemBounds _ (Item _ (ContractType _) _) = LitBool nowhere True
+mkSItemBounds whn item@(Item vt _) = bound vt (VarRef nowhere whn SStorage item)
 
 mkCItemBounds :: TItem AInteger Calldata -> Exp ABoolean
-mkCItemBounds item@(Item _ (PrimitiveType vt) _) = bound vt (VarRef nowhere Pre SCalldata item)
-mkCItemBounds (Item _ (ContractType _) _) = LitBool nowhere True
+mkCItemBounds item@(Item vt _) = bound vt (VarRef nowhere Pre SCalldata item)
 
 mkLocationBounds :: [Location] -> [Exp ABoolean]
 mkLocationBounds refs = concatMap mkBound refs
   where
     mkBound :: Location -> [Exp ABoolean]
-    mkBound (Loc SInteger rk item) = [mkItemBounds rk item]
-    mkBound (Loc typ rk item@(Item _ (PrimitiveType at) _)) | isJust $ flattenArrayAbiType at =
-      maybe [] (\Refl -> mkItemBounds rk <$> expandItem item) $ testEquality (flattenSType typ) SInteger
+    mkBound (Loc (TInteger _ _) rk item) = [mkItemBounds rk item]
+    mkBound (Loc TAddress rk item) = [mkItemBounds rk item]
+    mkBound (Loc typ rk item@(Item (TArray _ _) _)) =
+      maybe [] (\Refl -> mkItemBounds rk <$> expandItem item) $ testEquality (toSType $ fst $ flattenValueType typ) SInteger
     mkBound _ = []
 
     mkItemBounds :: SRefKind k -> TItem AInteger k -> Exp ABoolean
@@ -174,11 +174,11 @@ mkLocationBounds refs = concatMap mkBound refs
 
 mkCallDataBounds :: [Decl] -> [Exp ABoolean]
 mkCallDataBounds = concatMap $ \(Decl argtyp name) -> case argtyp of
-  (AbiArg typ) ->
-    case typ of
+  (AbiArg typ) -> case typ of
       -- Array element bounds are applied lazily when needed in mkCalldataLocationBounds
-      (AbiArrayType _ _) -> []
-      _ -> case fromAbiType typ of
-            AInteger -> [bound typ (_Var typ name)]
-            _ -> []
+    (AbiArrayType _ _) -> []
+    _ -> case fromAbiType' typ of
+         ValueType t@(TInteger _ _) -> [bound t (_Var t name)]
+         ValueType TAddress -> [bound TAddress (_Var TAddress name)]
+         _ -> []
   (ContractArg _ cid) -> [bound AbiAddressType (Address cid (_Var AbiAddressType name))]
