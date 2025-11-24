@@ -21,7 +21,7 @@ import Data.Char (toLower)
 data Timing = Timed | Untimed
 
 -- | Encodes choice between explicitly referring to the pre-/post-state, or not.
-data Time t where
+data Time where
   Pre     :: Time Timed
   Post    :: Time Timed
   Neither :: Time Untimed

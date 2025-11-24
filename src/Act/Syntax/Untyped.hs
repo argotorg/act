@@ -6,7 +6,6 @@ module Act.Syntax.Untyped (module Act.Syntax.Untyped, module Act.Syntax.Types) w
 
 import Data.Aeson
 import Data.List (intercalate)
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Text as T (pack)
 
 import EVM.ABI
@@ -21,10 +20,10 @@ newtype Act = Main [Contract]
 data Contract = Contract Constructor [Transition]
   deriving (Eq, Show)
 
-data Constructor = Constructor Pn Id Interface Iff Creates Ensures Invariants
+data Constructor = Constructor Pn Id Interface Iff (Cases Creates) Ensures Invariants
   deriving (Eq, Show)
 
-data Transition = Transition Pn Id Id Interface Iff Cases Ensures
+data Transition = Transition Pn Id Id Interface Iff (Cases (StorageUpdates, Maybe Expr)) Ensures
   deriving (Eq, Show)
 
 type Iff = [Expr]
@@ -39,24 +38,22 @@ data Interface = Interface Id [Decl]
 instance Show Interface where
   show (Interface a d) = a <> "(" <> intercalate ", " (fmap show d) <> ")"
 
-newtype Cases = Branches [Case]
+type Cases a = [Case a]
+  
+data Case a = Case Pn Expr a
   deriving (Eq, Show)
 
-data Case = Case Pn Expr [StorageUpdate] (Maybe Expr)
+type Creates = [Assign]
+  
+data StorageUpdate = Update Ref Expr
   deriving (Eq, Show)
 
-newtype Creates = Creates [Assign]
+type StorageUpdates = [StorageUpdate]
+
+data StorageVar = StorageVar Pn ValueType Id
   deriving (Eq, Show)
 
-data StorageUpdate
-  = Update Entry Expr
-  deriving (Eq, Show)
-
-data Assign = AssignVal StorageVar Expr | AssignMapping StorageVar [Mapping]
-  deriving (Eq, Show)
-
-data StorageVar = StorageVar Pn SlotType Id
-  deriving (Eq, Show)
+type Assign = (StorageVar, Expr)
 
 data Decl = Decl ArgType Id
   deriving (Eq, Ord)
@@ -64,13 +61,12 @@ data Decl = Decl ArgType Id
 data ArgType = AbiArg AbiType | ContractArg Pn Id
   deriving (Eq, Ord, Show)
 
-data Entry
-  = EVar Pn Id
-  | EIndexed Pn Entry [Expr]
-  | EField Pn Entry Id
-  deriving (Eq, Show)
-
-data Mapping = Mapping Expr Expr
+data Ref
+  = RVar Pn Id
+  | RVarPre Pn Id
+  | RVarPost Pn Id
+  | RIndex Pn Ref [Expr]
+  | RField Pn Ref Id
   deriving (Eq, Show)
 
 data Expr
@@ -91,10 +87,8 @@ data Expr
   | EDiv Pn Expr Expr
   | EMod Pn Expr Expr
   | EExp Pn Expr Expr
-  | EUTEntry Entry
-  | EPreEntry Entry
-  | EPostEntry Entry
-  | ECreate Pn Id [Expr]
+  | ERef Ref
+  | ECreate Pn Id [Expr] (Maybe Expr)
   | EArray Pn [Expr]
   | ListConst Expr
   | ECat Pn Expr Expr
@@ -109,60 +103,29 @@ data Expr
   | IntLit Pn Integer
   | BoolLit Pn Bool
   | EInRange Pn AbiType Expr
+  | AddrOf Pn Expr
+  | Mapping Pn [(Expr, Expr)]
+  | MappingUpd Pn Ref [(Expr, Expr)]
   deriving (Eq, Show)
-
---data ValueType
---  = ContractType Id
---  | PrimitiveType AbiType
---  deriving Eq
---
---instance Show ValueType where
---  show (ContractType c) = c
---  show (PrimitiveType t) = show t
-
-data SlotType
-  = StorageMapping (NonEmpty ValueType) ValueType
-  | StorageValue ValueType
-  deriving (Eq)
-
-instance Show SlotType where
- show (StorageValue t) = show t
- show (StorageMapping s t) =
-   foldr
-   (\x y ->
-       "mapping("
-       <> show x
-       <> " => "
-       <> y
-       <> ")")
-   (show t) s
 
 data EthEnv
   = Caller
   | Callvalue
-  | Calldepth
   | Origin
-  | Blockhash
-  | Blocknumber
-  | Difficulty
-  | Chainid
-  | Gaslimit
-  | Coinbase
-  | Timestamp
   | This
-  | Nonce
+--   | Calldepth
+--   | Blockhash
+--   | Blocknumber
+--   | Difficulty
+--   | Chainid
+--   | Gaslimit
+--   | Coinbase
+--   | Timestamp
+--   | Nonce
   deriving (Show, Eq)
 
 instance Show Decl where
   show (Decl t a) = show t <> " " <> a
-
-
-instance ToJSON SlotType where
-  toJSON (StorageValue t) = object ["kind" .= String "ValueType"
-                                   , "valueType" .= toJSON t]
-  toJSON (StorageMapping ixTypes resType) = object [ "kind" .= String "MappingType"
-                                                   , "ixTypes" .= toJSON ixTypes
-                                                   , "resType" .= toJSON resType]
 
 
 instance ToJSON (TValueType a) where
@@ -181,6 +144,10 @@ instance ToJSON (TValueType a) where
   toJSON (TArray n t)             = object [ "type" .= String "Array"
                                            , "arrayType" .= toJSON t
                                            , "size" .= String (T.pack $ show n) ]
+  toJSON (TMapping k v)           = object [ "type" .= String "Mapping"
+                                           , "keyType" .= toJSON k
+                                           , "valueType" .= toJSON v ]
+                                           
 instance ToJSON ValueType where
   toJSON (ValueType vt)           = toJSON vt
 
