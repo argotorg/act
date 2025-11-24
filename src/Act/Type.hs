@@ -471,7 +471,7 @@ checkExpr env t1 e =
     maybe (maybeCast (getPosn e) t1 t2) (\Refl -> pure te) $ relaxedIntCheck t1 t2)
     where
       maybeCast :: Pn -> TValueType a -> TValueType b -> Exp b t -> Err (Exp a t)
-      maybeCast pn TInteger (TContract c) te = pure $ Address pn c te) --TODO: is pn correct here?
+      maybeCast pn TInteger (TContract c) te = pure $ Address pn c te --TODO: is pn correct here?
       -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array of contracts?
       maybeCast pn t1' t2 _ = typeMismatchErr pn t1' t2
 

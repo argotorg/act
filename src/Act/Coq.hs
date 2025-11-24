@@ -144,7 +144,7 @@ extStep main store = inductive
     localStore = contractStore main store
 
     substep :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    substep var (StorageValue (ContractType cid), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> envVar' <+> stateDecl'), body')
+    substep var (StorageValue (TContract cid), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> envVar' <+> stateDecl'), body')
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
@@ -161,7 +161,7 @@ extStep main store = inductive
     substep _ _ = Nothing
 
     subBounds :: Id -> Id -> (SlotType, Integer) -> Maybe T.Text
-    subBounds stepVar var (StorageValue (ContractType cid), _) | var /= stepVar = Just $ T.pack cid <.> "integerBoundsRec" <+> parens (T.pack var <+> stateVar)
+    subBounds stepVar var (StorageValue (TContract cid), _) | var /= stepVar = Just $ T.pack cid <.> "integerBoundsRec" <+> parens (T.pack var <+> stateVar)
     subBounds _ _ _ = Nothing
       
 
@@ -198,7 +198,7 @@ contractAddressIn name store = inductive
     localStore = contractStore name store
 
     subCAddr :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    subCAddr var (StorageValue (ContractType cid), _) = Just ("addressOf_" <> varp, Just $ parens ("p : address") <+> stateDecl, body')
+    subCAddr var (StorageValue (TContract cid), _) = Just ("addressOf_" <> varp, Just $ parens ("p : address") <+> stateDecl, body')
       where
         varp = T.pack var
         body' = indent 2 . implication $
@@ -219,13 +219,13 @@ addressIn name store = inductive
     localStore = contractStore name store
 
     subAddr :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    subAddr var (StorageValue (PrimitiveType AbiAddressType), _) =
+    subAddr var (StorageValue TAddress, _) =
       let varp = T.pack var in
       Just ("address_" <> varp, Just stateDecl, indent 5 $ addressInType <+>  parens (varp <+> stateVar) <+> stateVar)
     subAddr _ _ = Nothing
 
 slotContractName :: SlotType -> Maybe Id
-slotContractName (StorageValue (ContractType cid)) = Just cid
+slotContractName (StorageValue (TContract cid)) = Just cid
 slotContractName _ = Nothing
 
 noAliasing :: Id -> Store -> T.Text
@@ -267,22 +267,18 @@ intBounds name store = inductive
     localStore = contractStore name store
 
     go :: Id -> (SlotType, Integer) -> Maybe T.Text
-    go v (StorageValue (ContractType cid), _) = Just $
+    go v (StorageValue (TContract cid), _) = Just $
       "0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar) <+> "<= UINT_MAX 160"
-    go v (StorageValue (PrimitiveType (AbiUIntType n)), _) = Just $
+    go v (StorageValue (TInteger n Unsigned), _) = Just $
       "0 <=" <+> T.pack v <+> stateVar <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageValue (PrimitiveType (AbiIntType n)), _) = Just $
+    go v (StorageValue (TInteger n Signed), _) = Just $
       "INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> "<= INT_MAX" <+> T.pack (show n)
-    go v (StorageValue (PrimitiveType (AbiBytesType n)), _) = Just $
-      "0 <=" <+> T.pack v <+> stateVar <+> "<= UINT_MAX" <+> T.pack (show (8*n))
-    go v (StorageMapping is (ContractType cid), _) = Just $ parens $
+    go v (StorageMapping is (TContract cid), _) = Just $ parens $
       "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar <+> ixs (length is)) <+> "<= UINT_MAX 160"
-    go v (StorageMapping is (PrimitiveType (AbiUIntType n)), _) = Just $ parens $
+    go v (StorageMapping is (TInteger n Unsigned), _) = Just $ parens $
       "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (PrimitiveType (AbiIntType n)), _) = Just $ parens $
+    go v (StorageMapping is (TInteger n Signed), _) = Just $ parens $
       "forall" <+> ixs (length is) <> ", INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= INT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (PrimitiveType (AbiBytesType n)), _) = Just $ parens $
-      "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= UINT_MAX" <+> T.pack (show (n * 8))
     go _ _ = Nothing
 
     ixs n = T.unwords $ T.pack . (<>) "i" . show <$> [0..(n-1)]
@@ -296,24 +292,20 @@ intBoundsRec name store = inductive
     localStore = contractStore name store
 
     go :: Id -> (SlotType, Integer) -> [T.Text]
-    go v (StorageValue (ContractType cid), _) =
+    go v (StorageValue (TContract cid), _) =
       [ "0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar) <+> "<= UINT_MAX 160"
       , T.pack cid <.> "integerBoundsRec" <+> parens (T.pack v <+> stateVar) ]
-    go v (StorageValue (PrimitiveType (AbiUIntType n)), _) = pure $
+    go v (StorageValue (TInteger n Unsigned), _) = pure $
       "0 <=" <+> T.pack v <+> stateVar <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageValue (PrimitiveType (AbiIntType n)), _) = pure $
+    go v (StorageValue (TInteger n Signed), _) = pure $
       "INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> "<= INT_MAX" <+> T.pack (show n)
-    go v (StorageValue (PrimitiveType (AbiBytesType n)), _) = pure $
-      "0 <=" <+> T.pack v <+> stateVar <+> "<= UINT_MAX" <+> T.pack (show (8*n))
-    go v (StorageMapping is (ContractType cid), _) =
+    go v (StorageMapping is (TContract cid), _) =
       [ parens $ "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar <+> ixs (length is)) <+> "<= UINT_MAX 160"
       , parens $ "forall" <+> ixs (length is) <> "," <+> T.pack cid <.> "integerBoundsRec" <+> parens (T.pack v <+> stateVar <+> ixs (length is)) ]
-    go v (StorageMapping is (PrimitiveType (AbiUIntType n)), _) = pure $ parens $
+    go v (StorageMapping is (TInteger n Unsigned), _) = pure $ parens $
       "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (PrimitiveType (AbiIntType n)), _) = pure $ parens $
+    go v (StorageMapping is (TInteger n Signed), _) = pure $ parens $
       "forall" <+> ixs (length is) <> ", INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= INT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (PrimitiveType (AbiBytesType n)), _) = pure $ parens $
-      "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= UINT_MAX" <+> T.pack (show (n * 8))
     go _ _ = []
 
     ixs n = T.unwords $ T.pack . (<>) "i" . show <$> [0..(n-1)]
