@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {-|
 Module      : Decompile
@@ -244,7 +245,7 @@ mkBehvs c = concatMapM (\(i, bs) -> mapM (mkbehv i) (Set.toList bs)) (Map.toList
             AbiFunctionType -> Left "cannot decompile methods that return a function pointer"
             _ -> do
               v <- fromWord (invertLayout c.storageLayout) . Expr.readWord (EVM.Lit 0) $ retBuf
-              pure . Just . TExp SInteger Atomic $ v
+              pure . Just . TExp (TInteger 256 Unsigned) $ v
           Dynamic -> Left "cannot decompile methods that return dynamically sized types"
         _ -> Left "cannot decompile methods with multiple return types"
       rewrites <- case Map.toList store of
@@ -270,15 +271,22 @@ mkBehvs c = concatMapM (\(i, bs) -> mapM (mkbehv i) (Set.toList bs)) (Map.toList
 mkRewrites :: Text -> DistinctStore -> Either Text [StorageUpdate]
 mkRewrites cname (DistinctStore writes) = forM (Map.toList writes) $ \(name,(val,typ)) ->
   case typ of
-    StorageValue v -> case v of
-      PrimitiveType t -> case abiKind t of
-        Static -> case t of
+    StorageValue (ValueType v) -> case v of
+      t@(TInteger _ _) -> case abiKind $ toAbiType t of
+        Static -> case toAbiType t of
           AbiTupleType _ -> Left "cannot decompile methods that write to tuple in storage"
           AbiFunctionType -> Left "cannot decompile methods that store function pointers"
           _ -> do
-            pure (Update SInteger (Item SInteger v (SVar nowhere (T.unpack cname) (T.unpack name))) val)
+            pure (Update v (Item v (SVar nowhere (T.unpack cname) (T.unpack name))) val)
         Dynamic -> Left "cannot decompile methods that store dynamically sized types"
-      ContractType {} -> Left "cannot decompile contracts that have contract types in storage"
+      t@TAddress -> case abiKind $ toAbiType t of
+        Static -> case toAbiType t of
+          AbiTupleType _ -> Left "cannot decompile methods that write to tuple in storage"
+          AbiFunctionType -> Left "cannot decompile methods that store function pointers"
+          _ -> do
+            pure (Update v (Item v (SVar nowhere (T.unpack cname) (T.unpack name))) val)
+        Dynamic -> Left "cannot decompile methods that store dynamically sized types"
+      _ -> Left "cannot decompile contracts that have non-integer types in storage"
     StorageMapping {} -> Left "cannot decompile contracts that write to mappings"
 
 newtype DistinctStore = DistinctStore (Map Text (Exp AInteger, SlotType))
@@ -325,10 +333,10 @@ simplify e = if (mapTerm go e == e)
              else simplify (mapTerm go e)
   where
     go (Neg _ (Neg _ p)) = p
-    go (Eq _ SInteger (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 1)) = go a
-    go (Eq _ SInteger (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 0)) = go (Neg nowhere (go a))
-    go (Eq _ SInteger (LitInt _ 1) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go a
-    go (Eq _ SInteger (LitInt _ 0) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go (Neg nowhere (go a))
+    go (Eq _ (TInteger _ _) (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 1)) = go a
+    go (Eq _ (TInteger _ _) (ITE _ a (LitInt _ 1) (LitInt _ 0)) (LitInt _ 0)) = go (Neg nowhere (go a))
+    go (Eq _ (TInteger _ _) (LitInt _ 1) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go a
+    go (Eq _ (TInteger _ _) (LitInt _ 0) (ITE _ a (LitInt _ 1) (LitInt _ 0))) = go (Neg nowhere (go a))
     -- TODO perhaps normalize before simplification to make rewrites less verbose and more robust
 
     -- this is the condition we get for a non overflowing uint multiplication
@@ -336,8 +344,8 @@ simplify e = if (mapTerm go e == e)
     -- -> ~ (x != 0) | ~ (~ (in_range 256 x))
     -- -> x == 0 | in_range 256 x
     -- -> in_range 256 x
-    go (Neg _ (And _ (Neg _ (Eq _ SInteger a (LitInt _ 0))) (Neg _ (InRange _ (AbiUIntType sz) (Mul _ b c)))))
-      | a == b = InRange nowhere (AbiUIntType sz) (Mul nowhere a c)
+    go (Neg _ (And _ (Neg _ (Eq _ (TInteger _ _) a (LitInt _ 0))) (Neg _ (InRange _ (TInteger sz Unsigned) (Mul _ b c)))))
+      | a == b = InRange nowhere (TInteger sz Unsigned) (Mul nowhere a c)
 
     go x = x
 
@@ -355,7 +363,7 @@ fromProp l p = simplify <$> go p
   where
     go (EVM.PEq (a :: EVM.Expr t) b) = case eqT @t @EVM.EWord of
          Nothing -> Left $ "cannot decompile props comparing equality of non word terms: " <> T.pack (show p)
-         Just Refl -> liftM2 (Eq nowhere SInteger) (fromWord l a) (fromWord l b)
+         Just Refl -> liftM2 (Eq nowhere (TInteger 256 Unsigned)) (fromWord l a) (fromWord l b)
     go (EVM.PLT a b) = liftM2 (LT nowhere) (fromWord l a) (fromWord l b)
     go (EVM.PGT a b) = liftM2 (GT nowhere) (fromWord l a) (fromWord l b)
     go (EVM.PGEq a b) = liftM2 (GEQ nowhere) (fromWord l a) (fromWord l b)
@@ -377,7 +385,7 @@ fromWord layout w = simplify <$> go w
     go :: EVM.Expr EVM.EWord -> Either Text (Exp AInteger)
     go (EVM.Lit a) = Right $ LitInt nowhere (toInteger a)
     -- TODO: get the actual abi type from the compiler output
-    go (EVM.Var a) = Right $ _Var (AbiBytesType 32) (T.unpack a)
+    go (EVM.Var a) = Right $ _Var (TInteger 256 Unsigned) (T.unpack a)
     go (EVM.TxValue) = Right $ IntEnv nowhere Callvalue
 
     -- overflow checks
@@ -387,14 +395,14 @@ fromWord layout w = simplify <$> go w
     go (EVM.LT (EVM.Not a) b) = do
          a' <- go a
          b' <- go b
-         pure $ evmbool (Neg nowhere $ InRange nowhere (AbiUIntType 256) (Add nowhere a' b'))
+         pure $ evmbool (Neg nowhere $ InRange nowhere (TInteger 256 Unsigned) (Add nowhere a' b'))
     -- x * y
     -- x > 0 && MAX_UINT / x < y -> x > 0 && MAX_UINT < x * y (i.e. overflow)
     go (EVM.And (EVM.IsZero (EVM.IsZero a)) (EVM.LT (EVM.Div (EVM.Lit MAX_UINT) b) c))
       | a == b = do
         a' <- go a
         c' <- go c
-        pure $ evmbool $ And nowhere (Neg nowhere (Eq nowhere SInteger a' (LitInt nowhere 0))) (Neg nowhere $ InRange nowhere (AbiUIntType 256) (Mul nowhere a' c'))
+        pure $ evmbool $ And nowhere (Neg nowhere (Eq nowhere (TInteger 256 Unsigned) a' (LitInt nowhere 0))) (Neg nowhere $ InRange nowhere (TInteger 256 Unsigned) (Mul nowhere a' c'))
     -- a == 0 || (a * b) / a == b
     go (EVM.Or (EVM.IsZero a) (EVM.Eq b (EVM.Div (EVM.Mod (EVM.Mul c d) (EVM.Lit MAX_UINT)) e)))
       | a == c
@@ -402,14 +410,14 @@ fromWord layout w = simplify <$> go w
       , b == d = do
         a' <- go a
         b' <- go b
-        pure . evmbool $ InRange nowhere (AbiUIntType 256) (Mul nowhere a' b')
+        pure . evmbool $ InRange nowhere (TInteger 256 Unsigned) (Mul nowhere a' b')
     go (EVM.Or (EVM.Eq b (EVM.Div (EVM.Mod (EVM.Mul c d) (EVM.Lit MAX_UINT)) e)) (EVM.IsZero a))
       | a == c
       , a == e
       , b == d = do
         a' <- go a
         b' <- go b
-        pure . evmbool $ InRange nowhere (AbiUIntType 256) (Mul nowhere a' b')
+        pure . evmbool $ InRange nowhere (TInteger 256 Unsigned) (Mul nowhere a' b')
 
 
     -- SLT (max(a, length txdata) - 4) b == 0  if a - 4 = b
@@ -426,7 +434,7 @@ fromWord layout w = simplify <$> go w
          Right $ evmbool (LT nowhere a' b')
     go (EVM.IsZero a) = do
          a' <- go a
-         Right $ evmbool (Eq nowhere SInteger a' (LitInt nowhere 0))
+         Right $ evmbool (Eq nowhere (TInteger 256 Unsigned) a' (LitInt nowhere 0))
 
     -- arithmetic
 
@@ -444,7 +452,9 @@ fromWord layout w = simplify <$> go w
            Nothing -> Left "read from a storage location that is not present in the solc layout"
            Just (nm, tp) -> case tp of
              -- TODO: get lookup contract name by address
-             StorageValue t@(PrimitiveType _) -> Right $ VarRef nowhere Pre SStorage (Item SInteger t (SVar nowhere (T.unpack "Basic") (T.unpack nm)))
+             StorageValue (ValueType (TContract _)) -> Left $ "unable to handle storage reads for variables of type: " <> T.pack (show tp)
+             StorageValue (ValueType t@(TInteger _ _)) -> Right $ VarRef nowhere Pre SStorage (Item t (SVar nowhere (T.unpack "Basic") (T.unpack nm)))
+             StorageValue (ValueType t@TAddress) -> Right $ VarRef nowhere Pre SStorage (Item t (SVar nowhere (T.unpack "Basic") (T.unpack nm)))
              _ -> Left $ "unable to handle storage reads for variables of type: " <> T.pack (show tp)
 
     go e = err e
@@ -476,8 +486,8 @@ behvIface :: Method -> Interface
 behvIface method = Interface (T.unpack method.name) (fmap (\(n, t) -> Decl t (T.unpack n)) method.inputs)
 
 convslot :: EVM.SlotType -> SlotType
-convslot (EVM.StorageMapping a b) = StorageMapping (fmap PrimitiveType a) (PrimitiveType b)
-convslot (EVM.StorageValue a) = StorageValue (PrimitiveType a)
+convslot (EVM.StorageMapping a b) = StorageMapping (fmap fromAbiType' a) (fromAbiType' b)
+convslot (EVM.StorageValue a) = StorageValue (fromAbiType' a)
 
 invertLayout :: Map Text StorageItem -> Map (Integer, Integer) (Text, SlotType)
 invertLayout = Map.fromList . fmap go . Map.toList

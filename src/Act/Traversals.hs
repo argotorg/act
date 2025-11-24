@@ -146,14 +146,14 @@ mapExpM f = \case
     f (VarRef p t k i')
 
 mapTypedExpM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedExp t -> m (TypedExp t)
-mapTypedExpM f (TExp t s e) = do
+mapTypedExpM f (TExp t e) = do
   e' <- f e
-  pure $ TExp t s e'
+  pure $ TExp t e'
 
 mapTItemM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TItem k b t -> m (TItem k b t)
-mapTItemM f (Item s v r) = do
+mapTItemM f (Item v r) = do
   r' <- mapRefM f r
-  pure $ Item s v r'
+  pure $ Item v r'
 
 mapRefM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> Ref k t -> m (Ref k t)
 mapRefM f = \case

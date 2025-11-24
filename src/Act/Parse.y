@@ -252,8 +252,8 @@ AbiType : 'uint'
        | 'bool'                                       { AbiBoolType }
        | 'string'                                     { AbiStringType }
 
-Type : AbiType                                        { PrimitiveType $1 }
-     | id                                             { ContractType $ name $1 }
+Type : AbiType                                        { fromAbiType' $1 }
+     | id                                             { ValueType $ TContract (name $1) }
 
 SlotType : 'mapping' '(' MappingArgs ')'              { (uncurry StorageMapping) $3 }
          | Type                                       { StorageValue $1 }
