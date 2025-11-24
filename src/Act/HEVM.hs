@@ -62,6 +62,7 @@ type family ExprType a where
   ExprType 'ABoolean  = EVM.EWord
   ExprType 'AContract = EVM.EWord
   ExprType 'AByteStr  = EVM.Buf
+  ExprType 'AContract = EVM.EWord
 
 -- | The storage layout. Maps each contract type to a map that maps storage
 -- variables to their slot, offset, and size in bytes in memory
@@ -201,7 +202,7 @@ storageBounds contractMap locs = do
     refInCalldata (SField _ _ _ _) = False
 
 translateConstructor :: Monad m => BS.ByteString -> Constructor -> ContractMap -> ActT m ([EVM.Expr EVM.End], Calldata, Sig, ContractMap, [EVM.Prop])
-translateConstructor bytecode (Constructor cid iface _ preconds _ _ upds) cmap = do
+translateConstructor bytecode (Constructor cid iface preconds _ _ upds) cmap = do
   let initmap = M.insert initAddr (initcontract, cid) cmap
   preconds' <- mapM (toProp initmap) preconds
   cmap' <- applyUpdates initmap initmap upds
@@ -241,26 +242,26 @@ translateBehvs cmap behvs = do
            exprs <- mapM (translateBehv cmap (snd calldata) bounds) behvs'
            pure (behvName behvs', exprs, calldata, behvSig behvs, bounds)) groups
   where
-    behvCalldata (Behaviour _ _ iface _ _ _ _ _ _:_) = makeCalldata iface
+    behvCalldata (Behaviour _ _ iface _ _ _ _ _:_) = makeCalldata iface
     behvCalldata [] = error "Internal error: behaviour groups cannot be empty"
 
-    behvSig (Behaviour _ _ iface _ _ _ _ _ _:_) = ifaceToSig iface
+    behvSig (Behaviour _ _ iface _ _ _ _ _:_) = ifaceToSig iface
     behvSig [] = error "Internal error: behaviour groups cannot be empty"
 
     -- TODO remove reduntant name in behaviors
-    sameIface (Behaviour _ _ iface  _ _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _ _) =
+    sameIface (Behaviour _ _ iface  _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _) =
       makeIface iface == makeIface iface'
 
-    behvName (Behaviour _ _ (Interface name _) _ _ _ _ _ _:_) = name
+    behvName (Behaviour _ _ (Interface name _) _ _ _ _ _:_) = name
     behvName [] = error "Internal error: behaviour groups cannot be empty"
 
 ifaceToSig :: Interface -> Sig
 ifaceToSig (Interface name args) = Sig (T.pack name) (fmap fromdecl args)
   where
-    fromdecl (Decl t _) = t
+    fromdecl (Decl argtype _) = argToAbiType argtype
 
 translateBehv :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> Behaviour -> ActT m (EVM.Expr EVM.End, ContractMap)
-translateBehv cmap cdataprops bounds (Behaviour _ _ _ _ preconds caseconds _ upds ret)  = do
+translateBehv cmap cdataprops bounds (Behaviour _ _ _ preconds caseconds _ upds ret)  = do
   preconds' <- mapM (toProp cmap) preconds
   caseconds' <- mapM (toProp cmap) caseconds
   ret' <- returnsToExpr cmap ret
@@ -285,6 +286,11 @@ applyUpdate readMap writeMap (Update typ (Item _ ref) e) = do
     TContract _ | isCreate e -> do
         fresh <- getFreshIncr
         let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
+        writeMap' <- localCaddr freshAddr $ createCastedContract readMap writeMap freshAddr e
+        pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
+    SContract | isCreate e -> do
+        fresh <- getFreshIncr
+        let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
         writeMap' <- localCaddr freshAddr $ createContract readMap writeMap freshAddr e
         pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
     TByteStr -> error "Bytestrings not supported"
@@ -305,7 +311,11 @@ applyUpdate readMap writeMap (Update typ (Item _ ref) e) = do
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
     TBoolean -> do
         e' <- toExpr readMap e
-
+        let prevValue = readStorage addr contract
+        let e'' = storedValue e' prevValue offset size
+        pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
+    SContract -> do
+        e' <- toExpr readMap e
         let prevValue = readStorage addr contract
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
@@ -335,13 +345,19 @@ applyUpdate readMap writeMap (Update typ (Item _ ref) e) = do
     updateNonce (EVM.GVar _) = error "Internal error: contract cannot be a global variable"
 
     isCreate (Create _ _ _) = True
+    isCreate (Address _ (Create _ _ _)) = True
     isCreate _ = False
+
+createCastedContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActT m ContractMap
+createCastedContract readMap writeMap freshAddr (Address _ (Create pn cid args)) =
+ createContract readMap writeMap freshAddr (Create pn cid args)
+createCastedContract _ _ _ _ = error "Internal error: constructor call expected"
 
 createContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AContract -> ActT m ContractMap
 createContract readMap writeMap freshAddr (Create _ cid args) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
-    Just (Contract (Constructor _ iface _ _ _ _ upds) _, _, bytecode) -> do
+    Just (Contract (Constructor _ iface _ _ _ upds) _, _, bytecode) -> do
       let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                            , EVM.storage = EVM.ConcreteStore mempty
                            , EVM.tStorage = EVM.ConcreteStore mempty
@@ -355,24 +371,6 @@ createContract readMap writeMap freshAddr (Create _ cid args) = do
     Nothing -> error "Internal error: constructor not found"
 createContract _ _ _ _ = error "Internal error: constructor call expected"
 -- TODO needs to propagate up preconditions and check pointer constraints
-
-createCastContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActT m ContractMap
-createCastContract readMap writeMap freshAddr (Create _ cid args) = do
-  codemap <- getCodemap
-  case M.lookup cid codemap of
-    Just (Contract (Constructor _ iface _ _ _ _ upds) _, _, bytecode) -> do
-      let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
-                           , EVM.storage = EVM.ConcreteStore mempty
-                           , EVM.tStorage = EVM.ConcreteStore mempty
-                           , EVM.balance = EVM.Lit 0
-                           , EVM.nonce = Just 1
-                           }
-      let subst = makeSubstMap iface args
-
-      let upds' = substUpds subst upds
-      applyUpdates readMap (M.insert freshAddr (contract, cid) writeMap) upds'
-    Nothing -> error "Internal error: constructor not found"
-createCastContract _ _ _ _ = error "Internal error: constructor call expected"
 
 -- | Substitutions
 
@@ -465,6 +463,8 @@ substExp subst expr = case expr of
     ETItem k' item' ->  VarRef pn whn k' item'
 
   Create pn a b -> Create pn a (substArgs subst b)
+
+  Address c x -> Address c (substExp subst x)
 
 
 returnsToExpr :: Monad m => ContractMap -> Maybe TypedExp -> ActT m (EVM.Expr EVM.Buf)
@@ -716,6 +716,7 @@ toExpr cmap =  fmap stripMods . go
 
       e@(ITE _ _ _ _) -> error $ "Internal error: expecting flat expression. got: " <> show e
 
+      (Address _ e') -> toExpr cmap e'
       e ->  error $ "TODO: " <> show e
 
     op2 :: Monad m => forall b c. (EVM.Expr (ExprType c) -> EVM.Expr (ExprType c) -> b) -> Exp c -> Exp c -> ActT m b
@@ -773,6 +774,7 @@ checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere (TInteger 256 Unsigned) e1 (LitIn
                             (Eq nowhere (TInteger 256 Unsigned) e2 (Div nowhere (Mul nowhere e1 e2) e1)))
 checkOp (Div _ _ _) = LitBool nowhere True
 checkOp (Mod _ _ _) = LitBool nowhere True
+checkOp (Address _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"
 checkOp (IntMin _ _)  = error "Internal error: invalid in range expression"
 checkOp (IntMax _ _)  = error "Internal error: invalid in range expression"
@@ -799,9 +801,9 @@ checkEquiv solvers l1 l2 = do
 
 -- | Create the initial contract state before analysing a contract
 -- | Assumes that all calldata variables have unique names
-getInitContractState :: App m => SolverGroup -> Interface -> [Pointer] -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
-getInitContractState solvers iface pointers preconds cmap = do
-  let casts = (\(PointsTo _ x c) -> (x, c)) <$> pointers
+getInitContractState :: App m => SolverGroup -> Interface -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
+getInitContractState solvers iface preconds cmap = do
+  let casts = castsFromIFace iface
   let casts' = groupBy (\x y -> fst x == fst y) casts
   (cmaps, checks) <- mapAndUnzipM getContractState (fmap nub casts')
 
@@ -811,14 +813,19 @@ getInitContractState solvers iface pointers preconds cmap = do
   pure (finalmap, check <* sequenceA_ checks <* checkUniqueAddr (cmap:cmaps))
 
   where
+    castsFromIFace :: Interface -> [(Id, Id)]
+    castsFromIFace (Interface _ decls) = mapMaybe castingDecl decls
+      where
+      castingDecl (Decl (ContractArg _ cid) name) = Just (name, cid)
+      castingDecl _ = Nothing
 
     getContractState :: App m => [(Id, Id)] -> ActT m (ContractMap, Error String ())
     getContractState [(x, cid)] = do
       let addr = EVM.SymAddr $ T.pack x
       codemap <- getCodemap
       case M.lookup cid codemap of
-        Just (Contract (Constructor _ iface' pointers' preconds' _ _ upds) _, _, bytecode) -> do
-          (icmap, check) <- getInitContractState solvers iface' pointers' preconds' M.empty
+        Just (Contract (Constructor _ iface' preconds' _ _ upds) _, _, bytecode) -> do
+          (icmap, check) <- getInitContractState solvers iface' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty
                                , EVM.tStorage = EVM.ConcreteStore mempty
@@ -870,9 +877,9 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface pointers preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface preconds _ _ _)  _) = do
   -- Construct the initial contract state
-  (actinitmap, checks) <- getInitContractState solvers iface pointers preconds M.empty
+  (actinitmap, checks) <- getInitContractState solvers iface preconds M.empty
   let hevminitmap = translateCmap actinitmap
   -- Translate Act constructor to Expr
   fresh <- getFresh
@@ -1092,7 +1099,7 @@ checkAbi solver contract cmap = do
   checkResult (txdata, []) Nothing (fmap (toVRes msg) res)
 
   where
-    actSig (Behaviour _ _ iface _ _ _ _ _ _) = T.pack $ makeIface iface
+    actSig (Behaviour _ _ iface _ _ _ _ _) = T.pack $ makeIface iface
     actSigs (Contract _ behvs) = actSig <$> behvs
 
     checkBehv :: [EVM.Prop] -> EVM.Expr EVM.End -> [EVM.Prop]

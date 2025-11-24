@@ -19,11 +19,7 @@ creates
 
 
 constructor of B
-interface constructor(address x, address y)
-
-pointers
-  x |-> A
-  y |-> A
+interface constructor(address<A> x, address<A> y)
 
 iff
     CALLVALUE == 0

@@ -31,12 +31,15 @@
             "args": [
               {
                 "abitype": {
-                  "arrayType": {
-                    "size": "256",
-                    "type": "Int"
+                  "abitype": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "Int"
+                    },
+                    "size": "2",
+                    "type": "Array"
                   },
-                  "size": "2",
-                  "type": "Array"
+                  "kind": "AbiArgument"
                 },
                 "id": "\"xs\"",
                 "kind": "Declaration"
@@ -47,7 +50,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -521,12 +523,15 @@
             "args": [
               {
                 "abitype": {
-                  "arrayType": {
-                    "size": "256",
-                    "type": "Int"
+                  "abitype": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "Int"
+                    },
+                    "size": "2",
+                    "type": "Array"
                   },
-                  "size": "2",
-                  "type": "Array"
+                  "kind": "AbiArgument"
                 },
                 "id": "\"xs\"",
                 "kind": "Declaration"
@@ -537,7 +542,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -988,12 +992,15 @@
             "args": [
               {
                 "abitype": {
-                  "arrayType": {
-                    "size": "256",
-                    "type": "Int"
+                  "abitype": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "Int"
+                    },
+                    "size": "2",
+                    "type": "Array"
                   },
-                  "size": "2",
-                  "type": "Array"
+                  "kind": "AbiArgument"
                 },
                 "id": "\"xs\"",
                 "kind": "Declaration"
@@ -1004,7 +1011,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -1577,12 +1583,15 @@
             "args": [
               {
                 "abitype": {
-                  "arrayType": {
-                    "size": "256",
-                    "type": "Int"
+                  "abitype": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "Int"
+                    },
+                    "size": "2",
+                    "type": "Array"
                   },
-                  "size": "2",
-                  "type": "Array"
+                  "kind": "AbiArgument"
                 },
                 "id": "\"xs\"",
                 "kind": "Declaration"
@@ -1593,7 +1602,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -2182,7 +2190,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [

@@ -147,6 +147,7 @@ type family TypeOf a where
   TypeOf 'AInteger = Integer
   TypeOf 'ABoolean = Bool
   TypeOf 'AByteStr = ByteString
+  TypeOf 'AContract = Integer
   TypeOf ('AArray a) = [TypeOf a]
 
 -- Given a possibly nested ABI Array Type, returns the
@@ -160,6 +161,7 @@ flattenAbiType (AbiArrayType n t) = case flattenAbiType t of
   (a, Nothing) -> (a, Just $ NonEmpty.singleton n)
   (a, l) -> (a, ((<|) n) <$> l)
 flattenAbiType a = (a, Nothing)
+
 
 fromAbiType :: AbiType -> ActType
 fromAbiType (AbiUIntType _)     = AInteger

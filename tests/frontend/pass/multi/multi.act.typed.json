@@ -27,7 +27,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [
@@ -96,8 +95,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -108,7 +110,6 @@
           },
           "kind": "Behaviour",
           "name": "remote",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -376,8 +377,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -388,7 +392,6 @@
           },
           "kind": "Behaviour",
           "name": "multi",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -779,7 +782,7 @@
                 "kind": "SVar",
                 "svar": "a"
               },
-              "type": "int"
+              "type": "contract"
             },
             "value": {
               "args": [
@@ -800,7 +803,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [
@@ -849,10 +851,6 @@
             ],
             "arity": 2,
             "symbol": "and"
-          },
-          {
-            "literal": "True",
-            "type": "bool"
           }
         ],
         "preConditions": []
@@ -885,7 +883,7 @@
             "kind": "ValueType",
             "valueType": {
               "kind": "ContractType",
-              "name": "\"A\""
+              "name": "A"
             }
           },
           1

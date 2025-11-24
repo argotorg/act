@@ -17,9 +17,7 @@ storage
   x => n
 
 constructor of A2
-interface constructor(address a)
-pointers
-  a |-> A1
+interface constructor(address<A1> a)
 
 iff
   CALLVALUE == 0

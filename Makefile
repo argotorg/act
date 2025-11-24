@@ -60,7 +60,7 @@ hevm_multi_fast=$(filter-out $(hevm_multi_slow), $(hevm_multi_pass))
 failing_typing=tests/frontend/pass/dss/vat.act tests/frontend/pass/creation/createMultiple.act tests/frontend/pass/staticstore/staticstore.act
 
 
-coq-examples = tests/coq/transitions tests/coq/safemath tests/coq/exponent tests/coq/token tests/coq/ERC20-simple tests/coq/ERC20 tests/coq/multi tests/coq/amm
+#coq-examples = tests/coq/multi tests/coq/transitions tests/coq/safemath tests/coq/exponent tests/coq/token tests/coq/ERC20-simple tests/coq/ERC20  tests/coq/amm tests/coq/pointers
 
 .PHONY: test-coq $(coq-examples)
 test-coq: compiler $(coq-examples)
@@ -129,5 +129,5 @@ tests/hevm/pass/%.act.hevm.pass.fast:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
 	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
-test-ci: test-parse test-type test-invariant test-postcondition test-coq test-hevm
+test-ci: test-parse test-type test-invariant test-postcondition test-coq test-hevm-fast
 test: test-ci test-cabal

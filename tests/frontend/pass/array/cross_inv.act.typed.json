@@ -27,7 +27,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [
@@ -120,7 +119,8 @@
           "args": [
             {
               "abitype": {
-                "type": "Address"
+                "kind": "ContractArgument",
+                "name": "A"
               },
               "id": "\"a\"",
               "kind": "Declaration"
@@ -143,17 +143,21 @@
                         "type": "int"
                       },
                       {
-                        "timing": "Pre",
-                        "var": {
-                          "item": {
-                            "abitype": {
-                              "type": "Address"
+                        "arg": {
+                          "timing": "Pre",
+                          "var": {
+                            "item": {
+                              "abitype": {
+                                "type": "Address"
+                              },
+                              "kind": "Var",
+                              "var": "a"
                             },
-                            "kind": "Var",
-                            "var": "a"
-                          },
-                          "type": "int"
-                        }
+                            "type": "contract"
+                          }
+                        },
+                        "arity": 1,
+                        "symbol": "addr"
                       }
                     ],
                     "arity": 2,
@@ -162,17 +166,21 @@
                   {
                     "args": [
                       {
-                        "timing": "Pre",
-                        "var": {
-                          "item": {
-                            "abitype": {
-                              "type": "Address"
+                        "arg": {
+                          "timing": "Pre",
+                          "var": {
+                            "item": {
+                              "abitype": {
+                                "type": "Address"
+                              },
+                              "kind": "Var",
+                              "var": "a"
                             },
-                            "kind": "Var",
-                            "var": "a"
-                          },
-                          "type": "int"
-                        }
+                            "type": "contract"
+                          }
+                        },
+                        "arity": 1,
+                        "symbol": "addr"
                       },
                       {
                         "literal": "1461501637330902918203684832716283019655932542975",
@@ -416,13 +424,6 @@
           }
         ],
         "kind": "Constructor",
-        "pointers": [
-          {
-            "contract": "A",
-            "kind": "PointsTo",
-            "var": "a"
-          }
-        ],
         "postConditions": [
           {
             "args": [
@@ -703,17 +704,21 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Pre",
-                    "var": {
-                      "item": {
-                        "abitype": {
-                          "type": "Address"
+                    "arg": {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "a"
                         },
-                        "kind": "Var",
-                        "var": "a"
-                      },
-                      "type": "int"
-                    }
+                        "type": "contract"
+                      }
+                    },
+                    "arity": 1,
+                    "symbol": "addr"
                   }
                 ],
                 "arity": 2,
@@ -722,17 +727,21 @@
               {
                 "args": [
                   {
-                    "timing": "Pre",
-                    "var": {
-                      "item": {
-                        "abitype": {
-                          "type": "Address"
+                    "arg": {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "abitype": {
+                            "type": "Address"
+                          },
+                          "kind": "Var",
+                          "var": "a"
                         },
-                        "kind": "Var",
-                        "var": "a"
-                      },
-                      "type": "int"
-                    }
+                        "type": "contract"
+                      }
+                    },
+                    "arity": 1,
+                    "symbol": "addr"
                   },
                   {
                     "literal": "1461501637330902918203684832716283019655932542975",

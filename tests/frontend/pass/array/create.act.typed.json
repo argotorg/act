@@ -9,15 +9,37 @@
           "args": [
             {
               "abitype": {
-                "size": "256",
-                "type": "Int"
+                "abitype": {
+                  "size": "256",
+                  "type": "Int"
+                },
+                "kind": "AbiArgument"
               },
               "id": "\"x\"",
               "kind": "Declaration"
             },
             {
               "abitype": {
-                "arrayType": {
+                "abitype": {
+                  "arrayType": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "size": "2",
+                    "type": "Array"
+                  },
+                  "size": "3",
+                  "type": "Array"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"y\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "abitype": {
                   "arrayType": {
                     "size": "256",
                     "type": "UInt"
@@ -25,20 +47,7 @@
                   "size": "2",
                   "type": "Array"
                 },
-                "size": "3",
-                "type": "Array"
-              },
-              "id": "\"y\"",
-              "kind": "Declaration"
-            },
-            {
-              "abitype": {
-                "arrayType": {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                "size": "2",
-                "type": "Array"
+                "kind": "AbiArgument"
               },
               "id": "\"z\"",
               "kind": "Declaration"
@@ -49,7 +58,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [],
         "preConditions": [
           {
@@ -127,18 +135,8 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
-          "postConditions": [
-            {
-              "literal": "True",
-              "type": "bool"
-            }
-          ],
+          "postConditions": [],
           "preConditions": [
-            {
-              "literal": "True",
-              "type": "bool"
-            },
             {
               "args": [
                 {
@@ -353,7 +351,7 @@
                   "kind": "SVar",
                   "svar": "a"
                 },
-                "type": "int"
+                "type": "contract"
               },
               "value": {
                 "args": [
@@ -471,7 +469,7 @@
                 "kind": "SVar",
                 "svar": "a"
               },
-              "type": "int"
+              "type": "contract"
             },
             "value": {
               "args": [
@@ -645,12 +643,7 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
-          {
-            "literal": "True",
-            "type": "bool"
-          },
           {
             "args": [
               {
@@ -1280,7 +1273,7 @@
             "kind": "ValueType",
             "valueType": {
               "kind": "ContractType",
-              "name": "\"A\""
+              "name": "A"
             }
           },
           0

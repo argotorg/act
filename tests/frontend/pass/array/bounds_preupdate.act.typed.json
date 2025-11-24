@@ -17,7 +17,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -539,7 +538,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [

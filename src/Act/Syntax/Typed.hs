@@ -96,7 +96,6 @@ deriving instance Eq (InvariantPred t)
 data Constructor t = Constructor
   { _cname :: Id
   , _cinterface :: Interface
-  , _cpointers :: [Pointer]
   , _cpreconditions :: [Exp ABoolean t]
   , _cpostconditions :: [Exp ABoolean t]
   , _invariants :: [Invariant t]
@@ -110,7 +109,6 @@ data Behaviour t = Behaviour
   { _name :: Id
   , _contract :: Id
   , _interface :: Interface
-  , _pointers :: [Pointer]
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
   , _caseconditions :: [Exp ABoolean t] -- if preconditions are satisfied and the case conditions are not, some other instance of the behavior should apply
   , _postconditions :: [Exp ABoolean Timed]
@@ -278,6 +276,7 @@ data Exp (a :: ActType) (t :: Timing) where
   -- when the variable refers to calldata
   --VarRef :: SingI a => Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
   VarRef :: Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
+  Address :: Id -> Exp AContract t -> Exp AInteger t
 
 deriving instance Show (Exp a t)
 
@@ -380,6 +379,7 @@ instance Timable (Exp a) where
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
     VarRef p _ k item -> VarRef p time k (go item)
+    Address c e -> Address c (go e)
     where
       go :: Timable c => c Untimed -> c Timed
       go = setTime time
@@ -423,7 +423,6 @@ instance ToJSON (Constructor t) where
   toJSON Constructor{..} = object [ "kind" .= String "Constructor"
                                   , "contract" .= _cname
                                   , "interface" .= toJSON _cinterface
-                                  , "pointers" .= toJSON _cpointers
                                   , "preConditions" .= toJSON _cpreconditions
                                   , "postConditions" .= toJSON _cpostconditions
                                   , "invariants" .= listValue toJSON _invariants
@@ -434,7 +433,6 @@ instance ToJSON (Behaviour t) where
                                 , "name" .= _name
                                 , "contract" .= _contract
                                 , "interface" .= toJSON _interface
-                                , "pointers" .= toJSON _pointers
                                 , "preConditions" .= toJSON _preconditions
                                 , "case" .= toJSON _caseconditions
                                 , "postConditions" .= toJSON _postconditions
@@ -574,6 +572,9 @@ instance ToJSON (Exp a t) where
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
                               , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
                               , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
+  toJSON (Address _ x) = object [ "symbol" .= pack "addr"
+                                 , "arity" .= Data.Aeson.Types.Number 1
+                                 , "arg" .= toJSON x ]
 
   toJSON v = error $ "todo: json ast for: " <> show v
 
@@ -632,6 +633,7 @@ eval e = case e of
   Array _ l -> mapM eval l
 
   Create _ _ _ -> error "eval of contracts not supported"
+  Address _ _ -> error "eval of contracts not supported"
   _              -> empty
 
 intmin :: Int -> Integer

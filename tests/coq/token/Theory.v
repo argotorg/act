@@ -56,7 +56,7 @@ Qed.
 Opaque Z.sub Z.add Z.of_nat.
 
 
-Lemma balances_sum_thm x f f' addr acc :
+Lemma balances_sum_thm x f f' (addr : nat) acc :
   (forall y, x <> y -> f y = f' y) ->
   0 <= x ->
   balances_sum' f addr acc =
@@ -71,9 +71,9 @@ Proof.
       { eapply leb_correct_conv. lia. }
       rewrite Hbeq. rewrite Hyp. reflexivity. eauto.
 
-  - destruct (Z.to_nat x <=? S addr)%nat eqn:Hleq.
+  - destruct (Z.to_nat x <=? S addr0)%nat eqn:Hleq.
     + eapply Nat.leb_le in Hleq.
-      destruct (Z.of_nat (S addr) =? x) eqn:Heqb.
+      destruct (Z.of_nat (S addr0) =? x) eqn:Heqb.
       * eapply Z.eqb_eq in Heqb. simpl. rewrite Heqb.
         erewrite balances_sum_f_eq with (f' := f').
         rewrite !balances_sum_acc. lia.
@@ -81,7 +81,7 @@ Proof.
         intros. eapply Hyp. lia.
 
       * simpl.
-        destruct ((Z.to_nat x <=? addr)%nat) eqn:Hleq'.
+        destruct ((Z.to_nat x <=? addr0)%nat) eqn:Hleq'.
         -- rewrite IHaddr; eauto. rewrite Hyp. reflexivity.
            intros Heq; subst. lia.
         -- eapply Z.eqb_neq in Heqb.
@@ -159,7 +159,9 @@ Proof.
   intros B S.
   eapply step_multi_step with (P := fun s1 s2 => balances_sum s1 = balances_sum s2).
   - intros s s' Hstep.
-    induction Hstep.
+    induction Hstep as [e Hestep].
+    destruct Hestep as [e s s' Hstep].
+    destruct Hstep.
     destruct H. (* X as [Hpc1 Hpc2 Hpc3 Hpc4 Hpc5 Hpc6 Hpc7 Hpc8 Hpc9 Hpc10 Hpc11 Hpc12].*)
     destructAnds.
     + unfold transfer0.

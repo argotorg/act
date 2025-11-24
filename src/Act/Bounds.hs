@@ -10,6 +10,7 @@ import Data.Type.Equality
 import Act.Syntax
 import Act.Syntax.TypedExplicit
 import Act.Type (globalEnv)
+import Debug.Trace
 
 
 {-|
@@ -30,7 +31,7 @@ addBounds (Act store contracts) = Act store (addBoundsContract <$> contracts)
 -- | Adds type bounds for calldata, environment vars, and external storage vars
 -- as preconditions
 addBoundsConstructor :: Constructor -> Constructor
-addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs stateUpdates) =
+addBoundsConstructor ctor@(Constructor _ (Interface _ decls) pre post invs stateUpdates) =
   ctor { _cpreconditions = pre'
        , _cpostconditions = post'
        , _invariants = invs' }
@@ -41,7 +42,7 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
               -- The following is sound as values of locations outside local storage
               -- already exist as the constructor starts executing,
               -- and the constructor cannot modify non-local locations.
-             <> mkLocationBounds nonlocalLocs
+             <> mkLocationBounds (toPrestate stateUpdates <$> nonlocalLocs)
       invs' = addBoundsInvariant ctor <$> invs
       post' = post <> mkStorageBounds stateUpdates Post
 
@@ -50,15 +51,48 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre post invs sta
              <> concatMap locsFromUpdate stateUpdates
       nonlocalLocs = filter (not . isLocalLoc) locs
 
+
+changeBase :: Location -> StorageUpdate -> Maybe Location
+changeBase _ (Update _ (Item _ _ _) e) | isCreate e = Nothing
+  -- TODO: suppport!
+  where
+    isCreate :: Exp a -> Bool
+    isCreate (Address _ (Create _ _ _)) = True
+    isCreate (Create _ _ _) = True
+    isCreate _ = False
+changeBase (Loc st SStorage (Item _ vt baseref)) (Update _ (Item _ _ updatedRef) (VarRef _ _ sk' (Item _ _ ru'))) =
+  Loc st sk' . Item st vt <$> hasBase baseref ru'
+  where
+    hasBase :: Ref Storage -> Ref k -> Maybe (Ref k)
+    hasBase r''@(SVar _ _ _) ru =
+      if updatedRef == r'' then Just ru else Nothing
+    hasBase r''@(SArray pn r' vt' ixs) ru =
+      if updatedRef == r'' then Just ru
+      else (\_r -> SArray pn _r vt' ixs) <$> hasBase r' ru
+    hasBase r''@(SMapping pn r' vt' ixs) ru =
+      if updatedRef == r'' then Just ru
+      else (\_r -> SMapping pn _r vt' ixs) <$> hasBase r' ru
+    hasBase r''@(SField pn r' id' id'') ru =
+      if updatedRef == r'' then Just ru
+      else (\_r -> SField pn _r id' id'') <$> hasBase r' ru
+changeBase _ _ = Nothing
+
+toPrestate :: [StorageUpdate] -> Location -> Location
+toPrestate _ loc@(Loc _ SCalldata _) = loc
+toPrestate updates loc@(Loc _ SStorage _) =
+  case mapMaybe (changeBase loc) updates of
+    [] -> loc
+    l -> last l
+
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
-addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stateUpdates ret) =
+addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) pre cases post stateUpdates ret) =
   behv { _preconditions = pre', _postconditions = post' }
     where
       pre' = nub $ pre
              <> mkCallDataBounds decls
              <> mkStorageBounds stateUpdates Pre
-             <> mkLocationBounds locs
+             <> mkLocationBounds (toPrestate stateUpdates <$> locs)
              <> mkEthEnvBounds (ethEnvFromBehaviour behv)
       post' = post
               <> mkStorageBounds stateUpdates Post
@@ -69,7 +103,7 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases post stat
 
 -- | Adds type bounds for calldata, environment vars, and storage vars
 addBoundsInvariant :: Constructor -> Invariant -> Invariant
-addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
+addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
   inv { _ipreconditions = preconds', _istoragebounds = storagebounds' }
     where
       preconds' = nub $ preconds
@@ -139,10 +173,12 @@ mkLocationBounds refs = concatMap mkBound refs
     mkItemBounds SCalldata = mkCItemBounds
 
 mkCallDataBounds :: [Decl] -> [Exp ABoolean]
-mkCallDataBounds = concatMap $ \(Decl typ name) -> case typ of
-  -- Array element bounds are applied lazily when needed in mkCalldataLocationBounds
-  (AbiArrayType _ _) -> []
-  _ -> case fromAbiType' typ of
-        ValueType t@(TInteger _ _) -> [bound t (_Var t name)]
-        ValueType TAddress -> [bound TAddress (_Var TAddress name)]
-        _ -> []
+mkCallDataBounds = concatMap $ \(Decl argtyp name) -> case argtyp of
+  (AbiArg typ) -> case typ of
+      -- Array element bounds are applied lazily when needed in mkCalldataLocationBounds
+    (AbiArrayType _ _) -> []
+    _ -> case fromAbiType' typ of
+         ValueType t@(TInteger _ _) -> [bound t (_Var t name)]
+         ValueType TAddress -> [bound TAddress (_Var TAddress name)]
+         _ -> []
+  (ContractArg _ cid) -> [bound AbiAddressType (Address cid (_Var AbiAddressType name))]

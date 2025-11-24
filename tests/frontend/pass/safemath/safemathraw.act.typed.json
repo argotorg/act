@@ -14,16 +14,22 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"x\"",
                 "kind": "Declaration"
               },
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"y\"",
                 "kind": "Declaration"
@@ -34,7 +40,6 @@
           },
           "kind": "Behaviour",
           "name": "add",
-          "pointers": [],
           "postConditions": [],
           "preConditions": [
             {
@@ -349,7 +354,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [],
         "preConditions": []
       },

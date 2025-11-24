@@ -14,12 +14,15 @@
             "args": [
               {
                 "abitype": {
-                  "arrayType": {
-                    "size": "256",
-                    "type": "UInt"
+                  "abitype": {
+                    "arrayType": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "size": "2",
+                    "type": "Array"
                   },
-                  "size": "2",
-                  "type": "Array"
+                  "kind": "AbiArgument"
                 },
                 "id": "\"a\"",
                 "kind": "Declaration"
@@ -30,7 +33,6 @@
           },
           "kind": "Behaviour",
           "name": "f",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -1498,7 +1500,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [

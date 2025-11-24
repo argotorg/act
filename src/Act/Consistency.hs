@@ -70,7 +70,7 @@ mkExhaustiveAssertion caseconds =
 
 -- | Create a query for cases
 mkCaseQuery :: ([Exp ABoolean] -> Exp ABoolean) -> [Behaviour] -> (Id, SMTExp, (SolverInstance -> IO Model))
-mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) _ preconds _ _ _ _):_) =
+mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) preconds _ _ _ _):_) =
   (ifaceName, smt, getModel)
   where
     locs = nub $ concatMap locsFromExp (preconds <> caseconds)
@@ -120,7 +120,7 @@ checkCases (Act _ contracts) solver' smttimeout debug = do
 
     where
 
-      sameIface (Behaviour _ _ iface _ _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _ _) =
+      sameIface (Behaviour _ _ iface _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _) =
         makeIface iface == makeIface iface'
 
       checkRes :: String -> (Id, SMT.SMTResult) -> IO ()
@@ -154,7 +154,7 @@ mkStorageBounds (Loc _ _ (Item _ ref)) = mkRefBounds ref
 
 -- TODO: There are locs that don't need to be checked, e.g. assignment locs cannot be out of bounds
 mkConstrArrayBoundsQuery :: Constructor -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
-mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) _ preconds _ _ initialStorage) =
+mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) preconds _ _ initialStorage) =
   (ifaceName, arrayLocs, smt, getModel)
   where
     -- Declare vars
@@ -171,7 +171,7 @@ mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) 
     getModel = getCtorModel constructor
 
 mkBehvArrayBoundsQuery :: Behaviour -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
-mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds _ stateUpdates _) =
+mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) preconds caseconds _ stateUpdates _) =
   (ifaceName, arrayLocs, smt, getModel)
   where
     -- Declare vars
@@ -280,7 +280,7 @@ mkAliasingAssertion :: [Location] -> Exp ABoolean
 mkAliasingAssertion ls = mkOr $ map (uncurry mkEqualityAssertion) $ combine ls
 
 mkAliasingQuery :: Behaviour -> (Id, [[Location]], SMTExp, SolverInstance -> IO Model)
-mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds caseconds _ stateUpdates _) =
+mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) preconds caseconds _ stateUpdates _) =
   (ifaceName, groupedLocs, smt, getModel)
   where
     updatedLocs = locFromUpdate <$> stateUpdates

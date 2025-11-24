@@ -21,10 +21,10 @@ newtype Act = Main [Contract]
 data Contract = Contract Constructor [Transition]
   deriving (Eq, Show)
 
-data Constructor = Constructor Pn Id Interface [Pointer] Iff Creates Ensures Invariants
+data Constructor = Constructor Pn Id Interface Iff Creates Ensures Invariants
   deriving (Eq, Show)
 
-data Transition = Transition Pn Id Id Interface [Pointer] Iff Cases Ensures
+data Transition = Transition Pn Id Id Interface Iff Cases Ensures
   deriving (Eq, Show)
 
 type Iff = [Expr]
@@ -68,8 +68,11 @@ data Assign = AssignVal StorageVar Expr | AssignMapping StorageVar [Mapping]
 data StorageVar = StorageVar Pn SlotType Id
   deriving (Eq, Show)
 
-data Decl = Decl AbiType Id
+data Decl = Decl ArgType Id
   deriving (Eq, Ord)
+
+data ArgType = AbiArg AbiType | ContractArg Pn Id
+  deriving (Eq, Ord, Show)
 
 data Entry
   = EVar Pn Id
@@ -191,6 +194,12 @@ instance ToJSON (TValueType a) where
 instance ToJSON ValueType where
   toJSON (ValueType vt)           = toJSON vt
 
+instance ToJSON ArgType where
+  toJSON (AbiArg abiType) = object [ "kind" .= String "AbiArgument"
+                                   , "abitype" .= toJSON abiType
+                                   ]
+  toJSON (ContractArg _ c) = object [ "kind" .= String "ContractArgument"
+                                  , "name" .= c ]
 
 instance ToJSON AbiType where
   toJSON (AbiUIntType n)          = object [ "type" .= String "UInt"
@@ -213,8 +222,11 @@ instance ToJSON AbiType where
   toJSON (AbiFunctionType)        = object [ "type" .= String "Function" ]
 
 
+argToAbiType :: ArgType -> AbiType
+argToAbiType (AbiArg t) = t
+argToAbiType (ContractArg _ _) = AbiAddressType
 
 -- Create the string that is used to construct the function selector
 makeIface :: Interface -> String
 makeIface (Interface a decls) =
- a <> "(" <> intercalate "," (fmap (\(Decl typ _) -> show typ) decls) <> ")"
+ a <> "(" <> intercalate "," (fmap (\(Decl argtype _) -> show $ argToAbiType argtype) decls) <> ")"
