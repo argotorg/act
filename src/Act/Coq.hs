@@ -598,13 +598,13 @@ stateval ctor store contract handler updates =
   let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar store updates handler (SVar nowhere contract n) t) (M.toList store')
       (vals, bindings) = unzip texts
       bindings' = concat bindings
+      finalBindings = if ctor then env1Binding : bindings' else bindings'
+      env1Binding = iEnv 1 <+> ":=" <+> "NextEnv" <+> envVar
   in
   (T.unwords $ stateConstructor : addr : vals, finalBindings, finalI)
   where
     addr = if ctor then parens ("NextAddr" <+> envVar) else parens (T.pack contract <.> addrField <+> stateVar)
     store' = contractStore contract store
-    finalBindings = if ctor then env1Binding : bindings' else bindings'
-    env1Binding = iEnv 1 <+> ":=" <+> "NextEnv" <+> envVar
  -- let bindings = snoc (concat argBindings) (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <.> T.pack cid <+> iEnv i <+> T.unwords args')
 
 

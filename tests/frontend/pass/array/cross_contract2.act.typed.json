@@ -478,9 +478,11 @@
                           "field": "ar",
                           "kind": "Field",
                           "reference": {
-                            "contract": "B",
-                            "kind": "SVar",
-                            "svar": "x"
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "Var",
+                            "var": "a"
                           }
                         }
                       },
@@ -516,9 +518,11 @@
                           "field": "ar",
                           "kind": "Field",
                           "reference": {
-                            "contract": "B",
-                            "kind": "SVar",
-                            "svar": "x"
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "Var",
+                            "var": "a"
                           }
                         }
                       },
