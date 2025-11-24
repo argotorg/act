@@ -58,9 +58,7 @@ returns
 
 // contract C
 constructor of C
-interface constructor(address y)
-pointers
-   y |-> B
+interface constructor(address<B> y)
 
 iff
    CALLVALUE == 0

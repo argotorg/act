@@ -96,41 +96,41 @@ Qed.
 
 Lemma swap00_post0_witness : swap00_post0.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop; lia.
 Qed.
 
 Lemma swap00_post1_witness : swap00_post1.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop; lia.
 Qed.
 
 Lemma swap00_post2_witness : swap00_post2.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap00_post3_witness : swap00_post3.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
@@ -139,18 +139,18 @@ Lemma swap00_post3_witness : swap00_post3.
 Qed.
 
 Lemma swap00_post4_witness : swap00_post4.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap00_post5_witness : swap00_post5.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
@@ -161,43 +161,43 @@ Lemma swap00_post5_witness : swap00_post5.
 Qed.
 
 Lemma swap01_post0_witness : swap01_post0.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop; lia.
 Qed.
 
 Lemma swap01_post1_witness : swap01_post1.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop; lia.
 Qed.
 
 Lemma swap01_post2_witness : swap01_post2.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap01_post3_witness : swap01_post3.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
@@ -207,7 +207,7 @@ Qed.
 
 Lemma swap01_post4_witness : swap01_post4.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   repeat rewrite Z.eqb_refl.
@@ -218,55 +218,55 @@ Qed.
 
 Lemma swap01_post5_witness : swap01_post5.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap10_post0_witness : swap10_post0.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop2; lia.
 Qed.
 
 Lemma swap10_post1_witness : swap10_post1.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop2; lia.
 Qed.
 
 Lemma swap10_post2_witness : swap10_post2.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap10_post3_witness : swap10_post3.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
@@ -276,19 +276,19 @@ Qed.
 
 Lemma swap10_post4_witness : swap10_post4.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap10_post5_witness : swap10_post5.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
@@ -298,43 +298,43 @@ Qed.
 
 Lemma swap11_post0_witness : swap11_post0.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply mod_prop2; lia.
 Qed.
 
 Lemma swap11_post1_witness : swap11_post1.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   apply div_prop2; lia.
 Qed.
 
 Lemma swap11_post2_witness : swap11_post2.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((Caller ENV =? This ENV) = false) as HifCond. lia.
+  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.
 
 Lemma swap11_post3_witness : swap11_post3.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
@@ -344,7 +344,7 @@ Qed.
 
 Lemma swap11_post4_witness : swap11_post4.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   repeat rewrite Z.eqb_refl.
@@ -355,12 +355,12 @@ Qed.
 
 Lemma swap11_post5_witness : swap11_post5.
 Proof.
-  intros ENV STATE STATE' amt HConds Hstep.
+  intros ENV STATE STATE' amt HConds Hreach Hstep.
   rewrite Hstep.
   simpl.
   rewrite Z.eqb_refl.
   destruct HConds.
-  assert ((This ENV =? Caller ENV) = false) as HifCond. lia.
+  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
   rewrite HifCond.
   lia.
 Qed.

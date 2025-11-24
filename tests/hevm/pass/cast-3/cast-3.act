@@ -41,10 +41,7 @@ case CALLER == to:
 
 
 constructor of TransferOneToken
-interface constructor(address _tokenAddress)
-
-pointers
-    _tokenAddress |-> Token
+interface constructor(address<Token> _tokenAddress)
 
 iff
 

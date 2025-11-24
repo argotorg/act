@@ -168,20 +168,18 @@ Contract : Constructor list(Transition)              { Contract $1 $2 }
 
 Transition : 'behaviour' id 'of' id
              Interface
-             Pointers
              Precondition
              Cases
              Ensures                                  { Transition (posn $1) (name $2) (name $4)
-                                                        $5 $6 $7 $8 $9 }
+                                                        $5 $6 $7 $8 }
 
 Constructor : 'constructor' 'of' id
               CInterface
-              Pointers
               Precondition
               Creation
               Ensures
               Invariants                              { Constructor (posn $3) (name $3)
-                                                         $4 $5 $6 $7 $8 $9 }
+                                                         $4 $5 $6 $7 $8 }
 
 Ensures : optblock('ensures', Expr)                   { $1 }
 
@@ -232,7 +230,10 @@ Assign : StorageVar ':=' Expr                         { AssignVal $1 $3 }
 
 Defn : Expr ':=' Expr                                 { Mapping $1 $3 }
 
-Decl : AbiType id                                     { Decl $1 (name $2) }
+Decl : ArgType id                                     { Decl $1 (name $2) }
+
+ArgType : AbiType                                     { AbiArg $1 }
+        | 'address' '<' id '>'                        { ContractArg (posn $3) (name $3) }
 
 StorageVar : SlotType id                              { StorageVar (posn $2) $1 (name $2) }
 
@@ -333,6 +334,6 @@ parseError ((L token pn):_) =
     show token])
 
 emptyConstructor :: Transition -> Constructor
-emptyConstructor (Transition _ _ c _ _ _ _ _) = Constructor nowhere c (Interface "constructor" []) [] [] (Creates []) [] []
+emptyConstructor (Transition _ _ c _ _ _ _) = Constructor nowhere c (Interface "constructor" []) [] (Creates []) [] []
 
 }

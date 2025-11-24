@@ -38,13 +38,15 @@ Lemma invStepProof : invariantStep invariantProp.
 Proof.
   unfold invariantProp.
   intros env _b _e s s' Hinit Hstep HinvPre.
-  destruct Hstep as [ENV STATE HstepConds].
+  destruct Hstep as [e Hestep].
+  destruct Hestep as [ENV STATE Hstep].
+  induction H.
   simpl.
   rewrite Z.sub_1_r.
   rewrite <- Z.mul_assoc.
   rewrite pow_pred with (a := b STATE) (e := e STATE - 1).
   - assumption.
-  - destruct HstepConds.
+  - destruct H.
     lia.
 Qed.
 

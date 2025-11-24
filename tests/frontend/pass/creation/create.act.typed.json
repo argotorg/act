@@ -41,7 +41,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [

@@ -213,7 +213,6 @@ mkConstructor cs
           pure $ Constructor
             { _cname = T.unpack cs.name
             , _cinterface = fst cs.creation
-            , _cpointers = []
             , _cpreconditions = nub ps
             , _cpostconditions = mempty
             , _invariants = mempty
@@ -258,7 +257,6 @@ mkBehvs c = concatMapM (\(i, bs) -> mapM (mkbehv i) (Set.toList bs)) (Map.toList
         { _contract = T.unpack c.name
         , _interface = behvIface method
         , _name = T.unpack method.name
-        , _pointers = []
         , _preconditions = nub pres
         , _caseconditions = mempty -- TODO: what to do here?
         , _postconditions = mempty
@@ -470,10 +468,10 @@ toErr _ (Just a) = Right a
 toErr msg Nothing = Left msg
 
 ctorIface :: [(Text, AbiType)] -> Interface
-ctorIface args = Interface "constructor" (fmap (\(n, t) -> Decl t (T.unpack n)) args)
+ctorIface args = Interface "constructor" (fmap (\(n, t) -> Decl (AbiArg t) (T.unpack n)) args)
 
 behvIface :: Method -> Interface
-behvIface method = Interface (T.unpack method.name) (fmap (\(n, t) -> Decl t (T.unpack n)) method.inputs)
+behvIface method = Interface (T.unpack method.name) (fmap (\(n, t) -> Decl (AbiArg t) (T.unpack n)) method.inputs)
 
 convslot :: EVM.SlotType -> SlotType
 convslot (EVM.StorageMapping a b) = StorageMapping (fmap PrimitiveType a) (PrimitiveType b)

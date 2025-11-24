@@ -34,8 +34,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -46,7 +49,6 @@
           },
           "kind": "Behaviour",
           "name": "bar",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -477,8 +479,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -489,7 +494,6 @@
           },
           "kind": "Behaviour",
           "name": "bar",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -930,8 +934,11 @@
             "args": [
               {
                 "abitype": {
-                  "size": "256",
-                  "type": "UInt"
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
                 },
                 "id": "\"z\"",
                 "kind": "Declaration"
@@ -942,7 +949,6 @@
           },
           "kind": "Behaviour",
           "name": "bar",
-          "pointers": [],
           "postConditions": [
             {
               "args": [
@@ -1377,7 +1383,6 @@
         },
         "invariants": [],
         "kind": "Constructor",
-        "pointers": [],
         "postConditions": [
           {
             "args": [

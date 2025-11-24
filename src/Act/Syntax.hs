@@ -13,6 +13,7 @@ module Act.Syntax where
 import Prelude hiding (LT, GT)
 
 import Data.List hiding (singleton)
+import Data.Maybe (mapMaybe)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map (Map,empty,insertWith,unionsWith,unionWith,singleton)
 
@@ -31,7 +32,7 @@ invExp :: TypedExplicit.InvariantPred -> TypedExplicit.Exp ABoolean
 invExp (PredTimed pre post) = pre <> post
 
 locsFromBehaviour :: TypedExplicit.Behaviour -> [TypedExplicit.Location]
-locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds rewrites returns) = nub $
+locsFromBehaviour (Behaviour _ _ _ preconds cases postconds rewrites returns) = nub $
   concatMap locsFromExp preconds
   <> concatMap locsFromExp cases
   <> concatMap locsFromExp postconds
@@ -39,7 +40,7 @@ locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds rewrites returns) 
   <> maybe [] locsFromTypedExp returns
 
 locsFromConstructor :: TypedExplicit.Constructor -> [TypedExplicit.Location]
-locsFromConstructor (TypedExplicit.Constructor _ _ _ pre post inv initialStorage) = nub $
+locsFromConstructor (TypedExplicit.Constructor _ _ pre post inv initialStorage) = nub $
   concatMap locsFromExp pre
   <> concatMap locsFromExp post
   <> concatMap locsFromConstrInvariant inv
@@ -59,7 +60,7 @@ locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
 ------------------------------------
 
 nameOfContract :: Contract t -> Id
-nameOfContract (Contract (Constructor cname _ _ _ _ _ _) _) = cname
+nameOfContract (Contract (Constructor cname _ _ _ _ _) _) = cname
 
 behvsFromAct :: Typed.Act t -> [Behaviour t]
 behvsFromAct (Act _ contracts) = behvsFromContracts contracts
@@ -146,6 +147,7 @@ locsFromExp = nub . go
       Create _ _ es -> concatMap locsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
       VarRef _ _ k a -> locsFromItem k a
+      Address _ e' -> locsFromExp e'
 
 createsFromExp :: Exp a t -> [Id]
 createsFromExp = nub . go
@@ -185,6 +187,7 @@ createsFromExp = nub . go
       Create _ f es -> [f] <> concatMap createsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
       VarRef _ _ _ a -> createsFromItem a
+      Address _ e' -> createsFromExp e'
 
 createsFromItem :: TItem k a t -> [Id]
 createsFromItem item = concatMap createsFromTypedExp (ixsFromItem item)
@@ -197,7 +200,7 @@ createsFromContract (Contract constr behvs) =
   createsFromConstructor constr <> concatMap createsFromBehaviour behvs
 
 createsFromConstructor :: Constructor t -> [Id]
-createsFromConstructor (Constructor _ _ _ pre post inv initialStorage) = nub $
+createsFromConstructor (Constructor _ _ pre post inv initialStorage) = nub $
   concatMap createsFromExp pre
   <> concatMap createsFromExp post
   <> concatMap createsFromInvariant inv
@@ -216,7 +219,7 @@ createsFromUpdate update = nub $ case update of
   TypedExplicit.Update _ item e -> createsFromItem item <> createsFromExp e
 
 createsFromBehaviour :: Behaviour t -> [Id]
-createsFromBehaviour (Behaviour _ _ _ _ _ preconds postconds rewrites returns) = nub $
+createsFromBehaviour (Behaviour _ _ _ _ preconds postconds rewrites returns) = nub $
   concatMap createsFromExp preconds
   <> concatMap createsFromExp postconds
   <> concatMap createsFromUpdate rewrites
@@ -228,15 +231,19 @@ pointersFromContract (Contract constr behvs) =
   nub $ pointersFromConstructor constr <> concatMap pointersFromBehaviour behvs
 
 pointersFromConstructor :: Constructor t -> [Id]
-pointersFromConstructor (Constructor _ _ ptrs _ _ _ _) =
-  map (\(PointsTo _ _ c) -> c) ptrs
+pointersFromConstructor (Constructor _ (Interface _ decls) _ _ _ _) =
+  mapMaybe (fmap snd . pointerFromDecl) decls
 
 pointersFromBehaviour :: Behaviour t -> [Id]
-pointersFromBehaviour (Behaviour _ _ _ ptrs _ _ _ _ _) =
-  map (\(PointsTo _ _ c) -> c) ptrs
+pointersFromBehaviour (Behaviour _ _ (Interface _ decls) _ _ _ _ _) =
+  mapMaybe (fmap snd . pointerFromDecl) decls
+
+pointerFromDecl :: Decl -> Maybe (Id, Id)
+pointerFromDecl (Decl (ContractArg _ c) name) = Just (name,c)
+pointerFromDecl _ = Nothing
 
 ethEnvFromBehaviour :: Behaviour t -> [EthEnv]
-ethEnvFromBehaviour (Behaviour _ _ _ _ preconds cases postconds rewrites returns) = nub $
+ethEnvFromBehaviour (Behaviour _ _ _ preconds cases postconds rewrites returns) = nub $
   concatMap ethEnvFromExp preconds
   <> concatMap ethEnvFromExp cases
   <> concatMap ethEnvFromExp postconds
@@ -244,7 +251,7 @@ ethEnvFromBehaviour (Behaviour _ _ _ _ preconds cases postconds rewrites returns
   <> maybe [] ethEnvFromTypedExp returns
 
 ethEnvFromConstructor :: TypedExplicit.Constructor -> [EthEnv]
-ethEnvFromConstructor (TypedExplicit.Constructor _ _ _ pre post inv initialStorage) = nub $
+ethEnvFromConstructor (TypedExplicit.Constructor _ _ pre post inv initialStorage) = nub $
   concatMap ethEnvFromExp pre
   <> concatMap ethEnvFromExp post
   <> concatMap ethEnvFromInvariant inv
@@ -306,6 +313,7 @@ ethEnvFromExp = nub . go
       ByEnv _ a -> [a]
       Create _ _ ixs -> concatMap ethEnvFromTypedExp ixs
       VarRef _ _ _ a -> ethEnvFromItem a
+      Address _ e' -> ethEnvFromExp e'
 
 idFromItem :: TItem a k t -> Id
 idFromItem (Item _ _ ref) = idFromRef ref
@@ -428,6 +436,7 @@ posnFromExp e = case e of
   NEq p _ _ _ -> p
   ITE p _ _ _ -> p
   VarRef p _ _ _ -> p
+  Address _ e' -> posnFromExp e'
 
 posnFromItem :: TItem a k t -> Pn
 posnFromItem (Item _ _ ref) = posnFromRef ref
@@ -474,6 +483,7 @@ expandArrayExpr :: SType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)
 expandArrayExpr (SSArray SInteger) (Array _ l) = l
 expandArrayExpr (SSArray SBoolean) (Array _ l) = l
 expandArrayExpr (SSArray SByteStr) (Array _ l) = l
+expandArrayExpr (SSArray SContract) (Array _ l) = l
 expandArrayExpr (SSArray s@(SSArray _)) (Array _ l) = concatMap (expandArrayExpr s) l
 expandArrayExpr _ (VarRef pn t k item) = VarRef pn t k <$> expandItem item
 expandArrayExpr typ (ITE pn tbool e1 e2) =
@@ -492,7 +502,7 @@ nameFromEntry (EIndexed _ e _) = nameFromEntry e
 nameFromEntry (EField _ e _) = nameFromEntry e
 
 nameFromBehv :: TypedExplicit.Behaviour -> Id
-nameFromBehv (Behaviour _ _ (Interface ifaceName _) _ _ _ _ _ _) = ifaceName
+nameFromBehv (Behaviour _ _ (Interface ifaceName _) _ _ _ _ _) = ifaceName
 
 getPosEntry :: Entry -> Pn
 getPosEntry (EVar pn _) = pn

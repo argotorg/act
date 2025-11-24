@@ -17,12 +17,8 @@ creates
     uint z := z1
 
 constructor of C
-interface constructor(address a1, address a2)
+interface constructor(address<A> a1, address<B> a2)
 
-pointers
-  a1 |-> A
-  a2 |-> B
-  
 iff
     CALLVALUE == 0
 
@@ -31,11 +27,7 @@ creates
     B b := a2
 
 constructor of D
-interface constructor(address a1, address a2)
-
-pointers
-  a1 |-> A
-  a2 |-> B
+interface constructor(address<A> a1, address<B> a2)
 
 iff
     CALLVALUE == 0    

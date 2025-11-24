@@ -31,10 +31,9 @@ prettyContract :: Contract t -> String
 prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
-prettyCtor (Constructor name interface ptrs pres posts invs initStore)
+prettyCtor (Constructor name interface pres posts invs initStore)
   =   "constructor of " <> name
   >-< "interface " <> show interface
-  <> prettyPtrs ptrs
   <> prettyPre pres
   <> prettyCreates initStore
   <> prettyPost posts
@@ -55,10 +54,9 @@ prettyValueType = \case
 
 
 prettyBehaviour :: Behaviour t -> String
-prettyBehaviour (Behaviour name contract interface ptrs preconditions cases postconditions stateUpdates returns)
+prettyBehaviour (Behaviour name contract interface preconditions cases postconditions stateUpdates returns)
   =   "behaviour " <> name <> " of " <> contract
   >-< "interface " <> (show interface)
-  <> prettyPtrs ptrs
   <> prettyPre preconditions
   <> prettyCases cases
   <> prettyStorage stateUpdates
@@ -72,12 +70,6 @@ prettyBehaviour (Behaviour name contract interface ptrs preconditions cases post
     prettyRet Nothing = ""
 
 
-
-prettyPtrs :: [Pointer] -> String
-prettyPtrs [] = ""
-prettyPtrs ptrs = header "pointers" >-< block (prettyPtr <$> ptrs)
-  where
-    prettyPtr (PointsTo _ x c) = x <> " |-> " <> c
 
 prettyPre :: [Exp ABoolean t] -> String
 prettyPre [] = ""
@@ -150,6 +142,7 @@ prettyExp e = case e of
   ITE _ a b c -> "(if " <> prettyExp a <> " then " <> prettyExp b <> " else " <> prettyExp c <> ")"
   VarRef _ t SStorage a -> timeParens t $ prettyItem a
   VarRef _ _ SCalldata a -> prettyItem a
+  Address _ c  -> prettyExp c
   where
     print2 sym a b = "(" <> prettyExp a <> " " <> sym <> " " <> prettyExp b <> ")"
 
@@ -246,6 +239,7 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       ITE p x y z -> ITE p (untime x) (untime y) (untime z)
       Slice p a b c -> Slice p (untime a) (untime b) (untime c)
       VarRef p _  k (Item t vt a) -> VarRef p Neither k (Item t vt (untimeRef a))
+      Address c a -> Address c (untime a)
 
 -- | Doc type for terminal output
 type DocAnsi = Doc Term.AnsiStyle

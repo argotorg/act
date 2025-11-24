@@ -214,16 +214,17 @@ iff
 returns pre(allowance[idx1][idx2])
 
 constructor of Amm
-interface constructor()
+interface constructor(address<Token> t0, address<Token> t1)
 
 iff
 
     CALLVALUE == 0
+    t0 =/= t1
 
 creates
 
-    Token token0 := create Token(200) 
-    Token token1 := create Token(200)
+    Token token0 := t0 
+    Token token1 := t1
 
 behaviour swap0 of Amm
 interface swap0(uint256 amt)
