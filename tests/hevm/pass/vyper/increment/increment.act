@@ -1,0 +1,18 @@
+constructor of A
+interface constructor()
+
+iff
+  CALLVALUE == 0
+
+creates
+  uint128 x := 0
+
+behaviour f of A
+interface f()
+
+iff
+  CALLVALUE == 0
+  inRange(uint128, x+1)
+
+storage
+  x => x+1
