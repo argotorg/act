@@ -34,6 +34,7 @@ data ActType where
   AStruct    :: ActType
   AArray     :: ActType -> ActType
   AContract  :: ActType
+  AMapping   :: ActType
 
 -- | Singleton runtime witness for Act types. Sometimes we need to examine type
 -- tags at runtime. Tagging structures with this type will let us do that.
@@ -44,6 +45,7 @@ data SType (a :: ActType) where
   SStruct   :: SType AStruct
   SSArray   :: SType a -> SType (AArray a)
   SContract :: SType AContract
+  SMapping  :: SType AMapping
 deriving instance Eq (SType a)
 
 instance Show (SType a) where
@@ -54,6 +56,7 @@ instance Show (SType a) where
     SStruct  -> "struct"
     SSArray a -> show a ++ " array"
     SContract -> "contract"
+    SMapping  -> "mapping"
 
 type instance Sing = SType
 
@@ -79,6 +82,7 @@ data TValueType (a :: ActType) where
   TStruct   :: [ValueType] -> TValueType AStruct
   TArray    :: SingI a => Int -> TValueType a -> TValueType (AArray a)
   TContract :: Id -> TValueType AContract
+  TMapping  :: ValueType -> ValueType -> TValueType AMapping
 deriving instance Eq (TValueType a)
 deriving instance Show (TValueType a)
 
@@ -90,6 +94,7 @@ instance TestEquality TValueType where
   testEquality (TContract c1) (TContract c2) | c1 == c2 = Just Refl
   testEquality (TArray n1 t1) (TArray n2 t2) | n1 == n2 = (\Refl -> Just Refl) =<< testEquality t1 t2
   testEquality (TStruct fs1) (TStruct fs2) | and (zipWith (==) fs1 fs2) = Just Refl
+  testEquality (TMapping k1 v1) (TMapping k2 v2) | k1 == k2 && v1 == v2 = Just Refl
   testEquality _ _ = Nothing
 
 data ValueType = forall (a :: ActType). SingI a => ValueType (TValueType a)
@@ -118,6 +123,7 @@ instance SingI 'AByteStr where sing = SByteStr
 instance SingI 'AStruct  where sing = SStruct
 instance SingI 'AContract  where sing = SContract
 instance SingI a => SingI ('AArray a) where sing = SSArray (sing @a)
+instance SingI 'AMapping where sing = SMapping
 
 type family ActSingI (a :: ActType) :: Constraint where
   ActSingI (a :: ActType) = SingI a
@@ -132,6 +138,7 @@ type family Base (a :: ActType) :: ActType where
   Base AByteStr = AByteStr
   Base AStruct  = AStruct
   Base AContract = AContract
+  Base AMapping = AMapping
 
 flattenSType :: SType a -> SType (Base a)
 flattenSType (SSArray s') = flattenSType s'
@@ -140,6 +147,7 @@ flattenSType SBoolean  = SBoolean
 flattenSType SByteStr  = SByteStr
 flattenSType SStruct   = SStruct
 flattenSType SContract = SContract
+flattenSType SMapping  = SMapping
 
 -- | Reflection of an Act type into a haskell type. Used to define the result
 -- type of the evaluation function.
@@ -163,30 +171,18 @@ flattenAbiType (AbiArrayType n t) = case flattenAbiType t of
 flattenAbiType a = (a, Nothing)
 
 
-fromAbiType :: AbiType -> ActType
-fromAbiType (AbiUIntType _)     = AInteger
-fromAbiType (AbiIntType  _)     = AInteger
-fromAbiType AbiAddressType      = AInteger
-fromAbiType AbiBoolType         = ABoolean
-fromAbiType (AbiBytesType n)    = if n <= 32 then AInteger else AByteStr
-fromAbiType AbiBytesDynamicType = AByteStr
-fromAbiType AbiStringType       = AByteStr
-fromAbiType (AbiArrayType _ a)  = AArray $ fromAbiType a
-fromAbiType (AbiTupleType _)    = AStruct
-fromAbiType _ = error "Syntax.Types.actType: TODO"
-
-fromAbiType' :: AbiType -> ValueType
-fromAbiType' (AbiUIntType n)     = ValueType $ TInteger n Unsigned
-fromAbiType' (AbiIntType  n)     = ValueType $ TInteger n Signed
-fromAbiType' AbiAddressType      = ValueType TAddress
-fromAbiType' AbiBoolType         = ValueType TBoolean
-fromAbiType' (AbiBytesType n)    = if n <= 32 then ValueType (TInteger (n*8) Unsigned) else ValueType TByteStr
-fromAbiType' AbiBytesDynamicType = ValueType TByteStr
-fromAbiType' AbiStringType       = ValueType TByteStr
-fromAbiType' (AbiArrayType n a)  = case fromAbiType' a of
+fromAbiType :: AbiType -> ValueType
+fromAbiType (AbiUIntType n)     = ValueType $ TInteger n Unsigned
+fromAbiType (AbiIntType  n)     = ValueType $ TInteger n Signed
+fromAbiType AbiAddressType      = ValueType TAddress
+fromAbiType AbiBoolType         = ValueType TBoolean
+fromAbiType (AbiBytesType n)    = if n <= 32 then ValueType (TInteger (n*8) Unsigned) else ValueType TByteStr
+fromAbiType AbiBytesDynamicType = ValueType TByteStr
+fromAbiType AbiStringType       = ValueType TByteStr
+fromAbiType (AbiArrayType n a)  = case fromAbiType a of
   ValueType vt' -> ValueType $ TArray n vt'
-fromAbiType' (AbiTupleType f)    = ValueType $ TStruct (fromAbiType' <$> V.toList f)
-fromAbiType' _ = error "Syntax.Types.valueType: TODO"
+fromAbiType (AbiTupleType f)    = ValueType $ TStruct (fromAbiType <$> V.toList f)
+fromAbiType _ = error "Syntax.Types.valueType: TODO"
 
 toAbiType :: TValueType a -> AbiType
 toAbiType (TInteger n Unsigned) = AbiUIntType n
@@ -197,7 +193,8 @@ toAbiType TByteStr              = AbiBytesDynamicType
 toAbiType (TContract _)         = AbiAddressType
 toAbiType (TStruct fs)          = AbiTupleType (V.fromList $ toAbiType' <$> fs)
   where toAbiType' (ValueType t) = toAbiType t
-toAbiType (TArray n t)          = AbiArrayType n (toAbiType t) 
+toAbiType (TArray n t)          = AbiArrayType n (toAbiType t)
+toAbiType (TMapping _ _)       = error "Syntax.Types.toAbiType: Mappings are not representable in ABI"
 
 --valueToAbiType :: ValueType -> AbiType
 --valueToAbiType (ValueType t) = toAbiType t
@@ -212,6 +209,7 @@ flattenValueType TBoolean = (TBoolean, Nothing)
 flattenValueType TByteStr = (TByteStr, Nothing)
 flattenValueType (TStruct fs) = (TStruct fs, Nothing)
 flattenValueType (TContract cid) = (TContract cid, Nothing)
+flattenValueType (TMapping k v) = (TMapping k v, Nothing)
 
 toSType :: forall (a :: ActType). TValueType a -> SType a
 --toSType _ = sing @a
@@ -222,6 +220,7 @@ toSType TAddress = SInteger
 toSType (TStruct _) = SStruct
 toSType (TContract _) = SContract
 toSType (TArray _ t) = SSArray (toSType t)
+toSType (TMapping _ _) = SMapping
 
 
 someType :: ActType -> SomeType
@@ -232,6 +231,7 @@ someType AStruct = SomeType SStruct
 someType AContract = SomeType SContract
 someType (AArray a) = case someType a of
   (FromSome styp ) -> SomeType $ SSArray styp
+someType AMapping = SomeType SMapping
 
 --actType :: SType s -> ActType
 --actType SInteger = AInteger

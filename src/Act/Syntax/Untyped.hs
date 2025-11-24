@@ -33,12 +33,6 @@ type Ensures = [Expr]
 
 type Invariants = [Expr]
 
-data Pointer = PointsTo Pn Id Id
-  deriving (Eq, Ord)
-
-instance Show Pointer where
-  show (PointsTo _ x c) = "(" <> x <> "|->" <> c <> ")"
-
 data Interface = Interface Id [Decl]
   deriving (Eq, Ord)
 
@@ -48,17 +42,13 @@ instance Show Interface where
 newtype Cases = Branches [Case]
   deriving (Eq, Show)
 
-data Case = Case Pn Expr Post
-  deriving (Eq, Show)
-
-data Post
-  = Post [Storage] (Maybe Expr)
+data Case = Case Pn Expr [StorageUpdate] (Maybe Expr)
   deriving (Eq, Show)
 
 newtype Creates = Creates [Assign]
   deriving (Eq, Show)
 
-data Storage
+data StorageUpdate
   = Update Entry Expr
   deriving (Eq, Show)
 
