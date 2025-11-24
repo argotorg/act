@@ -57,15 +57,15 @@ import Act.Syntax.Timing  as Act.Syntax.Typed
 import Act.Syntax.Untyped as Act.Syntax.Typed (Pn, Interface(..), EthEnv(..), Decl(..), SlotType(..), ArgType(..), Pointer(..), makeIface, argToAbiType)
 
 -- AST post typechecking
-data Act t = Act Store [Contract t]
+data Act t = Act StorageTyping [Contract t]
   deriving (Show, Eq)
 
 data Contract t = Contract (Constructor t) [Behaviour t]
   deriving (Show, Eq)
 
--- For each contract, it stores the type of a storage variables and
--- the order in which they are declared
-type Store = Map Id (Map Id (SlotType, Integer))
+-- For each contract, we store the type of a storage variables and the order in
+-- which they are declared
+type StorageTyping = Map Id (Map Id (ValueType, Integer))
 
 
 -- | Represents a contract level invariant. The invariant is defined in the
@@ -93,16 +93,17 @@ data InvariantPred (t :: Timing) where
 deriving instance Show (InvariantPred t)
 deriving instance Eq (InvariantPred t)
 
+type Cases a = [(Exp ABoolean Untimed, a)]
+
 data Constructor t = Constructor
   { _cname :: Id
   , _cinterface :: Interface
   , _cpreconditions :: [Exp ABoolean t]
+  , _ccases :: Cases [StorageUpdate t]
   , _cpostconditions :: [Exp ABoolean t]
   , _invariants :: [Invariant t]
-  , _initialStorage :: [StorageUpdate t]
   } deriving (Show, Eq)
-
-
+  
 -- After typing each behavior may be split to multiple behaviors, one for each case branch.
 -- In this case, only the `_caseconditions`, `_stateUpdates`, and `_returns` fields are different.
 data Behaviour t = Behaviour
@@ -110,32 +111,29 @@ data Behaviour t = Behaviour
   , _contract :: Id
   , _interface :: Interface
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
-  , _caseconditions :: [Exp ABoolean t] -- if preconditions are satisfied and the case conditions are not, some other instance of the behavior should apply
+  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp Timed))
   , _postconditions :: [Exp ABoolean Timed]
-  , _stateUpdates :: [StorageUpdate t]
-  , _returns :: Maybe (TypedExp Timed)
   } deriving (Show, Eq)
 
 data StorageUpdate (t :: Timing) where
-  Update :: TValueType a -> TItem a Storage t -> Exp a t -> StorageUpdate t
+  Update :: TValueType a -> Ref Storage t -> Exp a t -> StorageUpdate t
 deriving instance Show (StorageUpdate t)
 
 instance Eq (StorageUpdate t) where
   (==) :: StorageUpdate t -> StorageUpdate t -> Bool
   Update vt1@VType i1 e1 == Update vt2@VType i2 e2 = eqS'' vt1 vt2 && eqS' i1 i2 && eqS e1 e2
 
-_Update :: TItem a Storage t -> Exp a t -> StorageUpdate t
-_Update item@(Item t@VType _) expr = Update t item expr
+_Update :: Ref Storage t -> Exp a t -> StorageUpdate t
+_Update ref expr = Update (getValueType ref) ref expr
 
-data Location (t :: Timing) where
-  Loc :: TValueType a -> SRefKind k -> TItem a k t -> Location t
-deriving instance Show (Location t)
+data TypedRef (t :: Timing) where
+  TRef :: TValueType a -> SRefKind k -> Ref k t -> TypedRef t
+deriving instance Show (TypedRef t)
 
-instance Eq (Location t) where
-  Loc vt1@VType SRefKind i1 == Loc vt2@VType SRefKind i2 = eqS'' vt1 vt2 && eqTypeKind i1 i2
-
-_Loc :: SRefKind k -> TItem a k t -> Location t
-_Loc k item@(Item t@VType _) = Loc t k item
+instance Eq (TypedRef t) where
+  TRef vt1@VType SRefKind i1 == TRef vt2@VType SRefKind i2 = eqS'' vt1 vt2 && eqTypeKind i1 i2
+_TRef :: SRefKind k -> Ref k t -> TypedRef t
+_TRef k item@(Item t@VType _) = TRef t k item
 
 -- | Distinguish the type of Refs to calldata variables and storage
 data RefKind = Storage | Calldata
@@ -197,21 +195,6 @@ instance Eq (Ref k t) where
   SField _ r c x      == SField _ r' c' x'      = r == r' && c == c' && x == x'
   _                   == _                      = False
 
--- | Item is a reference together with its Act type. The type is
--- parametrized on a timing `t`, a type `a`, and the reference kind
--- `k`. `t` can be either `Timed` or `Untimed` and indicates whether
--- any indices that reference items in storage explicitly refer to the
--- pre-/post-state, or not. `a` is the type of the item that is
--- referenced. Items are also annotated with the original ValueType
--- that carries more precise type information (e.g., the exact
--- contract type).
-data TItem (a :: ActType) (k :: RefKind) (t :: Timing) where
-  Item :: TValueType a -> Ref k t -> TItem a k t
-deriving instance Show (TItem a k t)
-deriving instance Eq (TItem a k t)
-
---_Item :: SingI a => ValueType -> Ref k t -> TItem a k t
---_Item = Item sing
 
 -- | Expressions for which the return type is known.
 data TypedExp t
