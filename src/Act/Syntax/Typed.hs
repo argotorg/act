@@ -54,7 +54,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import Act.Parse          as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Pn, Interface(..), EthEnv(..), Decl(..), SlotType(..), Pointer(..), makeIface)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Pn, Interface(..), EthEnv(..), Decl(..), SlotType(..), ArgType(..), Pointer(..), makeIface, argToAbiType)
 
 -- AST post typechecking
 data Act t = Act Store [Contract t]

@@ -144,7 +144,7 @@ extStep main store = inductive
     localStore = contractStore main store
 
     substep :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    substep var (StorageValue (TContract cid), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> envVar' <+> stateDecl'), body')
+    substep var (StorageValue (ValueType (TContract cid)), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> envVar' <+> stateDecl'), body')
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
@@ -161,7 +161,7 @@ extStep main store = inductive
     substep _ _ = Nothing
 
     subBounds :: Id -> Id -> (SlotType, Integer) -> Maybe T.Text
-    subBounds stepVar var (StorageValue (TContract cid), _) | var /= stepVar = Just $ T.pack cid <.> "integerBoundsRec" <+> parens (T.pack var <+> stateVar)
+    subBounds stepVar var (StorageValue (ValueType (TContract cid)), _) | var /= stepVar = Just $ T.pack cid <.> "integerBoundsRec" <+> parens (T.pack var <+> stateVar)
     subBounds _ _ _ = Nothing
       
 
@@ -198,7 +198,7 @@ contractAddressIn name store = inductive
     localStore = contractStore name store
 
     subCAddr :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    subCAddr var (StorageValue (TContract cid), _) = Just ("addressOf_" <> varp, Just $ parens ("p : address") <+> stateDecl, body')
+    subCAddr var (StorageValue (ValueType (TContract cid)), _) = Just ("addressOf_" <> varp, Just $ parens ("p : address") <+> stateDecl, body')
       where
         varp = T.pack var
         body' = indent 2 . implication $
@@ -219,13 +219,13 @@ addressIn name store = inductive
     localStore = contractStore name store
 
     subAddr :: Id -> (SlotType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    subAddr var (StorageValue TAddress, _) =
+    subAddr var (StorageValue (ValueType TAddress), _) =
       let varp = T.pack var in
       Just ("address_" <> varp, Just stateDecl, indent 5 $ addressInType <+>  parens (varp <+> stateVar) <+> stateVar)
     subAddr _ _ = Nothing
 
 slotContractName :: SlotType -> Maybe Id
-slotContractName (StorageValue (TContract cid)) = Just cid
+slotContractName (StorageValue (ValueType (TContract cid))) = Just cid
 slotContractName _ = Nothing
 
 noAliasing :: Id -> Store -> T.Text
@@ -267,17 +267,17 @@ intBounds name store = inductive
     localStore = contractStore name store
 
     go :: Id -> (SlotType, Integer) -> Maybe T.Text
-    go v (StorageValue (TContract cid), _) = Just $
+    go v (StorageValue (ValueType (TContract cid)), _) = Just $
       "0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar) <+> "<= UINT_MAX 160"
-    go v (StorageValue (TInteger n Unsigned), _) = Just $
+    go v (StorageValue (ValueType (TInteger n Unsigned)), _) = Just $
       "0 <=" <+> T.pack v <+> stateVar <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageValue (TInteger n Signed), _) = Just $
+    go v (StorageValue (ValueType (TInteger n Signed)), _) = Just $
       "INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> "<= INT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (TContract cid), _) = Just $ parens $
+    go v (StorageMapping is (ValueType (TContract cid)), _) = Just $ parens $
       "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar <+> ixs (length is)) <+> "<= UINT_MAX 160"
-    go v (StorageMapping is (TInteger n Unsigned), _) = Just $ parens $
+    go v (StorageMapping is (ValueType (TInteger n Unsigned)), _) = Just $ parens $
       "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (TInteger n Signed), _) = Just $ parens $
+    go v (StorageMapping is (ValueType (TInteger n Signed)), _) = Just $ parens $
       "forall" <+> ixs (length is) <> ", INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= INT_MAX" <+> T.pack (show n)
     go _ _ = Nothing
 
@@ -292,19 +292,19 @@ intBoundsRec name store = inductive
     localStore = contractStore name store
 
     go :: Id -> (SlotType, Integer) -> [T.Text]
-    go v (StorageValue (TContract cid), _) =
+    go v (StorageValue (ValueType (TContract cid)), _) =
       [ "0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar) <+> "<= UINT_MAX 160"
       , T.pack cid <.> "integerBoundsRec" <+> parens (T.pack v <+> stateVar) ]
-    go v (StorageValue (TInteger n Unsigned), _) = pure $
+    go v (StorageValue (ValueType (TInteger n Unsigned)), _) = pure $
       "0 <=" <+> T.pack v <+> stateVar <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageValue (TInteger n Signed), _) = pure $
+    go v (StorageValue (ValueType (TInteger n Signed)), _) = pure $
       "INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> "<= INT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (TContract cid), _) =
+    go v (StorageMapping is (ValueType (TContract cid)), _) =
       [ parens $ "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack cid <.> addrField <+> parens (T.pack v <+> stateVar <+> ixs (length is)) <+> "<= UINT_MAX 160"
       , parens $ "forall" <+> ixs (length is) <> "," <+> T.pack cid <.> "integerBoundsRec" <+> parens (T.pack v <+> stateVar <+> ixs (length is)) ]
-    go v (StorageMapping is (TInteger n Unsigned), _) = pure $ parens $
+    go v (StorageMapping is (ValueType (TInteger n Unsigned)), _) = pure $ parens $
       "forall" <+> ixs (length is) <> ", 0 <=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= UINT_MAX" <+> T.pack (show n)
-    go v (StorageMapping is (TInteger n Signed), _) = pure $ parens $
+    go v (StorageMapping is (ValueType (TInteger n Signed)), _) = pure $ parens $
       "forall" <+> ixs (length is) <> ", INT_MIN" <+> T.pack (show n) <+> "<=" <+> T.pack v <+> stateVar <+> ixs (length is) <+> "<= INT_MAX" <+> T.pack (show n)
     go _ _ = []
 
@@ -643,7 +643,7 @@ updateExp (Address _ (Create _ cid args)) = do
 updateExp e = pure (coqexp e, [])
 
 updateExpTyped :: TypedExp -> Fresh (T.Text, [T.Text])
-updateExpTyped (TExp _ _ te) = updateExp te
+updateExpTyped (TExp _ te) = updateExp te
 
 unField :: Ref Storage -> Ref Storage -> Ref Storage
 unField rFocus (SField pn r cid x) | r == rFocus = SVar pn cid x
@@ -651,7 +651,7 @@ unField rFocus (SField pn r cid x) = SField pn (unField rFocus r) cid x
 unField _ r' = r'
 
 updateVar :: Store -> [StorageUpdate] -> (Ref Storage -> SlotType -> T.Text) -> Ref Storage -> SlotType -> Fresh (T.Text, [T.Text])
-updateVar store updates handler focus t@(StorageValue (ContractType cid)) =
+updateVar store updates handler focus t@(StorageValue (ValueType (TContract cid))) =
   case unsnoc groupedUpdates of
     Nothing -> pure (handler focus t, [])
     Just (_, (firstU@(Update _ _ e) NE.:| [])) | eqRef focus firstU->
@@ -673,14 +673,14 @@ updateVar store updates handler focus t@(StorageValue (ContractType cid)) =
     -- all updates before the last group will be overwritten and so can be ignored
     groupedUpdates = NE.groupBy (\_ b -> not $ eqRef focus b) focusUpdates
 
-updateVar _ updates handler focus t@(StorageValue (PrimitiveType AbiAddressType)) =
+updateVar _ updates handler focus t@(StorageValue (ValueType TAddress)) =
   case unsnoc focusUpdates of
     Nothing -> pure (handler focus t, [])
     Just (_, (Update _ _ e)) -> updateExp e
   where
     focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
 
-updateVar _ updates handler focus t@(StorageValue (PrimitiveType _)) =
+updateVar _ updates handler focus t@(StorageValue _) =
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
     where
       updatedVal _ (Update TByteStr _ _) = error "bytestrings not supported"
@@ -746,8 +746,8 @@ valueType (ValueType (TContract cid)) = T.pack cid <> "." <> "State" -- the type
 valueType (ValueType t) = abiType $ toAbiType t
 
 mappingIdxType :: ValueType -> T.Text
-mappingIdxType (PrimitiveType t) = abiType t
-mappingIdxType (ContractType _) = "address" -- index by addresses, not contents of states
+mappingIdxType (ValueType (TContract _)) = "address" -- index by addresses, not contents of states
+mappingIdxType (ValueType t) = abiType $ toAbiType t
 
 -- | coq syntax for an abi type
 abiType :: AbiType -> T.Text
@@ -868,7 +868,8 @@ typedexp (TExp _ e) = coqexp e
 
 entry :: Time 'Timed -> TItem k a -> T.Text
 entry _ (Item TByteStr _) = error "bytestrings not supported"
-entry whn (Item _ r) = ref whn r
+entry Pre (Item _ r) = ref stateVar r
+entry Post (Item _ r) = ref stateVar' r
 
 ref :: T.Text -> Ref k -> T.Text
 ref refState (SVar _ cid name) = parens $ T.pack cid <.> T.pack name <+> refState
