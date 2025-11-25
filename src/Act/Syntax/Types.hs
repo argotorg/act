@@ -80,7 +80,7 @@ data TValueType (a :: ActType) where
   TBoolean  :: TValueType ABoolean
   TByteStr  :: TValueType AByteStr
   TStruct   :: [ValueType] -> TValueType AStruct
-  TArray    :: SingI a => Int -> TValueType a -> TValueType (AArray a)
+  TArray    :: Int -> TValueType a -> TValueType (AArray a)
   TContract :: Id -> TValueType AContract
   TMapping  :: ValueType -> ValueType -> TValueType AMapping
 deriving instance Eq (TValueType a)

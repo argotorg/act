@@ -176,7 +176,7 @@ Transition : 'behaviour' id 'of' id
 Constructor : 'constructor' 'of' id
               CInterface
               Precondition
-              Creation
+              nonempty(CreationCase)
               Ensures
               Invariants                              { Constructor (posn $3) (name $3)
                                                          $4 $5 $6 $7 $8 }
@@ -185,22 +185,19 @@ Ensures : optblock('ensures', Expr)                   { $1 }
 
 Invariants : optblock('invariants', Expr)             { $1 }
 
-Pointers : optblock('pointers', Pointer)              { $1 }
 Interface : 'interface' id '(' seplist(Decl, ',') ')' { Interface (name $2) $4 }
 
 CInterface : 'interface' 'constructor' '(' seplist(Decl, ',') ')' { Interface "constructor" $4 }
 
-Pointer : id '|->' id                                 { PointsTo (posn $2) (name $1) (name $3) }
-
-Cases : Post                                          { Branches [Case nowhere (BoolLit nowhere True) $1] }
-      | nonempty(Case)                                { Branches $1 }
+Cases : Post                                          { [Case nowhere (BoolLit nowhere True) $1] }
+      | nonempty(Case)                                { $1 }
 
 Case : 'case' Expr ':' Post                           { Case (posn $1) $2 $4 }
 
 
-Post  : Storage                                       { Post $1 Nothing }
-      | Returns                                       { Post [] (Just $1) }
-      | Storage Returns                               { Post $1 (Just $2) }
+Post  : Storage                                       { ($1, Nothing) }
+      | Returns                                       { ([], Just $1) }
+      | Storage Returns                               { ($1, Just $2) }
 
 Returns : 'returns' Expr                              { $2 }
 
@@ -214,28 +211,31 @@ RangePrecondition : 'iff in range' AbiType nonempty(Expr)
 
 SimplePrecondition : optblock('iff', Expr)            { $1 }
 
-Store : Entry '=>' Expr                               { Update $1 $3 }
+Store : Ref ':=' Expr                               { Update $1 $3 }
 
-Entry : id                                            { EVar (posn $1) (name $1) }
-      | Entry '[' Expr ']' list(Index)                { EIndexed (posn $2) $1 ($3:$5) }
-      | Entry '.' id                                  { EField (posn $2) $1 (name $3) }
+Ref : id                                              { RVar (posn $1) (name $1) }
+    | 'pre' '(' id ')'                                { RVarPre (posn $1) (name $3) }
+    | 'post' '(' id ')'                               { RVarPost (posn $1) (name $3) }
+    | Ref '[' Expr ']' list(Index)                    { RIndex (posn $2) $1 ($3:$5) }
+    | Ref '.' id                                      { RField (posn $2) $1 (name $3) }
 
 Index : '[' Expr ']'                                  { $2 }
 
+CreationCase : 'case' Expr ':' Creation               { Case (posn $1) $2 $4 }
 
-Creation : optblock('creates',Assign)                 { Creates $1 }
+Creation : optblock('creates',Assign)                 { $1 }
 
-Assign : StorageVar ':=' Expr                         { AssignVal $1 $3 }
-       | StorageVar ':=' '[' seplist(Defn, ',') ']'   { AssignMapping $1 $4 }
+Assign : StorageVar ':=' Expr                         { ($1, $3) }
+       --| StorageVar ':=' '[' seplist(Defn, ',') ']'   { AssignMapping $1 $4 }
 
-Defn : Expr ':=' Expr                                 { Mapping $1 $3 }
+Defn : Expr ':=' Expr                                 { ($1, $3) }
 
 Decl : ArgType id                                     { Decl $1 (name $2) }
 
 ArgType : AbiType                                     { AbiArg $1 }
         | 'address' '<' id '>'                        { ContractArg (posn $3) (name $3) }
 
-StorageVar : SlotType id                              { StorageVar (posn $2) $1 (name $2) }
+StorageVar : ValueType id                              { StorageVar (posn $2) $1 (name $2) }
 
 AbiType : 'uint'
         { case validsize $1 of
@@ -247,21 +247,18 @@ AbiType : 'uint'
             True  -> AbiIntType $1
             False -> error $ "invalid int size: int" <> (show $1)
         }
-       | 'bytes'                                      { AbiBytesType $1 }
-       | AbiType '[' ilit ']'                         { AbiArrayType (fromIntegral $ value $3) $1 }
-       | 'address'                                    { AbiAddressType }
-       | 'bool'                                       { AbiBoolType }
-       | 'string'                                     { AbiStringType }
+        | 'bytes'                                     { AbiBytesType $1 }
+        | AbiType '[' ilit ']'                        { AbiArrayType (fromIntegral $ value $3) $1 }
+        | 'address'                                   { AbiAddressType }
+        | 'bool'                                      { AbiBoolType }
+        | 'string'                                    { AbiStringType }
 
-Type : AbiType                                        { fromAbiType' $1 }
-     | id                                             { ValueType $ TContract (name $1) }
-
-SlotType : 'mapping' '(' MappingArgs ')'              { (uncurry StorageMapping) $3 }
-         | Type                                       { StorageValue $1 }
+ValueType : AbiType                                   { fromAbiType $1 }
+          | id                                        { ValueType $ TContract (name $1) }
 
 
-MappingArgs : Type '=>' Type                          { ($1 NonEmpty.:| [], $3) }
-            | Type '=>' 'mapping' '(' MappingArgs ')' { (NonEmpty.cons $1 (fst $5), snd $5)  }
+MappingArgs : ValueType '=>' ValueType                     { ($1 NonEmpty.:| [], $3) }
+            | ValueType '=>' 'mapping' '(' MappingArgs ')' { (NonEmpty.cons $1 (fst $5), snd $5)  }
 
 Expr : '(' Expr ')'                                   { $2 }
 
@@ -294,26 +291,33 @@ Expr : '(' Expr ')'                                   { $2 }
 
   -- composites
   | 'if' Expr 'then' Expr 'else' Expr                 { EITE (posn $1) $2 $4 $6 }
-  | Entry                                             { EUTEntry $1 }
-  | 'pre'  '(' Entry ')'                              { EPreEntry $3 }
-  | 'post' '(' Entry ')'                              { EPostEntry $3 }
-  | 'create' id '(' seplist(Expr, ',') ')'            { ECreate (posn $2) (name $2) $4 }
+  | Ref                                               { ERef $1 }
+--  | 'pre'  '(' Entry ')'                              { EPreEntry $3 }
+--  | 'post' '(' Entry ')'                              { EPostEntry $3 }
+  | 'create' id '(' seplist(Expr, ',') ')'              { ECreate (posn $2) (name $2) $4 Nothing }
+  | 'create' id '(' Expr ')' '(' seplist(Expr, ',') ')' { ECreate (posn $2) (name $2) $7 (Just $4) }
+  | 'address' '(' Expr ')'                            { AddrOf (posn $1) $3 }
+
   | '[' neseplist(Expr, ',') ']'                      { EArray  (posn $1) $ NonEmpty.toList $2 }
+  | '[' seplist(Defn, ',') ']'                        { Mapping (posn $1) $2 }
+  | Ref '[' seplist(Defn, ',') ']'                    { MappingUpd (posn $2) $1 $3 }
+
+
   | Expr '++' Expr                                    { ECat   (posn $2) $1 $3 }
 --  | id '[' Expr '..' Expr ']'                       { ESlice (posn $2) $1 $3 $5 }
   | 'CALLER'                                          { EnvExp (posn $1) Caller }
-  | 'CALLDEPTH'                                       { EnvExp (posn $1) Calldepth }
-  | 'ORIGIN'                                          { EnvExp (posn $1) Origin }
-  | 'BLOCKHASH'                                       { EnvExp (posn $1) Blockhash }
-  | 'BLOCKNUMBER'                                     { EnvExp (posn $1) Blocknumber }
-  | 'DIFFICULTY'                                      { EnvExp (posn $1) Difficulty }
-  | 'CHAINID'                                         { EnvExp (posn $1) Chainid }
-  | 'GASLIMIT'                                        { EnvExp (posn $1) Gaslimit }
-  | 'COINBASE'                                        { EnvExp (posn $1) Coinbase }
-  | 'TIMESTAMP'                                       { EnvExp (posn $1) Timestamp }
   | 'CALLVALUE'                                       { EnvExp (posn $1) Callvalue }
+  | 'ORIGIN'                                          { EnvExp (posn $1) Origin }
   | 'THIS'                                            { EnvExp (posn $1) This }
-  | 'NONCE'                                           { EnvExp (posn $1) Nonce }
+--  | 'CALLDEPTH'                                       { EnvExp (posn $1) Calldepth }
+--  | 'BLOCKHASH'                                       { EnvExp (posn $1) Blockhash }
+--  | 'BLOCKNUMBER'                                     { EnvExp (posn $1) Blocknumber }
+--  | 'DIFFICULTY'                                      { EnvExp (posn $1) Difficulty }
+--  | 'CHAINID'                                         { EnvExp (posn $1) Chainid }
+--  | 'GASLIMIT'                                        { EnvExp (posn $1) Gaslimit }
+--  | 'COINBASE'                                        { EnvExp (posn $1) Coinbase }
+--  | 'TIMESTAMP'                                       { EnvExp (posn $1) Timestamp }
+--  | 'NONCE'                                           { EnvExp (posn $1) Nonce }
   -- missing builtins
   | 'newAddr' '(' Expr ',' Expr ')'                   { ENewaddr (posn $1) $3 $5 }
 
@@ -334,6 +338,6 @@ parseError ((L token pn):_) =
     show token])
 
 emptyConstructor :: Transition -> Constructor
-emptyConstructor (Transition _ _ c _ _ _ _) = Constructor nowhere c (Interface "constructor" []) [] (Creates []) [] []
+emptyConstructor (Transition _ _ c _ _ _ _) = Constructor nowhere c (Interface "constructor" []) [] [Case nowhere (BoolLit nowhere True) []] [] []
 
 }
