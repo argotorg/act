@@ -12,7 +12,7 @@ bytecode level.
 
 It extends on the previous [Act](https://github.com/dapphub/klab/blob/master/acts.md) project.
 
-More in depth documentation can be found in [The Act Book](https://ethereum.github.io/act/).
+More in depth documentation can be found in [The Act Book](https://argotorg.github.io/act/).
 
 # Building
 
@@ -67,4 +67,4 @@ cabal run act -- --help
 ```
 
 Alternatively, you can `make` first and then run the executable `act` as in  `act <OPTIONS>`.
-For more details on how to run each individual backend consult [The Act Book](https://ethereum.github.io/act/).
+For more details on how to run each individual backend consult [The Act Book](https://argotorg.github.io/act/).
