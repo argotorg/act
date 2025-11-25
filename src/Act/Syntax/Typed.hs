@@ -14,7 +14,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE ViewPatterns #-}
 
 {-|
 Module      : Syntax.Typed
@@ -178,28 +177,24 @@ eqTypeKind fa fb = maybe False (\Refl ->
                        $ testEquality (sing @c) (sing @d))
                          $ testEquality (sing @a) (sing @b)
 
--- | Reference to an item in storage or a variable. It can be either a
--- storage or calldata variable, a map lookup, or a field selector.
--- annotated with two identifiers: the contract that they belong to
--- and their name.
+-- | Variable References
 data Ref (k :: RefKind) (t :: Timing) where
-  CVar :: Pn -> AbiType -> Id -> Ref Calldata t     -- Calldata variable
-  SVar :: Pn -> Id -> Id -> Ref Storage t           -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
-  RArray :: Pn -> Ref k t -> ValueType -> [(TypedExp t, Int)] -> Ref k t
-                                                    -- Array access. `Int` in indices list stores the corresponding index upper bound
-  RMapping :: Pn -> Ref k t -> ValueType -> [TypedExp t] -> Ref k t
-  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t    -- Field access (for accessing storage variables of contracts).
-                                                    -- The first `Id` is the name of the contract that the field belongs to.
+  CVar :: Pn -> AbiType -> Id -> Ref Calldata t               -- Calldata variable  
+  SVar :: Pn -> Time t -> Id -> Id -> Ref Storage t           -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
+  RArrIdx :: Pn -> Ref k t -> ValueType -> [(TypedExp t, Int)] -> Ref k t
+                                                              -- Array access. `Int` in indices list stores the corresponding index upper bound
+  RMapIdx :: Pn -> Ref k t -> ValueType -> [TypedExp t] -> Ref k t
+  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t              -- Field access (for accessing storage variables of contracts).
+                                                              -- The first `Id` is the name of the contract that the field belongs to.
 deriving instance Show (Ref k t)
 
 instance Eq (Ref k t) where
   CVar _ at x         == CVar _ at' x'          = at == at' && x == x'
-  SVar _ c x          == SVar _ c' x'           = c == c' && x == x'
-  RArray _ r ts ixs   == RArray _ r' ts' ixs'   = r == r' && ts == ts' && ixs == ixs'
-  RMapping _ r ts ixs == RMapping _ r' ts' ixs' = r == r' && ts == ts' && ixs == ixs'
+  SVar _ t c x        == SVar _ t' c' x'        = t == t' && c == c' && x == x'
+  RArrIdx _ r ts ixs  == RArrIdx _ r' ts' ixs'  = r == r' && ts == ts' && ixs == ixs'
+  RMapIdx _ r ts ixs  == RMapIdx _ r' ts' ixs'  = r == r' && ts == ts' && ixs == ixs'
   RField _ r c x      == RField _ r' c' x'      = r == r' && c == c' && x == x'
   _                   == _                      = False
-
 
 -- | Expressions for which the return type is known.
 data TypedExp t
@@ -254,19 +249,20 @@ data Exp (a :: ActType) (t :: Timing) where
 
   Array :: Pn -> [Exp a t] -> Exp (AArray a) t
   -- contracts
-  Create   :: Pn -> Id -> [TypedExp t] -> Exp AContract t
+  Create   :: Pn -> Id -> [TypedExp t] -> Maybe (Exp AInteger t) -> Exp AContract t
   -- polymorphic
   Eq  :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
   NEq :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
   ITE :: Pn -> Exp ABoolean t -> Exp a t -> Exp a t -> Exp a t
-  -- Calldata references and storage variable references. 
-  -- Note that the timing annotation does not make a difference 
-  -- when the variable refers to calldata
-  --VarRef :: SingI a => Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
-  VarRef :: Pn -> Time t -> SRefKind k -> TypedRef t -> Exp a t
-  Address :: Id -> Exp AContract t -> Exp AInteger t
-
+  -- variable references
+  VarRef :: Pn -> TValueType a -> SRefKind k -> Ref k t -> Exp a t
+  -- address of contract
+  Address :: Pn -> Exp AContract t -> Exp AInteger t
+  -- mappings
+  Mapping :: Pn -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
+  MappingUpd :: Pn -> Ref Storage t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
 deriving instance Show (Exp a t)
+
 
 -- Equality modulo source file position.
 instance Eq (Exp a t) where
@@ -306,9 +302,19 @@ instance Eq (Exp a t) where
   NEq _ vt1@VType a b == NEq _ vt2@VType c d = eqS'' vt1 vt2 && eqS a c && eqS b d
 
   ITE _ a b c == ITE _ d e f = a == d && b == e && c == f
-  VarRef _ a SRefKind t == VarRef _ b SRefKind u = a == b && t == u
-  Create _ a b == Create _ c d = a == c && b == d
-
+  VarRef _ a SRefKind t == VarRef _ b SRefKind u = a == b && eqKind' t u
+  Create _ a b c == Create _ d e f = a == d && b == e && c == f
+  Array _ a == Array _ b = a == b
+  Address _ a == Address _ b = a == b
+  Mapping _ (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == Mapping _ (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
+    (testEquality (sing @a1) (sing @a2) >>= \Refl ->
+     testEquality (sing @b1) (sing @b2) >>= \Refl ->
+     pure $ m == m' && vt1 == vt3 && vt2 == vt4) == Just True
+  MappingUpd _ r (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == MappingUpd _ r' (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
+    r == r' &&
+    (testEquality (sing @a1) (sing @a2) >>= \Refl ->
+     testEquality (sing @b1) (sing @b2) >>= \Refl ->
+     pure $ m == m' && vt1 == vt3 && vt2 == vt4) == Just True
   _ == _ = False
 
 
@@ -360,14 +366,17 @@ instance Timable (Exp a) where
     ByLit p x -> ByLit p x
     ByEnv p x -> ByEnv p x
     -- contracts
-    Create p x y -> Create p x (go <$> y)
+    Create p x y z -> Create p x (go <$> y) (go <$> z)
 
     -- polymorphic
     Eq  p s x y -> Eq p s (go x) (go y)
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
-    VarRef p _ k item -> VarRef p time k (go item)
+    VarRef p vt k item -> VarRef p vt k (go item)
     Address c e -> Address c (go e)
+    -- mappings
+    Mapping p kt vt kvs -> Mapping p kt vt (bimap go go <$> kvs)
+    MappingUpd p r kt vt kvs -> MappingUpd p (go r) kt vt (bimap go go <$> kvs)
     where
       go :: Timable c => c Untimed -> c Timed
       go = setTime time
@@ -379,10 +388,10 @@ instance Timable TypedRef where
 
 instance Timable (Ref k) where
   setTime :: When -> Ref k Untimed -> Ref k Timed
-  setTime time (RMapping p e ts ixs) = RMapping p (setTime time e) ts (setTime time <$> ixs)
-  setTime time (RArray p e ts ixs) = RArray p (setTime time e) ts ((first (setTime time)) <$> ixs)
+  setTime time (RMapIdx p e ts ixs) = RMapIdx p (setTime time e) ts (setTime time <$> ixs)
+  setTime time (RArrIdx p e ts ixs) = RArrIdx p (setTime time e) ts ((first (setTime time)) <$> ixs)
   setTime time (RField p e c x) = RField p (setTime time e) c x
-  setTime _ (SVar p c ref) = SVar p c ref
+  setTime time (SVar p _ c ref) = SVar p time c ref
   setTime _ (CVar p at ref) = CVar p at ref
 
 
@@ -456,19 +465,20 @@ instance ToJSON (StorageUpdate t) where
 
 instance ToJSON (TypedRef t) where
   toJSON (TRef t k r) = object [ "ref" .= toJSON r
-                             , "type" .=  show t
-                             , "kind" .=  show k
-                             ]
+                               , "type" .=  show t
+                               , "kind" .=  show k
+                               ]
 
 instance ToJSON (Ref k t) where
-  toJSON (SVar _ c x) = object [ "kind" .= pack "SVar"
-                               , "svar" .=  pack x
-                               , "contract" .= pack c ]
+  toJSON (SVar _ t c x) = object [ "kind" .= pack "SVar"
+                                 , "svar" .=  pack x
+                                 , "time" .=  pack (show t)
+                                 , "contract" .= pack c ]
   toJSON (CVar _ at x) = object [ "kind" .= pack "Var"
                                 , "var" .=  pack x
                                 , "abitype" .=  toJSON at ]
-  toJSON (RArray _ e _ xs) = array e xs
-  toJSON (RMapping _ e _ xs) = mapping e xs
+  toJSON (RArrIdx _ e _ xs) = array e xs
+  toJSON (RMapIdx _ e _ xs) = mapping e xs
   toJSON (RField _ e c x) = field e c x
 
 array :: (ToJSON a1, ToJSON a2) => a1 -> a2 -> Value
@@ -545,15 +555,25 @@ instance ToJSON (Exp a t) where
                               , "type" .= pack "bytestring" ]
   toJSON (VarRef _ t _ a) = object [ "var"  .= toJSON a
                                    , "timing" .= show t ]
-  toJSON (Create _ f xs) = object [ "symbol" .= pack "create"
-                                  , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
-                                  , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) ]
+  toJSON (Create _ f xs v) = object [ "symbol" .= pack "create"
+                                    , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
+                                    , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) 
+                                    , "value"  .= toJSON v ]
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
                               , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
                               , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
   toJSON (Address _ x) = object [ "symbol" .= pack "addr"
-                                 , "arity" .= Data.Aeson.Types.Number 1
-                                 , "arg" .= toJSON x ]
+                                , "arity" .= Data.Aeson.Types.Number 1
+                                , "arg" .= toJSON x ]
+  toJSON (Mapping _ kt vt kvs) = object [ "symbol" .= pack "mapping"
+                                        , "keyType" .= show kt
+                                        , "valueType" .= show vt
+                                        , "entries" .= toJSON kvs ]
+  toJSON (MappingUpd _ r kt vt kvs) = object [ "symbol" .= pack "mappingUpd"
+                                             , "ref" .= toJSON r
+                                             , "keyType" .= show kt
+                                             , "valueType" .= show vt
+                                             , "entries" .= toJSON kvs ]
 
   toJSON v = error $ "todo: json ast for: " <> show v
 
@@ -611,8 +631,10 @@ eval e = case e of
 
   Array _ l -> mapM eval l
 
-  Create _ _ _ -> error "eval of contracts not supported"
+  Create _ _ _ _ -> error "eval of contracts not supported"
   Address _ _ -> error "eval of contracts not supported"
+  Mapping _ _ _ _ -> error "eval of mappings not supported"
+  MappingUpd _ _ _ _ _ -> error "eval of mapping updates not supported"
   _              -> empty
 
 intmin :: Int -> Integer
@@ -628,7 +650,7 @@ uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
 _Var :: SingI a => TValueType a -> Id -> Exp a Timed
-_Var vt x = VarRef nowhere Pre SCalldata (TRef vt SCalldata (CVar nowhere (toAbiType vt) x))
+_Var vt x = VarRef nowhere vt SCalldata (CVar nowhere (toAbiType vt) x)
 
 _Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
-_Array vt x ix = VarRef nowhere Pre SCalldata (TRef vt SCalldata (RArray nowhere (CVar nowhere (toAbiType vt) x) (fromAbiType (toAbiType vt)) ix))
+_Array vt x ix = VarRef nowhere vt SCalldata (RArrIdx nowhere (CVar nowhere (toAbiType vt) x) (fromAbiType (toAbiType vt)) ix)
