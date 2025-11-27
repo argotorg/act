@@ -494,6 +494,7 @@ expandTRef = undefined
 -- The order of the returned elements is the same as 'expandItem's
 expandArrayExpr :: TValueType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)) t]
 expandArrayExpr (TArray _ (TInteger _ _)) (Array _ l) = l
+expandArrayExpr (TArray _ TUnboundedInt) (Array _ l) = l
 expandArrayExpr (TArray _ TAddress) (Array _ l) = l
 expandArrayExpr (TArray _ TBoolean) (Array _ l) = l
 expandArrayExpr (TArray _ TByteStr) (Array _ l) = l
@@ -642,3 +643,4 @@ upperBound :: forall t. TValueType AInteger -> Exp AInteger t
 upperBound (TInteger n Unsigned) = UIntMax nowhere n
 upperBound (TInteger n Signed) = IntMax nowhere n
 upperBound TAddress   = UIntMax nowhere 160
+upperBound _ = error "upperBound: no upper bound defined for this type"

@@ -325,7 +325,7 @@ checkExpr env t1 e =
       -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array of contracts?
       maybeCast pn t1' t2 _ = typeMismatchErr pn t1' t2
 
--- | Attempt to infer a type of an expression. If successful returns an
+-- | Attempt to infer a type of an expression. If successful, it returns an
 -- existential package of the infered typed together with the typed expression.
 inferExpr :: forall t. Typeable t => Env -> U.Expr -> Err (TypedExp t)
 inferExpr env@Env{calldata, constructors} e = case e of

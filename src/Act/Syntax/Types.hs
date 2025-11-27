@@ -75,19 +75,21 @@ data IntSign = Signed | Unsigned
   deriving (Eq, Show)
 
 data TValueType (a :: ActType) where
-  TInteger  :: Int -> IntSign -> TValueType AInteger
-  TAddress  :: TValueType AInteger
-  TBoolean  :: TValueType ABoolean
-  TByteStr  :: TValueType AByteStr
-  TStruct   :: [ValueType] -> TValueType AStruct
-  TArray    :: Int -> TValueType a -> TValueType (AArray a)
-  TContract :: Id -> TValueType AContract
+  TInteger       :: Int -> IntSign -> TValueType AInteger
+  TUnboundedInt  :: TValueType AInteger
+  TAddress       :: TValueType AInteger
+  TBoolean       :: TValueType ABoolean
+  TByteStr       :: TValueType AByteStr
+  TStruct        :: [ValueType] -> TValueType AStruct
+  TArray         :: Int -> TValueType a -> TValueType (AArray a)
+  TContract      :: Id -> TValueType AContract
   TMapping  :: ValueType -> ValueType -> TValueType AMapping
 deriving instance Eq (TValueType a)
 deriving instance Show (TValueType a)
 
 instance TestEquality TValueType where
   testEquality (TInteger b1 s1) (TInteger b2 s2) | b1 == b2 && s1 == s2 = Just Refl
+  testEquality TUnboundedInt TUnboundedInt = Just Refl
   testEquality TBoolean TBoolean = Just Refl
   testEquality TByteStr TByteStr = Just Refl
   testEquality TAddress TAddress = Just Refl
@@ -187,6 +189,7 @@ fromAbiType _ = error "Syntax.Types.valueType: TODO"
 toAbiType :: TValueType a -> AbiType
 toAbiType (TInteger n Unsigned) = AbiUIntType n
 toAbiType (TInteger n Signed)   = AbiIntType n
+toAbiType TUnboundedInt         = error "Syntax.Types.toAbiType: Unbounded integers are not representable in ABI"
 toAbiType TAddress              = AbiAddressType
 toAbiType TBoolean              = AbiBoolType
 toAbiType TByteStr              = AbiBytesDynamicType
@@ -204,6 +207,7 @@ flattenValueType (TArray n a) = case flattenValueType a of
   (a', Nothing) -> (a', Just $ NonEmpty.singleton n)
   (a', l) -> (a', ((<|) n) <$> l)
 flattenValueType (TInteger n s) = (TInteger n s, Nothing)
+flattenValueType TUnboundedInt = (TUnboundedInt, Nothing)
 flattenValueType TAddress = (TAddress, Nothing)
 flattenValueType TBoolean = (TBoolean, Nothing)
 flattenValueType TByteStr = (TByteStr, Nothing)
@@ -214,6 +218,7 @@ flattenValueType (TMapping k v) = (TMapping k v, Nothing)
 toSType :: forall (a :: ActType). TValueType a -> SType a
 --toSType _ = sing @a
 toSType (TInteger _ _) = SInteger
+toSType TUnboundedInt = SInteger
 toSType TBoolean = SBoolean
 toSType TByteStr = SByteStr
 toSType TAddress = SInteger

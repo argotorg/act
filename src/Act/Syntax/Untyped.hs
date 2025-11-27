@@ -133,6 +133,7 @@ instance ToJSON (TValueType a) where
                                            , "size" .= String (T.pack $ show n) ]
   toJSON (TInteger n Unsigned)    = object [ "type" .= String "UInt"
                                            , "size" .= String (T.pack $ show n) ]
+  toJSON TUnboundedInt            = object [ "type" .= String "UnboundedInt" ]
   toJSON TAddress                 = object [ "type" .= String "Address" ]
   toJSON TBoolean                 = object [ "type" .= String "Bool" ]
   toJSON TByteStr                 = object [ "type" .= String "Bytes" ]
