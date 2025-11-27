@@ -115,14 +115,14 @@ data Behaviour t = Behaviour
   } deriving (Show, Eq)
 
 data StorageUpdate (t :: Timing) where
-  Update :: TValueType a -> Ref Storage t -> Exp a t -> StorageUpdate t
+  Update :: TValueType a -> Ref LHS t -> Exp a t -> StorageUpdate t
 deriving instance Show (StorageUpdate t)
 
 instance Eq (StorageUpdate t) where
   (==) :: StorageUpdate t -> StorageUpdate t -> Bool
   Update vt1@VType r1 e1 == Update vt2@VType r2 e2 = eqS'' vt1 vt2 && r1 == r2 && eqS e1 e2
 
---_Update :: Ref Storage t -> Exp a t -> StorageUpdate t
+--_Update :: Ref LHS t -> Exp a t -> StorageUpdate t
 --_Update ref expr = Update (getValueType ref) ref expr
 
 data TypedRef (t :: Timing) where
@@ -135,24 +135,24 @@ instance Eq (TypedRef t) where
 --_TRef :: SRefKind k -> Ref k t -> TypedRef t
 --_TRef k ref@(TRef t@VType _ _) = TRef t k ref
 
--- | Distinguish the type of Refs to calldata variables and storage
-data RefKind = Storage | Calldata
+-- | Distinguish the references that are updatable.
+data RefKind = RHS | LHS
   deriving (Show, Eq)
 
 data SRefKind (k :: RefKind) where
-  SStorage  :: SRefKind Storage
-  SCalldata :: SRefKind Calldata
+  SLHS  :: SRefKind LHS
+  SRHS :: SRefKind RHS
 
 type instance Sing = SRefKind
 
 instance Show (SRefKind a) where
   show = \case
-    SStorage -> "SStorage"
-    SCalldata -> "SCalldata"
+    SLHS -> "SLHS"
+    SRHS -> "SRHS"
 
 instance TestEquality SRefKind where
-  testEquality SStorage SStorage = Just Refl
-  testEquality SCalldata SCalldata = Just Refl
+  testEquality SLHS SLHS = Just Refl
+  testEquality SRHS SRHS = Just Refl
   testEquality _ _ = Nothing
   
 -- | Helper pattern to retrieve the 'SingI' instances of the type represented by
@@ -179,12 +179,12 @@ eqTypeKind fa fb = maybe False (\Refl ->
 
 -- | Variable References
 data Ref (k :: RefKind) (t :: Timing) where
-  CVar :: Pn -> AbiType -> Id -> Ref Calldata t               -- Calldata variable  
-  SVar :: Pn -> Time t -> Id -> Id -> Ref Storage t           -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
+  CVar :: Pn -> AbiType -> Id -> Ref RHS t               -- Calldata variable  
+  SVar :: Pn -> Time t -> Id -> Id -> Ref k t           -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
   RArrIdx :: Pn -> Ref k t -> ValueType -> [(TypedExp t, Int)] -> Ref k t
                                                               -- Array access. `Int` in indices list stores the corresponding index upper bound
-  RMapIdx :: Pn -> Ref k t -> ValueType -> [TypedExp t] -> Ref k t
-  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t              -- Field access (for accessing storage variables of contracts).
+  RMapIdx :: Pn -> Ref k t -> ValueType -> [TypedExp t] -> Ref RHS t
+  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t              -- Field access (for accessing storage variables of contracts). Mapp
                                                               -- The first `Id` is the name of the contract that the field belongs to.
 deriving instance Show (Ref k t)
 
@@ -192,7 +192,7 @@ instance Eq (Ref k t) where
   CVar _ at x         == CVar _ at' x'          = at == at' && x == x'
   SVar _ t c x        == SVar _ t' c' x'        = t == t' && c == c' && x == x'
   RArrIdx _ r ts ixs  == RArrIdx _ r' ts' ixs'  = r == r' && ts == ts' && ixs == ixs'
-  RMapIdx _ r ts ixs  == RMapIdx _ r' ts' ixs'  = r == r' && ts == ts' && ixs == ixs'
+  RMapIdx _ _ ts ixs  == RMapIdx _ _ ts' ixs'   = ts == ts' && ixs == ixs'
   RField _ r c x      == RField _ r' c' x'      = r == r' && c == c' && x == x'
   _                   == _                      = False
 
@@ -260,7 +260,7 @@ data Exp (a :: ActType) (t :: Timing) where
   Address :: Pn -> Exp AContract t -> Exp AInteger t
   -- mappings
   Mapping :: Pn -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
-  MappingUpd :: Pn -> Ref Storage t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
+  MappingUpd :: Pn -> Ref LHS t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
 deriving instance Show (Exp a t)
 
 
@@ -650,7 +650,7 @@ uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
 _Var :: SingI a => TValueType a -> Id -> Exp a Timed
-_Var vt x = VarRef nowhere vt SCalldata (CVar nowhere (toAbiType vt) x)
+_Var vt x = VarRef nowhere vt SRHS (CVar nowhere (toAbiType vt) x)
 
 _Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
-_Array vt x ix = VarRef nowhere vt SCalldata (RArrIdx nowhere (CVar nowhere (toAbiType vt) x) (fromAbiType (toAbiType vt)) ix)
+_Array vt x ix = VarRef nowhere vt SRHS (RArrIdx nowhere (CVar nowhere (toAbiType vt) x) (fromAbiType (toAbiType vt)) ix)

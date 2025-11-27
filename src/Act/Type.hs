@@ -49,7 +49,7 @@ import Control.Monad.Accum (MonadAccum(add))
 type Err = Error String
 
 -- | A map containing the interfaces of all available constructors together with their preconditions.
-type Constructors = Map Id ([ArgType], [Exp ABoolean])
+type Constructors = Map Id ([ArgType], [Exp ABoolean Untimed])
 
 -- | The type checking environment.
 data Env = Env
@@ -79,11 +79,11 @@ typecheckContracts' =
 
 typecheckContracts :: Env -> [U.Contract] -> Err (StorageTyping, [Contract])
 typecheckContracts env [] = pure (env, [])
-typecheckContracts env ((U.Constructor cnstr behvs):cs) =
+typecheckContracts env ((U.Contract cnstr behvs):cs) =
     typecheckConstructor env cnstr `bindValidation` \(env', cnstr') ->
     typecheckBehaviors env' behvs `bindValidation` \(env'', behvs') ->
     typecheckContracts env'' cs `bindValidation` \(env''', cs') ->
-    pure (env''', (Constructor cnstr' behvs') : cs') 
+    pure (env''', (Contact cnstr' behvs') : cs') 
 
 mkConstrEnv :: Id -> Env -> Env
 mkConstrEnv cid iface env = env { contract = cid , storage = mempty, calldata =  mkCalldata iface }
@@ -98,7 +98,7 @@ typecheckConstructor env (U.Constructor posn cid (Interface _ params) iffs cases
     traverse_ (checkParams env') decls
     checkConstrName cid env
     let env' = mkConstrEnv cid env
-    iffs' <- checkIffs env iffs
+    iffs' <- checkExpr env TBoolean iffs
     (storageType, cases) <- concat <$> checkConstrCases env' cases    
     ensures <- traverse (checkExpr env' TBoolean) posts
     invs' <- fmap (Invariant contract [] [] . PredUntimed) <$> traverse (checkExpr env' TBoolean) invs
@@ -141,7 +141,7 @@ typecheckConstrCases env cases = do
         M.fromList typing
     
     -- make the storage typing from a list of assignments
-    makeStorageTyping :: [U.Assign] ->  [Id, (ValueType, Integer)]
+    makeStorageTyping :: [U.Assign] ->  [(Id, (ValueType, Integer))]
     makeStorageTyping [] _ = []
     makeStorageTyping ((U.StorageVar _ typ name):rest) slot = (name, (typ, slot)):makeStorageTyping rest (slot + 1)
 
@@ -195,7 +195,7 @@ checkAssign env (U.StorageVar p typ var, expr) = do
     pure [Update (RVar p var) expr']
   where
     validSlotType :: Env -> Pn -> TValueType a -> Err ()
-    validSlotType env (TInteger size _) =
+    validSlotType env p (TInteger size _) =
       when (size `notElem` [8,16,32,64,128,256]) $
         throw (p, "Invalid integer size: " <> show size)
     validSlotType env p (TContract c) =
@@ -217,38 +217,29 @@ ethEnv Caller    = TAddress
 ethEnv This      = TAddress
 ethEnv Origin    = TAddress
 
--- | Type checks a case, returning typed versions of its preconditions, rewrites and return value.
-checkCase :: Env -> U.Case -> Err ([Exp ABoolean Untimed], [StorageUpdate], Maybe (TypedExp Timed))
-checkCase env c@(U.Case _ pre post) = do
-  -- TODO isWild checks for WildExp, but WildExp is never generated
-  if' <- traverse (checkExpr env TBoolean) $ if isWild c then [U.BoolLit nowhere True] else [pre]
-  (storage,return') <- checkPost env post
-  pure (if',storage,return')
 
-inferRefType :: Env -> U.Ref -> Err TypedRef
-inferRefType env ref = do 
-  kind <- inferKind env ref
-  (typ, tref) <- checkRef env kind ref
-  pure $ TRef typ tref  
-  where
-    inferKind :: Env -> U.Ref -> Err SRefKind
-    inferKind Env{calldata} (U.RVar p name) = 
-      case Map.lookup name calldata of
-        Just _ -> pure SCalldata
-        Nothing -> pure SStorage
-    inferKind env (U.RIndex p en _) =
-      inferKind env en
-    inferKind env (U.RField p en _) =
-      inferKind env en
+-- inferRefType :: Env -> U.Ref -> Err TypedRef
+-- inferRefType env ref = do 
+--   kind <- inferKind env ref
+--   (typ, tref) <- checkRef env kind ref
+--   pure $ TRef typ tref  
+--   where
+--     inferKind :: Env -> U.Ref -> Err SRefKind
+--     inferKind Env{calldata} (U.RVar p name) = 
+--       case Map.lookup name calldata of
+--         Just _ -> pure S
+--         Nothing -> pure SStorage
+--     inferKind env (U.RIndex p en _) =
+--       inferKind env en
+--     inferKind env (U.RField p en _) =
+--       inferKind env en
 
 checkRef :: forall t k. Typeable t => Env -> SRefKind k -> U.Ref -> Err (ValueType, Ref k t)
-checkRef Env{contract, calldata, storage} SCalldata (U.RVar p name) = 
+checkRef Env{contract, calldata, storage} kind (U.RVar p name) = 
     case M.lookup name calldata of
-      Just typ -> pure (fromAbiType' typ, CVar p typ name)
-      Nothing -> hrow (p, "Unbound variable " <> show name)
-checkRef Env{contract, calldata, storage} SStorage (U.RVar p name) = 
-    case M.lookup name calldata of
-      Just typ -> pure (fromAbiType' typ, CVar p typ name)
+      Just typ -> case kind of 
+        SLHS -> throw (p, "Cannot use calldata variable " <> show name <> " as LHS reference")
+        SRHS -> pure (fromAbiType' typ, CVar p typ name)
       Nothing -> case M.lookup contract storage of
         Just storageTyping -> case M.lookup name storageTyping of
             Just (typ, _) -> pure (typ, SVar p contract name)
@@ -259,10 +250,12 @@ checkRef env kind (U.RIndex p en args) =
     TArray len typ -> 
         checkArrayIxs env p args (toList len) `bindValidation` \ixs ->
         pure (typ, RArrIdx p ref typ ixs)
-    TMapping keytyp valtyp -> 
-        checkIxs env p args (NonEmpty.toList keytyp) `bindValidation` \ixs ->
-        pure (valtyp, RMapIdx p ref valtyp ixs)
-    _ -> throw (p, "Reference should have an array or mapping type" <> show en)
+    TMapping keytyp valtyp ->
+        checkArgs env p (NonEmpty.toList keytyp) args `bindValidation` \ixs ->
+        case kind of
+            SLHS -> throw (p, "Cannot use mapping indexing as LHS reference")
+            SRHS -> pure (valtyp, RMapIdx p ref valtyp ixs)
+    _ -> throw (p, "An indexed reference should have an array or mapping type" <> show en)
 checkRef env kind (U.RField p en x) =
   checkRef env kind en `bindValidation` \(styp, ref) -> case styp of
     TContract c -> case Map.lookup c (theirs env) of
@@ -273,30 +266,8 @@ checkRef env kind (U.RField p en x) =
     _ -> throw (p, "Reference should have a contract type" <> show en)
 
 
--- TODO code bellow this point is mostly unchanged, needs to be adapted to new type system
-
--- | Typecheck a storage update
-checkStorageExpr :: Env -> U.Entry -> U.Expr -> Err StorageUpdate
-checkStorageExpr env entry expr =
-  validateEntry env SStorage entry `bindValidation` \(ValueType vt, ref) ->
-  checkExpr env vt expr `bindValidation` \te ->
-  --findContractType env te `bindValidation` \ctyp ->
-  pure $ _Update (Item vt ref) te -- <$ validContractType (getPosn expr) (ValueType vt) ctyp
-
-
-validContractType :: Pn -> ValueType -> Maybe Id -> Err ()
-validContractType pn (ValueType (TContract c1)) (Just c2) =
-  assert (pn, "Assignment to storage variable was expected to have contract type " <> c1 <> " but has contract type " <> c2) (c1 == c2)
-validContractType pn (ValueType (TContract c1)) Nothing =
-  throw (pn, "Assignment to storage variable was expected to have contract type " <> c1)
-validContractType _ _ _ = pure ()
-
-checkIffs :: Env -> U.Iff -> Err [Exp ABoolean Untimed]
-checkIffs env exps = traverse (checkExpr env TBoolean) exps
-
 -- | If an `inrange e` predicate appears in the source code, then the inrange
--- predicate is propagated to all subexpressions of `e`. This elaboration step
--- happens here.
+-- predicate is propagated to all subexpressions of `e`. 
 genInRange :: TValueType AInteger -> Exp AInteger t -> [Exp ABoolean t]
 genInRange t e@(LitInt _ _) = [InRange nowhere t e]
 genInRange t e@(VarRef _ _ _ _)  = [InRange nowhere t e]
@@ -314,14 +285,6 @@ genInRange _ (UIntMin _ _) = error "Internal error: invalid range expression"
 genInRange _ (UIntMax _ _) = error "Internal error: invalid range expression"
 genInRange _ (ITE _ _ _ _) = error "Internal error: invalid range expression"
 
--- | Attempt to construct a `TypedExp` whose type matches the supplied `ValueType`.
--- The target timing parameter will be whatever is required by the caller.
-checkExprVType :: forall t. Typeable t => Env -> U.Expr -> ValueType -> Err (TypedExp t)
-checkExprVType env e (ValueType vt) = TExp vt <$> checkExpr env vt e
-
---showShapedSType :: SType a -> Shape (ActShape a) -> String
---showShapedSType (SSArray a) (Shaped l) = show (flattenSType a) <> concatMap (show . singleton) (reverse $ toList l)
---showShapedSType a _ = show a
 
 typeMismatchErr :: forall a b res. Pn -> TValueType a -> TValueType b -> Err res
 typeMismatchErr p t1 t2 = (throw (p, "Type " <> show t1 <> " should match type " <> show t2))
@@ -335,10 +298,17 @@ defaultInteger = TInteger 256 Signed
 defaultUInteger :: TValueType AInteger
 defaultUInteger = TInteger 256 Unsigned
 
+
 relaxedIntCheck :: TValueType a -> TValueType b -> Maybe (a :~: b)
 relaxedIntCheck (TInteger _ _) (TInteger _ _) = Just Refl
 relaxedIntCheck (TArray n1 t1) (TArray n2 t2) | n1 == n2 = (\Refl -> Just Refl) =<< relaxedIntCheck t1 t2
 relaxedIntCheck t1 t2 = testEquality t1 t2
+
+-- | Attempt to construct a `TypedExp` whose type matches the supplied `ValueType`.
+-- The target timing parameter will be whatever is required by the caller.
+checkExprVType :: forall t. Typeable t => Env -> U.Expr -> ValueType -> Err (TypedExp t)
+checkExprVType env e (ValueType vt) = TExp vt <$> checkExpr env vt e
+
 
 -- | Check if the given expression can be typed with the given type
 checkExpr :: forall t a. Typeable t => Env -> TValueType a -> U.Expr -> Err (Exp a t)
@@ -355,7 +325,7 @@ checkExpr env t1 e =
       -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array of contracts?
       maybeCast pn t1' t2 _ = typeMismatchErr pn t1' t2
 
--- | Attempt to infer a type of an expression. If succesfull returns an
+-- | Attempt to infer a type of an expression. If successful returns an
 -- existential package of the infered typed together with the typed expression.
 inferExpr :: forall t. Typeable t => Env -> U.Expr -> Err (TypedExp t)
 inferExpr env@Env{calldata, constructors} e = case e of
@@ -404,22 +374,11 @@ inferExpr env@Env{calldata, constructors} e = case e of
         [] -> error "Empty array expressions not supported"
 
     -- Constructor calls
-  U.ECreate p c args -> case Map.lookup c constructors of
-    Just sig ->
-      let ptrs = argContractId <$> sig in
-      -- check the types of arguments to constructor call
-      checkIxs env p args (fmap castArgType sig) `bindValidation` (\args' ->
-      -- then check that all arguments that need to be valid pointers to a contract have a contract type
-      traverse_ (uncurry $ checkContractType env) (zip args' ptrs) $>
-      TExp (TContract c) (Create p c args'))
-        where
-          castArgType :: ArgType -> ValueType
-          castArgType (ContractArg _ cid) = TContract cid
-          castArgType (AbiArg at) = fromAbiType' at
-
-          argContractId :: ArgType -> Maybe Id
-          argContractId (ContractArg _ cid) = Just cid
-          argContractId _ = Nothing
+  U.ECreate p c args callvalue -> case Map.lookup c constructors of
+    Just (sig, _iffs) -> do -- TODO check preconditions
+      cv <- traverse (checkExpr env (TInteger 256 Unsigned)) callvalue
+      args' <- checkArgs env p sig args
+      pure $ TExp (TContract c) (Create p c args' cv)
 
     Nothing -> throw (p, "Unknown constructor " <> show c)
 
@@ -435,19 +394,38 @@ inferExpr env@Env{calldata, constructors} e = case e of
     _             -> throw (p, "Unknown environment variable " <> show v1)
 
   -- Variable references
-  U.EUTEntry entry | isCalldataEntry entry -> case (eqT @t @Timed, eqT @t @Untimed) of
-    (Just Refl, _) -> checkVar Pre entry
-    (_, Just Refl) -> checkVar Neither entry
-    (_,_) -> error "Internal error: Timing should be either Timed or Untimed"
-  U.EPreEntry entry | isCalldataEntry entry  -> error $ "Internal error: Calldata variables cannot be pre" <> show e
-  U.EPostEntry entry | isCalldataEntry entry -> error $ "Internal error: Calldata variables cannot be post" <> show e
-  -- Storage references
-  U.EUTEntry entry   -> checkStorage entry Neither
-  U.EPreEntry entry  -> checkStorage entry Pre
-  U.EPostEntry entry -> checkStorage entry Post
+  U.ERef ref -> do 
+    (typ, tref) <- checkRef env SRHS ref
+    pure $ TExp typ $ VarRef (getPosEntry ref) Timed SCalldata (Item typ tref)
 
-  _ -> throw (getPosn e, "Internal error: Cannot type expression " <> show e)
+  U.AddrOf p e -> do
+    inferExpr env TContract e `bindValidation` \case 
+      TExp (TContract c) e' -> pure $ TExp TAddress (Address p c e')
+      TExp t _ -> throw (p, "Expression of type " <> show t <> " cannot be converted to address")
 
+  U.Mapping p [] -> throw (p, "Cannot create empty mapping")
+
+  U.Mapping p ((key,val):map) -> do
+    TExp keytyp key' <- inferExpr env key
+    TExp valtyp val' <- inferExpr env val
+    rest <- traverse (\(k,v) -> do
+        k' <- checkExpr env keytyp k
+        v' <- checkExpr env valtyp v
+        pure (k', v')) map
+    pure $ TExp (TMapping (ValueType keytyp) (ValueType valtyp)) (Mapping p keytyp valtyp ((key', val') : rest))
+
+  U.MappingUpd p ref map -> do
+    (styp, tref) <- checkRef env SLHS ref    
+    case styp of
+      TMapping keytyp valtyp -> do
+        updates <- traverse (\(k,v) -> do
+            k' <- checkExpr env keytyp k
+            v' <- checkExpr env valtyp v
+            pure (k', v')) map
+        pure $ TExp styp (MappingUpd p tref keytyp valtyp updates)
+      _ -> throw (p, "Mapping update applied to non-mapping type" <> show ref)
+    
+  --  
   where
     wrapOp f t e1 = TExp t (f e1) -- use sign to let Haskell automatically derive the type here
     --wrapOp2 f t e1 e2 = TExp t (f e1 e2)
@@ -471,67 +449,25 @@ inferExpr env@Env{calldata, constructors} e = case e of
         inferExpr env e2 `bindValidation` \(TExp (t2 :: TValueType a2) (te2 :: Exp a2 t)) ->
         maybe (typeMismatchErr pn t1 t2) (\Refl -> pure $ cons pn t1 te1 te2) $ relaxedIntCheck t1 t2
 
-    checkVar :: forall t0. Typeable t0 => Time t0 -> U.Entry -> Err (TypedExp t0)
-    checkVar whn entry =
-        (\(ValueType vt, ref) -> TExp vt $ VarRef (getPosEntry entry) whn SCalldata (Item vt ref)) <$> (validateEntry env SCalldata entry)
-
-    -- Type check a storage variable
-    checkStorage :: forall t0.  Typeable t0 => U.Entry -> Time t0 -> Err (TypedExp t)
-    checkStorage entry time =
-        -- check that the timing is correct
-       checkTime (getPosEntry entry) <*>
-       ((\(ValueType vt, ref) -> TExp vt $ VarRef (getPosEntry entry) time SStorage (Item vt ref)) <$> validateEntry env SStorage entry)
-
     -- Check that an expression is typed with the right timing
     checkTime :: forall t0. Typeable t0 => Pn -> Err (TypedExp t0 -> TypedExp t)
     checkTime pn = case eqT @t @t0 of
       Just Refl -> pure id
       Nothing   -> throw (pn, (tail . show $ typeRep @t) <> " variable needed here")
 
-    isCalldataEntry (U.EVar _ name) = case Map.lookup name calldata of
-      Just _  -> True
-      _ -> False
-    isCalldataEntry (U.EIndexed _ entry _) = isCalldataEntry entry
-    isCalldataEntry (U.EField _ entry _) = isCalldataEntry entry
-
 -- | Helper to create to create a conjunction out of a list of expressions
 andExps :: [Exp ABoolean t] -> Exp ABoolean t
 andExps [] = LitBool nowhere True
 andExps (c:cs) = foldr (And nowhere) c cs
 
-unsafeFindContractType :: Exp a t -> Id
-unsafeFindContractType (ITE _ _ a _) =
-  unsafeFindContractType a
-unsafeFindContractType (Create _ c _) = c
-unsafeFindContractType (VarRef _ _ _ (Item (TContract c) _)) = c
-unsafeFindContractType _ = error "Internal error: unsafeFindContractType called for non contract expression"
 
--- | Find the contract id of an expression with contract type
-findContractType :: Env -> Exp a t -> Err (Maybe Id)
-findContractType env (ITE p _ a b) =
-  findContractType env a `bindValidation` \oc1 ->
-  findContractType env b `bindValidation` \oc2 ->
-  case (oc1, oc2) of
-    (Just c1, Just c2) -> Just c1 <$ assert (p, "Type of if-then-else branches does not match") (c1 == c2)
-    (_, _ )-> pure Nothing
-findContractType _ (Create _ c _) = pure $ Just c
-findContractType _ (VarRef _ _ _ (Item (TContract c) _)) = pure $ Just c
-findContractType _ _ =  pure Nothing
-
--- | Check if an expression has the expected contract id, if any
-checkContractType :: Env -> TypedExp t -> Maybe Id -> Err ()
-checkContractType _ _ Nothing = pure ()
-checkContractType env (TExp _ e) (Just c) =
-  findContractType env e `bindValidation` \case
-    Just c' -> assert (posnFromExp e, "Expression was expected to have contract type " <> c <> " but has contract type " <> c') (c == c')
-    Nothing -> throw (posnFromExp e, "Expression was expected to have contract type " <> c)
-
--- | Checks that there are as many expressions as expected by the types,
--- and checks that each one of them agree with its type.
-checkIxs :: forall t. Typeable t => Env -> Pn -> [U.Expr] -> [ValueType] -> Err [TypedExp t]
-checkIxs env pn exprs types = if length exprs /= length types
-                              then throw (pn, "Index mismatch for entry")
-                              else traverse (uncurry $ checkExprVType env) (exprs `zip` types)
+checkArgs :: forall t. Typeable t => Env -> Pn -> [ValueType] -> [U.Expr] -> Err [TypedExp t]
+checkArgs env pn [] [] = pure []
+checkArgs env pn (t:types) (e:exprs) = do
+    e' <- checkExpr env (fromAbiType' t) e
+    es' <- checkArgs env pn types exprs
+    pure (TExp (fromAbiType' t) e' : es')
+checkArgs env pn _ _ = throw (pn, "Argument length mismatch")
 
 -- | Checks that there are as many expressions as expected by the array,
 -- and checks that each one of them can be typed into Integer

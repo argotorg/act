@@ -137,26 +137,20 @@ prettyExp e = case e of
 
   --polymorphic
   ITE _ a b c -> "(if " <> prettyExp a <> " then " <> prettyExp b <> " else " <> prettyExp c <> ")"
-  VarRef _ _ SStorage r -> timeParens (getTime r) $ prettyRef r
-  VarRef _ _ SCalldata r -> prettyRef r
+  VarRef _ _ _ r -> prettyRef r
   Address _ c  -> prettyExp c
   Mapping _ _ _ kvs -> "mapping(" <> intercalate ", " (map (\(k,v) -> prettyExp k <> " => " <> prettyExp v) kvs) <> ")"
   MappingUpd _ r _ _ kvs -> prettyRef r <> "{" <> intercalate ", " (map (\(k,v) -> prettyExp k <> " => " <> prettyExp v) kvs) <> "}"
   where
     print2 sym a b = "(" <> prettyExp a <> " " <> sym <> " " <> prettyExp b <> ")"
-    getTime :: Ref Storage t -> Time t
-    getTime (SVar _ t _ _) = t
-    getTime (RArrIdx _ r _ _) = getTime r
-    getTime (RMapIdx _ r _ _) = getTime r  
-    getTime (RField _ r _ _) = getTime r
-
+    
 prettyTypedExp :: TypedExp t -> String
 prettyTypedExp (TExp _ e) = prettyExp e
 
 prettyRef :: Ref k t -> String
 prettyRef = \case
   CVar _ _ n -> n
-  SVar _ _ _ n -> n
+  SVar _ t _ n -> timeParens t n
   RArrIdx _ r _ args -> prettyRef r <> concatMap (brackets . prettyTypedExp . fst) args
   RMapIdx _ r _ args -> prettyRef r <> concatMap (brackets . prettyTypedExp) args
   RField _ r _ n -> prettyRef r <> "." <> n

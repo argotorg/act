@@ -79,11 +79,7 @@ constrFromContracts :: [Contract t] -> [Constructor t]
 constrFromContracts contracts = fmap (\(Contract c _) -> c) contracts
 
 isStorageTRef :: TypedRef t -> Bool
-isStorageTRef (TRef _ SStorage item) = isLocalRef item
-isStorageTRef (TRef _ SCalldata _) = False
-
---isLocalTRef :: TypedRef t -> Bool
---isLocalTRef (TRef _ _ ref) = isLocalRef ref
+isStorageTRef (TRef _ _ ref) = isLocalRef ref
 
 isLocalRef :: Ref k t -> Bool
 isLocalRef (SVar _ _ _ _) = True
@@ -92,23 +88,24 @@ isLocalRef (RArrIdx _ ref _ _) = isLocalRef ref
 isLocalRef (RMapIdx _ ref _ _) = isLocalRef ref
 isLocalRef (RField _ _ _ _) = False
 
-partitionLocs :: [TypedRef t] -> ([TypedRef t], [TypedRef t])
-partitionLocs locs = foldMap sepTRef locs
-  where
-    sepTRef :: TypedRef t -> ([TypedRef t], [TypedRef t])
-    sepTRef loc@(TRef _ SStorage _) = ([loc],[])
-    sepTRef loc@(TRef _ SCalldata _) = ([],[loc])
+-- Zoe: not sure what's the correct definition
+-- partitionLocs :: [TypedRef t] -> ([TypedRef t], [TypedRef t])
+-- partitionLocs locs = foldMap sepTRef locs
+--   where
+--     sepTRef :: TypedRef t -> ([TypedRef t], [TypedRef t])
+--     sepTRef loc@(TRef _ SStorage _) = ([loc],[])
+--     sepTRef loc@(TRef _ SCalldata _) = ([],[loc])
 
 locsFromUpdate :: StorageUpdate t -> [TypedRef t]
 locsFromUpdate update = nub $ case update of
-  (Update t ref e) -> locsFromTRef (TRef t SStorage ref) <> locsFromExp e
+  (Update t ref e) -> locsFromTRef (TRef t SLHS ref) <> locsFromExp e
 
 locsFromUpdateRHS :: StorageUpdate t -> [TypedRef t]
 locsFromUpdateRHS update = nub $ case update of
   (Update _ _ e) -> locsFromExp e
 
 locFromUpdate :: StorageUpdate t -> TypedRef t
-locFromUpdate (Update typ item _) = TRef typ SStorage item
+locFromUpdate (Update typ item _) = TRef typ SLHS item
 
 locsFromTRef :: TypedRef t -> [TypedRef t]
 locsFromTRef ref@(TRef (toSType -> SType) _ _) = ref : concatMap locsFromTypedExp (ixsFromTRef ref)
@@ -156,7 +153,8 @@ locsFromExp = nub . go
       VarRef _ vt k a -> locsFromTRef (TRef vt k a)
       Address _ e' -> locsFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
-      Typed.MappingUpd _ r _ _ kvs -> locsFromTRef (TRef (TMapping (ValueType (TInteger 256 Unsigned)) (ValueType (TInteger 256 Unsigned))) SStorage r) <> concatMap (\(k', v') -> go k' <> go v') kvs
+      Typed.MappingUpd _ r t1@VType t2@VType kvs -> 
+        locsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SLHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
 createsFromExp :: Exp a t -> [Id]
 createsFromExp = nub . go
@@ -198,7 +196,8 @@ createsFromExp = nub . go
       VarRef _ vt k a -> createsFromTRef (TRef vt k a)
       Address _ e' -> createsFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
-      Typed.MappingUpd _ r _ _ kvs -> createsFromTRef (TRef (TMapping (ValueType (TInteger 256 Unsigned)) (ValueType (TInteger 256 Unsigned))) SStorage r) <> concatMap (\(k', v') -> go k' <> go v') kvs
+      Typed.MappingUpd _ r t1@VType t2@VType kvs ->
+        createsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SLHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
 createsFromTRef :: TypedRef t -> [Id]
 createsFromTRef ref = concatMap createsFromTypedExp (ixsFromTRef ref)
@@ -231,7 +230,7 @@ createsFromInvariantPred (PredTimed pre post) = createsFromExp pre <> createsFro
 
 createsFromUpdate :: StorageUpdate t ->[Id]
 createsFromUpdate update = nub $ case update of
-  TypedExplicit.Update t ref e -> createsFromTRef (TRef t SStorage ref) <> createsFromExp e
+  TypedExplicit.Update t ref e -> createsFromTRef (TRef t SLHS ref) <> createsFromExp e
 
 createsFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp Timed))) -> [Id]
 createsFromCase (cond, (rewrites, mret)) = nub $
@@ -291,7 +290,7 @@ ethEnvFromInvariantPred (PredTimed pre post) = ethEnvFromExp pre <> ethEnvFromEx
 
 ethEnvFromUpdate :: StorageUpdate t -> [EthEnv]
 ethEnvFromUpdate rewrite = case rewrite of
-  TypedExplicit.Update t ref e -> nub $ ethEnvFromItem (TRef t SStorage ref) <> ethEnvFromExp e
+  TypedExplicit.Update t ref e -> nub $ ethEnvFromItem (TRef t SLHS ref) <> ethEnvFromExp e
 
 ethEnvFromItem :: TypedRef t -> [EthEnv]
 ethEnvFromItem = nub . concatMap ethEnvFromTypedExp . ixsFromTRef
