@@ -11,7 +11,7 @@
 {-# Language ViewPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Act.Type (typecheck, lookupVars, globalEnv, Err) where
+module Act.Type (typecheck, Err) where
 
 import Prelude hiding (GT, LT)
 
@@ -44,6 +44,7 @@ import Act.Error
 
 import Data.Type.Equality (TestEquality(..))
 import Control.Monad.Accum (MonadAccum(add))
+import Control.Lens (Cons)
 
 
 type Err = Error String
@@ -68,47 +69,64 @@ emptyEnv = Env
   , constructors = mempty
   }
 
-typecheck :: U.Act -> Err Act
-typecheck (U.Main contracts) = 
-    uncurry Act <*> typecheckContracts' contracts
-    
 
-typecheckContracts' :: [U.Contract] -> Err (StorageTyping, [Contract])
-typecheckContracts' = 
-    (\(env, constracts) -> (storage env, constracts)) <*> typecheckContracts emptyEnv
+-- | Functions to manipulate environments
+addConstr :: Id -> Env -> Env
+addConstr cid env = env { constructors = Map.insert cid ([], []) (constructors env) }
 
-typecheckContracts :: Env -> [U.Contract] -> Err (StorageTyping, [Contract])
-typecheckContracts env [] = pure (env, [])
-typecheckContracts env ((U.Contract cnstr behvs):cs) =
-    typecheckConstructor env cnstr `bindValidation` \(env', cnstr') ->
-    typecheckBehaviors env' behvs `bindValidation` \(env'', behvs') ->
-    typecheckContracts env'' cs `bindValidation` \(env''', cs') ->
-    pure (env''', (Contact cnstr' behvs') : cs') 
-
-mkConstrEnv :: Id -> Env -> Env
-mkConstrEnv cid iface env = env { contract = cid , storage = mempty, calldata =  mkCalldata iface }
-
-mkCalldata :: [Decl] -> Env -> Env
-mkCalldata decls env = env{ calldata = abiVars }
+addCalldata :: [Decl] -> Env -> Env
+addCalldata decls env = env{ calldata = abiVars }
   where
    abiVars = Map.fromList $ map (\(Decl typ var) -> (var, typ)) decls
 
-typecheckConstructor :: Env -> U.Constructor -> Err (Constructor, Env)
-typecheckConstructor env (U.Constructor posn cid (Interface _ params) iffs cases posts invs) = do
+addConstrStorage :: Id -> Map Id (ValueType, Integer) -> Env -> Env
+addConstrStorage id storageTyping env = env { storage = Map.insert id storageTyping (storage env) }
+
+addConstructor :: Id -> [ArgType] -> [Exp ABoolean Untimed] -> Env -> Env
+addConstructor cid args preconds env =
+  env { constructors = Map.insert cid (args, preconds) (constructors env) } 
+
+-- | Constraints generated during type checking. 
+-- An integer constraint constrains an integer expression to fit within the bounds of a given type.
+-- A call constraint constrains the arguments of a constructor call to satisfy the constructor's preconditions.
+data Constraint = 
+    BoolCnstr Pn (Exp ABoolean Untimed)
+  | CallCnstr Pn [TypedExp Untimed] Id
+
+makeIntegerBoundConstraint :: Pn -> TValueType AInteger -> Exp AInteger Untimed -> Constraint
+makeIntegerBoundConstraint p t e = BoolCnstr p (InRange nowhere t e)
+
+
+-- | Top-level typechecking function
+typecheck :: U.Act -> Err Act
+typecheck (U.Main contracts) = 
+    uncurry Act <$> checkContracts' contracts
+
+checkContracts' :: [U.Contract] -> Err (StorageTyping, [Contract])
+checkContracts' = 
+    (\(env, constracts) -> (storage env, constracts)) <*> checkContracts emptyEnv
+
+checkContracts :: Env -> [U.Contract] -> Err (Env, [Contract])
+checkContracts env [] = pure (env, [])
+checkContracts env ((U.Contract cnstr behvs):cs) = do
+    (constr', env') <- checkConstructor env cnstr
+    behvs' <- checkBehaviours env' behvs
+    (env''', cs') <- checkContracts env' cs
+    pure (env''', (Contract constr' behvs') : cs') 
+
+
+checkConstructor :: Env -> U.Constructor -> Err (Constructor, Env)
+checkConstructor env (U.Constructor posn cid (Interface _ params) iffs cases posts invs) = do
     traverse_ (checkParams env') decls
     checkConstrName cid env
-    let env' = mkConstrEnv cid env
-    iffs' <- checkExpr env TBoolean iffs
-    (storageType, cases) <- concat <$> checkConstrCases env' cases    
-    ensures <- traverse (checkExpr env' TBoolean) posts
-    invs' <- fmap (Invariant contract [] [] . PredUntimed) <$> traverse (checkExpr env' TBoolean) invs
-    env' <- addConstructorStorage env storageType 
-    pure (Constructor contract (Interface contract decls) ptrs iffs' ensures invs' stateUpdates, env')
+    let env' = addCalldata params $ addConstr cid env
+    (iffs', cnstr1) <- unzip <$> traverse (checkExpr env TBoolean) iffs    
+    (storageType, cnstr2) <- checkConstrCases env' cases        
+    (ensures, cnstr3) <- unzip <$> traverse (checkExpr env' TBoolean) posts
+    -- ignore invariants for the time being 
+    let env' = addConstrStorage env storageType
+    pure (Constructor contract (Interface contract decls) ptrs iffs' ensures [] stateUpdates, env')
     where
-        addConstructorStorage :: Env -> Map Id (ValueType, Integer) -> Err Env
-        addConstructorStorage env storageType = 
-            pure env { storage = Map.insert cid storageType storage }
-
         checkConstrName :: Id -> Env -> Err ()
         checkConstrName cid Env{constructors} =
             case Map.lookup cid constructors of
@@ -123,8 +141,8 @@ checkParams Env{storage} (Decl (ContractArg p c) _) =
 -- TODO check that abi types are valid    
 checkParams _ _ = pure ()
 
-typecheckConstrCases :: Env -> [U.Case U.Creates] -> Err (Map Id (ValueType, Integer), Cases [StorageUpdate])
-typecheckConstrCases env cases = do
+checkConstrCases :: Env -> [U.Case U.Creates] -> Err (Map Id (ValueType, Integer), Cases [StorageUpdate])
+checkConstrCases env cases = do
   -- TODO check case consistency
   cases' <- for cases $ \(U.Case p cond assigns) -> do
     cond' <- checkExpr env TBoolean cond
@@ -292,52 +310,97 @@ typeMismatchErr p t1 t2 = (throw (p, "Type " <> show t1 <> " should match type "
 arrayTypeMismatchErr :: forall a b res. Pn -> TValueType a -> TValueType b -> Err res
 arrayTypeMismatchErr p t1 t2 = (throw (p, "Inconsistent array type: Type " <> show t1 <> " should match type " <> show t2))
 
-defaultInteger :: TValueType AInteger
-defaultInteger = TInteger 256 Signed
+relaxedtestEquality :: TValueType a -> TValueType b -> Maybe (a :~: b)
+relaxedtestEquality (TInteger _ _) (TInteger _ _) = Refl
+relaxedtestEquality (TInteger _ _) TUnboundedInt = Refl
+relaxedtestEquality TUnboundedInt (TInteger _ _) = Refl
+relaxedtestEquality TUnboundedInt TUnboundedInt = Refl
+relaxedtestEquality t1 t2 = testEquality t1 t2
 
-defaultUInteger :: TValueType AInteger
-defaultUInteger = TInteger 256 Unsigned
-
-
-relaxedIntCheck :: TValueType a -> TValueType b -> Maybe (a :~: b)
-relaxedIntCheck (TInteger _ _) (TInteger _ _) = Just Refl
-relaxedIntCheck (TArray n1 t1) (TArray n2 t2) | n1 == n2 = (\Refl -> Just Refl) =<< relaxedIntCheck t1 t2
-relaxedIntCheck t1 t2 = testEquality t1 t2
+relaxedIntCheck :: TValueType a -> TValueType b -> Bool
+relaxedIntCheck t1 t2 = isJust $ relaxedtestEquality t1 t2
 
 -- | Attempt to construct a `TypedExp` whose type matches the supplied `ValueType`.
 -- The target timing parameter will be whatever is required by the caller.
 checkExprVType :: forall t. Typeable t => Env -> U.Expr -> ValueType -> Err (TypedExp t)
 checkExprVType env e (ValueType vt) = TExp vt <$> checkExpr env vt e
 
+checkEqType :: forall a b. Pn -> TValueType a -> TValueType b -> Err ()
+checkEqType p t1 t2 = 
+    if relaxedIntCheck t1 t2 then pure ()
+    else typeMismatchErr p t1 t2
+
+-- | Combines two types that should satisfy the relaxedtestEquality to the most general type
+combineTypes :: TValueType a -> TValueType a -> Err (TValueType a)
+combineTypes t1@(TInteger w1 s1) t2@(TInteger w2 s2) = pure $ TInteger (max w1 w2) Signed
+combineTypes (TInteger w1 Unsigned) (TInteger w2 Unsigned) = pure $ TInteger (max w1 w2) Unsigned
+combineTypes (TInteger w1 Signed) (TInteger w2 Unsigned) = 
+    if w1 > w2 then pure (TInteger w1 Signed)
+    else pure TUnboundedInt
+combineTypes (TInteger w1 Unsigned) (TInteger w2 Signed) = 
+    if w2 > w1 then pure (TInteger w2 Signed)
+    else pure TUnboundedInt
+combineTypes (TInteger _ Unsigned) (TInteger _ Signed) = pure TUnboundedInt
+combineTypes TUnboundedInt TUnboundedInt = pure TUnboundedInt
+combineTypes (TInteger _ _) TUnboundedInt = pure TUnboundedInt
+combineTypes TUnboundedInt (TInteger _ _) = pure TUnboundedInt
+combineTypes t1 _ = pure t1
+
+fitsIn :: TValueType AInteger -> TValueType AInteger -> Bool
+fitsIn (TInteger w1 s1) (TInteger w2 s2)
+  | s1 == s2 = w1 <= w2
+  | s1 == Unsigned && s2 == Signed = w1 < w2
+  | s1 == Signed && s2 == Unsigned = False
+fitsIn TUnboundedInt (TInteger _ _) = False
+fitsIn (TInteger _ _) TUnboundedInt = True
+fitsIn TUnboundedInt TUnboundedInt = True
 
 -- | Check if the given expression can be typed with the given type
-checkExpr :: forall t a. Typeable t => Env -> TValueType a -> U.Expr -> Err (Exp a t)
-checkExpr env t1 e =
-    -- No idea why type annotation is required here
-    (inferExpr env e :: Err (TypedExp t)) `bindValidation` (\(TExp t2 te) ->
-    -- TODO: when integer types will always be infered to be `defaultInteger`, so mismatch is
-    -- certain for any other type. Implement conversion, and probably check validity through SMT
-    -- under the preconditions/case conditions?
-    maybe (maybeCast (getPosn e) t1 t2) (\Refl -> pure te) $ relaxedIntCheck t1 t2)
-    where
-      maybeCast :: Pn -> TValueType a -> TValueType b -> Exp b t -> Err (Exp a t)
-      maybeCast pn TInteger (TContract c) te = pure $ Address pn c te --TODO: is pn correct here?
-      -- maybeCast _ (SSArray _) s1' (SSArray _) s2 _ | s1' == s2 = -- TODO: cast of whole array of contracts?
-      maybeCast pn t1' t2 _ = typeMismatchErr pn t1' t2
+checkExpr :: forall t a. Typeable t => Env -> TValueType a -> U.Expr -> Err (Exp a t, [Constraint])
+-- Mapping Expressions
+checkExpr env mtyp@(TMapping keytyp valtyp) (U.MappingUpd p ref map) = do
+    (rtyp, tref) <- checkRef env SLHS ref
+    checkEqType p mtyp rtyp
+    updates <- traverse (\(k,v) -> do
+        (k', c1) <- checkExpr env keytyp k
+        (v', c2) <- checkExpr env valtyp v
+        pure ((k', v'), c1 ++ c2)) map
+    pure $ TExp styp (MappingUpd p tref keytyp valtyp updates)
+checkExpr env mtyp@(TMapping keytyp valtyp) (U.Mapping p map) = do
+    map' <- traverse (\(k,v) -> do
+        (k', c1) <- checkExpr env keytyp k
+        (v', c2) <- checkExpr env valtyp v
+        pure ((k', v'), c1 ++ c2)) map
+    pure $ TExp styp (Mapping p keytyp valtyp map')
+-- Integer Expressions
+checkExpr env t1@(TInteger _ _) e = do
+    (TExp t2 te, cs) <- inferExpr env e
+    case t2 of
+        t2@(TInteger _ _) -> 
+            if t1 `fitsIn` t2 then pure (te, cs)
+            else pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) t1 te])
+        TUnboundedInt -> pure (t2, cs ++ [makeIntegerBoundConstraint (getPosn e) t1 te])
+        _ -> typeMismatchErr (getPosn e) t1 t2
+checkExpr _ TUnboundedInt _ = throw (nowhere, "Expected bounded integer type")
+checkExpr env t e = do
+    (TExp t2 te, cs) <- inferExpr env e
+    checkEqType (getPosn e) t1 t2
+    pure (te, cs)
+
 
 -- | Attempt to infer a type of an expression. If successful, it returns an
 -- existential package of the infered typed together with the typed expression.
-inferExpr :: forall t. Typeable t => Env -> U.Expr -> Err (TypedExp t)
+inferExpr :: forall t. Typeable t => Env -> U.Expr -> Err (TypedExp t, [Constraint])
 inferExpr env@Env{calldata, constructors} e = case e of
   -- Boolean expressions
   U.ENot    p v1    -> wrapOp  (Neg  p) TBoolean <$> checkExpr env TBoolean v1
   U.EAnd    p v1 v2 -> boolOp2 (And  p) TBoolean v1 v2
   U.EOr     p v1 v2 -> boolOp2 (Or   p) TBoolean v1 v2
   U.EImpl   p v1 v2 -> boolOp2 (Impl p) TBoolean v1 v2
-  U.ELT     p v1 v2 -> boolOp2 (LT   p) defaultInteger v1 v2
-  U.ELEQ    p v1 v2 -> boolOp2 (LEQ  p) defaultInteger v1 v2
-  U.EGEQ    p v1 v2 -> boolOp2 (GEQ  p) defaultInteger v1 v2
-  U.EGT     p v1 v2 -> boolOp2 (GT   p) defaultInteger v1 v2
+  U.ELT     p v1 v2 -> boolOp2 (LT   p) TUnboundedInt v1 v2
+  U.ELEQ    p v1 v2 -> boolOp2 (LEQ  p) TUnboundedInt v1 v2
+  U.EGEQ    p v1 v2 -> boolOp2 (GEQ  p) TUnboundedInt v1 v2
+  U.EGT     p v1 v2 -> boolOp2 (GT   p) TUnboundedInt v1 v2
   U.EEq     p v1 v2 -> TExp TBoolean <$> polycheck p Eq v1 v2
   U.ENeq    p v1 v2 -> TExp TBoolean <$> polycheck p NEq v1 v2
   U.BoolLit p v1    -> pure $ TExp TBoolean (LitBool p v1)
@@ -349,8 +412,14 @@ inferExpr env@Env{calldata, constructors} e = case e of
   U.EDiv   p v1 v2 -> arithOp2 (Div p) v1 v2
   U.EMod   p v1 v2 -> arithOp2 (Mod p) v1 v2
   U.EExp   p v1 v2 -> arithOp2 (Exp p) v1 v2
-  U.IntLit p v1    -> pure $ TExp (TInteger 256 Signed) (LitInt p v1)
-
+  U.IntLit p v1    -> 
+    pure $ TExp (litBoundedType v1) (LitInt p v1)
+   where
+    litBoundedType :: Integer -> TValueType AInteger
+    litBoundedType v1 | v1 >= 0 && v1 <= maxUnsigned 256 = TInteger (findBoundUnsigned v1) Unsigned
+                      | otherwise && v1 >= minSigned 256 && v1 <= maxSigned 256 = TInteger (findBoundSigned v1) Signed
+                      | otherwise = TUnboundedInt
+    
   U.EArray p l -> typedArray `bindValidation` checkAllTypes
     where
       typedArray :: Err [(Pn, TypedExp t)]
@@ -373,7 +442,7 @@ inferExpr env@Env{calldata, constructors} e = case e of
 
         [] -> error "Empty array expressions not supported"
 
-    -- Constructor calls
+  -- Constructor calls
   U.ECreate p c args callvalue -> case Map.lookup c constructors of
     Just (sig, _iffs) -> do -- TODO check preconditions
       cv <- traverse (checkExpr env (TInteger 256 Unsigned)) callvalue
@@ -403,51 +472,32 @@ inferExpr env@Env{calldata, constructors} e = case e of
       TExp (TContract c) e' -> pure $ TExp TAddress (Address p c e')
       TExp t _ -> throw (p, "Expression of type " <> show t <> " cannot be converted to address")
 
-  U.Mapping p [] -> throw (p, "Cannot create empty mapping")
 
-  U.Mapping p ((key,val):map) -> do
-    TExp keytyp key' <- inferExpr env key
-    TExp valtyp val' <- inferExpr env val
-    rest <- traverse (\(k,v) -> do
-        k' <- checkExpr env keytyp k
-        v' <- checkExpr env valtyp v
-        pure (k', v')) map
-    pure $ TExp (TMapping (ValueType keytyp) (ValueType valtyp)) (Mapping p keytyp valtyp ((key', val') : rest))
-
-  U.MappingUpd p ref map -> do
-    (styp, tref) <- checkRef env SLHS ref    
-    case styp of
-      TMapping keytyp valtyp -> do
-        updates <- traverse (\(k,v) -> do
-            k' <- checkExpr env keytyp k
-            v' <- checkExpr env valtyp v
-            pure (k', v')) map
-        pure $ TExp styp (MappingUpd p tref keytyp valtyp updates)
-      _ -> throw (p, "Mapping update applied to non-mapping type" <> show ref)
-    
-  --  
+  U.Mapping p _ -> throw (p, "The type of mappings cannot be inferred.")
+  U.MappingUpd p _ _ -> throw (p, "The type of mappings cannot be inferred.")
+  
   where
     wrapOp f t e1 = TExp t (f e1) -- use sign to let Haskell automatically derive the type here
     --wrapOp2 f t e1 e2 = TExp t (f e1 e2)
 
     boolOp2 :: forall a. (Exp a t -> Exp a t -> Exp ABoolean t) -> TValueType a -> U.Expr -> U.Expr -> Err (TypedExp t)
     boolOp2 f t e1 e2 = do
-      e1' <- checkExpr env t e1
-      e2' <- checkExpr env t e2
-      pure $ TExp TBoolean (f e1' e2')
+      (e1', c1) <- checkExpr env t e1
+      (e2', c2) <- checkExpr env t e2
+      pure $ (TExp TBoolean (f e1' e2'), c1 ++ c2)
 
     arithOp2 :: (Exp AInteger t -> Exp AInteger t -> Exp AInteger t) -> U.Expr -> U.Expr -> Err (TypedExp t)
     arithOp2 f e1 e2 = do
-      e1' <- checkExpr env defaultInteger e1
-      e2' <- checkExpr env defaultInteger e2
-      pure $ TExp defaultInteger (f e1' e2')
-
+      -- Could generate more precise int type here 
+      (e1', c1) <- checkExpr env TUnboundedInt e1
+      (e2', c2) <- checkExpr env TUnboundedInt e2
+      pure $ (TExp TUnboundedInt (f e1' e2'), c1 ++ c2)
 
     polycheck :: forall z. Pn -> (forall y. ActSingI y => Pn -> TValueType y -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err z
-    polycheck pn cons e1 e2 =
-        inferExpr env e1 `bindValidation` \(TExp (t1 :: TValueType a1) (te1 :: Exp a1 t)) -> -- I don't know why type annotations are required here
-        inferExpr env e2 `bindValidation` \(TExp (t2 :: TValueType a2) (te2 :: Exp a2 t)) ->
-        maybe (typeMismatchErr pn t1 t2) (\Refl -> pure $ cons pn t1 te1 te2) $ relaxedIntCheck t1 t2
+    polycheck pn cons e1 e2 = do
+        (TExp t1 te1, c1) <- inferExpr env e1
+        (TExp t2 te2, c2) <- inferExpr env e2
+        pure $ maybe (typeMismatchErr pn t1 t2) (\Refl -> pure $ cons pn (combineTypes t1 t2) te1 te2) $ relaxedtestEquality t1 t2
 
     -- Check that an expression is typed with the right timing
     checkTime :: forall t0. Typeable t0 => Pn -> Err (TypedExp t0 -> TypedExp t)
@@ -477,3 +527,27 @@ checkArrayIxs env pn exprs ixsBounds = if length exprs > length ixsBounds
                               else traverse check (zip exprs ixsBounds)
   where
     check (e,i) = checkExpr env defaultUInteger e `bindValidation` (pure . (\e' -> (TExp defaultUInteger e', i)))
+
+
+maxUnsigned :: Int -> Integer
+maxUnsigned bits = 2 ^ bits - 1
+
+maxSinged :: Int -> Integer
+maxSinged bits = 2 ^ (bits - 1) - 1
+
+minSigned :: Int -> Integer
+minSigned bits = - (2 ^ (bits - 1))
+
+findBoundSigned :: Integer -> Int -> Int
+findBoundSigned v = go 8
+  where
+    go bits | v >= minSigned bits && v <= maxSinged bits = bits
+            | bits >= 256 = 256
+            | otherwise   = go (bits + 8)
+
+findBoundUnsigned :: Integer -> Int -> Int
+findBoundUnsigned v = go 8
+  where
+    go bits | 0 <= v && v <= maxUnsigned bits = bits
+            | bits >= 256 = 256
+            | otherwise   = go (bits + 8)
