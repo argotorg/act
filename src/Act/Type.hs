@@ -45,6 +45,7 @@ import Act.Error
 import Data.Type.Equality (TestEquality(..))
 import Control.Monad.Accum (MonadAccum(add))
 import Control.Lens (Cons)
+import Act.Syntax.Untyped (Expr(BoolLit))
 
 
 type Err = Error String
@@ -117,15 +118,16 @@ checkContracts env ((U.Contract cnstr behvs):cs) = do
 
 checkConstructor :: Env -> U.Constructor -> Err (Constructor, Env)
 checkConstructor env (U.Constructor posn cid (Interface _ params) iffs cases posts invs) = do
-    traverse_ (checkParams env') decls
+    traverse_ (checkParams env) params
     checkConstrName cid env
     let env' = addCalldata params $ addConstr cid env
     (iffs', cnstr1) <- unzip <$> traverse (checkExpr env TBoolean) iffs    
-    (storageType, cnstr2) <- checkConstrCases env' cases        
+    (storageType, cases', cnstr2) <- checkConstrCases env' cases        
     (ensures, cnstr3) <- unzip <$> traverse (checkExpr env' TBoolean) posts
     -- ignore invariants for the time being 
-    let env' = addConstrStorage env storageType
-    pure (Constructor contract (Interface contract decls) ptrs iffs' ensures [] stateUpdates, env')
+    -- TODO handle constraints
+    let env'' = addConstrStorage cid storageType env'
+    pure (Constructor cid (Interface cid params) iffs' cases' ensures [], env'')
     where
         checkConstrName :: Id -> Env -> Err ()
         checkConstrName cid Env{constructors} =
@@ -141,39 +143,44 @@ checkParams Env{storage} (Decl (ContractArg p c) _) =
 -- TODO check that abi types are valid    
 checkParams _ _ = pure ()
 
-checkConstrCases :: Env -> [U.Case U.Creates] -> Err (Map Id (ValueType, Integer), Cases [StorageUpdate])
+checkConstrCases :: Env -> [U.Case U.Creates] -> Err (Map Id (ValueType, Integer), Cases [StorageUpdate], [(Exp ABoolean Untimed, [Constraint])])
 checkConstrCases env cases = do
-  -- TODO check case consistency
-  cases' <- for cases $ \(U.Case p cond assigns) -> do
-    cond' <- checkExpr env TBoolean cond
-    storageUpdates <- concat <$> traverse (checkAssign env) assigns
-    pure $ Case p cond' storageUpdates
+  (cases', cnstr) <- checkCases cases
+  -- TODO check case consistency  
   storageTyping <- checkStorageTyping cases
-  pure (storageTyping, cases')
+  pure (storageTyping, cases', cnstr)
   where
-    checkStorageTyping :: [U.Case U.Creates] -> Map Id (ValueType, Integer)
+    checkCases :: [U.Case U.Creates] -> Err (Cases [StorageUpdate], [(Exp ABoolean Untimed, [Constraint])])
+    checkCases [] = pure ([], [])
+    checkCases ((U.Case p cond assigns):cases) = do
+        (cond', cnstr1) <- checkExpr env TBoolean cond
+        (storageUpdates, cnstr2) <- unzip <$> traverse (checkAssign env) assigns
+        (cases', cnstrs) <- checkCases cases
+        pure ((cond', storageUpdates):cases', (LitBool nowhere True, cnstr1):(cond', concat cnstr2):cnstrs)
+  
+    checkStorageTyping :: [U.Case U.Creates] -> Err (Map Id (ValueType, Integer))
     checkStorageTyping [] = mempty
-    checkStorageTyping ((U.Case p cond assigns):cases) =
-        let typing = makeStorageTyping assigns 0 in
+    checkStorageTyping ((U.Case _ _ assigns):_) = do
+        let typing = makeStorageTyping assigns 0
         consistentStorageTyping typing cases
-        M.fromList typing
+        pure $ Map.fromList typing
     
     -- make the storage typing from a list of assignments
-    makeStorageTyping :: [U.Assign] ->  [(Id, (ValueType, Integer))]
+    makeStorageTyping :: [U.Assign] -> Integer ->  [(Id, (ValueType, Integer))]
     makeStorageTyping [] _ = []
-    makeStorageTyping ((U.StorageVar _ typ name):rest) slot = (name, (typ, slot)):makeStorageTyping rest (slot + 1)
+    makeStorageTyping ((U.StorageVar _ typ name, _):rest) slot = (name, (typ, slot)):makeStorageTyping rest (slot + 1)
 
     -- check that the storage typing is the same across all cases
-    consistentStorageTyping :: Map Id (ValueType, Integer) -> [U.Case U.Creates] -> Err ()
+    consistentStorageTyping :: [(Id, (ValueType, Integer))] -> [U.Case U.Creates] -> Err ()
     consistentStorageTyping _ [] = pure ()
     consistentStorageTyping typing ((U.Case p _ assigns):cases) =
         let typing' = makeStorageTyping assigns 0 in
         consistentStorageTyping typing cases *>
-        assert (p, "Inconsistent storage typing in constructor cases")
+        assert (p, "Inconsistent storage typing in constructor cases") (typing == typing')
 
 checkBehaviours :: Env -> [U.Transition] -> Err [Behaviour]
-checkBehaviours env _ [] = pure (storage env, [])
-checkBehaviours env names (b:bs) = do
+checkBehaviours _ [] = pure []
+checkBehaviours env (b:bs) = do
     checkBehvName b bs
     b' <- checkBehaviour env b
     bs' <- checkBehaviours env bs
@@ -183,50 +190,52 @@ checkBehaviours env names (b:bs) = do
         checkBehvName :: U.Transition -> [U.Transition] -> Err ()
         checkBehvName (U.Transition pn name _ _ _ _ _) bs =
             case find (\(U.Transition _ n _ _ _ _ _) -> n == name) bs of
-                Just _ -> throw (pn, "Behaviour " <> name <> "for contract " <> contract <> " is already defined")
+                Just _ -> throw (pn, "Behaviour " <> name <> "for contract " <> contract env <> " is already defined")
                 Nothing -> pure ()
 
 
-checkBehavior :: Env -> U.Transition -> Err Behaviour
-checkBehavior env@Env{contract} (U.Transition posn name _ iface@(Interface _ decls) iffs cases posts) = do
-    traverse_ (checkDecl env) decls
-    let env' = addCalddata iface env
-    iffs' <- checkIffs env iffs
+checkBehaviour :: Env -> U.Transition -> Err Behaviour
+checkBehaviour env@Env{contract} (U.Transition posn name _ iface@(Interface _ params) iffs cases posts) = do
+    traverse_ (checkParams env) params
+    let env' = addCalldata params env
+    (iffs', cnstr1) <- unzip <$> traverse (checkExpr env TBoolean) iffs
     -- TODO check case consistency
-    cases' <- concat <$> traverse (checkBehvCase env') cases
-    ensures <- traverse (checkExpr env TBoolean) posts
-    pure $ Behaviour name contract iface iffs' cases' ensures storageType
+    (cases', cnstr2) <- unzip <$> traverse (checkBehvCase env') cases
+    (ensures, cnstr3) <- unzip <$> traverse (checkExpr env TBoolean) posts
+    pure $ Behaviour name contract iface iffs' cases' ensures
 
 
-checkBehvCase :: Env -> U.Case (U.StorageUpdates, Maybe U.Expr) -> Err ([Exp ABoolean Untimed], ([StorageUpdate], Maybe (TypedExp Timed)))
-checkBehvCase env (U.Case p cond (updates, mret)) = do
-    cond' <- checkExpr env TBoolean cond
-    storageUpdates <- concat <$> traverse (checkStorageUpdate env) updates
-    mret' <- checkTypedExpr env Timed <$> mret
-    pure (cond', storageUpdates, mret')
+checkBehvCase :: Env -> U.Case (U.StorageUpdates, Maybe U.Expr) -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Timed))), [(Exp ABoolean Untimed, [Constraint])])
+checkBehvCase env (U.Case _ cond (updates, mret)) = do
+    (cond', cnstr1) <- checkExpr env TBoolean cond
+    (storageUpdates, cnstr2) <- unzip <$> traverse (checkStorageUpdate env) updates
+    res <- traverse (inferExpr env) mret
+    (mret', cnstr3) <- case res of
+        Just (e, cs) -> pure (Just e, cs)
+        Nothing -> pure (Nothing, [])
+    pure ((cond', (storageUpdates, mret')), [(LitBool nowhere True, cnstr1), (cond', concat cnstr2 ++ cnstr3)])
 
-
-checkAssign :: Env -> U.Assign -> Err [StorageUpdate]
-checkAssign env (U.StorageVar p typ var, expr) = do
+checkAssign :: Env -> U.Assign -> Err (StorageUpdate, [Constraint])
+checkAssign env (U.StorageVar p (ValueType typ) var, expr) = do
     validSlotType env p typ
-    expr' <- checkExpr env typ expr
-    pure [Update (RVar p var) expr']
+    (expr', cnstr) <- checkExpr env typ expr
+    pure (Update typ (SVar p Neither (contract env) (var)) expr', cnstr)
   where
     validSlotType :: Env -> Pn -> TValueType a -> Err ()
-    validSlotType env p (TInteger size _) =
+    validSlotType _ p (TInteger size _) =
       when (size `notElem` [8,16,32,64,128,256]) $
         throw (p, "Invalid integer size: " <> show size)
     validSlotType env p (TContract c) =
-      case Map.lookup c (theirs env) of
+      case Map.lookup c (storage env) of
         Just _ -> pure ()
         Nothing -> throw (p, "Contract " <> c <> " is not a valid contract type")
     validSlotType _ _ _ = pure ()
 
-checkStorageUpdate :: Env -> U.StorageUpdate -> Err StorageUpdate
+checkStorageUpdate :: Env -> U.StorageUpdate -> Err (StorageUpdate, [Constraint])
 checkStorageUpdate env (U.Update ref expr) = do
-    (tref, typ) <- checkRef env SStorage ref
-    expr' <- checkExpr env typ expr
-    pure $ Update tref expr'
+    (ValueType typ, tref, cnstr) <- checkRef env SLHS ref
+    (expr', cnstr') <- checkExpr env typ expr
+    pure (Update typ tref expr', cnstr ++ cnstr')
 
 -- | Environment with globally available variables.
 ethEnv :: EthEnv -> TValueType AInteger
@@ -235,41 +244,24 @@ ethEnv Caller    = TAddress
 ethEnv This      = TAddress
 ethEnv Origin    = TAddress
 
-
--- inferRefType :: Env -> U.Ref -> Err TypedRef
--- inferRefType env ref = do 
---   kind <- inferKind env ref
---   (typ, tref) <- checkRef env kind ref
---   pure $ TRef typ tref  
---   where
---     inferKind :: Env -> U.Ref -> Err SRefKind
---     inferKind Env{calldata} (U.RVar p name) = 
---       case Map.lookup name calldata of
---         Just _ -> pure S
---         Nothing -> pure SStorage
---     inferKind env (U.RIndex p en _) =
---       inferKind env en
---     inferKind env (U.RField p en _) =
---       inferKind env en
-
-checkRef :: forall t k. Typeable t => Env -> SRefKind k -> U.Ref -> Err (ValueType, Ref k t)
+checkRef :: forall t k. Typeable t => Env -> SRefKind k -> U.Ref -> Err (ValueType, Ref k t, [Constraint])
 checkRef Env{contract, calldata, storage} kind (U.RVar p name) = 
-    case M.lookup name calldata of
+    case Map.lookup name calldata of
       Just typ -> case kind of 
         SLHS -> throw (p, "Cannot use calldata variable " <> show name <> " as LHS reference")
-        SRHS -> pure (fromAbiType' typ, CVar p typ name)
-      Nothing -> case M.lookup contract storage of
-        Just storageTyping -> case M.lookup name storageTyping of
-            Just (typ, _) -> pure (typ, SVar p contract name)
+        SRHS -> pure (fromArgType typ, CVar p typ name, [])
+      Nothing -> case Map.lookup contract storage of
+        Just storageTyping -> case Map.lookup name storageTyping of
+            Just (typ, _) -> pure (typ, SVar p contract name, [])
             Nothing -> throw (p, "Unbound variable " <> show name)
         Nothing -> throw (nowhere, "Contract " <> contract <> " undefined") -- unreachable
-checkRef env kind (U.RIndex p en args) =
+checkRef env kind (U.RIndex p en args) = do
   checkRef env kind en `bindValidation` \(styp, ref) -> case styp of
-    TArray len typ -> 
-        checkArrayIxs env p args (toList len) `bindValidation` \ixs ->
-        pure (typ, RArrIdx p ref typ ixs)
-    TMapping keytyp valtyp ->
-        checkArgs env p (NonEmpty.toList keytyp) args `bindValidation` \ixs ->
+    TArray len typ -> do
+        (ixs, cnstr) <- checkArrayIxs env p args (toList len)
+        pure (typ, RArrIdx p ref typ ixs, cnstr)
+    TMapping keytyp valtyp -> do
+        (ixs, cnstr) <- checkArgs env p (NonEmpty.toList keytyp) args
         case kind of
             SLHS -> throw (p, "Cannot use mapping indexing as LHS reference")
             SRHS -> pure (valtyp, RMapIdx p ref valtyp ixs)
@@ -282,6 +274,8 @@ checkRef env kind (U.RField p en x) =
         Nothing -> throw (p, "Contract " <> c <> " does not have field " <> x)
       Nothing -> error $ "Internal error: Invalid contract type " <> show c
     _ -> throw (p, "Reference should have a contract type" <> show en)
+checkRef Env{contract, calldata, storage} kind (U.RVarPre p name) = undefined
+checkRef Env{contract, calldata, storage} kind (U.RVarPost p name) = undefined
 
 
 -- | If an `inrange e` predicate appears in the source code, then the inrange
@@ -322,8 +316,10 @@ relaxedIntCheck t1 t2 = isJust $ relaxedtestEquality t1 t2
 
 -- | Attempt to construct a `TypedExp` whose type matches the supplied `ValueType`.
 -- The target timing parameter will be whatever is required by the caller.
-checkExprVType :: forall t. Typeable t => Env -> U.Expr -> ValueType -> Err (TypedExp t)
-checkExprVType env e (ValueType vt) = TExp vt <$> checkExpr env vt e
+checkExprVType :: forall t. Typeable t => Env -> U.Expr -> ValueType -> Err (TypedExp t, [Constraint])
+checkExprVType env e (ValueType vt) = do
+    (te, cs) <- checkExpr env vt e
+    pure (TExp vt te, cs)
 
 checkEqType :: forall a b. Pn -> TValueType a -> TValueType b -> Err ()
 checkEqType p t1 t2 = 
