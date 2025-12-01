@@ -241,8 +241,8 @@ checkStorageUpdate env (U.Update ref expr) = do
     (expr', cnstr') <- checkExpr env typ expr
     pure (Update typ tref expr', cnstr ++ cnstr')
 
-checkRef :: forall t k. Typeable t => Env -> SRefKind k -> U.Ref -> Err (ValueType, Ref k t, [Constraint t])
-checkRef Env{contract, calldata, storage} kind (U.RVar p name) =
+checkRef :: forall t k. Env -> SRefKind k -> U.Ref -> Err (ValueType, Ref k t, [Constraint t])
+checkRef Env{contract, calldata, storage} kind (U.RVar p tag name) =
     case Map.lookup name calldata of
       Just typ -> case kind of
         SLHS -> throw (p, "Cannot use calldata variable " <> show name <> " as LHS reference")
@@ -250,23 +250,26 @@ checkRef Env{contract, calldata, storage} kind (U.RVar p name) =
       Nothing -> case Map.lookup contract storage of
         Just storageTyping -> case Map.lookup name storageTyping of
             Just (typ, _) ->
-                (\f -> (typ, f (SVar p Neither contract name), [])) <$> checkTime p
+                case tag of
+                    U.Neither -> (\f -> (typ, f (SVar p Neither contract name), [])) <$> checkTime p
+                    U.Pre     -> (\f -> (typ, f (SVar p Pre contract name), [])) <$> checkTime p
+                    U.Post    -> (\f -> (typ, f (SVar p Post contract name), [])) <$> checkTime p
             Nothing -> throw (p, "Unbound variable " <> show name)
         Nothing -> throw (nowhere, "Contract " <> contract <> " undefined") -- unreachable
 checkRef env kind (U.RIndex p en idx) = do
-  (ValueType styp, ref, cnstr) <- checkRef env kind en
+  (ValueType styp, ref :: Ref k t, cnstr) <- checkRef env kind en
   case styp of
     TArray len typ -> do
         (idx', cnstr') <- checkExpr env defaultUInteger idx        
         pure (ValueType typ, RArrIdx p ref idx' len, makeArrayBoundConstraint p len idx':cnstr ++ cnstr')
-    mtyp@(TMapping (ValueType keytyp) valtyp) -> do
-        (ix, cnstr') <- checkExpr env keytyp idx
+    mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) -> do
+        (ix, cnstr' :: [Constraint t]) <- checkExpr env keytyp idx
         case kind of
             SLHS -> throw (p, "Cannot use mapping indexing as LHS reference")
-            SRHS -> pure (valtyp, RMapIdx p (TRef mtyp kind ref) valtyp ix, cnstr ++ cnstr')
+            SRHS -> pure (ValueType valtyp, RMapIdx p (TRef mtyp kind ref) (TExp keytyp ix), cnstr ++ cnstr')
     _ -> throw (p, "An indexed reference should have an array or mapping type" <> show en)
 checkRef env kind (U.RField p en x) = do
-  (ValueType styp, ref, cnstr) <- checkRef env kind en
+  (ValueType styp, ref :: Ref k t, cnstr) <- checkRef env kind en
   case styp of
     TContract c -> case Map.lookup c (storage env) of
       Just cenv -> case Map.lookup x cenv of
@@ -274,9 +277,6 @@ checkRef env kind (U.RField p en x) = do
         Nothing -> throw (p, "Contract " <> c <> " does not have field " <> x)
       Nothing -> error $ "Internal error: Invalid contract type " <> show c
     _ -> throw (p, "Reference should have a contract type" <> show en)
-checkRef Env{contract, calldata, storage} kind (U.RVarPre p name) = undefined
-checkRef Env{contract, calldata, storage} kind (U.RVarPost p name) = undefined
-checkRef _ _ _ = error "Internal error: unhandled case in checkRef"
 
 -- Check that an expression is typed with the right timing
 checkTime :: forall k t0 t. Typeable t0 => Pn -> Err (Ref k t0 -> Ref k t)
@@ -409,8 +409,8 @@ inferExpr env@Env{calldata, constructors} e = case e of
   U.EEq     p v1 v2 -> TExp TBoolean <$> polycheck p Eq v1 v2
   U.ENeq    p v1 v2 -> TExp TBoolean <$> polycheck p NEq v1 v2
   U.BoolLit p v1    -> pure $ TExp TBoolean (LitBool p v1)
-  U.EInRange _ (fromAbiType' -> ValueType TAddress) v -> TExp TBoolean . andExps <$> genInRange TAddress <$> checkExpr env TAddress v -- Arithemetic expressions
-  U.EInRange _ (fromAbiType' -> ValueType t@(TInteger _ _)) v -> TExp TBoolean . andExps <$> genInRange t <$> checkExpr env t v
+  U.EInRange _ (fromAbiType -> ValueType TAddress) v -> TExp TBoolean . andExps <$> genInRange TAddress <$> checkExpr env TAddress v -- Arithemetic expressions
+  U.EInRange _ (fromAbiType -> ValueType t@(TInteger _ _)) v -> TExp TBoolean . andExps <$> genInRange t <$> checkExpr env t v
   U.EAdd   p v1 v2 -> arithOp2 (Add p) v1 v2
   U.ESub   p v1 v2 -> arithOp2 (Sub p) v1 v2
   U.EMul   p v1 v2 -> arithOp2 (Mul p) v1 v2
@@ -502,7 +502,7 @@ inferExpr env@Env{calldata, constructors} e = case e of
     polycheck pn cons e1 e2 = do
         (TExp t1 te1, c1) <- inferExpr env e1
         (TExp t2 te2, c2) <- inferExpr env e2
-        pure $ maybe (typeMismatchErr pn t1 t2) (\Refl -> cons pn (combineTypes t1 t2) te1 c1 te2 c2) $ relaxedtestEquality t1 t2
+        pure $ maybe (typeMismatchErr pn t1 t2) (\Refl -> cons pn t1 te1 c1 te2 c2) $ relaxedtestEquality t1 t2
 
 -- | Helper to create to create a conjunction out of a list of expressions
 andExps :: [Exp ABoolean t] -> Exp ABoolean t

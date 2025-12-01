@@ -516,9 +516,7 @@ nameFromStorage :: Untyped.StorageUpdate -> Id
 nameFromStorage (Untyped.Update e _) = nameFromEntry e
 
 nameFromEntry :: Untyped.Ref -> Id
-nameFromEntry (Untyped.RVar _ x) = x
-nameFromEntry (Untyped.RVarPre _ x) = x
-nameFromEntry (Untyped.RVarPost _ x) = x
+nameFromEntry (Untyped.RVar _ _ x) = x
 nameFromEntry (Untyped.RIndex _ e _) = nameFromEntry e
 nameFromEntry (Untyped.RField _ e _) = nameFromEntry e
 
@@ -526,9 +524,7 @@ nameFromBehv :: TypedExplicit.Behaviour -> Id
 nameFromBehv (Behaviour _ _ (Interface ifaceName _) _ _ _) = ifaceName
 
 getPosEntry :: Untyped.Ref -> Pn
-getPosEntry (Untyped.RVar pn _) = pn
-getPosEntry (Untyped.RVarPre pn _) = pn
-getPosEntry (Untyped.RVarPost pn _) = pn
+getPosEntry (Untyped.RVar pn _ _) = pn
 getPosEntry (Untyped.RIndex pn _ _) = pn
 getPosEntry (Untyped.RField pn _ _) = pn
 
@@ -619,9 +615,7 @@ idFromRewrites e = case e of
     idFromRewrites' = unionsWith (<>) . fmap idFromRewrites
 
     idFromRef' :: Untyped.Ref -> Map Id [Pn]
-    idFromRef' (Untyped.RVar p x) = singleton x [p]
-    idFromRef' (Untyped.RVarPre p x) = singleton x [p]
-    idFromRef' (Untyped.RVarPost p x) = singleton x [p]
+    idFromRef' (Untyped.RVar p _ x) = singleton x [p]
     idFromRef' (Untyped.RIndex _ en x) = unionWith (<>) (idFromRef' en) (idFromRewrites x)
     idFromRef' (Untyped.RField _ en _) = idFromRef' en
 

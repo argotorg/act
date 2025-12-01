@@ -158,8 +158,8 @@ list(x) : {- empty -}                                 { []      }
 optblock(label, x) : label nonempty(x)                { $2 }
                    | {- empty -}                      { [] }
 
-neseplist(x, sep) : x                                   { ($1 NonEmpty.:| []) }
-                  | x sep seplist(x, sep)               { ($1 NonEmpty.:|  $3) }
+neseplist(x, sep) : x                                 { ($1 NonEmpty.:| []) }
+                  | x sep seplist(x, sep)             { ($1 NonEmpty.:|  $3) }
 
 -- rules --
 
@@ -213,9 +213,9 @@ SimplePrecondition : optblock('iff', Expr)            { $1 }
 
 Store : Ref ':=' Expr                               { Update $1 $3 }
 
-Ref : id                                              { RVar (posn $1) (name $1) }
-    | 'pre' '(' id ')'                                { RVarPre (posn $1) (name $3) }
-    | 'post' '(' id ')'                               { RVarPost (posn $1) (name $3) }
+Ref : id                                              { RVar (posn $1) Neither (name $1) }
+    | 'pre' '(' id ')'                                { RVar (posn $1) Pre (name $3) }
+    | 'post' '(' id ')'                               { RVar (posn $1) Post (name $3) }
     | Ref '[' Expr ']'                                { RIndex (posn $2) $1 $3 }
     | Ref '.' id                                      { RField (posn $2) $1 (name $3) }
 

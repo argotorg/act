@@ -58,10 +58,11 @@ data Arg = Arg ArgType Id
 instance Show Arg where
   show (Arg t a) = show t <> " " <> a
 
+data TimeTag = Pre | Post | Neither
+  deriving (Eq, Show)
+
 data Ref
-  = RVar Pn Id
-  | RVarPre Pn Id
-  | RVarPost Pn Id
+  = RVar Pn TimeTag Id
   | RIndex Pn Ref Expr
   | RField Pn Ref Id
   deriving (Eq, Show)
