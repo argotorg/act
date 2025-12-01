@@ -71,7 +71,7 @@ import Act.Syntax
 import Act.Syntax.TypedExplicit hiding (array)
 
 import Act.Print
-import Act.Type (globalEnv)
+--import Act.Type (globalEnv)
 
 import EVM.Solvers (Solver(..))
 import Data.Type.Equality ((:~:)(..), testEquality)

@@ -53,7 +53,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import Act.Lex            as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface, ethEnv)
 
 -- AST post typechecking
 data Act t = Act StorageTyping [Contract t]

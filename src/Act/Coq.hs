@@ -428,7 +428,7 @@ intBoundsRec name store = inductive
 
 interfaceStateVarsConstraints :: Interface -> [T.Text]
 interfaceStateVarsConstraints (Interface _ decls) = concatMap go decls
-  where go (Decl (ContractArg _ cid) v) =
+  where go (Arg (ContractArg _ cid) v) =
           [ T.pack cid <.> nextAddrConstraintType <+> envVar <+> T.pack v
           , T.pack cid <.> reachableBeforeType <+> envVar <+> T.pack v ]
         go _ = []
@@ -741,13 +741,13 @@ updateVar _ updates handler focus t@(ValueType _) =
 interface :: Interface -> T.Text
 interface (Interface _ decls) =
   T.unwords $ map decl decls where
-  decl (Decl (AbiArg AbiAddressType) name) = parens $ T.pack name <+> ":" <+> abiType AbiAddressType
-  decl (Decl (ContractArg _ cid) name) = parens $ T.pack name <+> ":" <+> T.pack cid <.> "State"
-  decl (Decl (AbiArg t) name) = parens $ T.pack name <+> ":" <+> abiType t
+  decl (Arg (AbiArg AbiAddressType) name) = parens $ T.pack name <+> ":" <+> abiType AbiAddressType
+  decl (Arg (ContractArg _ cid) name) = parens $ T.pack name <+> ":" <+> T.pack cid <.> "State"
+  decl (Arg (AbiArg t) name) = parens $ T.pack name <+> ":" <+> abiType t
 
 arguments :: Interface -> T.Text
 arguments (Interface _ decls) =
-  T.unwords $ map (\(Decl _ name) -> T.pack name) decls
+  T.unwords $ map (\(Arg _ name) -> T.pack name) decls
 
 -- | coq syntax for a value type
 valueType :: ValueType -> T.Text
@@ -830,7 +830,7 @@ coqexp (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
 coqexp (InRange _ vt e) = coqexp (bound vt e)
 
 -- polymorphic
-coqexp (VarRef _ _ _ r) = ref r
+coqexp (VarRef _ _ r) = ref r
 coqexp (ITE _ b e1 e2) = parens $ "if"
                                <+> coqexp b
                                <+> "then"
@@ -912,15 +912,15 @@ ref :: Ref k -> T.Text
 ref (SVar _ Pre cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar
 ref (SVar _ Post cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar'
 ref (CVar _ _ name) = T.pack name
-ref (RArrIdx _ r _ ixs) = parens $ ref r <+> coqargs (fst <$> ixs)
-ref (RMapIdx _ r _ ixs) = parens $ ref r <+> coqargs ixs
+ref (RArrIdx _ r ix _) = parens $ ref r <+> coqexp ix
+ref (RMapIdx _ (TRef _ _ r) ix) = parens $ ref r <+> typedexp ix
 ref (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> ref r
 
 refState :: T.Text -> Ref k -> T.Text
 refState s (SVar _ _ cid name) = parens $ T.pack cid <.> T.pack name <+> s
 refState _ (CVar _ _ name) = T.pack name
-refState s (RArrIdx _ r _ ixs) = parens $ refState s r <+> coqargs (fst <$> ixs)
-refState s (RMapIdx _ r _ ixs) = parens $ refState s r <+> coqargs ixs
+refState s (RArrIdx _ r ix _) = parens $ refState s r <+> coqexp ix
+refState s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState s r <+> typedexp ix
 refState s (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> refState s r
 
 -- | coq syntax for a list of arguments
@@ -1101,8 +1101,8 @@ invPropVar = "IP"
 invPropType :: Interface -> T.Text
 invPropType (Interface _ decls) = T.intercalate " -> " $ concat [[envType], map decl' decls, [stateType, "Prop"]]
   where
-  decl' (Decl (ContractArg _ cid) _) = T.pack cid <> ".State"
-  decl' (Decl (AbiArg t) _) = abiType t
+  decl' (Arg (ContractArg _ cid) _) = T.pack cid <> ".State"
+  decl' (Arg (AbiArg t) _) = abiType t
 
 invPropDecl :: Interface -> T.Text
 invPropDecl i = parens $ invPropVar <+> ":" <+> invPropType i

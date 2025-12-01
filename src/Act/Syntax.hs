@@ -95,6 +95,10 @@ isLocalRef (RField _ _ _ _) = False
 --     sepTRef :: TypedRef t -> ([TypedRef t], [TypedRef t])
 --     sepTRef loc@(TRef _ SStorage _) = ([loc],[])
 --     sepTRef loc@(TRef _ SCalldata _) = ([],[loc])
+--
+locsFromCaseUpdatesRet :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [TypedRef t]
+locsFromCaseUpdatesRet (_, (rewrites, mret)) = nub $
+  concatMap locsFromUpdate rewrites <> maybe [] locsFromTypedExp mret
 
 locsFromUpdate :: StorageUpdate t -> [TypedRef t]
 locsFromUpdate update = nub $ case update of
@@ -474,21 +478,12 @@ arrayIdcs typ = map idx [0..(len - 1)]
 -- The returned elements follow increasing numerical order
 -- when interpreting the indices as digits of decreasing
 -- significance from outermost to innermost.
-expandTRef :: TValueType (AArray a) -> Ref k t -> (TValueType (Base (AArray a)), [Ref k t])
-expandTRef = undefined
--- expandTRef (TRef typ@(TArray _ _) k ref) =
---   let fvt = flattenValueType typ in
---   case fvt of
---   (btyp@(toSType -> SType), Just shape) -> 
---     case ref of
---       RArrIdx p r _ i -> (\i' -> TRef btyp k $
---         RArrIdx p r (ValueType btyp) (i ++ (zip ((TExp (TInteger 256 Unsigned). LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape)) ) <$> arrayIdcs shape
---       r -> (\i' -> TRef btyp k $
---         RArrIdx nowhere r (ValueType btyp) (zip ((TExp (TInteger 256 Unsigned). LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape) ) <$> arrayIdcs shape
---   (btyp@(toSType -> SType), Nothing) -> [TRef btyp k ref]
--- expandTRef (TRef (TStruct _) _ _) = error "TODO: expand structs"
--- expandTRef (TRef typ k r) =  [TRef btyp k r]
---   where (btyp, _) = flattenValueType typ
+expandTRef :: TValueType a -> Ref k t -> [Ref k t]
+expandTRef typ ref = go typ [ref]
+  where
+  go :: TValueType a -> [Ref k t] -> [Ref k t]
+  go (TArray n t) rs = go t (concatMap (\r -> ((\i -> RArrIdx nowhere r (LitInt nowhere $ fromIntegral i) n) <$> [0..n])) rs)
+  go _ rs = rs
 
 -- | Expand an array expression to a list of expressions of its elements,
 -- The order of the returned elements is the same as 'expandItem's
@@ -504,7 +499,8 @@ expandArrayExpr (TArray _ (TMapping _ _)) (Array _ _) = error "expandArrayExpr: 
 expandArrayExpr (TArray _ s@(TArray _ _)) (Array _ l) = concatMap (expandArrayExpr s) l
 expandArrayExpr _ (VarRef pn vt ref) = 
   case expandTRef vt ref of
-    (btyp, expandedRefs) -> (VarRef pn btyp) <$> expandedRefs
+    expandedRefs -> (VarRef pn btyp) <$> expandedRefs
+  where btyp = fst $ flattenValueType vt
 expandArrayExpr typ (ITE pn tbool e1 e2) =
   (uncurry $ ITE pn tbool) <$> zip (expandArrayExpr typ e1) (expandArrayExpr typ e2)
 
