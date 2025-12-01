@@ -255,8 +255,8 @@ pointersFromBehaviour :: Behaviour t -> [Id]
 pointersFromBehaviour (Behaviour _ _ (Interface _ decls) _ _ _) =
   mapMaybe (fmap snd . pointerFromDecl) decls
 
-pointerFromDecl :: Decl -> Maybe (Id, Id)
-pointerFromDecl (Decl (ContractArg _ c) name) = Just (name,c)
+pointerFromDecl :: Arg -> Maybe (Id, Id)
+pointerFromDecl (Arg (ContractArg _ c) name) = Just (name,c)
 pointerFromDecl _ = Nothing
 
 ethEnvFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp Timed))) -> [EthEnv]

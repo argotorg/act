@@ -277,7 +277,6 @@ checkRef env kind (U.RField p en x) =
 checkRef Env{contract, calldata, storage} kind (U.RVarPre p name) = undefined
 checkRef Env{contract, calldata, storage} kind (U.RVarPost p name) = undefined
 
-
 -- | If an `inrange e` predicate appears in the source code, then the inrange
 -- predicate is propagated to all subexpressions of `e`. 
 genInRange :: TValueType AInteger -> Exp AInteger t -> [Exp ABoolean t]

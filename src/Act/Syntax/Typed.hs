@@ -53,7 +53,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import Act.Parse          as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Pn, Interface(..), EthEnv(..), Decl(..), ArgType(..), makeIface, argToAbiType)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface)
 
 -- AST post typechecking
 data Act t = Act StorageTyping [Contract t]
@@ -440,8 +440,8 @@ instance ToJSON Interface where
                                       , "args" .= toJSON decls
                                       ]
 
-instance ToJSON Decl where
-  toJSON (Decl abitype x) = object [ "kind" .= String "Declaration"
+instance ToJSON Arg where
+  toJSON (Arg abitype x) = object [ "kind" .= String "Declaration"
                                    , "id" .= pack (show x)
                                    , "abitype" .= toJSON abitype
                                    ]

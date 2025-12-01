@@ -25,6 +25,9 @@ import qualified Data.List.NonEmpty as NonEmpty (singleton)
 import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import EVM.ABI            as Act.Syntax.Types (AbiType(..))
 import Data.Kind (Constraint)
+import Act.Lex (AlexPosn)
+
+type Pn = AlexPosn
 
 -- | Types of Act expressions
 data ActType where
@@ -104,6 +107,9 @@ deriving instance Show ValueType
 
 instance Eq (ValueType) where
   ValueType vt1 == ValueType vt2 = eqS'' vt1 vt2
+
+data ArgType = AbiArg AbiType | ContractArg Pn Id
+  deriving (Eq, Ord, Show)
 
 -- | Compare equality of two things parametrized by types which have singletons.
 eqS :: forall (a :: ActType) (b :: ActType) f t. (SingI a, SingI b, Eq (f a t)) => f a t -> f b t -> Bool
@@ -199,8 +205,13 @@ toAbiType (TStruct fs)          = AbiTupleType (V.fromList $ toAbiType' <$> fs)
 toAbiType (TArray n t)          = AbiArrayType n (toAbiType t)
 toAbiType (TMapping _ _)       = error "Syntax.Types.toAbiType: Mappings are not representable in ABI"
 
---valueToAbiType :: ValueType -> AbiType
---valueToAbiType (ValueType t) = toAbiType t
+argToValueType :: ArgType -> ValueType
+argToValueType (AbiArg t) = fromAbiType t
+argToValueType (ContractArg _ cid) = ValueType (TContract cid)
+
+argToAbiType :: ArgType -> AbiType
+argToAbiType (AbiArg t) = t
+argToAbiType (ContractArg _ _) = AbiAddressType
 
 flattenValueType :: TValueType a -> (TValueType (Base a), Maybe (NonEmpty Int))
 flattenValueType (TArray n a) = case flattenValueType a of
