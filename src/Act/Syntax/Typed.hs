@@ -110,7 +110,7 @@ data Behaviour t = Behaviour
   , _contract :: Id
   , _interface :: Interface
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
-  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp Timed)) t
+  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp t)) t
   , _postconditions :: [Exp ABoolean Timed]
   } deriving (Show, Eq)
 
@@ -250,7 +250,7 @@ data Exp (a :: ActType) (t :: Timing) where
   NEq :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
   ITE :: Pn -> Exp ABoolean t -> Exp a t -> Exp a t -> Exp a t
   -- variable references
-  VarRef :: Pn -> TValueType a -> SRefKind k -> Ref k t -> Exp a t
+  VarRef :: Pn -> TValueType a -> Ref RHS t -> Exp a t
   -- address of contract
   Address :: Pn -> Exp AContract t -> Exp AInteger t
   -- mappings
@@ -297,7 +297,7 @@ instance Eq (Exp a t) where
   NEq _ vt1@VType a b == NEq _ vt2@VType c d = eqS'' vt1 vt2 && eqS a c && eqS b d
 
   ITE _ a b c == ITE _ d e f = a == d && b == e && c == f
-  VarRef _ a SRefKind t == VarRef _ b SRefKind u = a == b && eqKind' t u
+  VarRef _ a t == VarRef _ b u = a == b && t == u
   Create _ a b c == Create _ d e f = a == d && b == e && c == f
   Array _ a == Array _ b = a == b
   Address _ a == Address _ b = a == b
@@ -367,7 +367,7 @@ instance Timable (Exp a) where
     Eq  p s x y -> Eq p s (go x) (go y)
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
-    VarRef p vt k item -> VarRef p vt k (go item)
+    VarRef p vt item -> VarRef p vt (go item)
     Address c e -> Address c (go e)
     -- mappings
     Mapping p kt vt kvs -> Mapping p kt vt (bimap go go <$> kvs)
@@ -548,8 +548,8 @@ instance ToJSON (Exp a t) where
                               , "type" .= pack "bytestring" ]
   toJSON (ByEnv _ a) = object [ "ethEnv" .= pack (show a)
                               , "type" .= pack "bytestring" ]
-  toJSON (VarRef _ t _ a) = object [ "var"  .= toJSON a
-                                   , "timing" .= show t ]
+  toJSON (VarRef _ t a) = object [ "var"  .= toJSON a
+                                 , "timing" .= show t ]
   toJSON (Create _ f xs v) = object [ "symbol" .= pack "create"
                                     , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
                                     , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) 
@@ -645,7 +645,7 @@ uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
 _Var :: SingI a => TValueType a -> Id -> Exp a Timed
-_Var vt x = VarRef nowhere vt SRHS (CVar nowhere (toArgType vt) x)
+_Var vt x = VarRef nowhere vt (CVar nowhere (toArgType vt) x)
 
 -- _Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
 -- _Array vt x ix = VarRef nowhere vt SRHS (RArrIdx nowhere (CVar nowhere (toArgType vt) x) (fromAbiType (toAbiType vt)) ix)

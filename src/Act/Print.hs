@@ -137,7 +137,7 @@ prettyExp e = case e of
 
   --polymorphic
   ITE _ a b c -> "(if " <> prettyExp a <> " then " <> prettyExp b <> " else " <> prettyExp c <> ")"
-  VarRef _ _ _ r -> prettyRef r
+  VarRef _ _ r -> prettyRef r
   Address _ c  -> prettyExp c
   Mapping _ _ _ kvs -> "mapping(" <> intercalate ", " (map (\(k,v) -> prettyExp k <> " => " <> prettyExp v) kvs) <> ")"
   MappingUpd _ r _ _ kvs -> prettyRef r <> "{" <> intercalate ", " (map (\(k,v) -> prettyExp k <> " => " <> prettyExp v) kvs) <> "}"
@@ -226,7 +226,7 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       ByEnv p a   -> ByEnv p a
       ITE p x y z -> ITE p (untime x) (untime y) (untime z)
       Slice p a b c -> Slice p (untime a) (untime b) (untime c)
-      VarRef p vt k a -> VarRef p vt k (untimeRef a)
+      VarRef p vt a -> VarRef p vt (untimeRef a)
       Address c a -> Address c (untime a)
       Mapping p kt vt kvs -> Mapping p kt vt (map (bimap untime untime) kvs)
       MappingUpd p r kt vt kvs -> MappingUpd p (untimeRef r) kt vt (map (bimap untime untime) kvs)

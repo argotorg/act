@@ -139,9 +139,9 @@ mapExpM f = \case
     b' <- mapExpM f b
     c' <- mapExpM f c
     f (ITE p a' b' c')
-  VarRef p t k r -> do
+  VarRef p t r -> do
     r' <- mapRefM f r
-    f (VarRef p t k r')
+    f (VarRef p t r')
   Address c x -> do
     x' <- mapExpM f x
     f (Address c x')

@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE InstanceSigs #-}
 
 {-|
 Module      : Syntax.TypedExplicit
@@ -68,10 +69,11 @@ instance Annotatable Typed.Behaviour where
 instance Annotatable Typed.StorageUpdate where
   -- The timing in items only refers to the timing of mapping indices of a
   -- storage update. Hence, it should be Pre
+  annotate :: Typed.StorageUpdate Untimed -> Typed.StorageUpdate Timed
   annotate (Update typ item expr) = Update typ (setPre item) (setPre expr)
 
 annotateCCase :: (Typed.Exp ABoolean Untimed, [Typed.StorageUpdate Untimed]) -> (Typed.Exp ABoolean Timed, [Typed.StorageUpdate Timed])
 annotateCCase (cond, upds) = (setPre cond, annotate <$> upds)
 
-annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Timed))) -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
-annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, ret))
+annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Untimed))) -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
+annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, setPre <$> ret))
