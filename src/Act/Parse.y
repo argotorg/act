@@ -185,9 +185,9 @@ Ensures : optblock('ensures', Expr)                   { $1 }
 
 Invariants : optblock('invariants', Expr)             { $1 }
 
-Interface : 'interface' id '(' seplist(Decl, ',') ')' { Interface (name $2) $4 }
+Interface : 'interface' id '(' seplist(Arg, ',') ')' { Interface (name $2) $4 }
 
-CInterface : 'interface' 'constructor' '(' seplist(Decl, ',') ')' { Interface "constructor" $4 }
+CInterface : 'interface' 'constructor' '(' seplist(Arg, ',') ')' { Interface "constructor" $4 }
 
 Cases : Post                                          { [Case nowhere (BoolLit nowhere True) $1] }
       | nonempty(Case)                                { $1 }
@@ -216,10 +216,8 @@ Store : Ref ':=' Expr                               { Update $1 $3 }
 Ref : id                                              { RVar (posn $1) (name $1) }
     | 'pre' '(' id ')'                                { RVarPre (posn $1) (name $3) }
     | 'post' '(' id ')'                               { RVarPost (posn $1) (name $3) }
-    | Ref '[' Expr ']' list(Index)                    { RIndex (posn $2) $1 ($3:$5) }
+    | Ref '[' Expr ']'                                { RIndex (posn $2) $1 $3 }
     | Ref '.' id                                      { RField (posn $2) $1 (name $3) }
-
-Index : '[' Expr ']'                                  { $2 }
 
 CreationCase : 'case' Expr ':' Creation               { Case (posn $1) $2 $4 }
 
@@ -230,7 +228,7 @@ Assign : StorageVar ':=' Expr                         { ($1, $3) }
 
 Defn : Expr ':=' Expr                                 { ($1, $3) }
 
-Decl : ArgType id                                     { Decl $1 (name $2) }
+Arg : ArgType id                                     { Arg $1 (name $2) }
 
 ArgType : AbiType                                     { AbiArg $1 }
         | 'address' '<' id '>'                        { ContractArg (posn $3) (name $3) }
@@ -322,10 +320,6 @@ Expr : '(' Expr ')'                                   { $2 }
   | 'newAddr' '(' Expr ',' Expr ')'                   { ENewaddr (posn $1) $3 $5 }
 
 {
-
-nowhere = AlexPn 0 0 0
-
-lastPos = AlexPn (-1) (-1) (-1)
 
 validsize :: Int -> Bool
 validsize x = (mod x 8 == 0) && (x >= 8) && (x <= 256)

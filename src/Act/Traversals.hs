@@ -168,16 +168,20 @@ mapRefM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> Ref k t -> m (Ref k
 mapRefM f = \case
   SVar p time c a -> pure (SVar p time c a)
   CVar p a b -> pure (CVar p a b)
-  RArrIdx p a ts b -> do
+  RArrIdx p a b n -> do
     a' <- mapRefM f a
-    b' <- mapM (\(te, i) -> do
-      te' <- mapTypedExpM f te
-      pure (te', i)) b
-    pure $ RArrIdx p a' ts b'
-  RMapIdx p a ts b -> do
-    a' <- mapRefM f a
-    b' <- mapM (mapTypedExpM f) b
-    pure $ RMapIdx p a' ts b'
+    b' <- mapExpM f b
+    pure $ RArrIdx p a' b' n
+  RMapIdx p a b -> do
+    a' <- mapTypedRefM f a
+    b' <- mapTypedExpM f b
+    pure $ RMapIdx p a' b'
   RField p r a b -> do
     r' <- mapRefM f r
     pure $ RField p r' a b
+
+
+mapTypedRefM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedRef t -> m (TypedRef t)
+mapTypedRefM f (TRef t k r) = do
+  r' <- mapRefM f r
+  pure $ TRef t k r'

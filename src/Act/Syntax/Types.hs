@@ -25,7 +25,7 @@ import qualified Data.List.NonEmpty as NonEmpty (singleton)
 import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import EVM.ABI            as Act.Syntax.Types (AbiType(..))
 import Data.Kind (Constraint)
-import Act.Lex (AlexPosn)
+import Act.Lex (AlexPosn, nowhere)
 
 type Pn = AlexPosn
 
@@ -204,6 +204,10 @@ toAbiType (TStruct fs)          = AbiTupleType (V.fromList $ toAbiType' <$> fs)
   where toAbiType' (ValueType t) = toAbiType t
 toAbiType (TArray n t)          = AbiArrayType n (toAbiType t)
 toAbiType (TMapping _ _)       = error "Syntax.Types.toAbiType: Mappings are not representable in ABI"
+
+toArgType :: TValueType a -> ArgType
+toArgType (TContract cid) = ContractArg nowhere cid
+toArgType t = AbiArg (toAbiType t)
 
 argToValueType :: ArgType -> ValueType
 argToValueType (AbiArg t) = fromAbiType t

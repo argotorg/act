@@ -151,12 +151,14 @@ prettyRef :: Ref k t -> String
 prettyRef = \case
   CVar _ _ n -> n
   SVar _ t _ n -> timeParens t n
-  RArrIdx _ r _ args -> prettyRef r <> concatMap (brackets . prettyTypedExp . fst) args
-  RMapIdx _ r _ args -> prettyRef r <> concatMap (brackets . prettyTypedExp) args
+  RArrIdx _ r arg _ -> prettyRef r <> brackets (prettyExp arg)
+  RMapIdx _ r arg -> prettyTypedRef r <> brackets (prettyTypedExp arg)
   RField _ r _ n -> prettyRef r <> "." <> n
   where
     brackets str = "[" <> str <> "]"
 
+prettyTypedRef :: TypedRef t -> String
+prettyTypedRef (TRef _ _ r) = prettyRef r
 prettyUpdate :: StorageUpdate t -> String
 prettyUpdate (Update _ r e) = prettyRef r <> " => " <> prettyExp e
 
@@ -180,11 +182,14 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
     untimeTyped :: TypedExp t -> TypedExp Untimed
     untimeTyped (TExp t e) = TExp t (untime e)
 
+    untimeTypedRef :: TypedRef t -> TypedRef Untimed
+    untimeTypedRef (TRef t k r) = TRef t k (untimeRef r)
+
     untimeRef:: Ref k t -> Ref k Untimed
     untimeRef (SVar p _ c a) = SVar p Neither c a
     untimeRef (CVar p c a) = CVar p c a
-    untimeRef (RArrIdx p e ts xs) = RArrIdx p (untimeRef e) ts (fmap (first untimeTyped) xs)
-    untimeRef (RMapIdx p e ts xs) = RMapIdx p (untimeRef e) ts (fmap untimeTyped xs)
+    untimeRef (RArrIdx p e x n) = RArrIdx p (untimeRef e) (untime x) n
+    untimeRef (RMapIdx p e x) = RMapIdx p (untimeTypedRef e) (untimeTyped x)
     untimeRef (RField p e c x) = RField p (untimeRef e) c x
 
     untime :: Exp a t -> Exp a Untimed

@@ -55,11 +55,14 @@ type Assign = (StorageVar, Expr)
 data Arg = Arg ArgType Id
   deriving (Eq, Ord)
 
+instance Show Arg where
+  show (Arg t a) = show t <> " " <> a
+
 data Ref
   = RVar Pn Id
   | RVarPre Pn Id
   | RVarPost Pn Id
-  | RIndex Pn Ref [Expr]
+  | RIndex Pn Ref Expr
   | RField Pn Ref Id
   deriving (Eq, Show)
 
@@ -118,9 +121,12 @@ data EthEnv
 --   | Nonce
   deriving (Show, Eq)
 
-instance Show Arg where
-  show (Arg t a) = show t <> " " <> a
-    
+-- | Types of Ethereum environment variables
+ethEnv :: EthEnv -> TValueType AInteger
+ethEnv Callvalue = TInteger 256 Unsigned
+ethEnv Caller    = TAddress
+ethEnv This      = TAddress
+ethEnv Origin    = TAddress
 
 instance ToJSON (TValueType a) where
   toJSON (TInteger n Signed)      = object [ "type" .= String "Int"

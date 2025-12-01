@@ -50,7 +50,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 
 -- Reexports
 
-import Act.Parse          as Act.Syntax.Typed (nowhere)
+import Act.Lex            as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
 import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface)
@@ -122,19 +122,6 @@ instance Eq (StorageUpdate t) where
   (==) :: StorageUpdate t -> StorageUpdate t -> Bool
   Update vt1@VType r1 e1 == Update vt2@VType r2 e2 = eqS'' vt1 vt2 && r1 == r2 && eqS e1 e2
 
---_Update :: Ref LHS t -> Exp a t -> StorageUpdate t
---_Update ref expr = Update (getValueType ref) ref expr
-
-data TypedRef (t :: Timing) where
-  TRef :: TValueType a -> SRefKind k -> Ref k t -> TypedRef t
-deriving instance Show (TypedRef t)
-
-instance Eq (TypedRef t) where
-  TRef vt1@VType SRefKind r1 == TRef vt2@VType SRefKind r2 = eqS'' vt1 vt2 && eqKind' r1 r2
-
---_TRef :: SRefKind k -> Ref k t -> TypedRef t
---_TRef k ref@(TRef t@VType _ _) = TRef t k ref
-
 -- | Distinguish the references that are updatable.
 data RefKind = RHS | LHS
   deriving (Show, Eq)
@@ -179,22 +166,30 @@ eqTypeKind fa fb = maybe False (\Refl ->
 
 -- | Variable References
 data Ref (k :: RefKind) (t :: Timing) where
-  CVar :: Pn -> AbiType -> Id -> Ref RHS t               -- Calldata variable  
-  SVar :: Pn -> Time t -> Id -> Id -> Ref k t           -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
-  RArrIdx :: Pn -> Ref k t -> ValueType -> [(TypedExp t, Int)] -> Ref k t
-                                                              -- Array access. `Int` in indices list stores the corresponding index upper bound
-  RMapIdx :: Pn -> Ref k t -> ValueType -> [TypedExp t] -> Ref RHS t
-  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t              -- Field access (for accessing storage variables of contracts). Mapp
-                                                              -- The first `Id` is the name of the contract that the field belongs to.
+  CVar :: Pn -> ArgType -> Id -> Ref RHS t               -- Calldata variable  
+  SVar :: Pn -> Time t -> Id -> Id -> Ref k t            -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
+  RArrIdx :: Pn -> Ref k t -> Exp AInteger t -> Int -> Ref k t
+                                                         -- Array access. `Int` in indices list stores the corresponding index upper bound
+  RMapIdx :: Pn -> TypedRef t -> TypedExp t -> Ref RHS t
+  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t         -- Field access (for accessing storage variables of contracts). Mapp
+                                                         -- The first `Id` is the name of the contract that the field belongs to.
 deriving instance Show (Ref k t)
 
 instance Eq (Ref k t) where
   CVar _ at x         == CVar _ at' x'          = at == at' && x == x'
   SVar _ t c x        == SVar _ t' c' x'        = t == t' && c == c' && x == x'
-  RArrIdx _ r ts ixs  == RArrIdx _ r' ts' ixs'  = r == r' && ts == ts' && ixs == ixs'
-  RMapIdx _ _ ts ixs  == RMapIdx _ _ ts' ixs'   = ts == ts' && ixs == ixs'
+  RArrIdx _ r t ix    == RArrIdx _ r' t' ix'    = r == r' && t == t' && ix == ix'
+  RMapIdx _ r ix      == RMapIdx _ r' ix'       = r == r' &&  ix == ix'
   RField _ r c x      == RField _ r' c' x'      = r == r' && c == c' && x == x'
   _                   == _                      = False
+
+data TypedRef (t :: Timing) where
+  TRef :: TValueType a -> SRefKind k -> Ref k t -> TypedRef t
+deriving instance Show (TypedRef t)
+
+instance Eq (TypedRef t) where
+  TRef vt1@VType SRefKind r1 == TRef vt2@VType SRefKind r2 = eqS'' vt1 vt2 && eqKind' r1 r2
+
 
 -- | Expressions for which the return type is known.
 data TypedExp t
@@ -388,8 +383,8 @@ instance Timable TypedRef where
 
 instance Timable (Ref k) where
   setTime :: When -> Ref k Untimed -> Ref k Timed
-  setTime time (RMapIdx p e ts ixs) = RMapIdx p (setTime time e) ts (setTime time <$> ixs)
-  setTime time (RArrIdx p e ts ixs) = RArrIdx p (setTime time e) ts ((first (setTime time)) <$> ixs)
+  setTime time (RMapIdx p e ix) = RMapIdx p (setTime time e) (setTime time ix)
+  setTime time (RArrIdx p e ix n) = RArrIdx p (setTime time e) (setTime time ix) n
   setTime time (RField p e c x) = RField p (setTime time e) c x
   setTime time (SVar p _ c ref) = SVar p time c ref
   setTime _ (CVar p at ref) = CVar p at ref
@@ -477,8 +472,8 @@ instance ToJSON (Ref k t) where
   toJSON (CVar _ at x) = object [ "kind" .= pack "Var"
                                 , "var" .=  pack x
                                 , "abitype" .=  toJSON at ]
-  toJSON (RArrIdx _ e _ xs) = array e xs
-  toJSON (RMapIdx _ e _ xs) = mapping e xs
+  toJSON (RArrIdx _ e x _) = array e x
+  toJSON (RMapIdx _ e x) = mapping e x
   toJSON (RField _ e c x) = field e c x
 
 array :: (ToJSON a1, ToJSON a2) => a1 -> a2 -> Value
@@ -650,7 +645,7 @@ uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
 _Var :: SingI a => TValueType a -> Id -> Exp a Timed
-_Var vt x = VarRef nowhere vt SRHS (CVar nowhere (toAbiType vt) x)
+_Var vt x = VarRef nowhere vt SRHS (CVar nowhere (toArgType vt) x)
 
-_Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
-_Array vt x ix = VarRef nowhere vt SRHS (RArrIdx nowhere (CVar nowhere (toAbiType vt) x) (fromAbiType (toAbiType vt)) ix)
+-- _Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
+-- _Array vt x ix = VarRef nowhere vt SRHS (RArrIdx nowhere (CVar nowhere (toArgType vt) x) (fromAbiType (toAbiType vt)) ix)

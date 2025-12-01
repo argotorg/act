@@ -8,6 +8,8 @@ module Act.Lex
   , showposn
   , name
   , value
+  , nowhere
+  , lastPos
   ) where
 
 import Prelude hiding (EQ, GT, LT)
@@ -227,6 +229,12 @@ showposn (AlexPn _ line column) =
 
 posn :: Lexeme -> AlexPosn
 posn (L _ p) = p
+
+nowhere :: AlexPosn
+nowhere = AlexPn 0 0 0
+
+lastPos :: AlexPosn
+lastPos = AlexPn (-1) (-1) (-1)
 
 name :: Lexeme -> String
 name (L (ID s) _) = s

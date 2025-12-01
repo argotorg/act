@@ -85,7 +85,7 @@ isLocalRef :: Ref k t -> Bool
 isLocalRef (SVar _ _ _ _) = True
 isLocalRef (CVar _ _ _) = False
 isLocalRef (RArrIdx _ ref _ _) = isLocalRef ref
-isLocalRef (RMapIdx _ ref _ _) = isLocalRef ref
+isLocalRef (RMapIdx _ (TRef _ _ ref) _) = isLocalRef ref
 isLocalRef (RField _ _ _ _) = False
 
 -- Zoe: not sure what's the correct definition
@@ -347,7 +347,7 @@ idFromRef :: Ref k t -> Id
 idFromRef (SVar _ _ _ x) = x
 idFromRef (CVar _ _ x) = x
 idFromRef (RArrIdx _ e _ _) = idFromRef e
-idFromRef (RMapIdx _ e _ _) = idFromRef e
+idFromRef (RMapIdx _ (TRef _ _ e) _) = idFromRef e
 idFromRef (RField _ e _ _) = idFromRef e
 
 idFromUpdate :: StorageUpdate t -> Id
@@ -361,7 +361,7 @@ idsFromRef :: Ref k t -> [String]
 idsFromRef (SVar _ _ _ x) = [x]
 idsFromRef (CVar _ _ x) = [x]
 idsFromRef (RArrIdx _ e _ _) = idsFromRef e
-idsFromRef (RMapIdx _ e _ _) = idsFromRef e
+idsFromRef (RMapIdx _ (TRef _ _ e) _) = idsFromRef e
 idsFromRef (RField _ e _ f) = f : idsFromRef e
 
 ixsFromTRef :: TypedRef t -> [TypedExp t]
@@ -370,8 +370,8 @@ ixsFromTRef (TRef _ _ item) = ixsFromRef item
 ixsFromRef :: Ref k t -> [TypedExp t]
 ixsFromRef (SVar _ _ _ _) = []
 ixsFromRef (CVar _ _ _) = []
-ixsFromRef (RArrIdx _ ref _ ixs) = (fst <$> ixs) ++ ixsFromRef ref
-ixsFromRef (RMapIdx _ ref _ ixs) = ixs ++ ixsFromRef ref
+ixsFromRef (RArrIdx _ ref ix _) = (TExp defaultUInteger ix) : ixsFromRef ref
+ixsFromRef (RMapIdx _ (TRef _ _ ref) ix) = ix : ixsFromRef ref
 ixsFromRef (RField _ ref _ _) = ixsFromRef ref
 
 ixsFromUpdate :: StorageUpdate t -> [TypedExp t]
@@ -390,7 +390,7 @@ isArrayRef :: Ref k t -> Bool
 isArrayRef (SVar _ _ _ _) = False
 isArrayRef (CVar _ _ _) = False
 isArrayRef (RArrIdx _ _ _ _) = True
-isArrayRef (RMapIdx _ _ _ _) = False  -- may change in the future
+isArrayRef (RMapIdx _ _ _) = False  -- may change in the future
 isArrayRef (RField _ ref _ _) = isArrayRef ref
 
 isMappingTRef :: TypedRef t -> Bool
@@ -400,7 +400,7 @@ isMappingRef :: Ref k t -> Bool
 isMappingRef (SVar _ _ _ _) = False
 isMappingRef (CVar _ _ _) = False
 isMappingRef (RArrIdx _ _ _ _) = False  -- may change in the future
-isMappingRef (RMapIdx _ _ _ _) = True
+isMappingRef (RMapIdx _ _ _) = True
 isMappingRef (RField _ ref _ _) = isMappingRef ref
 
 posnFromExp :: Exp a t -> Pn
@@ -457,7 +457,7 @@ posnFromRef :: Ref a k -> Pn
 posnFromRef (CVar p _ _) = p
 posnFromRef (SVar p _ _ _) = p
 posnFromRef (RArrIdx p _ _ _) = p
-posnFromRef (RMapIdx p _ _ _) = p
+posnFromRef (RMapIdx p _ _) = p
 posnFromRef (RField p _ _ _) = p
 
 -- | Given the shape of a nested array (outer to inner lengths)
@@ -622,7 +622,7 @@ idFromRewrites e = case e of
     idFromRef' (Untyped.RVar p x) = singleton x [p]
     idFromRef' (Untyped.RVarPre p x) = singleton x [p]
     idFromRef' (Untyped.RVarPost p x) = singleton x [p]
-    idFromRef' (Untyped.RIndex _ en xs) = unionWith (<>) (idFromRef' en) (idFromRewrites' xs)
+    idFromRef' (Untyped.RIndex _ en x) = unionWith (<>) (idFromRef' en) (idFromRewrites x)
     idFromRef' (Untyped.RField _ en _) = idFromRef' en
 
 -- | True iff the case is a wildcard.
@@ -644,3 +644,9 @@ upperBound (TInteger n Unsigned) = UIntMax nowhere n
 upperBound (TInteger n Signed) = IntMax nowhere n
 upperBound TAddress   = UIntMax nowhere 160
 upperBound _ = error "upperBound: no upper bound defined for this type"
+
+defaultInteger :: TValueType AInteger
+defaultInteger = TInteger 256 Signed
+
+defaultUInteger :: TValueType AInteger
+defaultUInteger = TInteger 256 Unsigned
