@@ -14,13 +14,16 @@ import Act.Syntax.Types
 newtype Act = Main [Contract]
   deriving (Eq, Show)
 
+data IsPayable = Payable | NonPayable
+  deriving (Eq, Show)
+
 data Contract = Contract Constructor [Transition]
   deriving (Eq, Show)
 
-data Constructor = Constructor Pn Id Interface Iff (Cases Creates) Ensures Invariants
+data Constructor = Constructor Pn Id Interface IsPayable Iff (Cases Creates) Ensures Invariants
   deriving (Eq, Show)
 
-data Transition = Transition Pn Id Id Interface Iff (Cases (StorageUpdates, Maybe Expr)) Ensures
+data Transition = Transition Pn Id Id Interface IsPayable Iff (Cases (StorageUpdates, Maybe Expr)) Ensures
   deriving (Eq, Show)
 
 type Iff = [Expr]
@@ -63,6 +66,8 @@ data TimeTag = Pre | Post | Neither
 
 data Ref
   = RVar Pn TimeTag Id
+  | RVarPre Pn Id
+  | RVarPost Pn Id
   | RIndex Pn Ref Expr
   | RField Pn Ref Id
   deriving (Eq, Show)

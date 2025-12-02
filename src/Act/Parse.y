@@ -171,7 +171,7 @@ Transition : 'behaviour' id 'of' id
              Precondition
              Cases
              Ensures                                  { Transition (posn $1) (name $2) (name $4)
-                                                        $5 $6 $7 $8 }
+                                                        $5 NonPayable $6 $7 $8 }
 
 Constructor : 'constructor' 'of' id
               CInterface
@@ -179,7 +179,7 @@ Constructor : 'constructor' 'of' id
               nonempty(CreationCase)
               Ensures
               Invariants                              { Constructor (posn $3) (name $3)
-                                                         $4 $5 $6 $7 $8 }
+                                                         $4 NonPayable $5 $6 $7 $8 }
 
 Ensures : optblock('ensures', Expr)                   { $1 }
 

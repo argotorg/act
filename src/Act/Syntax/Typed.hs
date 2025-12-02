@@ -53,7 +53,7 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 import Act.Lex            as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface, ethEnv)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface, ethEnv, IsPayable(..))
 
 -- AST post typechecking
 data Act t = Act StorageTyping [Contract t]
@@ -97,6 +97,7 @@ type Cases a t = [(Exp ABoolean t, a)]
 data Constructor t = Constructor
   { _cname :: Id
   , _cinterface :: Interface
+  , _cisPayable :: IsPayable
   , _cpreconditions :: [Exp ABoolean t]
   , _ccases :: Cases [StorageUpdate t] t
   , _cpostconditions :: [Exp ABoolean t]
@@ -109,6 +110,7 @@ data Behaviour t = Behaviour
   { _name :: Id
   , _contract :: Id
   , _interface :: Interface
+  , _isPayable :: IsPayable
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
   , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp t)) t
   , _postconditions :: [Exp ABoolean Timed]
