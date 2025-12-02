@@ -369,7 +369,7 @@ checkExpr env mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) (U.MappingUp
         (v', cnstr3) <- checkExpr env valtyp v
         pure ((k', v'), cnstr2 ++ cnstr3)) map
     pure (MappingUpd p tref keytyp valtyp updates, cnstr1 ++ concat cnstr2)
-checkExpr env mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) (U.Mapping p map) = do
+checkExpr env (TMapping (ValueType keytyp) (ValueType valtyp)) (U.Mapping p map) = do
     (map', cnstr1) <- unzip <$> traverse (\(k,v) -> do
         (k', cnstr2) <- checkExpr env keytyp k
         (v', cnstr3) <- checkExpr env valtyp v
@@ -377,7 +377,7 @@ checkExpr env mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) (U.Mapping p
     pure (Mapping p keytyp valtyp map', concat cnstr1)
 -- Integer Expressions
 checkExpr env t1@(TInteger _ _) e = do
-    (TExp t2 te, cs) <- inferExpr env e
+    (TExp t2 (te :: Exp a1 t), cs) <- inferExpr env e
     case t2 of
         (TInteger _ _) ->
             if t2 `fitsIn` t1 then pure (te, cs)
@@ -387,7 +387,7 @@ checkExpr env t1@(TInteger _ _) e = do
 checkExpr _ TUnboundedInt _ = throw (nowhere, "Expected bounded integer type")
 checkExpr env t1 e = do
     let pn = getPosn e
-    (TExp t2 te, cs) <- inferExpr env e
+    (TExp t2 (te :: Exp a1 t), cs) <- inferExpr env e
     maybe (typeMismatchErr pn t1 t2) (\Refl -> pure (te, cs)) $ testEquality t1 t2
 
 
@@ -502,7 +502,7 @@ inferExpr env@Env{calldata, constructors} e = case e of
     polycheck pn cons e1 e2 = do
         (TExp t1 te1, c1) <- inferExpr env e1
         (TExp t2 te2, c2) <- inferExpr env e2
-        pure $ maybe (typeMismatchErr pn t1 t2) (\Refl -> cons pn t1 te1 c1 te2 c2) $ relaxedtestEquality t1 t2
+        pure $ maybe (typeMismatchErr pn t1 t2) (\Refl -> pure $ cons pn t1 te1 c1 te2 c2) $ relaxedtestEquality t1 t2
 
 -- | Helper to create to create a conjunction out of a list of expressions
 andExps :: [Exp ABoolean t] -> Exp ABoolean t
