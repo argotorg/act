@@ -92,6 +92,7 @@ data InvariantPred (t :: Timing) where
 deriving instance Show (InvariantPred t)
 deriving instance Eq (InvariantPred t)
 
+-- type Case a t = (Exp ABoolean t, a)
 type Cases a t = [(Exp ABoolean t, a)]
 
 data Constructor t = Constructor

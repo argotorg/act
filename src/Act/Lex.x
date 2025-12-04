@@ -30,7 +30,7 @@ tokens :-
 
   -- reserved words
   constructor                           { mk CONSTRUCTOR }
-  behaviour                             { mk BEHAVIOUR }
+  transition                            { mk TRANSITION }
   of                                    { mk OF }
   creates                               { mk CREATES }
   case                                  { mk CASE }
@@ -46,7 +46,7 @@ tokens :-
   or                                    { mk OR }
   true                                  { mk TRUE }
   false                                 { mk FALSE }
-  create                                { mk CREATE }
+  new                                   { mk NEW }
   as                                    { mk AS }
   mapping                               { mk MAPPING }
   ensures                               { mk ENSURES }
@@ -57,7 +57,9 @@ tokens :-
   at                                    { mk AT }
   pre                                   { mk PRE }
   post                                  { mk POST }
-
+  with                                  { mk WITH }
+  value                                 { mk VALUE }
+  payable                               { mk PAYABLE }
   -- builtin types
   uint $digit+                          { \ p s -> L (UINT (read (drop 4 s))) p }
   int  $digit+                          { \ p s -> L (INT  (read (drop 3 s))) p }
@@ -90,6 +92,7 @@ tokens :-
   -- symbols
   ":="                                  { mk ASSIGN }
   "==>"                                 { mk ARROW }
+  "=>"                                  { mk MAPSTO }
   "=="                                  { mk EQEQ }
   "!="                                  { mk NEQ }
   ">="                                  { mk GE }
@@ -125,7 +128,7 @@ tokens :-
 data LEX =
 
   -- reserved words
-    BEHAVIOUR
+    TRANSITION
   | CONSTRUCTOR
   | OF
   | CREATES
@@ -137,7 +140,7 @@ data LEX =
   | INRANGE
   | IFF
   | POINTERS
-  | POINTSTO
+  | MAPSTO
   | AND
   | NOT
   | OR
@@ -156,7 +159,9 @@ data LEX =
   | POST
   | PAYABLE
   | CONTRACT
-
+  | VALUE
+  | NEW
+  | WITH
   -- builtin types
   | UINT  Int
   | INT   Int

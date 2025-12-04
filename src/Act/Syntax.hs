@@ -516,9 +516,6 @@ nameFromEntry (Untyped.RVar _ _ x) = x
 nameFromEntry (Untyped.RIndex _ e _) = nameFromEntry e
 nameFromEntry (Untyped.RField _ e _) = nameFromEntry e
 
-nameFromBehv :: TypedExplicit.Behaviour -> Id
-nameFromBehv (Behaviour _ _ (Interface ifaceName _) _ _ _ _) = ifaceName
-
 getPosRef :: Untyped.Ref -> Pn
 getPosRef (Untyped.RVar pn _ _) = pn
 getPosRef (Untyped.RIndex pn _ _) = pn

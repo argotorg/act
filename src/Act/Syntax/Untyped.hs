@@ -17,14 +17,16 @@ newtype Act = Main [Contract]
 data IsPayable = Payable | NonPayable
   deriving (Eq, Show)
 
-data Contract = Contract Constructor [Transition]
+data Contract = Contract Pn Id Constructor [Transition]
   deriving (Eq, Show)
 
-data Constructor = Constructor Pn Id Interface IsPayable Iff (Cases Creates) Ensures Invariants
+data Constructor = Constructor Pn Interface IsPayable Iff (Cases Creates) Ensures Invariants
   deriving (Eq, Show)
 
-data Transition = Transition Pn Id Id Interface IsPayable Iff (Cases (StorageUpdates, Maybe Expr)) Ensures
+data Transition = Transition Pn Id Interface IsPayable RetType Iff (Cases (StorageUpdates, Maybe Expr)) Ensures
   deriving (Eq, Show)
+
+type RetType = Maybe ArgType
 
 type Iff = [Expr]
 
@@ -32,11 +34,11 @@ type Ensures = [Expr]
 
 type Invariants = [Expr]
 
-data Interface = Interface Id [Arg]
+data Interface = Interface Pn [Arg]
   deriving (Eq, Ord)
 
 instance Show Interface where
-  show (Interface a d) = a <> "(" <> intercalate ", " (fmap show d) <> ")"
+  show (Interface _ d) = "(" <> intercalate ", " (fmap show d) <> ")"
 
 type Cases a = [Case a]
   
@@ -185,6 +187,5 @@ instance ToJSON AbiType where
 
 
 -- Create the string that is used to construct the function selector
-makeIface :: Interface -> String
-makeIface (Interface a decls) =
- a <> "(" <> intercalate "," (fmap (\(Arg argtype _) -> show $ argToAbiType argtype) decls) <> ")"
+makeIface :: Id -> Interface -> String
+makeIface name (Interface _ decls) = name <> "(" <> intercalate "," (fmap (\(Arg argtype _) -> show $ argToAbiType argtype) decls) <> ")"
