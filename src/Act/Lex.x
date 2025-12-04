@@ -32,7 +32,6 @@ tokens :-
   constructor                           { mk CONSTRUCTOR }
   behaviour                             { mk BEHAVIOUR }
   of                                    { mk OF }
-  interface                             { mk INTERFACE }
   creates                               { mk CREATES }
   case                                  { mk CASE }
   returns                               { mk RETURNS }
@@ -42,7 +41,6 @@ tokens :-
   iff $white+ in $white+ range          { mk IFFINRANGE }
   inRange                               { mk INRANGE }
   iff                                   { mk IFF }
-  pointers                              { mk POINTERS }
   and                                   { mk AND }
   not                                   { mk NOT }
   or                                    { mk OR }
@@ -91,10 +89,9 @@ tokens :-
 
   -- symbols
   ":="                                  { mk ASSIGN }
-  "=>"                                  { mk ARROW }
-  "|->"                                 { mk POINTSTO }
+  "==>"                                 { mk ARROW }
   "=="                                  { mk EQEQ }
-  "=/="                                 { mk NEQ }
+  "!="                                  { mk NEQ }
   ">="                                  { mk GE }
   "<="                                  { mk LE }
   "++"                                  { mk CAT }
@@ -131,7 +128,6 @@ data LEX =
     BEHAVIOUR
   | CONSTRUCTOR
   | OF
-  | INTERFACE
   | CREATES
   | CASE
   | RETURNS
@@ -158,6 +154,8 @@ data LEX =
   | AT
   | PRE
   | POST
+  | PAYABLE
+  | CONTRACT
 
   -- builtin types
   | UINT  Int

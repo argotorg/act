@@ -20,7 +20,6 @@ import Act.Error
   'constructor'               { L CONSTRUCTOR _ }
   'behaviour'                 { L BEHAVIOUR _ }
   'of'                        { L OF _ }
-  'interface'                 { L INTERFACE _ }
   'creates'                   { L CREATES _ }
   'case'                      { L CASE _ }
   'returns'                   { L RETURNS _ }
@@ -29,7 +28,6 @@ import Act.Error
   'iff'                       { L IFF _ }
   'iff in range'              { L IFFINRANGE _ }
   'inRange'                   { L INRANGE _ }
-  'pointers'                  { L POINTERS _ }
   'and'                       { L AND _ }
   'not'                       { L NOT _ }
   'or'                        { L OR _ }
@@ -46,6 +44,8 @@ import Act.Error
   'at'                        { L AT _ }
   'pre'                       { L PRE _ }
   'post'                      { L POST _ }
+  'payable'                   { L PAYABLE _ }
+  'contract'                  { L CONTRACT _ }  
 
   -- builtin types
   'uint'                      { L (UINT $$) _ }
