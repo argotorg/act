@@ -519,10 +519,10 @@ nameFromEntry (Untyped.RField _ e _) = nameFromEntry e
 nameFromBehv :: TypedExplicit.Behaviour -> Id
 nameFromBehv (Behaviour _ _ (Interface ifaceName _) _ _ _ _) = ifaceName
 
-getPosEntry :: Untyped.Ref -> Pn
-getPosEntry (Untyped.RVar pn _ _) = pn
-getPosEntry (Untyped.RIndex pn _ _) = pn
-getPosEntry (Untyped.RField pn _ _) = pn
+getPosRef :: Untyped.Ref -> Pn
+getPosRef (Untyped.RVar pn _ _) = pn
+getPosRef (Untyped.RIndex pn _ _) = pn
+getPosRef (Untyped.RField pn _ _) = pn
 
 getPosn :: Untyped.Expr -> Pn
 getPosn expr = case expr of
@@ -545,7 +545,7 @@ getPosn expr = case expr of
     Untyped.EExp pn _ _ -> pn
     Untyped.ECreate pn _ _ _ -> pn
     Untyped.AddrOf pn _ -> pn
-    Untyped.ERef e -> getPosEntry e
+    Untyped.ERef e -> getPosRef e
     Untyped.EArray pn _ -> pn
     Untyped.ListConst e -> getPosn e
     Untyped.ECat pn _ _ -> pn

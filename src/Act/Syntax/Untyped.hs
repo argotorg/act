@@ -66,8 +66,6 @@ data TimeTag = Pre | Post | Neither
 
 data Ref
   = RVar Pn TimeTag Id
-  | RVarPre Pn Id
-  | RVarPost Pn Id
   | RIndex Pn Ref Expr
   | RField Pn Ref Id
   deriving (Eq, Show)

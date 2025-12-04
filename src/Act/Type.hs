@@ -25,6 +25,7 @@ import Act.Syntax.Timing
 import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
+import Data.Vector.Internal.Check (check)
 
 
 
@@ -216,16 +217,37 @@ checkBehaviour env@Env{contract} (U.Transition posn name _ iface@(Interface _ pa
 
 checkBehvCase :: Env -> U.Case (U.StorageUpdates, Maybe U.Expr)
               -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Untimed))), [(Exp ABoolean Untimed, [Constraint Untimed])])
-checkBehvCase env (U.Case _ cond (updates, mret)) = 
-    checkExpr env U TBoolean cond `bindValidation` \(cond', cnstr1) -> do
-    let env' = addPreconds [cond'] env
-    updcnstr <- unzip <$> traverse (checkStorageUpdate env') updates
+checkBehvCase env (U.Case p cond (updates, mret)) = 
+    checkExpr env U TBoolean cond `bindValidation` \(cond', cnstr1) ->
+    let env' = addPreconds [cond'] env in
+    (unzip <$> traverse (checkStorageUpdate env') updates) `bindValidation` \(tupdates, cnstr2) -> do
+    checkOrderedUpdates tupdates 
     res <- traverse (inferExpr env' U) mret
-    pure $ let (storageUpdates, cnstr2) = updcnstr
-               (mret', cnstr3) = case res of
+    pure $ let (mret', cnstr3) = case res of
                   Just (e, cs) -> (Just e, cs)
                   Nothing -> (Nothing, [])
-            in ((cond', (storageUpdates, mret')), [(LitBool nowhere True, cnstr1), (cond', concat cnstr2 ++ cnstr3)])
+            in ((cond', (tupdates, mret')), [(LitBool nowhere True, cnstr1), (cond', concat cnstr2 ++ cnstr3)])
+
+    where
+        checkOrderedUpdates :: [StorageUpdate] -> Err ()
+        checkOrderedUpdates [] = pure ()
+        checkOrderedUpdates ((Update _ ref _):upds) =
+            (assert (orderErr $ posnFromRef ref) $ not (any (leRef ref . getRef) upds)) *>
+            checkOrderedUpdates upds
+
+        orderErr p' = (p', "Storage updates must be listed from the least to most specific")
+
+        getRef :: StorageUpdate -> Ref LHS Untimed
+        getRef (Update _ ref _) = ref
+
+        leRef :: Ref LHS Untimed -> Ref LHS Untimed -> Bool 
+        leRef r1 r2 = r1 == r2 || ltRef r1 r2
+
+        ltRef :: Ref LHS Untimed -> Ref LHS Untimed -> Bool
+        ltRef (RField _ r1 _ _) r2 = r1 == r2 || ltRef r1 r2
+        ltRef (RArrIdx _ r1 _ _ ) r2 = r1 == r2 || ltRef r1 r2
+        ltRef (SVar _ _ _ _) _ = False
+         
 
 checkAssign :: Env -> U.Assign -> Err (StorageUpdate, [Constraint Untimed])
 checkAssign env (U.StorageVar p (ValueType typ) var, expr) = do
@@ -476,7 +498,7 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
   U.EnvExp p v -> pure (TExp (ethEnv v) (IntEnv p v), [])
   -- Variable references
   U.ERef ref ->
-    (\(ValueType typ, tref, cnstr) -> (TExp typ (VarRef (getPosEntry ref) typ tref), cnstr)) <$> checkRef env SRHS mode ref 
+    (\(ValueType typ, tref, cnstr) -> (TExp typ (VarRef (getPosRef ref) typ tref), cnstr)) <$> checkRef env SRHS mode ref 
   -- Address-of operator
   U.AddrOf p e -> do
     inferExpr env mode e `bindValidation` \(TExp ty e', cnstr) -> 
