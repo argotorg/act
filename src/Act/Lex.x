@@ -29,6 +29,7 @@ tokens :-
   $white+                               ;
 
   -- reserved words
+  contract                              { mk CONTRACT }
   constructor                           { mk CONSTRUCTOR }
   transition                            { mk TRANSITION }
   of                                    { mk OF }
@@ -128,8 +129,9 @@ tokens :-
 data LEX =
 
   -- reserved words
-    TRANSITION
+    CONTRACT
   | CONSTRUCTOR
+  | TRANSITION
   | OF
   | CREATES
   | CASE
@@ -158,7 +160,6 @@ data LEX =
   | PRE
   | POST
   | PAYABLE
-  | CONTRACT
   | VALUE
   | NEW
   | WITH
