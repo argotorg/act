@@ -1,4 +1,6 @@
-behaviour test of Inputs
+contract Inputs
+
+transition test
 interface test(uint128 x)
 
 iff in range uint128

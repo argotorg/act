@@ -1,11 +1,13 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 creates
 
   uint[3] x := [1, 2, 3]
 
-behaviour f of A
+transition f
 interface f()
 
 iff
@@ -13,9 +15,9 @@ iff
 
 storage
 
-  x[0] => 3
-  x[1] => 2
-  x[2] => 1
+  x[0] := 3
+  x[1] := 2
+  x[2] := 1
 
 ensures
   post(x) == (if pre(x) == [1,2,3] then [3,2,1] else [0,0,0])

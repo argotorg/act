@@ -1,32 +1,36 @@
-constructor of A
+contract B
+
+contract A
+
+constructor
 interface constructor()
 
 creates
    uint x := 0
    B b := create B()
 
-constructor of B
+constructor
 interface constructor()
 
 creates
    uint y := 0
    A a := create A()
 
-behaviour remote of B
+transition remote
 interface set_remote(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   a.x => z
+   a.x := z
 
-behaviour multi of B
+transition multi
 interface set_remote2(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   y => 1
-   a.x => z
+   y := 1
+   a.x := z

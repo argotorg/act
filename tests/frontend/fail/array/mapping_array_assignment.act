@@ -1,6 +1,8 @@
-constructor of B
+contract B
+
+constructor
 interface constructor()
 
 creates
 
-  mapping(uint => uint) m := [-1,-2]
+  mapping(uint := uint) m := [-1,-2]

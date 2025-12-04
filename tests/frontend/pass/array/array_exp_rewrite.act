@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 creates
@@ -6,9 +8,9 @@ creates
   uint[3][2][2] x := [ [ [0,0,0], [0,0,0] ], [ [0,0,0], [0,0,0] ] ]
   uint[3][2][2][1] y := [ [ [ [0,0,0], [0,0,0] ], [ [0,0,0], [0,0,0] ] ] ]
 
-behaviour f of A
+transition f
 interface f()
 
 storage
 
-  x[1] => y[0][1]
+  x[1] := y[0][1]

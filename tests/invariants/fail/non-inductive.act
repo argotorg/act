@@ -1,3 +1,5 @@
+contract C
+
 // The invariant x < 9 is true, but cannot be proved as it is not inductive.
 
 // If we assume that the invariant holds at the start of the call to j, then
@@ -6,7 +8,7 @@
 
 // A stronger invariant (e.g. x < 3) can succesfully be proven
 
-constructor of C
+constructor
 interface constructor()
 
 creates
@@ -17,29 +19,29 @@ invariants
 
     x < 9
 
-behaviour f of C
+transition f
 interface f()
 
 iff x == 0
 
     storage
 
-        x => 1
+        x := 1
 
-behaviour g of C
+transition g
 interface g()
 
 iff x == 1
 
     storage
 
-        x => 2
+        x := 2
 
-behaviour j of C
+transition j
 interface j()
 
 iff x == 7
 
     storage
 
-        x => 100
+        x := 100

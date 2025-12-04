@@ -1,4 +1,6 @@
-constructor of Fail
+contract Fail
+
+constructor
 interface constructor(uint y)
 
 creates

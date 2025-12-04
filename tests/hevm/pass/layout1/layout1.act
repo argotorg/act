@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 iff
@@ -10,7 +12,7 @@ creates
   uint128 x := 11
   uint128 y := 42
 
-behaviour swap of A
+transition swap
 interface swap()
 
 iff
@@ -19,7 +21,7 @@ iff
 
   storage
 
-    x => y
-    y => x
+    x := y
+    y := x
 
   returns 1

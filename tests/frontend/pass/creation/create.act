@@ -1,3 +1,5 @@
+contract Modest
+
 // A modest example specifying the creation of a new contract,
 // in this case the contract subject at question.
 // Specifying the creation of a contract serves multiple purposes:
@@ -6,7 +8,7 @@
 // perspective, it defines the storage layout of the contract, by explicit
 // typing of storage variables.
 
-constructor of Modest
+constructor
 interface constructor()
 
 creates

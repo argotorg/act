@@ -1,4 +1,6 @@
-behaviour f of A
+contract A
+
+transition f
 interface f(uint x)
 
 returns 1

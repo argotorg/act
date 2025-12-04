@@ -1,8 +1,12 @@
-constructor of A
+contract B
+
+contract A
+
+constructor
 interface constructor(uint foo)
 
 
-constructor of B
+constructor
 interface constructor()
 
 creates

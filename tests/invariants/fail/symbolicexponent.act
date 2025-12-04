@@ -1,4 +1,6 @@
-constructor of Exponentiation
+contract Exponentiation
+
+constructor
 interface constructor(uint x)
 
 creates

@@ -1,10 +1,12 @@
-constructor of C
+contract C
+
+constructor
 interface constructor()
 
 creates
    uint x := 0
 	
-behaviour bar of C
+transition bar
 interface bar(uint z)
 
 iff
@@ -15,14 +17,14 @@ iff
 case z == 0:
 
 storage
-  x => z
+  x := z
 
 case z == 1:
 
 storage
-  x => z + 1
+  x := z + 1
 
 case z > 1:
 
 storage
-  x => z + 2
+  x := z + 2

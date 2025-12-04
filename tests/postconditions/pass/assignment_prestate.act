@@ -1,11 +1,13 @@
-constructor of C
+contract C
+
+constructor
 interface constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-behaviour f of C
+transition f
 interface f(uint24 y)
 
 iff in range uint24 
@@ -13,7 +15,7 @@ iff in range uint24
 
 storage
 
-  x => x + y
+  x := x + y
 
 ensures
 

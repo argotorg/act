@@ -1,4 +1,6 @@
-constructor of C
+contract C
+
+constructor
 interface constructor(uint24 cd)
 
 creates

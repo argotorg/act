@@ -1,4 +1,6 @@
-constructor of B
+contract B
+
+constructor
 interface constructor(uint[3] c)
 
 iff

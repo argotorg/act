@@ -1,8 +1,12 @@
-constructor of A
+contract B
+
+contract A
+
+constructor
 interface constructor(int32[3][2] n2)
 
 
-constructor of B
+constructor
 interface constructor()
 
 creates

@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 iff
@@ -6,10 +8,10 @@ iff
 
 creates
   uint128 x := 0
-  mapping(uint128 => uint128) m := []
+  mapping(uint128 := uint128) m := []
 
 
-behaviour f of A
+transition f
 interface f()
 
 iff
@@ -19,16 +21,16 @@ case x > 2:
 
   storage
 
-    x => m[2]
+    x := m[2]
 
 case 1 <= x and x <= 2:
 
   storage
 
-    x => m[3]
+    x := m[3]
 
 case x < 1:
 
   storage
 
-    x => m[x]
+    x := m[x]

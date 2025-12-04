@@ -1,4 +1,8 @@
-constructor of C
+contract A
+
+contract C
+
+constructor
 interface constructor(uint z1)
 
 iff
@@ -7,7 +11,7 @@ iff
 creates
     uint z := z1
 
-constructor of A
+constructor
 interface constructor(uint x1)
 
 iff
@@ -18,7 +22,10 @@ creates
     C c := create C(42)
 
 
-constructor of B
+
+contract B
+
+constructor
 interface constructor(address<A> x, address<A> y)
 
 iff
@@ -29,7 +36,7 @@ creates
     A a1 := x
     A a2 := y
 
-behaviour upd of B
+transition upd
 interface upd()
 
 iff
@@ -37,5 +44,5 @@ iff
 
 storage
 
-    a1 => create A(42)
-    a2 => create A(43)
+    a1 := create A(42)
+    a2 := create A(43)

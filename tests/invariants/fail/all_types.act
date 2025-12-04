@@ -1,4 +1,6 @@
-constructor of C
+contract C
+
+constructor
 interface constructor(uint _a, uint _b, bool _c, bool _d, string _e, string _f)
 
 creates

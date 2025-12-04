@@ -1,4 +1,6 @@
-constructor of B
+contract B
+
+constructor
 interface constructor()
 
 creates
@@ -7,17 +9,17 @@ creates
   int[3] y := [0,0,0]
 
 
-behaviour f of B
+transition f
 interface f(uint[3][2][2] c)
 
 storage
 
-  x => c[4][3][2]
+  x := c[4][3][2]
 
 
-behaviour g of B
+transition g
 interface g(uint[3][2][2] c)
 
 storage
 
-  y[c[0][0][0]] => 1
+  y[c[0][0][0]] := 1

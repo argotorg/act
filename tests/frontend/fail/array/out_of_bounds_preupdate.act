@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 creates
@@ -6,15 +8,15 @@ creates
   uint[3] ar := [1,2,3]
   uint x := 0
 
-behaviour f of A
+transition f
 interface f()
 
 iff
   x == 10
 
 storage
-  x => 5
-  ar[1] => 5
+  x := 5
+  ar[1] := 5
 
 ensures
   post(ar[pre(x)]) == 5

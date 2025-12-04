@@ -1,6 +1,10 @@
+contract B
+
+contract A
+
 // contract A
 
-constructor of A
+constructor
 interface constructor(uint z)
 
 iff
@@ -11,7 +15,7 @@ creates
    uint x := z + 1
 
 
-behaviour x of A
+transition x
 interface x()
 
 iff
@@ -20,7 +24,7 @@ iff
 returns
    pre(x)
 
-behaviour add_x of A
+transition add_x
 interface add_x(uint y)
 
 iff
@@ -29,11 +33,11 @@ iff
 
 storage
 
-  x => x + y
+  x := x + y
 
 
 // contract B
-constructor of B
+constructor
 interface constructor(uint i)
 iff
    CALLVALUE == 0
@@ -43,11 +47,11 @@ creates
    uint z := i + 42
    A a := create A(i)
 
-behaviour foo of B
+transition foo
 interface foo()
 
 iff
    CALLVALUE == 0
 
 storage
-  a => create A(42)
+  a := create A(42)

@@ -1,11 +1,13 @@
-constructor of C
+contract C
+
+constructor
 interface constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-behaviour increase of C
+transition increase
 interface increase(uint24 new_x)
 
 iff 
@@ -13,13 +15,13 @@ iff
  
 case new_x > x:
   storage
-    x => new_x
+    x := new_x
 
   returns post(x) - pre(x)
 
 case new_x <= x:
   storage
-    x => x + new_x
+    x := x + new_x
 
   returns post(x) - pre(x)
 

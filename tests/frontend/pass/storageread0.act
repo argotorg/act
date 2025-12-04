@@ -1,4 +1,6 @@
-constructor of Pass
+contract Pass
+
+constructor
 interface constructor()
 
 creates
@@ -6,10 +8,10 @@ creates
 	uint x := 0
 	uint y := 2
 
-behaviour f of Pass
+transition f
 interface f()
 
 storage
 
-	x => y
+	x := y
     y

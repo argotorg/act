@@ -1,12 +1,14 @@
+contract C
+
 // This is wrong because we have two behviours for the same interface
-constructor of C
+constructor
 interface constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-behaviour increase of C
+transition increase
 interface increase(uint24 new_x)
 
   storage
@@ -18,7 +20,7 @@ ensures
 
   post(x) >= pre(x)
 
-behaviour increase2 of C
+transition increase2
 interface increase(uint24 new_x)
 
 storage

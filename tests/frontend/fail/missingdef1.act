@@ -1,4 +1,6 @@
-constructor of Fail
+contract Fail
+
+constructor
 interface constructor()
 
 creates
@@ -7,7 +9,7 @@ creates
 	uint y := 2
 
 // should fail to typecheck because x & y have not been declared in a storage block
-behaviour g of Fail
+transition g
 interface g()
 
 returns x + y

@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 iff
@@ -7,7 +9,7 @@ iff
 creates
   uint128 x := 0
 
-behaviour f of A
+transition f
 interface f()
 
 iff

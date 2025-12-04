@@ -1,4 +1,6 @@
-constructor of M
+contract M
+
+constructor
 interface constructor()
 
 creates
@@ -6,7 +8,7 @@ creates
   uint[3] a := [1,2,3]
 
 
-behaviour f of M
+transition f
 interface f()
 
 iff

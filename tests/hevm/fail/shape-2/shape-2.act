@@ -1,5 +1,9 @@
+contract C
+
+contract A
+
 // contract A
-constructor of A
+constructor
 interface constructor(uint z)
 
 iff
@@ -9,7 +13,7 @@ creates
    uint x := z
 
 
-behaviour x of A
+transition x
 interface x()
 
 iff
@@ -19,7 +23,7 @@ returns
    pre(x)
 
 // contract C
-constructor of C
+constructor
 interface constructor()
 iff
    CALLVALUE == 0
@@ -28,7 +32,7 @@ creates
    A a1 := create A(42)
    A a2 := create A(17)
 
-behaviour change of C
+transition change
 interface change()
 
 iff
@@ -36,4 +40,4 @@ iff
   CALLVALUE == 0
   
 storage
-  a1 => a2
+  a1 := a2

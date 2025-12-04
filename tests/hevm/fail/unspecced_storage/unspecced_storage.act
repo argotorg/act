@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 iff
@@ -7,9 +9,9 @@ iff
 
 creates
 
-  mapping (uint=>uint) x := []
+  mapping (uint:=uint) x := []
 
-behaviour f of A
+transition f
 interface f()
 
 // fails to mention the state update

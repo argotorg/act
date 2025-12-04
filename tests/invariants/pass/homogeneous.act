@@ -1,4 +1,6 @@
-constructor of Homogeneous
+contract Homogeneous
+
+constructor
 interface constructor()
 
 creates
@@ -10,7 +12,7 @@ invariants
 	x * y == z
 
 
-behaviour f of Homogeneous
+transition f
 interface f(uint256 scalar)
 
 iff in range uint256
@@ -18,11 +20,11 @@ iff in range uint256
 	z * scalar
 
 storage
-	x => x * scalar
-	z => z * scalar
+	x := x * scalar
+	z := z * scalar
 
 
-behaviour g of Homogeneous
+transition g
 interface g(uint256 scalar)
 
 iff in range uint256
@@ -30,5 +32,5 @@ iff in range uint256
 	z * scalar
 
 storage
-	y => y * scalar
-	z => z * scalar
+	y := y * scalar
+	z := z * scalar

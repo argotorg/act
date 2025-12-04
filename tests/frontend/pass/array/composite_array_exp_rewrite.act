@@ -1,13 +1,15 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 creates
 
   uint[3][2][2] x := [ [ [0,0,0], [0,0,0] ], [ [0,0,0], [0,0,0] ] ]
 
-behaviour f of A
+transition f
 interface f(uint[3][2] a)
 
 storage
 
-  x => [a, [ [0,0,0], [0,0,0] ] ]
+  x := [a, [ [0,0,0], [0,0,0] ] ]

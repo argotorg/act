@@ -1,52 +1,59 @@
+contract A
+
+contract B
+
 //Contract B
-constructor of B
+constructor
 interface constructor(uint u)
 
 creates
    uint x := u
    A a := create A()
 
-behaviour setx of B
+transition setx
 interface setx(uint z)
 
 storage
 
-  a.x => z
+  a.x := z
 
-behaviour setf of B
+transition setf
 interface setf(address i)
 
 storage
 
-  a.f[i] => 1
+  a.f[i] := 1
 
 // Contract A
-constructor of A
+constructor
 interface constructor()
 
 creates
    uint x := 0
-   mapping(address => uint) f := []
+   mapping(address := uint) f := []
 
 //Contract C
-constructor of C
+
+contract C
+
+constructor
 interface constructor()
 
 creates
    uint w := 0
    B b := create B(42)
 
-behaviour setf of C
+transition setf
 interface setf(address i)
 
 storage
 
-  b.a.f[i] => 2
+  b.a.f[i] := 2
 
-behaviour setxw of C
+transition setxw
 interface setxw(address i)
 
 storage
 
-  b.a.x => 1
-  w => 1
+  b.a.x := 1
+  w := 1

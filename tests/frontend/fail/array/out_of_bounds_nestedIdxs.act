@@ -1,4 +1,6 @@
-constructor of B
+contract B
+
+constructor
 interface constructor()
 
 creates
@@ -6,10 +8,10 @@ creates
   int[3] a := [0,0,0]
 
 
-behaviour f of B
+transition f
 interface f()
 
 
 storage
 
-  a[1] => a[a[2]]
+  a[1] := a[a[2]]

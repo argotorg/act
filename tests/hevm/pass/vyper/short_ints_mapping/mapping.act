@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 iff
   CALLVALUE == 0
@@ -7,17 +9,17 @@ creates
   mapping(uint64 => mapping(uint128 => uint32)) m := []
 
 
-behaviour setm of A
+transition setm
 interface setm(uint64 a, uint128 b, uint32 c)
 
 iff
   CALLVALUE == 0
 
 storage
-  m[a][b] => c
+  m[a][b] := c
 
 
-behaviour m of A
+transition m
 interface m(uint64 idx1, uint128 idx2)
 
 iff CALLVALUE == 0

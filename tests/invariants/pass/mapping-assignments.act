@@ -1,10 +1,12 @@
-constructor of C
+contract C
+
+constructor
 interface constructor()
 
 creates
 
    uint a := 0
-   mapping(uint=>uint) b := [0 := 1]
+   mapping(uint:=uint) b := [0 := 1]
 
 invariants
 

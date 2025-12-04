@@ -1,4 +1,8 @@
-constructor of A
+contract B
+
+contract A
+
+constructor
 interface constructor()
 
 creates
@@ -7,7 +11,7 @@ creates
 
 
 
-constructor of B
+constructor
 interface constructor(address<A> a)
 
 creates

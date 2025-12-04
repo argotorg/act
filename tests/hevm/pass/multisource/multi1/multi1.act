@@ -1,4 +1,8 @@
-constructor of A1
+contract A2
+
+contract A1
+
+constructor
 interface constructor()
 
 iff
@@ -7,16 +11,16 @@ iff
 creates
   uint128 x := 0
 
-behaviour setx of A1
+transition setx
 interface setx(uint128 n)
 
 iff
   CALLVALUE == 0
 
 storage
-  x => n
+  x := n
 
-constructor of A2
+constructor
 interface constructor(address<A1> a)
 
 iff
@@ -25,11 +29,11 @@ iff
 creates
   A1 y := a
 
-behaviour setA1x of A2
+transition setA1x
 interface setA1x(uint128 n)
 
 iff
   CALLVALUE == 0
 
 storage
-  y.x => n
+  y.x := n

@@ -1,7 +1,9 @@
-constructor of ReadMappingIndex
+contract ReadMappingIndex
+
+constructor
 interface constructor(uint _x, uint _y)
 
 creates
   uint                x := _x
   uint                y := _y
-  mapping(uint=>uint) m := [x := _y]
+  mapping(uint:=uint) m := [x := _y]

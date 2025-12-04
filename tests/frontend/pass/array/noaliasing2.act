@@ -1,4 +1,6 @@
-constructor of A
+contract A
+
+constructor
 interface constructor()
 
 creates
@@ -9,7 +11,7 @@ creates
   uint z := 0
   uint[3][3] arr1 := [[0,0,0],[0,0,0],[0,0,0]]
 
-behaviour f of A
+transition f
 interface f(uint a, uint b)
 
 iff
@@ -28,8 +30,8 @@ iff
 
 storage
 
-  arr1[x][y] => 1
-  arr1[y][x] => 2
-  arr1[a][b] => 1
-  arr1[b][a] => 2
+  arr1[x][y] := 1
+  arr1[y][x] := 2
+  arr1[a][b] := 1
+  arr1[b][a] := 2
 
