@@ -90,9 +90,10 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
     store' = contractStore _cname store
 
 constructorCode :: StorageTyping -> Constructor -> T.Text
-constructorCode store (Constructor cname iface precs cases _ invs) = T.unlines $
+constructorCode store (Constructor cname iface _ precs cases _ invs) = T.unlines $
   [ initPrecs iface precs ]
   <> evalSeq (ctorCreates store cname iface) cases
+  <> [ ctorCall cname iface cases ]
   <> [ initState cname iface cases ]
   <> [ initStateBefore cname iface cases ]
   <> [ invariants iface invs ]
@@ -100,17 +101,17 @@ constructorCode store (Constructor cname iface precs cases _ invs) = T.unlines $
 -- | definition of constructor preconditions
 initPrecs :: Interface -> [Exp ABoolean] -> T.Text
 initPrecs i conds = inductive
-  initPrecsType (envDecl <+> interface i) "Prop" [("ctorPreconds", Nothing, body)]
+  initPrecsType (nextAddrDecl <+> envDecl <+> interface i) "Prop" [("ctorPreconds", Nothing, body)]
   where
     body = indent 2 . implication . concat $
       [ coqprop <$> conds
       , interfaceStateVarsConstraints i
-      , ["Caller" <+> envVar <+> "<" <+> "NextAddr" <+> envVar]
-      , ["Origin" <+> envVar <+> "<" <+> "NextAddr" <+> envVar]
+      , ["Caller" <+> envVar <+> "<" <+> nextAddrVar]
+      , ["Origin" <+> envVar <+> "<" <+> nextAddrVar]
       , ["This" <+> envVar <+> "<>" <+> "Caller" <+> envVar]
       , ["This" <+> envVar <+> "<>" <+> "Origin" <+> envVar]
-      , ["This" <+> envVar <+> "=" <+> "NextAddr" <+> envVar] -- addrField <+> parens ("snd" <+> parens (T.pack name <+> envVar)) ]
-      , [ initPrecsType <+> envVar <+> arguments i ]
+      , ["This" <+> envVar <+> "=" <+> nextAddrVar]
+      , [ initPrecsType <+> nextAddrVar <+> envVar <+> arguments i ]
       ]
 
 ctorCreates :: StorageTyping -> Id -> Interface -> (Exp ABoolean, [StorageUpdate]) -> Fresh T.Text
@@ -119,74 +120,87 @@ ctorCreates store name iface (_, updates) = do
   let createsName = name' <> "_creates"
   pure $ base store createsName iface updates
 
+ctorCall :: Id -> Interface -> [(Exp ABoolean, [StorageUpdate])] -> T.Text
+ctorCall name iface cases = case unsnoc (zip ([0..] :: [Int]) cases) of
+  Just (cases', (lastCaseNum, _)) ->
+    definition (T.pack name <> "_call") (nextAddrDecl <+> envDecl <+> interface iface)
+    (foldr iteCase (caseText lastCaseNum) cases')
+  Nothing -> error "Internal error: empty constructor cases list"
+  where
+    caseText i = T.pack (name <> show i) <> "_creates" <> nextAddrVar <> envVar <> arguments iface
+
+    iteCase :: (Int, (Exp ABoolean, [StorageUpdate])) -> T.Text -> T.Text
+    iteCase (i, (casecond, _)) elseText =
+      "if" <+> boolScope (coqprop casecond) <+>
+      "then" <+> caseText i <+>
+      "else" <+> elseText
+
 -- | predicate characterizing all initial (post constructor) states
 initState :: Id -> Interface -> Cases [StorageUpdate] -> T.Text
 initState name i cases = inductive
   initStateType "" (stateType <+> "->" <+> "Prop") (evalSeq caseCtor cases) -- [("InitState", Just $ envDecl <+> interface i, constructorBody)]
   where
-    baseval n = parens $ "snd" <+> parens (T.pack n <+> envVar <+> arguments i)
+    baseval n = parens $ "snd" <+> parens (T.pack n <+> nextAddrVar <+> envVar <+> arguments i)
 
     caseCtor :: (Exp ABoolean, [StorageUpdate]) -> Fresh (T.Text, Maybe T.Text, T.Text)
     caseCtor (caseCond, _) = do
       name' <- freshId name
       let createsName = name' <> "_creates"
       let body = (indent 2) . implication . concat $
-            [ [initPrecsType <+> envVar <+> arguments i]
-            , ["This" <+> envVar <+> "=" <+> addrField <+> baseval createsName]
+            [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
+            , ["This" <+> envVar <+> "=" <+> nextAddrVar]
             , [ coqprop caseCond ]
             , [initStateType <+> baseval createsName]
             ]
-      pure (T.pack name', Just $ envDecl <+> interface i, body)
+      pure (T.pack name', Just $ nextAddrDecl <+> envDecl <+> interface i, body)
 
 -- | predicate characterizing all initial (post constructor) states that can be instantiated before a given environment
 initStateBefore :: Id -> Interface -> Cases [StorageUpdate] -> T.Text
 initStateBefore name i cases = inductive
-  initStateBeforeType "" (envType <+> "->" <+> stateType <+> "->" <+> "Prop") (evalSeq caseCtor cases)
+  initStateBeforeType "" (boundDecl <+> "->" <+> stateType <+> "->" <+> "Prop") (evalSeq caseCtor cases)
   where
-    baseval n = parens $ "snd" <+> parens (T.pack n <+> envVar <+> arguments i)
-
-    fenvVar = "FENV" :: T.Text
-    fenvDecl = parens $ fenvVar <+> ":" <+> envType
+    baseval n = parens $ "snd" <+> parens (T.pack n <+> nextAddrVar <+> envVar <+> arguments i)
+    finalAddr n = parens $ "fst" <+> parens (T.pack n <+> nextAddrVar <+> envVar <+> arguments i)
 
     caseCtor :: (Exp ABoolean, [StorageUpdate]) -> Fresh (T.Text, Maybe T.Text, T.Text)
     caseCtor (caseCond, _) = do
       name' <- freshId name
       let createsName = name' <> "_creates"
       let body = (indent 2) . implication . concat $
-            [ [initPrecsType <+> envVar <+> arguments i]
-            , [tuple envVar' stateVar <+> "=" <+> T.pack name <.> T.pack name <+> envVar <+> arguments i]
-            , ["This" <+> envVar <+> "=" <+> addrField <+> stateDecl]
-            , ["NextAddr" <+> envVar' <+> "<=" <+> "NextAddr" <+> fenvVar]
+            [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
+            , ["This" <+> envVar <+> "=" <+> nextAddrVar]
+            , [ finalAddr createsName <+> "<=" <+> boundVar]
             , [ coqprop caseCond ]
-            , [initStateType <+> baseval createsName]
+            , [initStateType <+> boundVar <+> baseval createsName]
             ]
-      pure (T.pack name', Just $ envDecl <+> interface i <+> envDecl' <+> fenvDecl <+> stateDecl, body)
+      pure (T.pack name', Just $ boundDecl <+> nextAddrDecl <+> envDecl <+> stateDecl <+> interface i, body)
 
 
 behaviourCode :: StorageTyping -> Behaviour -> T.Text
-behaviourCode store (Behaviour name cname iface precs cases _) = T.unlines $
+behaviourCode store (Behaviour name cname iface _ precs cases _) = T.unlines $
   [ behvConds name iface precs ]
   <> evalSeq (behvUpdates store name cname iface) cases
   <> [ behvPred name iface cases ]
+-- TODO: unify retVal for into 1 relation for each behaviour
   <> evalSeq (retVal name iface) cases
 
 -- | definition of behaviour-case conditions
 behvConds :: Id -> Interface -> [Exp ABoolean] -> T.Text
 behvConds name i conds = do
   inductive
-    (T.pack name <> "_conds") (envDecl <+> interface i <+> stateDecl) "Prop" [((T.pack name <> "_condsC"), Nothing, body name)]
+    (T.pack name <> "_conds") (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i) "Prop" [((T.pack name <> "_condsC"), Nothing, body name)]
   where
     body n = indent 2 . implication . concat $
       [ coqprop <$> conds
-      , [ nextAddrConstraintType <+> envVar <+> stateVar ]
+      , [ nextAddrConstraintType <+> nextAddrVar <+> stateVar ]
       , interfaceStateVarsConstraints i
-      , ["This" <+> envVar <+> "<" <+> "NextAddr" <+> envVar]
-      , ["Caller" <+> envVar <+> "<" <+> "NextAddr" <+> envVar]
-      , ["Origin" <+> envVar <+> "<" <+> "NextAddr" <+> envVar]
+      , ["This" <+> envVar <+> "<" <+> nextAddrVar]
+      , ["Caller" <+> envVar <+> "<" <+> nextAddrVar]
+      , ["Origin" <+> envVar <+> "<" <+> nextAddrVar]
       , ["This" <+> envVar <+> "<>" <+> "Caller" <+> envVar]
       , ["This" <+> envVar <+> "<>" <+> "Origin" <+> envVar]
       , ["This" <+> envVar <+> "=" <+> addrField <+> stateVar ]
-      , [ (T.pack n <> "_conds") <+> envVar <+> arguments i <+> stateVar ]
+      , [ (T.pack n <> "_conds") <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i ]
       ]
 
 behvUpdates :: StorageTyping -> Id -> Id -> Interface -> (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> Fresh T.Text
@@ -198,22 +212,24 @@ behvUpdates store name cname iface (_, (updates, _)) = do
 
 behvPred :: Id -> Interface -> [(Exp ABoolean, ([StorageUpdate], Maybe TypedExp))] -> T.Text
 behvPred name i cases = inductive
-  (T.pack name) "" (envType <+> "->" <+> stateType <+> "->" <+> envType <+> "->" <+> stateType <+> "-> Prop") caseCtors
+  (T.pack name) "" (nextAddrType <+> "->" <+> nextAddrType <+> "->" <+> envType <+> "->" <+> stateType <+> "->" <+> stateType <+> "-> Prop") caseCtors
   where
     caseCtors = (evalSeq caseCtor cases)
 
     caseCtor :: (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> Fresh (T.Text, Maybe T.Text, T.Text)
     caseCtor (caseCond, (_, _))= do
       name' <- fresh name
-      pure (name' <> stepSuffix, Just $ envDecl <+> interface i <+> stateDecl, caseBody caseCond name')
+      pure (name' <> stepSuffix, Just $ nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> interface i <+> stateDecl, caseBody caseCond name')
 
     caseBody c n = (indent 2) . implication $
-      [ (T.pack name) <> "_conds" <+> envVar <+> arguments i <+> stateVar
+      [ (T.pack name) <> "_conds" <+> envVar <+> stateVar <+> arguments i
       , "This" <+> envVar <+> "=" <+> addrField <+> stateVar
       , coqprop c
-      , (T.pack name) <+> envVar <+> stateVar
-        <+> parens ("fst" <+> parens ( n <> "_updates" <+> envVar <+> stateVar <+> arguments i))
-        <+> parens ("snd" <+> parens ( n <> "_updates" <+> envVar <+> stateVar <+> arguments i))
+      , (T.pack name) <+> nextAddrVar
+        <+> parens ("fst" <+> parens ( n <> "_updates" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i))
+        <+> envVar
+        <+> stateVar
+        <+> parens ("snd" <+> parens ( n <> "_updates" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i))
       ]
 
 
@@ -221,70 +237,70 @@ behvPred name i cases = inductive
 -- that takes into account only transitions of the current contract type
 localStep :: Id -> [Behaviour] -> T.Text
 localStep contract behvs = inductive
-  (localStepType contract) "" (envType <+> "->" <+> stateType <+> "->" <+> envType <+> "->" <+> stateType <+> "-> Prop") (stepBehv <$> behvs)
+  (localStepType contract) "" (nextAddrType <+> "->" <+> nextAddrType <+> "->" <+> envType <+> "->" <+> stateType <+> "->" <+> stateType <+> "-> Prop") (stepBehv <$> behvs)
   where
     -- | constructor for the step relation
     stepBehv :: Behaviour -> (T.Text, Maybe T.Text, T.Text)
-    stepBehv (Behaviour name _ _ _ _ _) = (T.pack name <> stepSuffix, Just $ envDecl <+> stateDecl <+> envDecl' <+> stateDecl', constructorBody)
+    stepBehv (Behaviour name _ _ _ _ _ _) = (T.pack name <> stepSuffix, Just $ nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> stateDecl <+> stateDecl', constructorBody)
       where
-        constructorBody = T.pack name <+> envVar <+> stateVar <+> envVar' <+> stateVar'
+        constructorBody = T.pack name <+> nextAddrVar <+> nextAddrVar' <+> envVar <+> stateVar <+> stateVar'
 
 -- | Constraint on Env expressing that the NextAddr field should be greated than
 -- all addresses contained in the state
 nextAddrConstraint :: T.Text
 nextAddrConstraint = definition
-  nextAddrConstraintType (envDecl <+> stateDecl) body
+  nextAddrConstraintType (nextAddrDecl <+> stateDecl) body
     where
       body = indent 2 $ forAll (parens ("p : address")) <+>
-        (addressInType <+> "p" <+> stateVar) <+> "->" <+> ("NextAddr" <+> envVar <+> "> p")
+        (addressInType <+> "p" <+> stateVar) <+> "->" <+> (nextAddrVar <+> "> p")
 
 -- | Inductive definition of step relation of 2 states
 -- that takes into account transitions of the current contract type
 -- and all transitions possible for contained contracts
 extStep :: Id -> StorageTyping -> T.Text
 extStep main store = inductive
-  extStepType "" (envType <+> "->" <+> stateType <+> "->" <+> envType <+> "->" <+> stateType <+> "-> Prop") body
+  extStepType "" (nextAddrType <+> "->" <+> envType <+> "->" <+> stateType <+> "->" <+> envType <+> "->" <+> stateType <+> "-> Prop") body
   where
     body =
-      (extStepType <> "_" <> T.pack main, Just $ (envDecl <+> envDecl' <+> stateDecl <+> stateDecl')
-      , indent 2 $ implication [localStepType main <+> envVar <+> stateVar <+> envVar' <+> stateVar', extStepType <+> envVar <+> stateVar <+> envVar' <+> stateVar'])
+      (extStepType <> "_" <> T.pack main, Just (nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> stateDecl <+> stateDecl')
+      , indent 2 $ implication [localStepType main <+> nextAddrVar <+> nextAddrVar' <+> envVar <+> stateVar <+> stateVar', extStepType <+> nextAddrVar <+> envVar <+> stateVar <+> stateVar'])
       : (M.elems $ M.mapMaybeWithKey substep localStore)
 
     localStore = contractStore main store
 
     substep :: Id -> (ValueType, Integer) -> Maybe (T.Text, Maybe T.Text, T.Text)
-    substep var (ValueType (TContract cid), _) = Just (extStepType <> "_" <> varp, Just (envDecl <+> stateDecl <+> envVar' <+> stateDecl'), body')
+    substep var (ValueType (TContract cid), _) = Just (extStepType <> "_" <> varp, Just (nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> stateDecl <+> stateDecl'), body')
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
-          [ [ nextAddrConstraintType <+> envVar <+> stateVar ]
+          [ [ nextAddrConstraintType <+> nextAddrVar <+> stateVar ]
           , [ "Origin" <+> envVar <+> "<>" <+> addrField <+> stateVar ]
           , [ "Caller" <+> envVar <+> "<>" <+> addrField <+> stateVar ]
-          , [ T.pack cid <.> extStepType <+> envVar <+> parens (varp <+> stateVar) <+> envVar' <+> parens (varp <+> stateVar') ]
+          , [ T.pack cid <.> extStepType <+> envVar <+> parens (varp <+> stateVar) <+> parens (varp <+> stateVar') ]
           , [ addrField <+> stateVar <+> "=" <+> addrField <+> stateVar' ]
           , (\var' -> parens (T.pack var' <+> stateVar) <+> "=" <+> parens (T.pack var' <+> stateVar')) <$> (filter (var /=) $ M.keys localStore)
           , [ "integerBounds" <+> stateVar ]
           , (M.elems $ M.mapMaybeWithKey (subBounds var) localStore)
-          , [ extStepType <+> envVar <+> stateVar <+> envVar' <+> stateVar' ]
+          , [ extStepType <+> nextAddrVar <+> nextAddrVar' <+> envVar <+> stateVar <+> stateVar' ]
           ]
     substep _ _ = Nothing
 
     subBounds :: Id -> Id -> (ValueType, Integer) -> Maybe T.Text
     subBounds stepVar var (ValueType (TContract cid), _) | var /= stepVar = Just $ T.pack cid <.> "integerBoundsRec" <+> parens (T.pack var <+> stateVar)
     subBounds _ _ _ = Nothing
-      
+
 
 
 step :: T.Text
 step =
   definition stepType (stateDecl <+> stateDecl') $
-    "exists" <+> envDecl <+> envDecl' <> "," <+> extStepType <+> envVar <+> stateVar <+> envVar' <+> stateVar'
+    "exists" <+> nextAddrDecl <+> nextAddrDecl' <+> envDecl <> "," <+> extStepType <+> nextAddrVar <+> nextAddrVar' <+> envVar <+> stateVar <+> stateVar'
 
 stepBefore :: T.Text
 stepBefore =
-  definition stepBeforeType (envDecl'' <+> stateDecl <+> stateDecl') $
-    "exists" <+> envDecl <+> envDecl' <> "," <+> extStepType <+> envVar <+> stateVar <+> envVar' <+> stateVar'
-    <+> "/\\" <+> "NextAddr" <+> envVar' <+> "<=" <+> "NextAddr" <+> "ENV''"
+  definition stepBeforeType (boundDecl <+> stateDecl <+> stateDecl') $
+    "exists" <+> nextAddrDecl <+> nextAddrDecl' <+> envDecl <> "," <+> extStepType <+> nextAddrVar <+> nextAddrVar' <+> envVar <+> stateVar <+> stateVar'
+    <+> "/\\" <+> nextAddrVar' <+> "<=" <+> boundVar
 
 
 combine :: [a] -> [(a,a)]
@@ -429,8 +445,8 @@ intBoundsRec name store = inductive
 interfaceStateVarsConstraints :: Interface -> [T.Text]
 interfaceStateVarsConstraints (Interface _ decls) = concatMap go decls
   where go (Arg (ContractArg _ cid) v) =
-          [ T.pack cid <.> nextAddrConstraintType <+> envVar <+> T.pack v
-          , T.pack cid <.> reachableBeforeType <+> envVar <+> T.pack v ]
+          [ T.pack cid <.> nextAddrConstraintType <+> nextAddrVar <+> T.pack v
+          , T.pack cid <.> reachableBeforeType <+> nextAddrVar <+> T.pack v ]
         go _ = []
 
 -- | definition of reachable states
@@ -446,9 +462,9 @@ reachableBefore :: T.Text
 reachableBefore = definition
   reachableBeforeType args value
   where
-    args = envDecl' <+> stateDecl --parens $ stateVar <+> ":" <+> stateType
-    value = "exists" <+> stateVar' <> "," <+> initStateBeforeType <+> envVar' <+> stateVar'
-      <+> "/\\" <+> multistepBeforeType <+> envVar' <+> stateVar' <+> stateVar
+    args = boundDecl <+> stateDecl
+    value = "exists" <+> stateVar' <> "," <+> initStateBeforeType <+> boundVar <+> stateVar'
+      <+> "/\\" <+> multistepBeforeType <+> boundVar <+> stateVar' <+> stateVar
 
 -- | specialization of generic multistep
 multistep :: T.Text
@@ -462,19 +478,19 @@ multistepBefore :: T.Text
 multistepBefore = definition
   multistepBeforeType args value
   where
-    args = envDecl' <+> stateDecl <+> stateDecl' -- parens $ stateVar <+> stateVar' <+> ":" <+> stateType
-    value = "ActLib" <.> multistepType <+> parens (stepBeforeType <+> envVar') <+> stateVar <+> stateVar'
+    args = boundDecl <+> stateDecl <+> stateDecl'
+    value = "ActLib" <.> multistepType <+> parens (stepBeforeType <+> boundVar) <+> stateVar <+> stateVar'
 
 -- | definition of reachable states from initial constructor parameters
 reachableFromInit :: Constructor -> T.Text
-reachableFromInit (Constructor name i _ _ _ _ ) = definition
+reachableFromInit (Constructor name i _ _ _ _ _ ) = definition
   reachableFromInitType args value
   where
-    args = envDecl <+> interface i <+> stateDecl
-    value = initPrecsType <+>
-      envVar <+> arguments i <+> "/\\"
-      <+> "This" <+> envVar <+> "=" <+> parens (addrField <+> parens ("snd" <+> parens (T.pack name <+> envVar <+> arguments i))) <+> "/\\"
-      <+> multistepType <+> parens ("snd" <+> parens (T.pack name <+> envVar <+> arguments i)) <+> stateVar
+    args = nextAddrDecl <+> envDecl <+> interface i <+> stateDecl
+    value = initPrecsType
+      <+> nextAddrVar <+> envVar <+> arguments i <+> "/\\"
+      <+> "This" <+> envVar <+> "=" <+> parens (addrField <+> parens ("snd" <+> parens (T.pack name <+> nextAddrVar <+> envVar <+> arguments i))) <+> "/\\"
+      <+> multistepType <+> parens ("snd" <+> parens (T.pack name <+> nextAddrVar <+> envVar <+> arguments i)) <+> stateVar
 
 
 
@@ -483,15 +499,15 @@ reachableFromInit (Constructor name i _ _ _ _ ) = definition
 -- | definition of a base state
 base :: StorageTyping -> Id -> Interface -> [StorageUpdate] -> T.Text
 base store name i updates =
-  let (s, bindings, finalI) = stateval True store name (\_ t -> defaultVal t) updates
-  in
-  definition (T.pack name) (envDecl <+> interface i)
-  (foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple (iEnv $ finalI + 1) s) bindings)
+  let (s, bindings, finalI) = stateval True store name (\_ t -> defaultVal t) updates in
+  definition (T.pack name) (nextAddrDecl <+> envDecl <+> interface i)
+    (foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple (iNextAddr finalI) s) bindings)
 
 transition :: StorageTyping -> Id -> Id -> Interface -> [StorageUpdate] -> T.Text
-transition store name cname i rewrites = do
-  let (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) rewrites
-  definition (T.pack name) (envDecl <+> stateDecl <+> interface i) $ foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple (iEnv finalI) s) bindings
+transition store name cname i rewrites =
+  let (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) rewrites in
+  definition (T.pack name) (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i)
+    (foldr (\a s' -> "let" <+> a <+> "in\n" <> s') (tuple (iNextAddr finalI) s) bindings)
 
 -- | inductive definition of a return claim
 -- ignores claims that do not specify a return value
@@ -501,21 +517,21 @@ retVal name i (caseCond, (_, Just ret)) = do
   --fresh name >>= continuation where
   return $ inductive
     (name' <> returnSuffix)
-    (envDecl <+> stateDecl <+> interface i)
+    (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i)
     (returnType ret <> " -> Prop")
     [(retname name' <> introSuffix, Nothing, body name')]
   where
     retname n = n <> returnSuffix
     body n = indent 2 . implication . concat $
-      [ [n <> "_conds" <+> envVar <+> arguments i <+> stateVar]
+      [ [n <> "_conds" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i]
       , [coqprop caseCond]
-      , [retname n <+> envVar <+> stateVar <+> arguments i <+> typedexp ret]
+      , [retname n <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i <+> typedexp ret]
       ]
 retVal _ _ _ = return ""
 
 -- | Definition of postcondition claim for constructor
 postCondConstr :: Constructor -> [T.Text]
-postCondConstr (Constructor cname iface _ _ postcs _) = evalSeq (go cname iface) postcs
+postCondConstr (Constructor cname iface _ _ _ postcs _) = evalSeq (go cname iface) postcs
   where
   go :: Id -> Interface -> Exp ABoolean -> Fresh T.Text
   go name i postc = do
@@ -523,17 +539,17 @@ postCondConstr (Constructor cname iface _ _ postcs _) = evalSeq (go cname iface)
     return $ definition postName "" body
     where
       body = indent 2 $ T.unlines
-        [ forAll $ envDecl <+> interface i <+> stateDecl'
+        [ forAll $ nextAddrDecl <+> envDecl <+> stateDecl' <+> interface i
         , implication . concat $
-          [ [initPrecsType <+> envVar <+> arguments i]
-          , [stateVar' <+> "=" <+> "snd" <+> parens (T.pack name <+> envVar <+> arguments i)]
+          [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
+          , [stateVar' <+> "=" <+> "snd" <+> parens (T.pack name <+> nextAddrVar <+> envVar <+> arguments i)]
           , [coqprop postc]
           ]
         ]
 
 -- | Definition of postcondition claim for behaviour cases
 postCondBehv :: Behaviour -> [T.Text]
-postCondBehv (Behaviour bname _ iface _ _ postcs) = evalSeq (go bname iface) postcs
+postCondBehv (Behaviour bname _ iface _ _ _ postcs) = evalSeq (go bname iface) postcs
   where
   go :: Id -> Interface -> Exp ABoolean -> Fresh T.Text
   go name i postc = do
@@ -541,11 +557,11 @@ postCondBehv (Behaviour bname _ iface _ _ postcs) = evalSeq (go bname iface) pos
     return $ definition postName "" (body postName)
     where
       body n = indent 2 $ T.unlines
-        [ forAll $ envDecl <+> stateDecl <+> stateDecl' <+> interface i
+        [ forAll $ nextAddrDecl <+> envDecl <+> stateDecl <+> stateDecl' <+> interface i
         , implication . concat $
-          [ [n <> "_conds" <+> envVar <+> arguments i <+> stateVar]
+          [ [n <> "_conds" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i]
           , [reachableType <+> stateVar]
-          , [stateVar' <+> "=" <+> "snd" <+> parens (n <+> envVar <+> stateVar <+> arguments i)]
+          , [stateVar' <+> "=" <+> "snd" <+> parens (n <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i)]
           , [coqprop postc]
           ]
         ]
@@ -554,7 +570,7 @@ postCondBehv (Behaviour bname _ iface _ _ postcs) = evalSeq (go bname iface) pos
 invariants :: Interface -> [Invariant] -> T.Text
 invariants _ [] = ""
 invariants i invs =
-  definition "invariants" (envDecl <+> interface i <+> stateDecl) $ indent 2 . conjuction $ invariantProp <$> invs
+  definition "invariants" (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i) $ indent 2 . conjuction $ invariantProp <$> invs
   where
     invariantProp :: Invariant -> T.Text
     invariantProp (Invariant _ _ _ (PredTimed p _)) = coqprop p
@@ -562,54 +578,54 @@ invariants i invs =
 
 -- | Definition of invariant claim at constructor poststate
 invariantInit :: Constructor -> T.Text
-invariantInit (Constructor name i _ _ _ _) =
+invariantInit (Constructor name i _ _ _ _ _) =
   definition invInitType (invPropDecl i) claim
   where
     claim = indent 2 $ T.unlines
-      [ forAll $ envDecl <+> interface i
+      [ forAll $ nextAddrDecl <+> envDecl <+> interface i
       , implication . concat $
-        [ [initPrecsType <+> envVar <+> arguments i]
-        , [invPropVar <+> envVar <+> arguments i <+> parens ("snd" <+> parens (T.pack name <+> envVar <+> arguments i))]
+        [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
+        , [invPropVar <+> nextAddrVar <+> envVar <+> arguments i <+> parens ("snd" <+> parens (T.pack name <+> nextAddrVar <+> envVar <+> arguments i))]
         ]
       ]
 
 -- | Definition of invariant claim for behaviour cases
 invariantStep :: Constructor -> T.Text
-invariantStep (Constructor _ i _ _ _ _) =
+invariantStep (Constructor _ i _ _ _ _ _) =
   definition invStepType (invPropDecl i) claim
   where
     claim = indent 2 $ T.unlines
-      [ forAll $ envDecl <+> interface i <+> stateDecl <+> stateDecl'
+      [ forAll $ nextAddrDecl <+> envDecl <+> stateDecl <+> stateDecl' <+> interface i
       , implication . concat $
-        [ [initPrecsType <+> envVar <+> arguments i]
+        [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
         , [stepType <+> stateVar <+> stateVar']
-        , [invPropVar <+> envVar <+> arguments i <+> stateVar]
-        , [invPropVar <+> envVar <+> arguments i <+> stateVar']
+        , [invPropVar <+> nextAddrVar <+> envVar <+> arguments i <+> stateVar]
+        , [invPropVar <+> nextAddrVar <+> envVar <+> arguments i <+> stateVar']
         ]
       ]
 
 -- | Lemma extending invariant properties' hold to reachable states,
 -- given proof of init and step invariance
 invariantReachable :: Constructor -> T.Text
-invariantReachable (Constructor _ i _ _ _ _) =
+invariantReachable (Constructor _ i _ _ _ _ _) =
   lemma invReachType "" claim proof
   where
     claim = indent 2 $ T.unlines
-      [ forAll (envDecl <+> interface i <+> stateDecl <+> invPropDecl i
+      [ forAll (nextAddrDecl <+> envDecl <+> stateDecl <+> invPropDecl i <+> interface i
         <+> parens ("HIPinvInit :" <+> invInitType <+> invPropVar) <+> parens ("HIPinvStep :" <+> invStepType <+> invPropVar))
       , implication . concat $
-        [ [reachableFromInitType <+> envVar <+> arguments i <+> stateDecl]
-        , [invPropVar <+> envVar <+> arguments i <+> stateVar]
+        [ [reachableFromInitType <+> nextAddrVar <+> envVar <+> arguments i <+> stateDecl]
+        , [invPropVar <+> nextAddrVar <+> envVar <+> arguments i <+> stateVar]
         ]
       ]
     proof = T.unlines $
       [
         "Proof."
       , indent 2 . T.unlines $
-        [ "intros" <+> envVar <+> arguments i <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach."
+        [ "intros" <+> nextAddrVar <+> envVar <+> stateVar <+> invPropVar <+> arguments i <+> "HIPinvInit HIPinvStep Hreach."
         , "unfold reachableFromInit in Hreach."
         , "destruct Hreach as [Hinit [HenvThis Hmulti]]."
-        , "apply step_multi_step with (P := fun s s' =>" <+> invPropVar <+> envVar <+> arguments i <+> "s ->" <+> invPropVar <+> envVar <+> arguments i <+> "s' ) in Hmulti."
+        , "apply step_multi_step with (P := fun s s' =>" <+> invPropVar <+> nextAddrVar <+> envVar <+> arguments i <+> "s ->" <+> invPropVar <+> nextAddrVar <+> envVar <+> arguments i <+> "s' ) in Hmulti."
         , "- apply Hmulti."
         , "  apply HIPinvInit; assumption."
         , "- intros s s' Hstep."
@@ -627,19 +643,21 @@ invariantReachable (Constructor _ i _ _ _ _) =
 
 -- | produce a state value from a list of storage updates
 -- 'handler' defines what to do in cases where a given name isn't updated
+-- TODO Lefteris: the order of `NextAddr`'s increments will follow the order in which the storage slots are stored in `StorageTyping`,
+-- which is alphabetical since it is a mapping keyed on names. This is a divergance from the formalization, where increments follow the order
+-- in which the the storage variables are defined. Not really important as addresses currently cannot be compared (right?), but fix at some point.
 stateval :: Bool -> StorageTyping -> Id -> (Ref LHS -> ValueType -> T.Text) -> [StorageUpdate] -> (T.Text, [T.Text], Int)
 stateval ctor store contract handler updates =
-  let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar store updates handler (SVar nowhere Pre contract n) t) (M.toList store')
+  let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar store updates handler (SVar nowhere Pre contract n) t) (M.toList store') (if ctor then 1 else 0)
       (vals, bindings) = unzip texts
       bindings' = concat bindings
       finalBindings = if ctor then env1Binding : bindings' else bindings'
-      env1Binding = iEnv 1 <+> ":=" <+> "NextEnv" <+> envVar
+      env1Binding = iNextAddr 1 <+> ":=" <+> "NextAddr + 1"
   in
   (T.unwords $ stateConstructor : addr : vals, finalBindings, finalI)
   where
-    addr = if ctor then parens ("NextAddr" <+> envVar) else parens (T.pack contract <.> addrField <+> stateVar)
+    addr = if ctor then "NextAddr" else parens (T.pack contract <.> addrField <+> stateVar)
     store' = contractStore contract store
- -- let bindings = snoc (concat argBindings) (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <.> T.pack cid <+> iEnv i <+> T.unwords args')
 
 
 contractStore :: Id -> StorageTyping -> Map Id (ValueType, Integer)
@@ -666,20 +684,22 @@ iState :: Int -> T.Text
 iState 0 = "STATE"
 iState i = "STATE" <> T.pack (show i)
 
-iEnv :: Int -> T.Text
-iEnv 0 = "ENV"
-iEnv i = "ENV" <> T.pack (show i)
+iNextAddr :: Int -> T.Text
+iNextAddr 0 = "NextAddr"
+iNextAddr i = "NextAddr" <> T.pack (show i)
 
 updateExp :: Exp a -> Fresh (T.Text, [T.Text])
-updateExp (Create _ cid args _) = do
+updateExp (Create _ cid args payment) = do
+  let paymentExp = maybe "0" coqexp payment
   (args', argBindings) <- unzip <$> mapM updateExpTyped args
   i <- getIncr
-  let bindings = snoc (concat argBindings) (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <.> T.pack cid <+> iEnv i <+> T.unwords args')
+  let bindings = snoc (concat argBindings) (tuple (iNextAddr (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <.> T.pack cid <> "call" <+> iNextAddr i <+> parens ("CallEnv" <+> paymentExp <+> ("This ENV")) <+> T.unwords args')
   pure (iState (i+1), bindings)
-updateExp (Address _ (Create _ cid args _)) = do
+updateExp (Address _ (Create _ cid args payment)) = do
+  let paymentExp = maybe "0" coqexp payment
   (args', argBindings) <- unzip <$> mapM updateExpTyped args
   i <- getIncr
-  let bindings = snoc (concat argBindings) (tuple (iEnv (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <.> T.pack cid <+> iEnv i <+> T.unwords args')
+  let bindings = snoc (concat argBindings) (tuple (iNextAddr (i+1)) (iState (i+1)) <+> ":=" <+> T.pack cid <.> T.pack cid <> "call" <+> iNextAddr i <+> parens ("CallEnv" <+> paymentExp <+> ("This ENV")) <+> T.unwords args')
   pure (parens $ T.pack cid <.> addrField <+> iState (i+1), bindings)
 updateExp e = pure (coqexp e, [])
 
@@ -691,16 +711,21 @@ unField rFocus (RField pn r cid x) | r == rFocus = SVar pn Pre cid x --TODO: Thi
 unField rFocus (RField pn r cid x) = RField pn (unField rFocus r) cid x
 unField _ r' = r'
 
+-- Returns the value of the state after all updates, as well as the relevant let-bindings for said state value
 updateVar :: StorageTyping -> [StorageUpdate] -> (Ref LHS -> ValueType -> T.Text) -> Ref LHS -> ValueType -> Fresh (T.Text, [T.Text])
 updateVar store updates handler focus t@(ValueType (TContract cid)) =
   case unsnoc groupedUpdates of
+    -- No update to relevant slot
     Nothing -> pure (handler focus t, [])
+    -- Update of only the base slot, not any of the contract fields
     Just (_, (firstU@(Update _ _ e) NE.:| [])) | eqRef focus firstU->
       updateExp e
+    -- Updates to the base slot and to the contracts fields
     Just (_, (firstU@(Update _ _ e) NE.:| nextUpdates)) | eqRef focus firstU-> do
       (newState, bindings) <- updateExp e
       (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store nextUpdates (\r _ -> refState newState $ unField focus r) (focus' n) t') (M.toList store')
       pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> newState) : t', bindings ++ concat bindings')
+    -- Updates only to the files of the contract
     Just (_, fieldUpdates) -> do
       (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
       pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> refState stateVar focus) : t', concat bindings')
@@ -752,7 +777,7 @@ arguments (Interface _ decls) =
 -- | coq syntax for a value type
 valueType :: ValueType -> T.Text
 valueType (ValueType (TContract cid)) = T.pack cid <> "." <> "State" -- the type of a contract is its state record
-valueType (ValueType (TMapping k t)) = valueType k <+> "->" <+> valueType t 
+valueType (ValueType (TMapping k t)) = valueType k <+> "->" <+> valueType t
 valueType (ValueType t) = abiType $ toAbiType t
 
 unfoldMappingType :: TValueType AMapping -> ([ValueType], ValueType)
@@ -869,7 +894,7 @@ mappingExp e _ = coqexp e
 
 mappingElem :: Int -> TValueType a -> (Exp a, Exp b) -> T.Text -> T.Text
 mappingElem level keyType (key, ve) elseText =
-  "if" <+> boolScope (parens (anon <> T.pack (show level)) <+> eqsym keyType <+> coqexp key) <+> 
+  "if" <+> boolScope (parens (anon <> T.pack (show level)) <+> eqsym keyType <+> coqexp key) <+>
   "then" <+> mappingExp ve (level + 1) <+>
   "else" <+> elseText
 
@@ -934,13 +959,13 @@ freshId :: Id -> Fresh Id
 freshId name = state $ \s -> (name <> show s, s + 1)
 
 getIncr :: Fresh Int
-getIncr = state $ \s -> (s + 1, s + 1)
+getIncr = state $ \s -> (s, s + 1)
 
 evalSeq :: Traversable t => (a -> Fresh b) -> t a -> t b
 evalSeq f xs = evalState (sequence (f <$> xs)) 0
 
-runSeq :: Traversable t => (a -> Fresh b) -> t a -> (t b, Int)
-runSeq f xs = runState (sequence (f <$> xs)) 0
+runSeq :: Traversable t => (a -> Fresh b) -> t a -> Int -> (t b, Int)
+runSeq f xs iInit = runState (sequence (f <$> xs)) iInit
 
 --- text manipulation ---
 
@@ -1131,6 +1156,21 @@ reachableFromInitType = "reachableFromInit"
 reachStep:: T.Text
 reachStep= "reach_step"
 
+nextAddrType :: T.Text
+nextAddrType = "Z"
+
+nextAddrVar :: T.Text
+nextAddrVar = "NextAddr"
+
+nextAddrDecl :: T.Text
+nextAddrDecl = parens $ nextAddrVar <+> ":" <+> nextAddrType
+
+nextAddrVar' :: T.Text
+nextAddrVar' = "NextAddr"
+
+nextAddrDecl' :: T.Text
+nextAddrDecl' = parens $ nextAddrVar' <+> ":" <+> nextAddrType
+
 envType :: T.Text
 envType = "Env"
 
@@ -1146,8 +1186,15 @@ envDecl = parens $ envVar <+> ":" <+> envType
 envDecl' :: T.Text
 envDecl' = parens $ envVar' <+> ":" <+> envType
 
-envDecl'' :: T.Text
-envDecl'' = parens $ "ENV''" <+> ":" <+> envType
+boundType :: T.Text
+boundType = "Z"
+
+boundVar :: T.Text
+boundVar = "BOUND"
+
+boundDecl :: T.Text
+boundDecl = parens $ boundVar <+> ":" <+> boundType
+
 
 anon :: T.Text
 anon = "_binding_"

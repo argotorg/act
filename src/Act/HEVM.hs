@@ -43,6 +43,7 @@ import Act.Syntax
 import Act.Error
 import qualified Act.Syntax.Typed as TA
 import Act.Syntax.Timing
+import Act.Bounds
 
 import EVM.ABI (Sig(..))
 import qualified EVM hiding (bytecode)
@@ -186,7 +187,7 @@ getCaller = do
 
 storageBounds :: forall m . Monad m => ContractMap -> [TypedRef] -> ActT m [EVM.Prop]
 storageBounds contractMap locs = do
-  mapM (toProp contractMap) $ mkLocationBounds $ filter (Prelude.not . locInCalldata) locs
+  mapM (toProp contractMap) $ mkRefsBounds $ filter (Prelude.not . locInCalldata) locs
   where
     locInCalldata :: TypedRef -> Bool
     locInCalldata (TRef _ _ ref) = refInCalldata ref
@@ -199,13 +200,13 @@ storageBounds contractMap locs = do
     refInCalldata (RField _ _ _ _) = False
 
 translateConstructor :: Monad m => BS.ByteString -> Constructor -> ContractMap -> ActT m ([(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])
-translateConstructor bytecode (Constructor cid iface preconds cases _ _) cmap = do
+translateConstructor bytecode (Constructor cid iface _ preconds cases _ _) cmap = do
   let initmap = M.insert initAddr (initcontract, cid) cmap
   -- After `addBounds`, `preconds` contains all integer locations that have been constrained in the Act spec.
   -- All must be enforced again to avoid discrepancies. Necessary for Vyper.
   -- Note that since all locations are already in `preconds`,
   -- there is no need to look at other fields.
-  bounds <- storageBounds cmap $ nub $ concatMap locsFromExp preconds
+  bounds <- storageBounds cmap $ nub $ concatMap locsFromConstrCase cases <> concatMap locsFromExp preconds
   ends <- mapM (translateConstructorCase bytecode initmap (snd calldata) bounds preconds) cases
   pure (ends, calldata, ifaceToSig iface, bounds)
   where
@@ -257,14 +258,14 @@ ifaceToSig (Interface name args) = Sig (T.pack name) (fmap fromdecl args)
     fromdecl (Arg argtype _) = argToAbiType argtype
 
 translateBehv :: Monad m => ContractMap -> Behaviour -> ActT m (Id, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])
-translateBehv cmap (Behaviour behvName _ iface preconds cases _)  = do
+translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
   -- We collect all integer bounds from all cases of a given behaviour.
   -- These bounds are set as preconditions for all cases of a behaviour,
   -- even if some are not necessary for all cases, because the input space
   -- must be compared against that of the symbolic execution. On that side,
   -- it is not possible to distinguish between cases, so we make no distinction
   -- here either.
-  bounds <- storageBounds cmap $ nub $ concatMap locsFromCaseUpdatesRet cases
+  bounds <- storageBounds cmap $ nub $ concatMap locsFromCase cases <> concatMap locsFromExp preconds
   ends <- mapM (translateBehvCase cmap (snd behvCalldata) bounds preconds) cases
   pure (behvName, ends, behvCalldata, behvSig, bounds)
   where
@@ -366,7 +367,7 @@ createContract readMap writeMap freshAddr (Create _ cid args _) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
     -- TODO: handle multiple cases
-    Just (Contract (Constructor _ iface _ ((_, upds):_) _ _) _, _, bytecode) -> do
+    Just (Contract (Constructor _ iface _ _ ((_, upds):_) _ _) _, _, bytecode) -> do
       let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                            , EVM.storage = EVM.ConcreteStore mempty
                            , EVM.tStorage = EVM.ConcreteStore mempty
@@ -834,7 +835,7 @@ getInitContractState solvers iface preconds cmap = do
       codemap <- getCodemap
       case M.lookup cid codemap of
         -- TODO: handle multiple cases
-        Just (Contract (Constructor _ iface' preconds' ((_,upds):_) _ _) _, _, bytecode) -> do
+        Just (Contract (Constructor _ iface' _ preconds' ((_,upds):_) _ _) _, _, bytecode) -> do
           (icmap, check) <- getInitContractState solvers iface' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty
@@ -845,7 +846,7 @@ getInitContractState solvers iface preconds cmap = do
           let icmap' = M.insert addr (contract, cid) icmap
           cmap' <- localCaddr addr $ applyUpdates icmap' icmap' upds
           pure (abstractCmap addr cmap', check)
-        Just (Contract (Constructor _ _ _ [] _ _) _, _, _) ->
+        Just (Contract (Constructor _ _ _ _ [] _ _) _, _, _) ->
           error $ "Internal error: Contract " <> cid <> " has no cases from which to form init map\n" <> show codemap
         Nothing -> error $ "Internal error: Contract " <> cid <> " not found\n" <> show codemap
     getContractState [] = error "Internal error: Cast cannot be empty"
@@ -889,7 +890,7 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface _ preconds _ _ _)  _) = do
   -- Construct the initial contract state
   (actinitmap, checks) <- getInitContractState solvers iface preconds M.empty
   let hevminitmap = translateCmap actinitmap
@@ -1112,7 +1113,7 @@ checkAbi solver contract cmap = do
   checkResult (txdata, []) Nothing (fmap (toVRes msg) res)
 
   where
-    actSig (Behaviour _ _ iface _ _ _) = T.pack $ makeIface iface
+    actSig (Behaviour _ _ iface _ _ _ _) = T.pack $ makeIface iface
     actSigs (Contract _ behvs) = actSig <$> behvs
 
     checkBehv :: [EVM.Prop] -> EVM.Expr EVM.End -> [EVM.Prop]

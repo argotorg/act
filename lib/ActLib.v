@@ -12,33 +12,13 @@ Record Env : Set :=
   { Callvalue : Z;
     Caller : address;
     This : address;
-    Blockhash : Z;
-    Blocknumber : Z;
-    Difficulty : Z;
-    Timestamp : Z;
-    Gaslimit : Z;
-    Coinbase : address;
-    Chainid : Z;
-    Origin : address;
-    Nonce : Z;
-    Calldepth : Z;
-    NextAddr : address }.
+    Origin : address }.
 
-Definition NextEnv (ENV : Env) : Env :=
-  {| Callvalue := Callvalue ENV;
-     Caller := Caller ENV;
+Definition CallEnv (value : Z) (caller : address) (ENV : Env) : Env :=
+  {| Callvalue := value;
+     Caller := caller;
      This := This ENV;
-     Blockhash := Blockhash ENV;
-     Blocknumber := Blocknumber ENV;
-     Difficulty := Difficulty ENV;
-     Timestamp := Timestamp ENV;
-     Gaslimit := Gaslimit ENV;
-     Coinbase := Coinbase ENV;
-     Chainid := Chainid ENV;
-     Origin := Origin ENV;
-     Nonce := Nonce ENV;
-     Calldepth := Calldepth ENV;
-     NextAddr := (NextAddr ENV + 1)%Z |}.
+     Origin := Origin ENV |}.
 
 
 (** * integer bounds *)
