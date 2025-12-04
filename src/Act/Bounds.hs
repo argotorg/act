@@ -31,7 +31,7 @@ addBounds (Act store contracts) = Act store (addBoundsContract <$> contracts)
 -- | Adds type bounds for calldata, environment vars, and external storage vars
 -- as preconditions
 addBoundsConstructor :: Constructor -> Constructor
-addBoundsConstructor ctor@(Constructor _ (Interface _ decls) pre cases _ invs) =
+addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre cases _ invs) =
   ctor { _cpreconditions = pre'
        , _invariants = invs' }
     where
@@ -51,7 +51,7 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) pre cases _ invs) =
 
 -- | Adds type bounds for calldata, environment vars, and storage vars as preconditions
 addBoundsBehaviour :: Behaviour -> Behaviour
-addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) pre cases _) =
+addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases _) =
   behv { _preconditions = pre' }
     where
       pre' = nub $ pre
@@ -64,7 +64,7 @@ addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) pre cases _) =
 
 -- | Adds type bounds for calldata, environment vars, and storage vars
 addBoundsInvariant :: Constructor -> Invariant -> Invariant
-addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
+addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ _) inv@(Invariant _ preconds storagebounds (PredTimed predicate _)) =
   inv { _ipreconditions = preconds', _istoragebounds = storagebounds' }
     where
       preconds' = nub $ preconds
