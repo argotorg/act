@@ -54,6 +54,9 @@ emptyEnv = Env
   }
 
 -- | Functions to manipulate environments
+addContractName :: Id -> Env -> Env
+addContractName cid env = env{ contract = cid }
+
 addCalldata :: [Arg] -> Env -> Env
 addCalldata decls env = env{ calldata = abiVars }
   where
@@ -99,19 +102,28 @@ checkContracts' cs = first storage <$> checkContracts emptyEnv cs
 
 checkContracts :: Env -> [U.Contract] -> Err (Env, [Contract])
 checkContracts env [] = pure (env, [])
-checkContracts env ((U.Contract cnstr behvs):cs) =
-    checkConstructor env cnstr `bindValidation` \(constr', env') -> do
-    behvs' <- checkBehaviours env' behvs
-    (env'', cs') <- checkContracts env' cs
-    pure (env'', Contract constr' behvs' : cs')
+checkContracts env ((U.Contract p cid cnstr behvs):cs) =
+    -- check that the constructor name is not already defined
+    checkContrName cid env *>
+    let env' = addContractName cid env in
+    -- Check constructor
+    checkConstructor env' cid cnstr `bindValidation` \(constr', env'') -> do
+    -- Check behaviors
+    behvs' <- checkBehaviours env'' behvs
+    (env''', cs') <- checkContracts env'' cs
+    pure (env''', Contract constr' behvs' : cs')
     
+    where
+        checkContrName :: Id -> Env -> Err ()
+        checkContrName cid Env{constructors} =
+            case Map.lookup cid constructors of
+                Just _ -> throw (p, "Constructor " <> cid <> " is already defined")
+                Nothing -> pure ()
 
-checkConstructor :: Env -> U.Constructor -> Err (Constructor, Env)
-checkConstructor env (U.Constructor posn cid (Interface _ params) payable iffs cases posts invs) =
+checkConstructor :: Env -> Id -> U.Constructor -> Err (Constructor, Env)
+checkConstructor env cid (U.Constructor posn (Interface p params) payable iffs cases posts invs) =
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
-    -- check that the constructor name is not already defined
-    checkConstrName cid env *>
     -- check preconditions
     (unzip <$> traverse (checkExpr env' U TBoolean) iffs) `bindValidation` \(iffs', cnstr1) ->
     -- check postconditions
@@ -122,16 +134,10 @@ checkConstructor env (U.Constructor posn cid (Interface _ params) payable iffs c
     -- check postconditions
     ensures <- fst . unzip <$> traverse (checkExpr env''' U TBoolean) posts
     -- return the constructor and the new environment
-    pure (Constructor cid (Interface cid params) payable iffs' cases' ensures [], clearLocalEnv env''')         
+    pure (Constructor cid (Interface p params) payable iffs' cases' ensures [], clearLocalEnv env''')         
     where
         env' = addCalldata params env
 
-        checkConstrName :: Id -> Env -> Err ()
-        checkConstrName cid Env{constructors} =
-            case Map.lookup cid constructors of
-                Just _ -> throw (posn, "Constructor " <> cid <> " is already defined")
-                Nothing -> pure ()
-        
         argTypes :: [ArgType]
         argTypes = map (\(Arg typ _) -> typ) params
 
@@ -199,7 +205,7 @@ checkBehaviours env (b:bs) = do
 
 
 checkBehaviour :: Env -> U.Transition -> Err Behaviour
-checkBehaviour env@Env{contract} (U.Transition posn name _ iface@(Interface _ params) payable iffs cases posts) = do
+checkBehaviour env@Env{contract} (U.Transition posn name iface@(Interface p params) payable rettype iffs cases posts) = do
     -- check that parameter types are valid
     traverse_ (checkParams env) params
     -- add parameters to environment
@@ -208,25 +214,30 @@ checkBehaviour env@Env{contract} (U.Transition posn name _ iface@(Interface _ pa
     iffs' <- fst . unzip <$> traverse (checkExpr env' U TBoolean) iffs
     -- TODO check case consistency
     -- check cases
-    cases' <- fst . unzip <$> traverse (checkBehvCase env') cases
+    cases' <- fst . unzip <$> traverse (checkBehvCase env' (argToValueType <$> rettype)) cases
     -- check postconditions
     ensures <- fst . unzip <$> traverse (checkExpr env' T TBoolean) posts
     -- return the behaviour
     pure $ Behaviour name contract iface payable iffs' cases' ensures
 
 
-checkBehvCase :: Env -> U.Case (U.StorageUpdates, Maybe U.Expr)
-              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Untimed))), [(Exp ABoolean Untimed, [Constraint Untimed])])
-checkBehvCase env (U.Case p cond (updates, mret)) = 
+checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)
+              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Untimed))), [Constraint Untimed])
+checkBehvCase env rettype (U.Case p cond (updates, mret)) = 
     checkExpr env U TBoolean cond `bindValidation` \(cond', cnstr1) ->
     let env' = addPreconds [cond'] env in
     (unzip <$> traverse (checkStorageUpdate env') updates) `bindValidation` \(tupdates, cnstr2) -> do
     checkOrderedUpdates tupdates 
-    res <- traverse (inferExpr env' U) mret
+    res <- case (rettype, mret) of
+        (Nothing, Nothing) -> pure Nothing
+        (Just (ValueType t), Just e)  ->  Just . first (TExp t) <$> checkExpr env' U t e
+        (Nothing, Just _)  -> throw (p, "Behaviour does not return a value, but return expression provided")
+        (Just _, Nothing)  -> throw (p, "Behaviour must return a value, but no return expression provided")
+
     pure $ let (mret', cnstr3) = case res of
                   Just (e, cs) -> (Just e, cs)
                   Nothing -> (Nothing, [])
-            in ((cond', (tupdates, mret')), [(LitBool nowhere True, cnstr1), (cond', concat cnstr2 ++ cnstr3)])
+            in ((cond', (tupdates, mret')), cnstr1 ++ concat cnstr2 ++ cnstr3)
 
     where
         checkOrderedUpdates :: [StorageUpdate] -> Err ()
@@ -263,8 +274,38 @@ checkAssign env (U.StorageVar p (ValueType typ) var, expr) = do
       case Map.lookup c (storage env) of
         Just _ -> pure ()
         Nothing -> throw (p, "Contract " <> c <> " is not a valid contract type")
-    validSlotType _ _ _ = pure ()
+    validSlotType env p (TArray _ elemtyp) = validSlotType env p elemtyp
+    validSlotType env p (TMapping (ValueType keytyp) (ValueType val)) = 
+        assert (p, "Mapping key type must be a base type") (validKeyType keytyp) *>
+        assert (p, "Mapping value type cannot be a contract") (validValueType val) *>
+        validSlotType env p keytyp *>
+        validSlotType env p val
+    validSlotType _ _  TAddress = pure ()
+    validSlotType _ _ TBoolean = pure ()
+    validSlotType _ _ TByteStr = pure ()
+    validSlotType _ _ (TStruct _) = throw (p, "Struct types are not supported yet")
+    validSlotType _ _ TUnboundedInt = pure ()
 
+    validKeyType ::  TValueType a -> Bool
+    validKeyType TInteger{} = True
+    validKeyType TAddress = True
+    validKeyType TBoolean = True
+    validKeyType TByteStr = True
+    validKeyType TUnboundedInt = True
+    validKeyType _ = False
+
+    validValueType :: TValueType a -> Bool
+    validValueType TContract{} = False
+    validValueType TInteger{} = True
+    validValueType TAddress = True
+    validValueType TBoolean = True
+    validValueType TByteStr = True
+    validValueType TUnboundedInt = True
+    validValueType TArray{} = True
+    validValueType TMapping{} = True
+    validValueType (TStruct {}) = False    
+
+    
 checkStorageUpdate :: Env -> U.StorageUpdate -> Err (StorageUpdate, [Constraint Untimed])
 checkStorageUpdate env (U.Update ref expr) =
     checkRef env SLHS U ref `bindValidation` \(ValueType typ, tref, cnstr) ->
