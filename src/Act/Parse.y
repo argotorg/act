@@ -120,10 +120,10 @@ some examples:
 %nonassoc '[' ']' '.'
 
 -- boolean
-%nonassoc '=>'
+%nonassoc '==>'
 %left 'and' 'or'
 %nonassoc 'not'
-%left '==' '=/='
+%left '==' '!='
 %nonassoc '<=' '<' '>=' '>'
 
 -- numeric
