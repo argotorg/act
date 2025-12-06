@@ -88,14 +88,22 @@ isLocalRef (RArrIdx _ ref _ _) = isLocalRef ref
 isLocalRef (RMapIdx _ (TRef _ _ ref) _) = isLocalRef ref
 isLocalRef (RField _ _ _ _) = False
 
+isCalldata :: Ref k t -> Bool
+isCalldata (SVar _ _ _ _) = False
+isCalldata (CVar _ _ _) = True
+isCalldata (RArrIdx _ ref _ _) = isCalldata ref
+isCalldata (RMapIdx _ (TRef _ _ ref) _) = isCalldata ref
+isCalldata (RField _ r _ _) = isCalldata r
+
 -- Zoe: not sure what's the correct definition
--- partitionLocs :: [TypedRef t] -> ([TypedRef t], [TypedRef t])
--- partitionLocs locs = foldMap sepTRef locs
---   where
---     sepTRef :: TypedRef t -> ([TypedRef t], [TypedRef t])
---     sepTRef loc@(TRef _ SStorage _) = ([loc],[])
---     sepTRef loc@(TRef _ SCalldata _) = ([],[loc])
---
+-- Lefteris: may not be necessary but works for now
+partitionLocs :: [TypedRef t] -> ([TypedRef t], [TypedRef t])
+partitionLocs locs = foldMap sepTRef locs
+  where
+    sepTRef :: TypedRef t -> ([TypedRef t], [TypedRef t])
+    sepTRef tref@(TRef _ _ r) | isCalldata r = ([],[tref])
+    sepTRef tref@(TRef _ _ _) = ([tref],[])
+
 locsFromCaseUpdatesRet :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [TypedRef t]
 locsFromCaseUpdatesRet (_, (rewrites, mret)) = nub $
   concatMap locsFromUpdate rewrites <> maybe [] locsFromTypedExp mret
@@ -155,7 +163,7 @@ locsFromExp = nub . go
       Create _ _ es _ -> concatMap locsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
       VarRef _ vt a -> locsFromTRef (TRef vt SRHS a)
-      Address _ e' -> locsFromExp e'
+      Address _ _ e' -> locsFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
       Typed.MappingUpd _ r t1@VType t2@VType kvs -> 
         locsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SLHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
@@ -198,7 +206,7 @@ createsFromExp = nub . go
       Create _ f es _ -> [f] <> concatMap createsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
       VarRef _ vt a -> createsFromTRef (TRef vt SRHS a)
-      Address _ e' -> createsFromExp e'
+      Address _ _ e' -> createsFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
       Typed.MappingUpd _ r t1@VType t2@VType kvs ->
         createsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SLHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
@@ -236,7 +244,7 @@ createsFromUpdate :: StorageUpdate t ->[Id]
 createsFromUpdate update = nub $ case update of
   TypedExplicit.Update t ref e -> createsFromTRef (TRef t SLHS ref) <> createsFromExp e
 
-createsFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [Id]
+createsFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp Timed))) -> [Id]
 createsFromCase (cond, (rewrites, mret)) = nub $
   createsFromExp cond <> concatMap createsFromUpdate rewrites <> maybe [] createsFromTypedExp mret
 
@@ -263,7 +271,7 @@ pointerFromDecl :: Arg -> Maybe (Id, Id)
 pointerFromDecl (Arg (ContractArg _ c) name) = Just (name,c)
 pointerFromDecl _ = Nothing
 
-ethEnvFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [EthEnv]
+ethEnvFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp Timed))) -> [EthEnv]
 ethEnvFromCase (cond, (rewrites, mret)) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites <> maybe [] ethEnvFromTypedExp mret
 
@@ -340,7 +348,7 @@ ethEnvFromExp = nub . go
       ByEnv _ a -> [a]
       Create _ _ ixs _ -> concatMap ethEnvFromTypedExp ixs
       VarRef _ _ a -> concatMap ethEnvFromTypedExp (ixsFromRef a)
-      Address _ e' -> ethEnvFromExp e'
+      Address _ _ e' -> ethEnvFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
       Typed.MappingUpd _ r _ _ kvs -> concatMap ethEnvFromTypedExp (ixsFromRef r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
@@ -450,7 +458,7 @@ posnFromExp e = case e of
   NEq p _ _ _ -> p
   ITE p _ _ _ -> p
   VarRef p _ _ -> p
-  Address _ e' -> posnFromExp e'
+  Address _ _ e' -> posnFromExp e'
   Typed.Mapping p _ _ _ -> p
   Typed.MappingUpd p _ _ _ _ -> p
 
@@ -630,7 +638,7 @@ upperBound :: forall t. TValueType AInteger -> Exp AInteger t
 upperBound (TInteger n Unsigned) = UIntMax nowhere n
 upperBound (TInteger n Signed) = IntMax nowhere n
 upperBound TAddress   = UIntMax nowhere 160
-upperBound _ = error "upperBound: no upper bound defined for this type"
+upperBound t = error $ "upperBound: no upper bound defined for type" <> show t
 
 defaultInteger :: TValueType AInteger
 defaultInteger = TInteger 256 Signed

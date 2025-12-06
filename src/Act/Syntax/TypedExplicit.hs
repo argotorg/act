@@ -75,5 +75,5 @@ instance Annotatable Typed.StorageUpdate where
 annotateCCase :: (Typed.Exp ABoolean Untimed, [Typed.StorageUpdate Untimed]) -> (Typed.Exp ABoolean Timed, [Typed.StorageUpdate Timed])
 annotateCCase (cond, upds) = (setPre cond, annotate <$> upds)
 
-annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Untimed))) -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
-annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, setPre <$> ret))
+annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Timed))) -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
+annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, ret))

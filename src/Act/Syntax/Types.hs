@@ -68,6 +68,7 @@ instance TestEquality SType where
   testEquality SBoolean SBoolean = Just Refl
   testEquality SByteStr SByteStr = Just Refl
   testEquality SStruct  SStruct  = Just Refl
+  testEquality SMapping SMapping = Just Refl
   testEquality SContract SContract = Just Refl
   testEquality (SSArray a) (SSArray b) = (\Refl -> Just Refl) =<< testEquality a b
   testEquality _ _ = Nothing
@@ -86,7 +87,7 @@ data TValueType (a :: ActType) where
   TStruct        :: [ValueType] -> TValueType AStruct
   TArray         :: Int -> TValueType a -> TValueType (AArray a)
   TContract      :: Id -> TValueType AContract
-  TMapping  :: ValueType -> ValueType -> TValueType AMapping
+  TMapping       :: ValueType -> ValueType -> TValueType AMapping
 deriving instance Eq (TValueType a)
 deriving instance Show (TValueType a)
 

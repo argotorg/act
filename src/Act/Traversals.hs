@@ -142,9 +142,9 @@ mapExpM f = \case
   VarRef p t r -> do
     r' <- mapRefM f r
     f (VarRef p t r')
-  Address c x -> do
+  Address p c x -> do
     x' <- mapExpM f x
-    f (Address c x')
+    f (Address p c x')
   Mapping p kt vt kvs -> do
     kvs' <- mapM (\(k, v) -> do
       k' <- mapExpM f k

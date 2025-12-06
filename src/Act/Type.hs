@@ -86,6 +86,11 @@ data Constraint t =
   | CallCnstr Pn Env [TypedExp t] Id
     deriving (Show, Eq)
 
+-- Note Lefteris: probably move this, but is useful for timing of return expressions to typecheck
+instance Annotatable Constraint where
+  annotate (BoolCnstr p env e) = BoolCnstr p env (setPre e)
+  annotate (CallCnstr p env es i) = CallCnstr p env (setPre <$> es) i
+
 makeIntegerBoundConstraint :: Pn -> Env -> TValueType AInteger -> Exp AInteger t -> Constraint t
 makeIntegerBoundConstraint p env t e = BoolCnstr p env (InRange nowhere t e)
 
@@ -222,7 +227,7 @@ checkBehaviour env@Env{contract} (U.Transition posn name iface@(Interface p para
 
 
 checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)
-              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Untimed))), [Constraint Untimed])
+              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Timed))), [Constraint Timed])
 checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     checkExpr env U TBoolean cond `bindValidation` \(cond', cnstr1) ->
     let env' = addPreconds [cond'] env in
@@ -230,14 +235,14 @@ checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     checkOrderedUpdates tupdates
     res <- case (rettype, mret) of
         (Nothing, Nothing) -> pure Nothing
-        (Just (ValueType t), Just e)  ->  Just . first (TExp t) <$> checkExpr env' U t e
+        (Just (ValueType t), Just e)  ->  Just . first (TExp t) <$> checkExpr env' T t e
         (Nothing, Just _)  -> throw (p, "Behaviour does not return a value, but return expression provided")
         (Just _, Nothing)  -> throw (p, "Behaviour must return a value, but no return expression provided")
 
     pure $ let (mret', cnstr3) = case res of
                   Just (e, cs) -> (Just e, cs)
                   Nothing -> (Nothing, [])
-            in ((cond', (tupdates, mret')), cnstr1 ++ concat cnstr2 ++ cnstr3)
+            in ((cond', (tupdates, mret')), (annotate <$> cnstr1) ++ concat ((fmap . fmap) annotate $ cnstr2) ++ cnstr3)
 
     where
         checkOrderedUpdates :: [StorageUpdate] -> Err ()
@@ -363,7 +368,7 @@ genInRange t e@(Div _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genIn
 genInRange t e@(Mod _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(Exp _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(IntEnv _ _) = [InRange nowhere t e]
-genInRange t e@(Address _ _) = [InRange nowhere t e]
+genInRange t e@(Address _ _ _) = [InRange nowhere t e]
 genInRange _ (IntMin _ _)  = error "Internal error: invalid range expression"
 genInRange _ (IntMax _ _)  = error "Internal error: invalid range expression"
 genInRange _ (UIntMin _ _) = error "Internal error: invalid range expression"
@@ -450,7 +455,12 @@ checkExpr env mode t1@(TInteger _ _) e =
             else pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) env t1 te])
         TUnboundedInt -> pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) env t1 te])
         _ -> typeMismatchErr (getPosn e) t1 t2
-checkExpr _ _ TUnboundedInt _ = throw (nowhere, "Expected bounded integer type")
+checkExpr env mode t1@TUnboundedInt e =
+    inferExpr env mode e `bindValidation` \(TExp t2 te, cs) -> do
+    case t2 of
+        (TInteger _ _) -> pure (te, cs)
+        TUnboundedInt -> pure (te, cs)
+        _ -> typeMismatchErr (getPosn e) t1 t2
 checkExpr env mode t1 e =
     let pn = getPosn e in
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) ->
@@ -472,10 +482,11 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
   U.EEq     p v1 v2 -> first (TExp TBoolean) <$> polycheck p Eq v1 v2
   U.ENeq    p v1 v2 -> first (TExp TBoolean) <$> polycheck p NEq v1 v2
   U.BoolLit p v1    -> pure (TExp TBoolean (LitBool p v1), [])
-  U.EInRange _ (fromAbiType -> ValueType (TInteger _ _)) v ->
+  U.EInRange _ (fromAbiType -> ValueType tr@(TInteger _ _)) v ->
     inferExpr env mode v `bindValidation` \(TExp t te, cnstr) ->
     case t of
-      TInteger _ _ -> pure (TExp TBoolean . andExps $ genInRange t te, cnstr)
+      TInteger _ _ -> pure (TExp TBoolean . andExps $ genInRange tr te, cnstr)
+      TUnboundedInt -> pure (TExp TBoolean . andExps $ genInRange tr te, cnstr)
       _ -> throw (getPosn e, "inRange can only be applied to integer expressions")
   U.EInRange _ _ _ -> throw (getPosn e, "inRange can be used only with integer types")
   U.EAdd   p v1 v2 -> arithOp2 (Add p) v1 v2
@@ -544,7 +555,7 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
   U.AddrOf p e -> do
     inferExpr env mode e `bindValidation` \(TExp ty e', cnstr) ->
       case ty of
-        TContract c -> pure (TExp TAddress (Address p e'), cnstr)
+        TContract c -> pure (TExp TAddress (Address p c e'), cnstr)
         _ -> throw (p, "Expression of type " <> show ty <> " cannot be converted to address")
   -- Mapping Epxressions
   U.Mapping p _ -> throw (p, "The type of mappings cannot be inferred.")

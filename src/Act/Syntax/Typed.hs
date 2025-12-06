@@ -113,7 +113,7 @@ data Behaviour t = Behaviour
   , _interface :: Interface
   , _isPayable :: IsPayable
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
-  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp t)) t
+  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp Timed)) t
   , _postconditions :: [Exp ABoolean Timed]
   } deriving (Show, Eq)
 
@@ -255,7 +255,7 @@ data Exp (a :: ActType) (t :: Timing) where
   -- variable references
   VarRef :: Pn -> TValueType a -> Ref RHS t -> Exp a t
   -- address of contract
-  Address :: Pn -> Exp AContract t -> Exp AInteger t
+  Address :: Pn -> Id -> Exp AContract t -> Exp AInteger t
   -- mappings
   Mapping :: Pn -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
   MappingUpd :: Pn -> Ref LHS t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
@@ -303,7 +303,7 @@ instance Eq (Exp a t) where
   VarRef _ a t == VarRef _ b u = a == b && t == u
   Create _ a b c == Create _ d e f = a == d && b == e && c == f
   Array _ a == Array _ b = a == b
-  Address _ a == Address _ b = a == b
+  Address _ _ a == Address _ _ b = a == b
   Mapping _ (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == Mapping _ (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
     (testEquality (sing @a1) (sing @a2) >>= \Refl ->
      testEquality (sing @b1) (sing @b2) >>= \Refl ->
@@ -371,7 +371,7 @@ instance Timable (Exp a) where
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
     VarRef p vt item -> VarRef p vt (go item)
-    Address c e -> Address c (go e)
+    Address p c e -> Address p c (go e)
     -- mappings
     Mapping p kt vt kvs -> Mapping p kt vt (bimap go go <$> kvs)
     MappingUpd p r kt vt kvs -> MappingUpd p (go r) kt vt (bimap go go <$> kvs)
@@ -560,7 +560,7 @@ instance ToJSON (Exp a t) where
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
                               , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
                               , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
-  toJSON (Address _ x) = object [ "symbol" .= pack "addr"
+  toJSON (Address _ _ x) = object [ "symbol" .= pack "addr"
                                 , "arity" .= Data.Aeson.Types.Number 1
                                 , "arg" .= toJSON x ]
   toJSON (Mapping _ kt vt kvs) = object [ "symbol" .= pack "mapping"
@@ -630,7 +630,7 @@ eval e = case e of
   Array _ l -> mapM eval l
 
   Create _ _ _ _ -> error "eval of contracts not supported"
-  Address _ _ -> error "eval of contracts not supported"
+  Address _ _ _ -> error "eval of contracts not supported"
   Mapping _ _ _ _ -> error "eval of mappings not supported"
   MappingUpd _ _ _ _ _ -> error "eval of mapping updates not supported"
   _              -> empty
