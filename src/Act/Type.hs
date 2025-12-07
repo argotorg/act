@@ -504,26 +504,22 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
                       | otherwise = TUnboundedInt
 
   U.EArray p l -> error "TODO"
-    -- typedArray `bindValidation` checkAllTypes
-    -- where
-    --   typedArray :: Err [(Pn, TypedExp t)]
-    --   typedArray = traverse (\e' -> (getPosn e',) <$> inferExpr env mode e') l
-    --   checkAllTypes :: [(Pn, TypedExp t)] -> Err (TypedExp t)
-    --   checkAllTypes tl = case tl of
-    --     (_, TExp styp1 _ ):_ -> TExp newType <$> Array p <$> traverse (uncurry (cmpType styp1)) tl
-    --       where
-    --         --newShape = case shape1 of
-    --         --  Atomic -> Shaped $ NonEmpty.singleton $ length l
-    --         --  Shaped l' -> Shaped $ (length l) <| l'
+     inferElementTypes l `bindValidation` \inferred ->
+     let (inferredElements, cs) = unzip inferred in
+     (flip (,) (concat cs)) <$> checkAllTypes inferredElements
+     where
+       inferElementTypes :: [U.Expr] -> Err [((Pn, TypedExp t), [Constraint t])]
+       inferElementTypes = traverse (\e' -> (first ((,) (getPosn e')) <$> inferExpr env mode e'))
 
-    --         newType = TArray (length l) styp1
-    --           --TArray n t -> TArray (length l : n) t
+       checkAllTypes :: [(Pn, TypedExp t)] -> Err (TypedExp t)
+       checkAllTypes tl = case tl of
+         (_, TExp vt1 _):_ -> TExp (TArray (length l) vt1) <$> Array p <$> traverse (uncurry (cmpType vt1)) tl
+           where
+             cmpType :: TValueType a -> Pn -> TypedExp t -> Err (Exp a t)
+             cmpType vt pn (TExp vt' e') =
+               maybe (arrayTypeMismatchErr pn vt vt') (\Refl -> pure e') $ relaxedtestEquality vt vt'
 
-    --         cmpType :: TValueType a -> Pn -> TypedExp t -> Err (Exp a t)
-    --         cmpType styp pn (TExp styp' e') =
-    --           maybe (arrayTypeMismatchErr pn styp styp') (\Refl -> pure e') $ relaxedIntCheck styp styp' --if eqShape shape shape' then testEquality styp styp' else Nothing
-
-    --     [] -> error "Empty array expressions not supported"
+         [] -> error "Empty array expressions not supported"
 
   -- Constructor calls
   U.ECreate p c args callvalue -> case Map.lookup c constructors of
