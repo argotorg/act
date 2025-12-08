@@ -1,5 +1,6 @@
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 iff
 
@@ -14,8 +15,7 @@ creates
   uint128 y := 42
   uint256 i := 128
 
-behaviour foo of A
-interface foo()
+transition foo() : uint256
 
 iff
 
@@ -23,15 +23,14 @@ iff
 
 storage
 
-  x => y
-  y => x
-  z => 11
-  flag => not flag
+  x := y
+  y := x
+  z := 11
+  flag := not flag
 
 returns 1
 
-behaviour set_flag of A
-interface set_flag(bool b)
+transition set_flag(bool b)
 
 iff
 
@@ -39,11 +38,10 @@ iff
 
 storage
 
-  flag => b
+  flag := b
 
 
-behaviour get_flag of A
-interface get_flag()
+transition get_flag() : bool
 
 iff
 
@@ -54,8 +52,7 @@ returns
   pre(flag)
 
 
-behaviour set_y_if_flag of A
-interface set_y_if_flag(uint128 v)
+transition set_y_if_flag(uint128 v) : uint256
 
 iff
 
@@ -64,7 +61,7 @@ iff
 case flag:
 
 storage
-  y => v
+  y := v
 
 returns 1
 

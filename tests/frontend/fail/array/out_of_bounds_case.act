@@ -1,12 +1,12 @@
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
 
   int[2] a := [1,2]
 
-behaviour f of B
-interface f()
+transition f() : uint256
 
 case a[-1] < 0:
 

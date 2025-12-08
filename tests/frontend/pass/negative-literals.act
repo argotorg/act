@@ -1,5 +1,6 @@
-constructor of C
-interface constructor()
+contract C
+
+constructor()
 
 creates
 

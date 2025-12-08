@@ -1,5 +1,6 @@
-constructor of Exponent
-interface constructor(uint _b, uint _e)
+contract Exponent
+
+constructor(uint _b, uint _e)
 
 iff
 
@@ -12,8 +13,7 @@ creates
     uint r := _b
 
 
-behaviour exp of Exponent
-interface exp()
+transition exp()
 
 iff in range uint
 
@@ -26,5 +26,5 @@ iff
 
 storage
 
-    r => r * b
-    e => e - 1
+    r := r * b
+    e := e - 1

@@ -1,4 +1,5 @@
-behaviour f of A
-interface f(address[2] xs)
+contract A
+
+transition f(address[2] xs) : address
 
 returns xs[1]

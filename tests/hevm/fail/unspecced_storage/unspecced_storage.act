@@ -1,5 +1,6 @@
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 iff
 
@@ -9,8 +10,7 @@ creates
 
   mapping (uint=>uint) x := []
 
-behaviour f of A
-interface f()
+transition f() : uint256
 
 // fails to mention the state update
 

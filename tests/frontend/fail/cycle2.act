@@ -8,38 +8,41 @@
 //           \
 //            C
 
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 creates
    uint x := 0
 
-constructor of B
-interface constructor(uint x)
+contract B
+
+constructor(uint x)
 
 creates
    uint y := x
-   D d := create D()
+   D d := new D()
 
-behaviour remote of B
-interface set_remote(uint z)
+transition remote(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   d.x => z
+   d.x := z
 
-constructor of C
-interface constructor(uint u)
+contract C
 
-creates
-   B b := create B(u)
-   A a := create A()
-
-constructor of D
-interface constructor()
+constructor(uint u)
 
 creates
-   C c := create C(0)
+   B b := new B(u)
+   A a := new A()
+
+contract D
+
+constructor()
+
+creates
+   C c := new C(0)
    uint x := 0

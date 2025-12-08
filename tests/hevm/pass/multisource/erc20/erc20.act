@@ -1,30 +1,30 @@
-constructor of Token
-interface constructor(uint256 _totalSupply)
+contract Token
+
+constructor(uint256 _totalSupply)
 
 iff CALLVALUE == 0
 
 creates
 
   uint256 totalSupply := _totalSupply
-  mapping(address => uint) balanceOf :=  [CALLER := _totalSupply]
-  mapping(address=>mapping(address=>uint)) allowance := []
+  mapping(address => uint) balanceOf :=  [CALLER => _totalSupply]
+  mapping(address => mapping(address => uint)) allowance := []
 
 
-behaviour transfer of Token
-interface transfer(uint256 value, address to)
+transition transfer(uint256 value, address to) : uint256
 
 iff
 
   CALLVALUE == 0
   inRange(uint256, balanceOf[CALLER] - value)
-  CALLER =/= to => inRange(uint256, balanceOf[to] + value)
+  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
 
-case CALLER =/= to:
+case CALLER != to:
 
   storage
 
-     balanceOf[CALLER] => balanceOf[CALLER] - value
-     balanceOf[to]     => balanceOf[to] + value
+     balanceOf[CALLER] := balanceOf[CALLER] - value
+     balanceOf[to]     := balanceOf[to] + value
 
   returns 1
 
@@ -33,49 +33,48 @@ case CALLER == to:
   returns 1
 
 
-behaviour transferFrom of Token
-interface transferFrom(address src, address dst, uint amount)
+transition transferFrom(address src, address dst, uint amount) : uint256
 
 iff
 
   amount <= balanceOf[src]
-  src    =/= dst => inRange(uint256, balanceOf[dst] + amount)
-  CALLER =/= src => inRange(uint256, allowance[src][CALLER] - amount)
+  src    != dst ==> inRange(uint256, balanceOf[dst] + amount)
+  CALLER != src ==> inRange(uint256, allowance[src][CALLER] - amount)
   CALLVALUE == 0
 
-case src =/= dst and CALLER == src:
+case src != dst and CALLER == src:
 
   storage
 
-     balanceOf[src] => balanceOf[src] - amount
-     balanceOf[dst] => balanceOf[dst] + amount
+     balanceOf[src] := balanceOf[src] - amount
+     balanceOf[dst] := balanceOf[dst] + amount
 
   returns 1
 
-case src =/= dst and CALLER =/= src and allowance[src][CALLER] == 2^256 - 1:
+case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
   storage
 
-     balanceOf[src] => balanceOf[src] - amount
-     balanceOf[dst] => balanceOf[dst] + amount
+     balanceOf[src] := balanceOf[src] - amount
+     balanceOf[dst] := balanceOf[dst] + amount
 
   returns 1
 
-case src =/= dst and CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
+case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance[src][CALLER] => allowance[src][CALLER] - amount
-    balanceOf[src]         => balanceOf[src] - amount
-    balanceOf[dst]         => balanceOf[dst] + amount
+    allowance[src][CALLER] := allowance[src][CALLER] - amount
+    balanceOf[src]         := balanceOf[src] - amount
+    balanceOf[dst]         := balanceOf[dst] + amount
 
   returns 1
 
-case src == dst and CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
+case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance[src][CALLER] => allowance[src][CALLER] - amount
+    allowance[src][CALLER] := allowance[src][CALLER] - amount
 
   returns 1
 
@@ -84,19 +83,18 @@ case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
   returns 1
 
 
-behaviour approve of Token
-interface approve(address spender, uint amount)
+transition approve(address spender, uint amount) : uint256
 
 iff
 
   inRange(uint256, amount)
   CALLVALUE == 0
 
-case CALLER =/= spender:
+case CALLER != spender:
 
   storage
 
-    allowance[CALLER][spender] => amount
+    allowance[CALLER][spender] := amount
 
   returns 1
 
@@ -105,8 +103,7 @@ case CALLER == spender:
   returns 1
 
 
-behaviour burn of Token
-interface burn(uint256 amount)
+transition burn(uint256 amount) : uint256
 
 iff
 
@@ -116,37 +113,36 @@ iff
 
 storage
 
-  totalSupply => totalSupply - amount
-  balanceOf[CALLER] => balanceOf[CALLER] - amount
+  totalSupply := totalSupply - amount
+  balanceOf[CALLER] := balanceOf[CALLER] - amount
 
 returns 1
 
 
-behaviour burnFrom of Token
-interface burnFrom(address src, uint256 amount)
+transition burnFrom(address src, uint256 amount) : uint256
 
 iff
   amount <= totalSupply
   amount <= balanceOf[src]
-  CALLER =/= src => amount <= allowance[src][CALLER]
+  CALLER != src ==> amount <= allowance[src][CALLER]
   CALLVALUE == 0
 
-case CALLER =/= src and allowance[src][CALLER] == 2^256 - 1:
+case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
   storage
 
-    totalSupply => totalSupply - amount
-    balanceOf[src] => balanceOf[src] - amount
+    totalSupply := totalSupply - amount
+    balanceOf[src] := balanceOf[src] - amount
 
   returns 1
 
-case CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
+case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    totalSupply => totalSupply - amount
-    allowance[src][CALLER] => allowance[src][CALLER] - amount
-    balanceOf[src]         => balanceOf[src] - amount
+    totalSupply := totalSupply - amount
+    allowance[src][CALLER] := allowance[src][CALLER] - amount
+    balanceOf[src]         := balanceOf[src] - amount
 
   returns 1
 
@@ -154,8 +150,8 @@ case CALLER == src:
 
   storage
 
-    totalSupply => totalSupply - amount
-    balanceOf[src] => balanceOf[src] - amount
+    totalSupply := totalSupply - amount
+    balanceOf[src] := balanceOf[src] - amount
 
   returns 1
 
@@ -164,8 +160,7 @@ ensures
   pre(balanceOf[src]) - post(balanceOf[src]) == pre(totalSupply) - post(totalSupply)
 
 
-behaviour mint of Token
-interface mint(address dst, uint256 amount)
+transition mint(address dst, uint256 amount) : uint256
 
 iff in range uint256
 
@@ -178,16 +173,15 @@ iff
 
 storage
 
-  totalSupply => totalSupply + amount
-  balanceOf[dst] => balanceOf[dst] + amount
+  totalSupply := totalSupply + amount
+  balanceOf[dst] := balanceOf[dst] + amount
 
 returns 1
 
 
 // View functions:
 
-behaviour totalSupply of Token
-interface totalSupply()
+transition totalSupply() : uint256
 
 iff 
 
@@ -195,8 +189,7 @@ iff
 
 returns pre(totalSupply)
 
-behaviour balanceOf of Token
-interface balanceOf(address idx)
+transition balanceOf(address idx) : uint256
 
 iff 
 
@@ -204,8 +197,7 @@ iff
 
 returns pre(balanceOf[idx])
 
-behaviour allowance of Token
-interface allowance(address idx1, address idx2)
+transition allowance(address idx1, address idx2) : uint256
 
 iff 
 

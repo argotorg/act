@@ -1,5 +1,6 @@
-constructor of Exponentiation
-interface constructor()
+contract Exponentiation
+
+constructor()
 
 creates
 

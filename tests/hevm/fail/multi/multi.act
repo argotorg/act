@@ -1,5 +1,6 @@
-constructor of A
-interface constructor(uint z)
+contract A
+
+constructor(uint z)
 
 iff
    CALLVALUE == 0
@@ -8,18 +9,18 @@ iff
 creates
    uint x := z + 42
 
-behaviour set_x of A
-interface set_x(uint z)
+transition set_x(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   x => z
+   x := z
 
 
-constructor of B
-interface constructor(uint v)
+contract B
+
+constructor(uint v)
 
 iff
    CALLVALUE == 0
@@ -28,4 +29,4 @@ iff
 
 creates
    uint y := 0
-   A a := create A(v)
+   A a := new A(v)

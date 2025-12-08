@@ -1,13 +1,13 @@
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 creates
   uint[2][2] x := [[0,0],[0,0]]
 
-behaviour f of A
-interface f()
+transition f()
 
 storage
 
-  x => [[1,2],[3,4]]
-  x[0] => [10,20]
+  x := [[1,2],[3,4]]
+  x[0] := [10,20]

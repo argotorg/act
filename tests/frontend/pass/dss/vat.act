@@ -14,8 +14,9 @@
 // debt : uint256
 // dai  : address -> uint256
 
-behaviour frob of Vat
-interface frob(bytes32 i, address u, address v, address w, int dink, int dart)
+contract Vat
+
+transition frob(bytes32 i, address u, address v, address w, int dink, int dart)
 
 iff in range uint256
 
@@ -34,7 +35,7 @@ iff in range int256
 iff
     CALLVALUE == 0
     live == 1
-    ilks[i].rate =/= 0
+    ilks[i].rate != 0
     dart <= 0 or ((ilks[i].art + dart) * ilks[i].rate <= ilks[i].line and debt + ilks[i].rate * dart <= line)
     (dart <= 0) or (((ilks[i].Art + dart) * ilks[i].rate <= ilks[i].line) and ((debt + ilks[i].rate * dart) <= line))
     (dart <= 0 and dink >= 0) or (((urns[i][u].art + dart) * ilks[i].rate) <= ((urns[i][u].ink + dink) * ilks[i].spot))
@@ -45,9 +46,9 @@ iff
 
 storage
 
-    urns[i][u].ink => urns[i][u].ink + dink
-    urns[i][u].art => urns[i][u].art + dart
-    ilks[i].Art    => ilks[i].Art + dart
-    gem[i][v]      => gem[i][v]   - dink
-    dai[w]         => dai[w] + ilks[i].rate * dart
-    debt           => debt   + ilks[i].rate * dart
+    urns[i][u].ink := urns[i][u].ink + dink
+    urns[i][u].art := urns[i][u].art + dart
+    ilks[i].Art    := ilks[i].Art + dart
+    gem[i][v]      := gem[i][v]   - dink
+    dai[w]         := dai[w] + ilks[i].rate * dart
+    debt           := debt   + ilks[i].rate * dart

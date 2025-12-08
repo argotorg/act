@@ -1,12 +1,12 @@
-constructor of Token
-interface constructor (address a, uint256 amt)
+contract Token
+
+constructor(address a, uint256 amt)
 
 creates
-  mapping(address => uint256) balances := [a := amt]
+  mapping(address => uint256) balances := [a => amt]
 
 
-behaviour transfer of Token
-interface transfer(address to, uint256 amt)
+transition transfer(address to, uint256 amt) : uint256
 
 
 iff in range uint256
@@ -17,12 +17,12 @@ iff
 
   amt <= balances[CALLER]
 
-case CALLER =/= to:
+case CALLER != to:
 
   storage
 
-	balances[CALLER] => balances[CALLER] - amt
-	balances[to] => balances[to] + amt
+	balances[CALLER] := balances[CALLER] - amt
+	balances[to] := balances[to] + amt
 
   returns 1
 

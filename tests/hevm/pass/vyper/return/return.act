@@ -1,5 +1,6 @@
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 iff
   CALLVALUE == 0
@@ -7,8 +8,7 @@ iff
 creates
   uint128 x := 0
 
-behaviour f of A
-interface f()
+transition f() : uint128
 
 iff
   CALLVALUE == 0

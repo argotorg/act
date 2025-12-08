@@ -1,13 +1,13 @@
-constructor of M
-interface constructor()
+contract M
+
+constructor()
 
 creates
 
   uint[3] a := [1,2,3]
 
 
-behaviour f of M
-interface f()
+transition f() : uint
 
 iff
 

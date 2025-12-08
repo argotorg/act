@@ -1,5 +1,6 @@
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
 
@@ -7,8 +8,7 @@ creates
   int[3] a := [1,2,3]
 
 
-behaviour f of B
-interface f()
+transition f() : uint256
 
 iff
 

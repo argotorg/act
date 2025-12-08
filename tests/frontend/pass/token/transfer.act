@@ -1,12 +1,13 @@
-constructor of Token
-interface constructor(string _symbol, string _name, string _version, uint _totalSupply)
+contract Token
+
+constructor(string _symbol, string _name, string _version, uint _totalSupply)
 
 creates
 
   string name         := _name
   string symbol       := _symbol
   uint256 totalSupply := _totalSupply
-  mapping(address => uint) balanceOf :=  [CALLER := _totalSupply]
+  mapping(address => uint) balanceOf :=  [CALLER => _totalSupply]
   mapping(address=>mapping(address=>uint)) allowance := []
 
 invariants
@@ -16,21 +17,20 @@ invariants
   symbol == _symbol
 
 
-behaviour transfer of Token
-interface transfer(uint256 value, address to)
+transition transfer(uint256 value, address to) : uint256
 
 iff
 
   CALLVALUE == 0
   value <= balanceOf[CALLER]
-  CALLER =/= to => balanceOf[to] + value < 2^256
+  CALLER != to ==> balanceOf[to] + value < 2^256
 
-case CALLER =/= to:
+case CALLER != to:
 
   storage
 
-     balanceOf[CALLER] => balanceOf[CALLER] - value
-     balanceOf[to]     => balanceOf[to] + value
+     balanceOf[CALLER] := balanceOf[CALLER] - value
+     balanceOf[to]     := balanceOf[to] + value
 
   returns 1
 
@@ -39,41 +39,40 @@ case CALLER == to:
   returns 1
 
 
-behaviour transferFrom of Token
-interface transferFrom(address src, address dst, uint amount)
+transition transferFrom(address src, address dst, uint amount) : uint256
 
 iff
 
   amount <= balanceOf[src]
-  src    =/= dst => balanceOf[dst] + amount < 2^256
-  CALLER =/= src => 0 <= allowance[src][CALLER] - amount
+  src    != dst ==> balanceOf[dst] + amount < 2^256
+  CALLER != src ==> 0 <= allowance[src][CALLER] - amount
   CALLVALUE == 0
 
-case src =/= dst and CALLER == src:
+case src != dst and CALLER == src:
 
   storage
 
-     balanceOf[src] => balanceOf[src] - amount
-     balanceOf[dst] => balanceOf[dst] + amount
+     balanceOf[src] := balanceOf[src] - amount
+     balanceOf[dst] := balanceOf[dst] + amount
 
   returns 1
 
-case src =/= dst and CALLER =/= src and allowance[src][CALLER] == 2^256 - 1:
+case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
   storage
 
-     balanceOf[src] => balanceOf[src] - amount
-     balanceOf[dst] => balanceOf[dst] + amount
+     balanceOf[src] := balanceOf[src] - amount
+     balanceOf[dst] := balanceOf[dst] + amount
 
   returns 1
 
-case src =/= dst and CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
+case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance[src][CALLER] => allowance[src][CALLER] - amount
-    balanceOf[src]         => balanceOf[src] - amount
-    balanceOf[dst]         => balanceOf[dst] + amount
+    allowance[src][CALLER] := allowance[src][CALLER] - amount
+    balanceOf[src]         := balanceOf[src] - amount
+    balanceOf[dst]         := balanceOf[dst] + amount
 
   returns 1
 

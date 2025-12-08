@@ -1,15 +1,13 @@
-constructor of Pass
-interface constructor()
+contract Pass
+
+constructor()
 
 creates
 
 	uint x := 0
 	uint y := 2
 
-behaviour f of Pass
-interface f()
+transition f()
 
 storage
-
-	x => y
-    y
+	x := y

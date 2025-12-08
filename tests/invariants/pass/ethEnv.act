@@ -1,5 +1,6 @@
-constructor of This
-interface constructor()
+contract This
+
+constructor()
 
 creates
 

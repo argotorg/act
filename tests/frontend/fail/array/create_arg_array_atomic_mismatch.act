@@ -1,9 +1,11 @@
-constructor of A
-interface constructor(uint[2] y)
+contract A
+
+constructor(uint[2] y)
 
 
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
-  A a := create A(3)
+  A a := new A(3)

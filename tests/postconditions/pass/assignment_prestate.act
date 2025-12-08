@@ -1,19 +1,19 @@
-constructor of C
-interface constructor(uint24 _x)
+contract C
+
+constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-behaviour f of C
-interface f(uint24 y)
+transition f(uint24 y)
 
 iff in range uint24 
   x + y
 
 storage
 
-  x => x + y
+  x := x + y
 
 ensures
 
