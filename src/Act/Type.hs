@@ -7,6 +7,7 @@
 {-# Language ApplicativeDo #-}
 {-# Language ViewPatterns #-}
 {-# Language TypeOperators #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Act.Type (typecheck, Err) where
 
@@ -89,6 +90,7 @@ data Constraint t =
 
 -- Note Lefteris: probably move this, but is useful for timing of return expressions to typecheck
 instance Annotatable Constraint where
+  annotate :: Constraint Untimed -> Constraint Timed
   annotate (BoolCnstr p env e) = BoolCnstr p env (setPre e)
   annotate (CallCnstr p env es i) = CallCnstr p env (setPre <$> es) i
 
