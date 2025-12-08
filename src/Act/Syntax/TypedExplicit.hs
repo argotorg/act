@@ -66,6 +66,9 @@ instance Annotatable Typed.Behaviour where
     , _cases = annotateCase <$> _cases
     }
 
+instance Annotatable Typed.TypedExp where
+  annotate (Typed.TExp t e) = Typed.TExp t (setPre e)
+
 instance Annotatable Typed.StorageUpdate where
   -- The timing in items only refers to the timing of mapping indices of a
   -- storage update. Hence, it should be Pre
@@ -75,5 +78,6 @@ instance Annotatable Typed.StorageUpdate where
 annotateCCase :: (Typed.Exp ABoolean Untimed, [Typed.StorageUpdate Untimed]) -> (Typed.Exp ABoolean Timed, [Typed.StorageUpdate Timed])
 annotateCCase (cond, upds) = (setPre cond, annotate <$> upds)
 
-annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Timed))) -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
-annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, ret))
+annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Untimed))) 
+             -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
+annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, annotate <$> ret))

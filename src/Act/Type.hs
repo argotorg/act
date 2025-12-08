@@ -27,7 +27,6 @@ import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
-import Data.Vector.Internal.Check (check)
 
 
 
@@ -101,25 +100,26 @@ makeArrayBoundConstraint :: Pn -> Env -> Int -> Exp AInteger t -> Constraint t
 makeArrayBoundConstraint p env len e = BoolCnstr p env (LT p e (LitInt p (fromIntegral len)))
 
 -- | Top-level typechecking function
-typecheck :: U.Act -> Err Act
+typecheck :: U.Act -> Err (Act, [Constraint Untimed])
 typecheck (U.Main contracts) = do
-    uncurry Act <$> checkContracts' contracts
+    (\(storageTyping, tcontracts, cnstrs) -> (Act storageTyping tcontracts, cnstrs)) <$> checkContracts' contracts
 
-checkContracts' :: [U.Contract] -> Err (StorageTyping, [Contract])
-checkContracts' cs = first storage <$> checkContracts emptyEnv cs
+checkContracts' :: [U.Contract] -> Err (StorageTyping, [Contract], [Constraint Untimed])
+checkContracts' cs = (\(s, tcs, cnstrs) -> (storage s, tcs, cnstrs)) <$> checkContracts emptyEnv cs
 
-checkContracts :: Env -> [U.Contract] -> Err (Env, [Contract])
-checkContracts env [] = pure (env, [])
+checkContracts :: Env -> [U.Contract] -> Err (Env, [Contract], [Constraint Untimed])
+checkContracts env [] = pure (env, [], [])
 checkContracts env ((U.Contract p cid cnstr behvs):cs) =
     -- check that the constructor name is not already defined
     checkContrName cid env *>
     let env' = addContractName cid env in
     -- Check constructor
-    checkConstructor env' cid cnstr `bindValidation` \(constr', env'') -> do
+    checkConstructor env' cid cnstr `bindValidation` \(constr', env'', cnstrs1) -> do
     -- Check behaviors
-    behvs' <- checkBehaviours env'' behvs
-    (env''', cs') <- checkContracts env'' cs
-    pure (env''', Contract constr' behvs' : cs')
+    behvsc <- checkBehaviours env'' behvs
+    (env''', cs', cnstrs3) <- checkContracts env'' cs
+    pure $ let (behvs', cnstrs2) = behvsc in
+           (env''', Contract constr' behvs' : cs', cnstrs1 ++ cnstrs2 ++ cnstrs3)
 
     where
         checkContrName :: Id -> Env -> Err ()
@@ -128,7 +128,7 @@ checkContracts env ((U.Contract p cid cnstr behvs):cs) =
                 Just _ -> throw (p, "Constructor " <> cid <> " is already defined")
                 Nothing -> pure ()
 
-checkConstructor :: Env -> Id -> U.Constructor -> Err (Constructor, Env)
+checkConstructor :: Env -> Id -> U.Constructor -> Err (Constructor, Env, [Constraint Untimed])
 checkConstructor env cid (U.Constructor posn (Interface p params) payable iffs cases posts invs) =
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
@@ -139,10 +139,12 @@ checkConstructor env cid (U.Constructor posn (Interface p params) payable iffs c
     (checkConstrCases env'' cases) `bindValidation` \(storageType, cases', cnstr2) -> do
     -- construct the new environment
     let env''' = addConstrStorage cid storageType $ addConstructor cid argTypes payable iffs' env''
+    -- check case consistency
+    let casecnstrs = checkCaseConsistency env' cases'
     -- check postconditions
     ensures <- fst . unzip <$> traverse (checkExpr env''' U TBoolean) posts
     -- return the constructor and the new environment
-    pure (Constructor cid (Interface p params) payable iffs' cases' ensures [], clearLocalEnv env''')
+    pure (Constructor cid (Interface p params) payable iffs' cases' ensures [], clearLocalEnv env''', concat cnstr1 ++ cnstr2 ++ casecnstrs)
     where
         env' = addCalldata params env
 
@@ -196,13 +198,15 @@ checkConstrCases env cases = do
         consistentStorageTyping typing cases *>
         assert (p, "Inconsistent storage typing in constructor cases") (typing == typing')
 
-checkBehaviours :: Env -> [U.Transition] -> Err [Behaviour]
-checkBehaviours _ [] = pure []
+checkBehaviours :: Env -> [U.Transition] -> Err ([Behaviour], [Constraint Untimed])
+checkBehaviours _ [] = pure ([], [])
 checkBehaviours env (b:bs) = do
     checkBehvName b bs
     b' <- checkBehaviour env b
     bs' <- checkBehaviours env bs
-    pure $ b':bs'
+    pure $ let (tbehv, bcnstrs) = b'
+               (tbs, bscnstrs) = bs' in
+            (tbehv:tbs, bcnstrs ++ bscnstrs)
 
     where
         checkBehvName :: U.Transition -> [U.Transition] -> Err ()
@@ -212,25 +216,27 @@ checkBehaviours env (b:bs) = do
                 Nothing -> pure ()
 
 
-checkBehaviour :: Env -> U.Transition -> Err Behaviour
-checkBehaviour env@Env{contract} (U.Transition posn name iface@(Interface p params) payable rettype iffs cases posts) = do
+checkBehaviour :: Env -> U.Transition -> Err (Behaviour, [Constraint Untimed])
+checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface p params) payable rettype iffs cases posts) = do
     -- check that parameter types are valid
     traverse_ (checkParams env) params
     -- add parameters to environment
     let env' = addCalldata params env
     -- check preconditions
-    iffs' <- fst . unzip <$> traverse (checkExpr env' U TBoolean) iffs
-    -- TODO check case consistency
+    iffsc <- unzip <$> traverse (checkExpr env' U TBoolean) iffs
     -- check cases
-    cases' <- fst . unzip <$> traverse (checkBehvCase env' (argToValueType <$> rettype)) cases
+    casesc <- unzip <$> traverse (checkBehvCase env' (argToValueType <$> rettype)) cases    
     -- check postconditions
     ensures <- fst . unzip <$> traverse (checkExpr env' T TBoolean) posts
     -- return the behaviour
-    pure $ Behaviour name contract iface payable iffs' cases' ensures
+    pure $ let (iffs', cnstrs1) = iffsc
+               (cases', cnstrs2) = casesc
+               casecnstrs = checkCaseConsistency env' cases'
+           in  (Behaviour name contract iface payable iffs' cases' ensures, concat cnstrs1 ++ concat cnstrs2 ++ casecnstrs) 
 
 
 checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)
-              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Timed))), [Constraint Timed])
+              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Untimed))), [Constraint Untimed])
 checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     checkExpr env U TBoolean cond `bindValidation` \(cond', cnstr1) ->
     let env' = addPreconds [cond'] env in
@@ -238,15 +244,14 @@ checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     checkOrderedUpdates tupdates
     res <- case (rettype, mret) of
         (Nothing, Nothing) -> pure Nothing
-        (Just (ValueType t), Just e)  ->  Just . first (TExp t) <$> checkExpr env' T t e
+        (Just (ValueType t), Just e)  ->  Just . first (TExp t) <$> checkExpr env' U t e
         (Nothing, Just _)  -> throw (p, "Behaviour does not return a value, but return expression provided")
         (Just _, Nothing)  -> throw (p, "Behaviour must return a value, but no return expression provided")
 
     pure $ let (mret', cnstr3) = case res of
                   Just (e, cs) -> (Just e, cs)
                   Nothing -> (Nothing, [])
-            in ((cond', (tupdates, mret')), (annotate <$> cnstr1) ++ concat ((fmap . fmap) annotate $ cnstr2) ++ cnstr3)
-
+            in ((cond', (tupdates, mret')), cnstr1 ++ concat cnstr2 ++ cnstr3)
     where
         checkOrderedUpdates :: [StorageUpdate] -> Err ()
         checkOrderedUpdates [] = pure ()
@@ -267,6 +272,38 @@ checkBehvCase env rettype (U.Case p cond (updates, mret)) =
         ltRef (RArrIdx _ r1 _ _ ) r2 = r1 == r2 || ltRef r1 r2
         ltRef (SVar _ _ _ _) _ = False
 
+combine :: [a] -> [(a,a)]
+combine lst = combine' lst []
+  where
+    combine' [] acc = concat acc
+    combine' (x:xs) acc =
+      let xcomb = [ (x, y) | y <- xs] in
+      combine' xs (xcomb:acc)
+
+mkOr :: [Exp ABoolean t] -> Exp ABoolean t
+mkOr [] = LitBool nowhere False
+mkOr (c:cs) = foldr (Or nowhere) c cs
+
+mkAnd :: [Exp ABoolean t] -> Exp ABoolean t
+mkAnd [] = LitBool nowhere True
+mkAnd (c:cs) = foldr (And nowhere) c cs
+
+checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
+checkCaseConsistency env cases = 
+    [ BoolCnstr nowhere env (mkNonoverlapAssertion conds)
+    , BoolCnstr nowhere env (Neg nowhere (mkExhaustiveAssertion conds))
+    ]
+    where 
+        conds :: [Exp ABoolean Untimed]
+        conds = map fst cases
+        -- For every pair of case conditions we assert that they are true
+        -- simultaneously. The query must be unsat.
+        mkNonoverlapAssertion :: [Exp ABoolean Untimed] -> Exp ABoolean Untimed
+        mkNonoverlapAssertion caseconds =
+            mkAnd $ (\(c1, c2) -> Neg nowhere (And nowhere c1 c2)) <$> combine caseconds
+
+        mkExhaustiveAssertion :: [Exp ABoolean Untimed] -> Exp ABoolean Untimed
+        mkExhaustiveAssertion caseconds = mkOr caseconds
 
 checkAssign :: Env -> U.Assign -> Err (StorageUpdate, [Constraint Untimed])
 checkAssign env (U.StorageVar p (ValueType typ) var, expr) = do

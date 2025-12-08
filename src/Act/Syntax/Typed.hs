@@ -113,7 +113,7 @@ data Behaviour t = Behaviour
   , _interface :: Interface
   , _isPayable :: IsPayable
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
-  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp Timed)) t
+  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp t)) t
   , _postconditions :: [Exp ABoolean Timed]
   } deriving (Show, Eq)
 

@@ -244,7 +244,7 @@ createsFromUpdate :: StorageUpdate t ->[Id]
 createsFromUpdate update = nub $ case update of
   TypedExplicit.Update t ref e -> createsFromTRef (TRef t SLHS ref) <> createsFromExp e
 
-createsFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp Timed))) -> [Id]
+createsFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [Id]
 createsFromCase (cond, (rewrites, mret)) = nub $
   createsFromExp cond <> concatMap createsFromUpdate rewrites <> maybe [] createsFromTypedExp mret
 
@@ -271,7 +271,7 @@ pointerFromDecl :: Arg -> Maybe (Id, Id)
 pointerFromDecl (Arg (ContractArg _ c) name) = Just (name,c)
 pointerFromDecl _ = Nothing
 
-ethEnvFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp Timed))) -> [EthEnv]
+ethEnvFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [EthEnv]
 ethEnvFromCase (cond, (rewrites, mret)) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites <> maybe [] ethEnvFromTypedExp mret
 
