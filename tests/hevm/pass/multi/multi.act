@@ -1,8 +1,4 @@
-contract B
-
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 iff
@@ -11,17 +7,17 @@ iff
 creates
    uint x := 0
 
-transition set_x
+behaviour set_x of A
 interface set_x(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   x := z
+   x => z
 
 
-constructor
+constructor of B
 interface constructor()
 
 iff
@@ -31,23 +27,23 @@ creates
    uint y := 0
    A a := create A()
 
-transition remote
+behaviour remote of B
 interface remote(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   a.x := z
+   a.x => z
 
 returns 0
 
 
-transition multi
+behaviour multi of B
 interface multi(uint z)
 
 iff
    CALLVALUE == 0
 storage
-   y := z
-   a.x := 42
+   y => z
+   a.x => 42

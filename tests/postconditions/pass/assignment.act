@@ -1,18 +1,16 @@
-contract C
-
-constructor
+constructor of C
 interface constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-transition f
+behaviour f of C
 interface f()
 
 storage
 
-  x := 2
+  x => 2
 
 ensures
 

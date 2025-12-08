@@ -1,6 +1,4 @@
-contract AllEnvVars
-
-constructor
+constructor of AllEnvVars
 interface constructor()
 
 creates

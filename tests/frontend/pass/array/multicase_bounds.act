@@ -1,6 +1,4 @@
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 creates
@@ -9,7 +7,7 @@ creates
   uint yn := 2
   uint[3] z := [11,22,33]
 
-transition f
+behaviour f of A
 interface f(int[2] xs)
 
 iff

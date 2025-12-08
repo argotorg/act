@@ -1,5 +1,3 @@
-contract Vat
-
 // contract Vat
 
 // ilk  : bytes32 -> {Art : uint256,
@@ -16,7 +14,7 @@ contract Vat
 // debt : uint256
 // dai  : address -> uint256
 
-transition frob
+behaviour frob of Vat
 interface frob(bytes32 i, address u, address v, address w, int dink, int dart)
 
 iff in range uint256
@@ -47,9 +45,9 @@ iff
 
 storage
 
-    urns[i][u].ink := urns[i][u].ink + dink
-    urns[i][u].art := urns[i][u].art + dart
-    ilks[i].Art    := ilks[i].Art + dart
-    gem[i][v]      := gem[i][v]   - dink
-    dai[w]         := dai[w] + ilks[i].rate * dart
-    debt           := debt   + ilks[i].rate * dart
+    urns[i][u].ink => urns[i][u].ink + dink
+    urns[i][u].art => urns[i][u].art + dart
+    ilks[i].Art    => ilks[i].Art + dart
+    gem[i][v]      => gem[i][v]   - dink
+    dai[w]         => dai[w] + ilks[i].rate * dart
+    debt           => debt   + ilks[i].rate * dart

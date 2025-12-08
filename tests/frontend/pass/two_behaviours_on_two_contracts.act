@@ -1,15 +1,11 @@
-contract D
-
-contract C
-
-constructor
+constructor of C
 interface constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-transition increase
+behaviour increase of C
 interface increase(uint24 new_x)
 
   storage
@@ -22,14 +18,14 @@ ensures
   post(x) >= pre(x)
 
 // Second contract, with same behaviour name
-constructor
+constructor of D
 interface constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-transition increase
+behaviour increase of D
 interface increase2(uint24 new_x)
 
 storage

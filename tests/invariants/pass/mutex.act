@@ -1,6 +1,4 @@
-contract Mutex
-
-constructor
+constructor of Mutex
 interface constructor()
 
 creates
@@ -12,11 +10,11 @@ invariants
 
 	not lock
 
-transition f
+behaviour f of Mutex
 interface setX(uint256 _x)
 
 iff
 	not lock
 
 storage
-	x := _x
+	x => _x

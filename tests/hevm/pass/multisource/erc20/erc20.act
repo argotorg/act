@@ -1,113 +1,112 @@
-contract Token
-constructor (uint256 _totalSupply)
+constructor of Token
+interface constructor(uint256 _totalSupply)
 
 iff CALLVALUE == 0
 
 creates
 
   uint256 totalSupply := _totalSupply
-  mapping(address => uint) balanceOf :=  [CALLER => _totalSupply]
+  mapping(address => uint) balanceOf :=  [CALLER := _totalSupply]
   mapping(address=>mapping(address=>uint)) allowance := []
 
 
-transition transfer (uint256 _value, address to) : uint256
+behaviour transfer of Token
+interface transfer(uint256 value, address to)
 
 iff
 
   CALLVALUE == 0
-  inRange(uint256, balanceOf[CALLER] - _value)
-  CALLER != to ==> inRange(uint256, balanceOf[to] + _value)
+  inRange(uint256, balanceOf[CALLER] - value)
+  CALLER =/= to => inRange(uint256, balanceOf[to] + value)
 
-case CALLER != to:
+case CALLER =/= to:
 
   storage
 
-    balanceOf := balanceOf [ CALLER => balanceOf[CALLER] - _value
-                           , to     => balanceOf[to] + _value ]
+     balanceOf[CALLER] => balanceOf[CALLER] - value
+     balanceOf[to]     => balanceOf[to] + value
 
   returns 1
 
 case CALLER == to:
 
-  storage
-
   returns 1
 
 
-transition transferFrom(address src, address dst, uint amount) : uint256
+behaviour transferFrom of Token
+interface transferFrom(address src, address dst, uint amount)
 
 iff
 
   amount <= balanceOf[src]
-  src    != dst ==> inRange(uint256, balanceOf[dst] + amount)
-  CALLER != src ==> inRange(uint256, allowance[src][CALLER] - amount)
+  src    =/= dst => inRange(uint256, balanceOf[dst] + amount)
+  CALLER =/= src => inRange(uint256, allowance[src][CALLER] - amount)
   CALLVALUE == 0
 
-case src != dst and CALLER == src:
+case src =/= dst and CALLER == src:
 
   storage
 
-    balanceOf := balanceOf [ src => balanceOf[src] - amount
-                           , dst => balanceOf[dst] + amount ]
+     balanceOf[src] => balanceOf[src] - amount
+     balanceOf[dst] => balanceOf[dst] + amount
 
   returns 1
 
-case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+case src =/= dst and CALLER =/= src and allowance[src][CALLER] == 2^256 - 1:
 
   storage
 
-    balanceOf := balanceOf [ src => balanceOf[src] - amount
-                           , dst => balanceOf[dst] + amount ]
+     balanceOf[src] => balanceOf[src] - amount
+     balanceOf[dst] => balanceOf[dst] + amount
 
   returns 1
 
-case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+case src =/= dst and CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance := allowance [ src => allowance[src] [ CALLER => allowance[src][CALLER] - amount ] ]
-    balanceOf := balanceOf [ src => balanceOf[src] - amount
-                           , dst => balanceOf[dst] + amount ]
+    allowance[src][CALLER] => allowance[src][CALLER] - amount
+    balanceOf[src]         => balanceOf[src] - amount
+    balanceOf[dst]         => balanceOf[dst] + amount
 
   returns 1
 
-case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+case src == dst and CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance := allowance [ src => allowance[src] [ CALLER => allowance[src][CALLER] - amount ] ]
+    allowance[src][CALLER] => allowance[src][CALLER] - amount
 
   returns 1
 
 case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
 
-  storage
-
   returns 1
 
 
-transition approve (address spender, uint amount)
+behaviour approve of Token
+interface approve(address spender, uint amount)
 
 iff
 
   inRange(uint256, amount)
   CALLVALUE == 0
 
-case CALLER != spender:
+case CALLER =/= spender:
 
   storage
 
-    allowance := allowance[CALLER => allowance[spender] [ spender => amount ] ]
-    //allowance[CALLER][spender] := amount
+    allowance[CALLER][spender] => amount
 
   returns 1
 
 case CALLER == spender:
-  storage
+
   returns 1
 
 
-transition burn (uint256 amount)
+behaviour burn of Token
+interface burn(uint256 amount)
 
 iff
 
@@ -117,37 +116,37 @@ iff
 
 storage
 
-  totalSupply := totalSupply - amount
-  balanceOf := balanceOf[CALLER => balanceOf[CALLER] - amount]
+  totalSupply => totalSupply - amount
+  balanceOf[CALLER] => balanceOf[CALLER] - amount
 
 returns 1
 
 
-transition burnFrom (address src, uint256 amount)
+behaviour burnFrom of Token
+interface burnFrom(address src, uint256 amount)
 
 iff
   amount <= totalSupply
   amount <= balanceOf[src]
-  CALLER != src ==> amount <= allowance[src][CALLER]
+  CALLER =/= src => amount <= allowance[src][CALLER]
   CALLVALUE == 0
 
-case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+case CALLER =/= src and allowance[src][CALLER] == 2^256 - 1:
 
   storage
 
-    totalSupply := totalSupply - amount
-    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
+    totalSupply => totalSupply - amount
+    balanceOf[src] => balanceOf[src] - amount
 
   returns 1
 
-case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+case CALLER =/= src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    totalSupply := totalSupply - amount
-    //allowance[src][CALLER] := allowance[src][CALLER] - amount
-    allowance := allowance[src => allowance[src][ CALLER => allowance[src][CALLER] - amount ] ]
-    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
+    totalSupply => totalSupply - amount
+    allowance[src][CALLER] => allowance[src][CALLER] - amount
+    balanceOf[src]         => balanceOf[src] - amount
 
   returns 1
 
@@ -155,57 +154,61 @@ case CALLER == src:
 
   storage
 
-    totalSupply := totalSupply - amount
-    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
+    totalSupply => totalSupply - amount
+    balanceOf[src] => balanceOf[src] - amount
 
   returns 1
 
 ensures
 
-  pre(balanceOf)[src] - post(balanceOf)[src] == pre(totalSupply) - post(totalSupply)
+  pre(balanceOf[src]) - post(balanceOf[src]) == pre(totalSupply) - post(totalSupply)
 
 
-transition mint (address dst, uint256 amount)
+behaviour mint of Token
+interface mint(address dst, uint256 amount)
+
+iff in range uint256
+
+  totalSupply + amount
+  balanceOf[dst] + amount
 
 iff
-  inRange(uint256, totalSupply + amount)
-  inRange(uint256, balanceOf[dst] + amount)
 
   CALLVALUE == 0
 
 storage
 
-  totalSupply := totalSupply + amount
-  balanceOf := balanceOf[ dst => balanceOf[dst] + amount ]
+  totalSupply => totalSupply + amount
+  balanceOf[dst] => balanceOf[dst] + amount
 
 returns 1
 
 
 // View functions:
 
-transition totalSupply ()
+behaviour totalSupply of Token
+interface totalSupply()
 
 iff 
 
   CALLVALUE == 0
 
-storage
 returns pre(totalSupply)
 
-transition balanceOf (address idx)
+behaviour balanceOf of Token
+interface balanceOf(address idx)
 
 iff 
 
   CALLVALUE == 0
 
-storage
-returns pre(balanceOf)[idx]
+returns pre(balanceOf[idx])
 
-transition allowance (address idx1, address idx2)
+behaviour allowance of Token
+interface allowance(address idx1, address idx2)
 
 iff 
 
   CALLVALUE == 0
 
-storage
-returns pre(allowance)[idx1][idx2]
+returns pre(allowance[idx1][idx2])

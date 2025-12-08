@@ -1,8 +1,4 @@
-contract B
-
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 creates
@@ -10,7 +6,7 @@ creates
   uint x := 100
 
 
-constructor
+constructor of B
 interface constructor(address<A> a)
 
 iff

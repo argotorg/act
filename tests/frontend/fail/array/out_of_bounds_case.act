@@ -1,13 +1,11 @@
-contract B
-
-constructor
+constructor of B
 interface constructor()
 
 creates
 
   int[2] a := [1,2]
 
-transition f
+behaviour f of B
 interface f()
 
 case a[-1] < 0:

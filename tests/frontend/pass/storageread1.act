@@ -1,6 +1,4 @@
-contract Pass
-
-constructor
+constructor of Pass
 interface constructor()
 
 creates
@@ -8,7 +6,7 @@ creates
     uint x := 0
     uint y := 2
 
-transition g
+behaviour g of Pass
 interface g()
 
 iff in range uint256
@@ -18,7 +16,7 @@ iff in range uint256
 storage
 
     // TODO: remove this hack once bug #81 is fixed...
-    x := x
+    x => x
     y
 
 returns x + y

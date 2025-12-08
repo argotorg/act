@@ -1,6 +1,4 @@
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 iff
@@ -10,11 +8,11 @@ creates
   uint128 x := 0
   uint128 y := 0
 
-transition f
+behaviour f of A
 interface f()
 
 iff
   CALLVALUE == 0
 
 storage
-  x := y
+  x => y

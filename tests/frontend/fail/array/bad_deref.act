@@ -1,6 +1,4 @@
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 creates

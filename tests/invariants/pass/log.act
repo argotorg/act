@@ -1,6 +1,4 @@
-contract Log
-
-constructor
+constructor of Log
 interface constructor(uint256 _n)
 
 iff
@@ -13,7 +11,7 @@ creates
 invariants
 	n > 1 or count > 0
 
-transition f
+behaviour f of Log
 interface f()
 
 iff
@@ -21,5 +19,5 @@ iff
     inRange(uint256, count+1)
     
 storage
-	n := n / 2
-	count := count + 1
+	n => n / 2
+	count => count + 1

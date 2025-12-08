@@ -1,6 +1,4 @@
-contract StateMachine
-
-constructor
+constructor of StateMachine
 interface constructor()
 
 iff
@@ -13,7 +11,7 @@ creates
 invariants
     x <= 2
 
-transition f
+behaviour f of StateMachine
 interface f()
 
 iff
@@ -22,9 +20,9 @@ iff
   CALLVALUE == 0
 
 storage
-    x := 1
+    x => 1
 
-transition g
+behaviour g of StateMachine
 interface g()
 
 iff
@@ -33,9 +31,9 @@ iff
   x == 1
 
   storage
-    x := 2
+    x => 2
 
-transition h
+behaviour h of StateMachine
 interface h()
 
 iff
@@ -43,4 +41,4 @@ iff
   x == 2
 
   storage
-    x := 0
+    x => 0

@@ -1,9 +1,7 @@
-contract ReadMapping
-
-constructor
+constructor of ReadMapping
 interface constructor(uint _x, uint _y)
 
 creates
   uint                x := _x
   uint                y := _y
-  mapping(uint:=uint) m := [_x := y + 5]
+  mapping(uint=>uint) m := [_x := y + 5]

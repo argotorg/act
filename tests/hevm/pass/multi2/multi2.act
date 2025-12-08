@@ -1,8 +1,4 @@
-contract B
-
-contract A
-
-constructor
+constructor of A
 interface constructor(uint z)
 
 iff
@@ -13,7 +9,7 @@ creates
    uint x := z + 1
 
 
-transition x
+behaviour x of A
 interface x()
 
 iff
@@ -22,16 +18,16 @@ iff
 returns
    pre(x)
 
-transition set_x
+behaviour set_x of A
 interface set_x(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-  x := z
+  x => z
 
-constructor
+constructor of B
 interface constructor(uint u)
 
 iff

@@ -1,6 +1,4 @@
-contract Pass
-
-constructor
+constructor of Pass
 interface constructor()
 
 creates
@@ -10,7 +8,7 @@ creates
     bool p := true
     bool q := false
 
-transition g
+behaviour g of Pass
 interface g()
 
 iff in range uint256
@@ -20,7 +18,7 @@ iff in range uint256
 storage
 
     // TODO: remove this hack once bug #81 is fixed...
-    x := x
-    y := (x + p) == (q > y)
-    p := (x + p) and (q > y)
+    x => x
+    y => (x + p) == (q > y)
+    p => (x + p) and (q > y)
     q

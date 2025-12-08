@@ -1,6 +1,4 @@
-contract C
-
-constructor
+constructor of C
 interface constructor(uint _x)
 
 creates
@@ -11,9 +9,9 @@ invariants
 
     x == _x
 
-transition f
+behaviour f of C
 interface f(uint _x)
 
 storage
 
-    x := _x
+    x => _x

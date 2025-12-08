@@ -1,16 +1,16 @@
-contract A
-constructor ()
+constructor of A
+interface constructor()
 
 creates
   uint x := 0
 
 
 
-contract B
-constructor (address<A> pa1, address p2, address<A> pa3, address p4)
+constructor of B
+interface constructor(address<A> pa1, address p2, address<A> pa3, address p4)
 
 iff
-  address(pa1) != address(pa3)
+  pa1 =/= pa3
 
 creates
   A a := pa1
@@ -19,44 +19,47 @@ creates
   address bu2 := p4
 
 
-transition g(address<A> pa1)
+behaviour g of B
+interface f(address<A> pa1)
 
 iff
-  address(pa1) != address(a)
+  pa1 =/= a
 
 storage
-  a := new A()
+  a => create A()
 
 
 
-contract C
-constructor (address<A> pa1, address<A> pa2)
+constructor of C
+interface constructor(address<A> pa1, address<A> pa2)
 
 iff
-  address(pa1) != address(pa2)
+  pa1 =/= pa2
 
 creates
-  B b1 := new B(pa1, address(pa2), new A(), address(new A()))
-  A a1 := new A()
-  address cu1 := address(new A())
-  address cu2 := address(new A())
+  B b1 := create B(pa1, pa2, create A(), create A())
+  A a1 := create A()
+  address cu1 := create A()
+  address cu2 := create A()
 
 
-transition f (address<A> pa1, address<A> pa2)
+behaviour f of C
+interface f(address<A> pa1, address<A> pa2)
 
 iff
-  address(pa1) != address(pa2)
-  address(pa1) != address(a1)
-  address(pa2) != address(a1)
-  address(pa1) != address(b1)
-  address(pa2) != address(b1)
-  address(pa1) != address(b1.a)
-  address(pa2) != address(b1.a)
+  pa1 =/= pa2
+  pa1 =/= a1
+  pa2 =/= a1
+  pa1 =/= b1
+  pa2 =/= b1
+  pa1 =/= b1.a
+  pa2 =/= b1.a
 
 storage
-  b1 := new B(pa1, address(pa2), new A(), address(new A()))
-  b1.y := 42
-  b1.a := new A()
+  b1 => create B(pa1, pa2, create A(), create A())
+  b1.y => 42
+  b1.a => create A()
+  b1.a.x => 17
   
 
 

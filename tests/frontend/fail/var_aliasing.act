@@ -1,6 +1,4 @@
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 creates
@@ -8,11 +6,11 @@ creates
   uint x := 0
   uint y := 0
 
-transition f
+behaviour f of A
 interface f()
 
 storage
 
-  x := 1
-  x := 1
+  x => 1
+  x => 1
 

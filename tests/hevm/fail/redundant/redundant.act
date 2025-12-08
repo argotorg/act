@@ -1,6 +1,4 @@
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 iff
@@ -11,7 +9,7 @@ creates
 
   uint x := 0
 
-transition f
+behaviour f of A
 interface f()
 
 iff
@@ -21,4 +19,4 @@ iff
 
 storage
 
-  x := 2
+  x => 2

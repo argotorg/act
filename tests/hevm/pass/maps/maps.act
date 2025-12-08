@@ -1,6 +1,4 @@
-contract Map
-
-constructor
+constructor of Map
 interface constructor()
 
 iff
@@ -9,9 +7,9 @@ iff
 
 creates
   uint256 val := 0
-  mapping(uint := uint) f := [0 := 42]
+  mapping(uint => uint) f := [0 := 42]
 
-transition val
+behaviour val of Map
 interface val()
 
 iff
@@ -20,7 +18,7 @@ iff
 
 returns pre(val)
 
-transition f
+behaviour f of Map
 interface f(uint x)
 
 iff
@@ -30,7 +28,7 @@ iff
 returns pre(f[x])
 
 
-transition set
+behaviour set of Map
 interface set(uint value, uint key)
 
 iff
@@ -39,6 +37,6 @@ iff
 
 storage
 
-  f[key] := value
+  f[key] => value
 
 returns 1

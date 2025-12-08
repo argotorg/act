@@ -1,8 +1,4 @@
-contract A
-
-contract C
-
-constructor
+constructor of C
 interface constructor(uint z1)
 
 iff
@@ -11,7 +7,7 @@ iff
 creates
     uint z := z1
 
-constructor
+constructor of A
 interface constructor(uint x1)
 
 iff
@@ -22,7 +18,7 @@ creates
     C c := create C(42)
 
 
-transition c
+behaviour c of A
 interface c()
 
 iff
@@ -30,10 +26,7 @@ iff
 
 returns (pre(c))
 
-
-contract B
-
-constructor
+constructor of B
 interface constructor(address<A> x)
 
 iff

@@ -1,6 +1,4 @@
-contract A
-
-constructor
+constructor of A
 interface constructor()
 
 iff
@@ -9,9 +7,9 @@ iff
 
 creates
 
-  mapping (uint:=uint) x := []
+  mapping (uint=>uint) x := []
 
-transition f
+behaviour f of A
 interface f()
 
 iff
@@ -20,6 +18,6 @@ iff
 
   storage
 
-    x[0] := 1
+    x[0] => 1
 
   returns 1

@@ -1,7 +1,3 @@
-contract B
-
-contract A
-
 //  Call graph:
 //
 //      C
@@ -12,42 +8,36 @@ contract A
 //           \
 //            C
 
-constructor
+constructor of A
 interface constructor()
 
 creates
    uint x := 0
 
-constructor
+constructor of B
 interface constructor(uint x)
 
 creates
    uint y := x
    D d := create D()
 
-transition remote
+behaviour remote of B
 interface set_remote(uint z)
 
 iff
    CALLVALUE == 0
 
 storage
-   d.x := z
+   d.x => z
 
-
-contract C
-
-constructor
+constructor of C
 interface constructor(uint u)
 
 creates
    B b := create B(u)
    A a := create A()
 
-
-contract D
-
-constructor
+constructor of D
 interface constructor()
 
 creates

@@ -1,6 +1,4 @@
-contract SafeAdd
-
-transition add
+behaviour add of SafeAdd
 interface add(uint256 x, uint256 y)
 
 iff in range uint256
@@ -12,7 +10,7 @@ iff
 
 returns x + y
 
-transition mul
+behaviour mul of SafeAdd
 interface mul(uint256 x, uint256 y)
 
 iff in range uint256
@@ -25,7 +23,7 @@ iff
 
 returns x * y
 
-transition double
+behaviour double of SafeAdd
 interface double(uint256 x)
 
 iff in range uint256

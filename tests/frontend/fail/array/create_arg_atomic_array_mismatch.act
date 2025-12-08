@@ -1,12 +1,8 @@
-contract B
-
-contract A
-
-constructor
+constructor of A
 interface constructor(int x)
 
 
-constructor
+constructor of B
 interface constructor()
 
 creates

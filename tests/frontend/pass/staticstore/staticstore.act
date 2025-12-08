@@ -1,6 +1,4 @@
-contract C
-
-transition f
+behaviour f of C
 interface f()
 
 iff in range uint256

@@ -1,13 +1,11 @@
-contract Token
-
-constructor
+constructor of Token
 interface constructor (address a, uint256 amt)
 
 creates
-  mapping(address := uint256) balances := [a := amt]
+  mapping(address => uint256) balances := [a := amt]
 
 
-transition transfer
+behaviour transfer of Token
 interface transfer(address to, uint256 amt)
 
 
@@ -23,8 +21,8 @@ case CALLER =/= to:
 
   storage
 
-	balances[CALLER] := balances[CALLER] - amt
-	balances[to] := balances[to] + amt
+	balances[CALLER] => balances[CALLER] - amt
+	balances[to] => balances[to] + amt
 
   returns 1
 
