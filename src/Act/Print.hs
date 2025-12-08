@@ -45,15 +45,15 @@ prettyCtor (Constructor name interface _ pres cases posts invs)
     prettyUpdate' :: StorageUpdate t -> String
     prettyUpdate' (Update v r e) = prettyTValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
     
-    prettyTValueType :: TValueType a -> String
-    prettyTValueType (TContract n) = n
-    prettyTValueType t = T.unpack (abiTypeSolidity (toAbiType t))
+prettyTValueType :: TValueType a -> String
+prettyTValueType (TContract n) = n
+prettyTValueType TUnboundedInt = "Unbounded"
+prettyTValueType (TMapping keytype maptype) =
+  "mapping(" ++ prettyValueType keytype ++ " => " ++ prettyValueType maptype ++ ")"
+prettyTValueType t = T.unpack (abiTypeSolidity (toAbiType t))
 
 prettyValueType :: ValueType -> String
-prettyValueType = \case
-  ValueType (TContract n) -> n
-  ValueType t -> T.unpack (abiTypeSolidity (toAbiType t))
-
+prettyValueType (ValueType t) = prettyTValueType t
 
 prettyBehaviour :: Behaviour t -> String
 prettyBehaviour (Behaviour name contract interface _ preconditions cases postconditions)

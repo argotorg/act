@@ -25,6 +25,7 @@ import Act.Syntax.Timing
 import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
+import Act.Print
 import Data.Vector.Internal.Check (check)
 
 
@@ -377,16 +378,21 @@ genInRange _ (ITE _ _ _ _) = error "Internal error: invalid range expression"
 
 
 typeMismatchErr :: forall a b res. Pn -> TValueType a -> TValueType b -> Err res
-typeMismatchErr p t1 t2 = (throw (p, "Type " <> show t1 <> " should match type " <> show t2))
+typeMismatchErr p t1 t2 = throw (p, "Type " <> prettyTValueType t1 <> " should match type " <> prettyTValueType t2)
 
-arrayTypeMismatchErr :: forall a b res. Pn -> TValueType a -> TValueType b -> Err res
-arrayTypeMismatchErr p t1 t2 = (throw (p, "Inconsistent array type: Type " <> show t1 <> " should match type " <> show t2))
+relaxedValueEquality :: ValueType -> ValueType -> Bool
+relaxedValueEquality (ValueType t1) (ValueType t2) = isJust $ relaxedtestEquality t1 t2
 
 relaxedtestEquality :: TValueType a -> TValueType b -> Maybe (a :~: b)
 relaxedtestEquality (TInteger _ _) (TInteger _ _) = Just Refl
 relaxedtestEquality (TInteger _ _) TUnboundedInt = Just Refl
 relaxedtestEquality TUnboundedInt (TInteger _ _) = Just Refl
 relaxedtestEquality TUnboundedInt TUnboundedInt = Just Refl
+relaxedtestEquality (TArray n1 t1) (TArray n2 t2) | n1 == n2 = relaxedtestEquality t1 t2 >>= \Refl -> Just Refl
+relaxedtestEquality (TMapping k1 t1) (TMapping k2 t2) =
+  if relaxedValueEquality k1 k2 && relaxedValueEquality t1 t2 then Just Refl else Nothing
+relaxedtestEquality (TStruct fs1) (TStruct fs2) =
+  if all (uncurry relaxedValueEquality) (zip fs1 fs2) then Just Refl else Nothing
 relaxedtestEquality t1 t2 = testEquality t1 t2
 
 relaxedIntCheck :: TValueType a -> TValueType b -> Bool
@@ -410,6 +416,10 @@ combineTypes (TInteger w1 Unsigned) (TInteger w2 Signed) =
 combineTypes TUnboundedInt TUnboundedInt = pure TUnboundedInt
 combineTypes (TInteger _ _) TUnboundedInt = pure TUnboundedInt
 combineTypes TUnboundedInt (TInteger _ _) = pure TUnboundedInt
+combineTypes t1@(TArray n1 t1') t2@(TArray n2 t2') = do
+    if n1 == n2 then pure () else typeMismatchErr nowhere t1 t2
+    c <- combineTypes t1' t2'
+    pure $ TArray n1 c
 combineTypes t1 _ = pure t1
 
 fitsIn :: TValueType AInteger -> TValueType AInteger -> Bool
@@ -461,6 +471,37 @@ checkExpr env mode t1@TUnboundedInt e =
         (TInteger _ _) -> pure (te, cs)
         TUnboundedInt -> pure (te, cs)
         _ -> typeMismatchErr (getPosn e) t1 t2
+-- Array Expressions
+-- TODO: all array cases except the last are probably not necessary, but may lead to nicer error messages,
+-- less unnecessary constraints and prettier code.
+-- The idea is that we can avoid unnecessary constraint enforcement by using `checkExpr` on each element
+-- If, instead, the whole array is inferred first, we are then forced to apply 
+checkExpr env mode (TArray len t) (U.EArray p es) = do
+    if len == length es then pure () else typeMismatchErr p (TArray len t) (TArray (length es) t)
+    r <- unzip <$> traverse (checkExpr env mode t) es
+    pure $ let (tes,cs) = r in (Array p tes, concat cs)
+checkExpr _ _ t (U.EArray p _) = throw (p, "Array expression cannot have type " <> prettyTValueType t)
+checkExpr env mode t@(TArray _ _) (U.EITE p e1 e2 e3) = do
+    r1 <- checkExpr env mode TBoolean e1
+    r2 <- checkExpr env mode t e2
+    r3 <- checkExpr env mode t e3
+    pure $ let (te1, cnstr1) = r1
+               (te2, cnstr2) = r2
+               (te3, cnstr3) = r3
+           in (ITE p te1 te2 te3, cnstr1 ++ cnstr2 ++ cnstr3)
+checkExpr env mode t1@(TArray _ _) e = 
+    let pn = getPosn e in
+    inferExpr env mode e `bindValidation` \(TExp t2 te, cs) -> 
+        flip (maybe (typeMismatchErr pn t1 t2)) (relaxedtestEquality t1 t2) $ \Refl ->
+            case (fst $ flattenValueType t1, fst $ flattenValueType t2) of
+                (bt1@(TInteger _ _), bt2@(TInteger _ _)) ->
+                    if bt2 `fitsIn` bt1 then pure (te, cs)
+                    else pure (te, cs ++ (makeIntegerBoundConstraint (getPosn e) env bt1 <$> expandArrayExpr t2 te))
+                (bt1@(TInteger _ _), TUnboundedInt) ->
+                    pure (te, cs ++ (makeIntegerBoundConstraint (getPosn e) env bt1 <$> expandArrayExpr t2 te))
+                (TUnboundedInt, TInteger _ _) -> pure (te, cs)
+                (TUnboundedInt, TUnboundedInt) -> pure (te, cs)
+                _ -> typeMismatchErr (getPosn e) t1 t2
 checkExpr env mode t1 e =
     let pn = getPosn e in
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) ->
@@ -479,6 +520,7 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
   U.ELEQ    p v1 v2 -> boolOp2 (LEQ  p) TUnboundedInt v1 v2
   U.EGEQ    p v1 v2 -> boolOp2 (GEQ  p) TUnboundedInt v1 v2
   U.EGT     p v1 v2 -> boolOp2 (GT   p) TUnboundedInt v1 v2
+  -- Do we allow Eq/Neq of contract expressions? TODO: Should not allow comparisons of mapping expressions
   U.EEq     p v1 v2 -> first (TExp TBoolean) <$> polycheck p Eq v1 v2
   U.ENeq    p v1 v2 -> first (TExp TBoolean) <$> polycheck p NEq v1 v2
   U.BoolLit p v1    -> pure (TExp TBoolean (LitBool p v1), [])
@@ -503,23 +545,19 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
                       | otherwise && v1 >= minSigned 256 && v1 <= maxSigned 256 = TInteger (findBoundSigned v1) Signed
                       | otherwise = TUnboundedInt
 
-  U.EArray p l -> error "TODO"
-     inferElementTypes l `bindValidation` \inferred ->
-     let (inferredElements, cs) = unzip inferred in
-     (flip (,) (concat cs)) <$> checkAllTypes inferredElements
-     where
-       inferElementTypes :: [U.Expr] -> Err [((Pn, TypedExp t), [Constraint t])]
-       inferElementTypes = traverse (\e' -> (first ((,) (getPosn e')) <$> inferExpr env mode e'))
+  U.EArray p l -> (unzip <$> traverse (inferExpr env mode) l) `bindValidation` \(tes, cs) ->
+    (flip (,)) (concat cs) <$> gatherElements tes
+    where
+      gatherElements :: [TypedExp t] -> Err (TypedExp t)
+      gatherElements (TExp t1 te1:tes) =  TExp (TArray (length l) t1) <$> (Array p . (:) te1 <$> traverse (checkElement t1) tes)
+      gatherElements [] = throw (p, "Internal error: Cannot infer type of empty array expression")
 
-       checkAllTypes :: [(Pn, TypedExp t)] -> Err (TypedExp t)
-       checkAllTypes tl = case tl of
-         (_, TExp vt1 _):_ -> TExp (TArray (length l) vt1) <$> Array p <$> traverse (uncurry (cmpType vt1)) tl
-           where
-             cmpType :: TValueType a -> Pn -> TypedExp t -> Err (Exp a t)
-             cmpType vt pn (TExp vt' e') =
-               maybe (arrayTypeMismatchErr pn vt vt') (\Refl -> pure e') $ relaxedtestEquality vt vt'
+      -- TODO: this relies on combineTypes, look that over as it is not complete
+      -- combinedType :: [TValueType a] -> Err (TValueType a)
+      -- combinedType ts@(th : tl) = foldl' (\ta tb -> ta `bindValidation` combineTypes tb) (pure th) ts
 
-         [] -> error "Empty array expressions not supported"
+      checkElement :: TValueType a -> TypedExp t -> Err (Exp a t)
+      checkElement t (TExp t' te) = maybe (typeMismatchErr (posnFromExp te) t t') (\Refl -> pure te) $ relaxedtestEquality t t'
 
   -- Constructor calls
   U.ECreate p c args callvalue -> case Map.lookup c constructors of
