@@ -1,10 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonadComprehensions #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DataKinds #-}
-{-# Language RecordWildCards #-}
 {-# Language ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE KindSignatures #-}
@@ -37,38 +34,8 @@ import Act.Print
 
 import qualified EVM.Solvers as Solvers
 
--- TODO this is duplicated in hevm Keccak.hs but not exported
-combine :: [a] -> [(a,a)]
-combine lst = combine' lst []
-  where
-    combine' [] acc = concat acc
-    combine' (x:xs) acc =
-      let xcomb = [ (x, y) | y <- xs] in
-      combine' xs (xcomb:acc)
-
-mkOr :: [Exp ABoolean] -> Exp ABoolean
-mkOr = foldr (Or nowhere) (LitBool nowhere False)
-
-mkOrNot :: [Exp ABoolean] -> Exp ABoolean
-mkOrNot = foldr (Or nowhere . Neg nowhere) (LitBool nowhere False)
-
--- | Checks non-overlapping cases,
--- For every pair of case conditions we assert that they are true
--- simultaneously. The query must be unsat.
-mkNonoverlapAssertion :: [Exp ABoolean] -> Exp ABoolean
-mkNonoverlapAssertion caseconds =
-  mkOr $ (uncurry $ And nowhere) <$> combine caseconds
-
--- | Checks exhaustiveness of cases.
--- We assert that none of the case conditions are true at the same
--- time. The query must be unsat.
-mkExhaustiveAssertion :: [Exp ABoolean] -> Exp ABoolean
-mkExhaustiveAssertion caseconds =
-  foldl mkAnd (LitBool nowhere True) caseconds
-  where
-    mkAnd r c = And nowhere (Neg nowhere c) r
-
 -- | Create a query for cases
+-- TODO remove (depricated). This check is now part of the typechecker
 mkCaseQuery :: ([Exp ABoolean] -> Exp ABoolean) -> [Behaviour] -> (Id, SMTExp, (SolverInstance -> IO Model))
 mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) preconds _ _ _ _):_) =
   (ifaceName, smt, getModel)
@@ -102,6 +69,7 @@ mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) preconds _ _
 mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"
 
 -- | Checks nonoverlapping and exhaustiveness of cases
+-- TODO remove (depricated). This check is now part of the typechecker
 checkCases :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 checkCases (Act _ contracts) solver' smttimeout debug = do
   let groups = concatMap (\(Contract _ behvs) -> groupBy sameIface behvs) contracts

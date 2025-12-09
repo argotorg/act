@@ -354,11 +354,11 @@ applyUpdate readMap writeMap (Update typ ref e) = do
     updateNonce (EVM.GVar _) = error "Internal error: contract cannot be a global variable"
 
     isCreate (Create _ _ _ _) = True
-    isCreate (Address _ (Create _ _ _ _)) = True
+    isCreate (Address _ _ (Create _ _ _ _)) = True
     isCreate _ = False
 
 createCastedContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActT m ContractMap
-createCastedContract readMap writeMap freshAddr (Address _ (Create pn cid args b)) =
+createCastedContract readMap writeMap freshAddr (Address _ _ (Create pn cid args b)) =
  createContract readMap writeMap freshAddr (Create pn cid args b)
 createCastedContract _ _ _ _ = error "Internal error: constructor call expected"
 
@@ -726,7 +726,7 @@ toExpr cmap =  fmap stripMods . go
 
       e@(ITE _ _ _ _) -> error $ "Internal error: expecting flat expression. got: " <> show e
 
-      (Address _ e') -> toExpr cmap e'
+      (Address _ _ e') -> toExpr cmap e'
       e ->  error $ "TODO: " <> show e
 
     op2 :: Monad m => forall b c. (EVM.Expr (ExprType c) -> EVM.Expr (ExprType c) -> b) -> Exp c -> Exp c -> ActT m b
@@ -784,7 +784,7 @@ checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere (TInteger 256 Unsigned) e1 (LitIn
                             (Eq nowhere (TInteger 256 Unsigned) e2 (Div nowhere (Mul nowhere e1 e2) e1)))
 checkOp (Div _ _ _) = LitBool nowhere True
 checkOp (Mod _ _ _) = LitBool nowhere True
-checkOp (Address _ _) = LitBool nowhere True
+checkOp (Address _ _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"
 checkOp (IntMin _ _)  = error "Internal error: invalid in range expression"
 checkOp (IntMax _ _)  = error "Internal error: invalid in range expression"

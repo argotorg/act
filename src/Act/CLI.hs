@@ -153,7 +153,6 @@ type' f solver' smttimeout' debug' = do
   contents <- readFile f
   proceed contents (addBounds <$> compile contents) $ \claims -> do
     checkArrayBounds claims solver' smttimeout' debug'
-    checkCases claims solver' smttimeout' debug'
     checkRewriteAliasing claims solver' smttimeout' debug'
     B.putStrLn $ encode claims
 
@@ -172,7 +171,6 @@ prove file' solver' smttimeout' debug' = do
   contents <- readFile file'
   proceed contents (addBounds <$> compile contents) $ \claims -> do
     checkArrayBounds claims solver' smttimeout' debug'
-    checkCases claims solver' smttimeout' debug'
     checkRewriteAliasing claims solver' smttimeout' debug'
     let
       catModels results = [m | Sat m <- results]
@@ -228,7 +226,6 @@ coq' f solver' smttimeout' debug' = do
   contents <- readFile f
   proceed contents (addBounds <$> compile contents) $ \claims -> do
     checkArrayBounds claims solver' smttimeout' debug'
-    checkCases claims solver' smttimeout' debug'
     checkRewriteAliasing claims solver' smttimeout' debug'
     TIO.putStr $ coq claims
 
