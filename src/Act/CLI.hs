@@ -52,7 +52,8 @@ import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
-import Act.Decompile
+import Act.Lex (lastPos)
+--import Act.Decompile
 
 import qualified EVM.Solvers as Solvers
 import EVM.Solidity
@@ -152,9 +153,9 @@ type' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f solver' smttimeout' debug' = do
   contents <- readFile f
   proceed contents (addBounds <$> compile contents) $ \claims -> do
-    checkArrayBounds claims solver' smttimeout' debug'
+    --checkArrayBounds claims solver' smttimeout' debug'
     checkCases claims solver' smttimeout' debug'
-    checkRewriteAliasing claims solver' smttimeout' debug'
+    --checkRewriteAliasing claims solver' smttimeout' debug'
     B.putStrLn $ encode claims
 
 parseSolver :: Maybe Text -> IO Solvers.Solver
@@ -167,13 +168,15 @@ parseSolver s = case s of
                               input -> render (text $ "unrecognised solver: " <> Text.pack input) >> exitFailure
 
 prove :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+prove _ _ _ _ = error "SMT TBD"
+{-
 prove file' solver' smttimeout' debug' = do
   let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout') debug'
   contents <- readFile file'
   proceed contents (addBounds <$> compile contents) $ \claims -> do
-    checkArrayBounds claims solver' smttimeout' debug'
+    --checkArrayBounds claims solver' smttimeout' debug'
     checkCases claims solver' smttimeout' debug'
-    checkRewriteAliasing claims solver' smttimeout' debug'
+    --checkRewriteAliasing claims solver' smttimeout' debug'
     let
       catModels results = [m | Sat m <- results]
       catErrors results = [e | e@SMT.Error {} <- results]
@@ -221,18 +224,21 @@ prove file' solver' smttimeout' debug' = do
       ]
 
     unless (fst invOutput && fst pcOutput) exitFailure
+    -}
 
 
 coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 coq' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (addBounds <$> compile contents) $ \claims -> do
-    checkArrayBounds claims solver' smttimeout' debug'
-    checkCases claims solver' smttimeout' debug'
-    checkRewriteAliasing claims solver' smttimeout' debug'
+  proceed contents (compile contents) $ \claims -> do
+    --checkArrayBounds claims solver' smttimeout' debug'
+    --checkCases claims solver' smttimeout' debug'
+    --checkRewriteAliasing claims solver' smttimeout' debug'
     TIO.putStr $ coq claims
 
 decompile' :: FilePath -> Text -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+decompile' _ _ _ _ _ = error "Decompile TBD"
+{-
 decompile' solFile' cid solver' timeout debug' = do
   let config = if debug' then debugActConfig else defaultActConfig
   cores <- fmap fromIntegral getNumProcessors
@@ -250,7 +256,7 @@ decompile' solFile' cid solver' timeout debug' = do
           exitFailure
         Right s -> do
           putStrLn (prettyAct s)
-
+-}
 
 hevm :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
@@ -398,7 +404,7 @@ proceed :: Validate err => String -> err (NonEmpty (Pn, String)) a -> (a -> IO (
 proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
 
 compile :: String -> Error String Act
-compile = pure . annotate <==< typecheck <==< parse . lexer
+compile = pure . annotate <==< fmap fst . typecheck <==< parse . lexer
 
 prettyErrs :: Traversable t => String -> t (Pn, String) -> IO ()
 prettyErrs contents errs = mapM_ prettyErr errs >> exitFailure

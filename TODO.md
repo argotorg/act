@@ -20,6 +20,7 @@ Target release data: 15/1/2025
   - [ ] Equivalence checking time (AMM?)
   - [ ] Clean up? 
   - [ ] Correct handling of Eth environment vars + balance
+  - [ ] Signed Integer overflow
 
 
 - Rocq
