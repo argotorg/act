@@ -65,15 +65,3 @@ iff
 creates
    A a := y.a
    B b := y 
-<<<<<<< HEAD
-=======
-
-transition change()
-
-iff
-
-  CALLVALUE == 0
-  
-storage
-  a := new A(42)
->>>>>>> rewrite
