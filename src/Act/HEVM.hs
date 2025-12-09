@@ -55,6 +55,7 @@ import EVM.Solvers
 import EVM.Effects
 import EVM.Format as Format
 import EVM.Traversals
+import Debug.Trace
 
 
 type family ExprType a where
@@ -206,9 +207,9 @@ translateConstructor bytecode (Constructor cid iface _ preconds cases _ _) cmap 
   -- All must be enforced again to avoid discrepancies. Necessary for Vyper.
   -- Note that since all locations are already in `preconds`,
   -- there is no need to look at other fields.
-  bounds <- storageBounds cmap $ nub $ concatMap locsFromConstrCase cases <> concatMap locsFromExp preconds
+  bounds <- storageBounds initmap $ nub $ concatMap locsFromConstrCase cases <> concatMap locsFromExp preconds
   ends <- mapM (translateConstructorCase bytecode initmap (snd calldata) bounds preconds) cases
-  pure (ends, calldata, ifaceToSig iface, bounds)
+  pure (ends, calldata, ifaceToSig cid iface, bounds)
   where
     calldata = makeCtrCalldata iface
     initcontract = EVM.C { EVM.code    = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
@@ -252,8 +253,8 @@ translateBehvs cmap behvs = do
   --  behvName (Behaviour _ _ (Interface name _) _ _ _) = name
   --  --behvName [] = error "Internal error: behaviour groups cannot be empty"
 
-ifaceToSig :: Interface -> Sig
-ifaceToSig (Interface name args) = Sig (T.pack name) (fmap fromdecl args)
+ifaceToSig :: Id -> Interface -> Sig
+ifaceToSig name (Interface _ args) = Sig (T.pack name) (fmap fromdecl args)
   where
     fromdecl (Arg argtype _) = argToAbiType argtype
 
@@ -269,8 +270,8 @@ translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
   ends <- mapM (translateBehvCase cmap (snd behvCalldata) bounds preconds) cases
   pure (behvName, ends, behvCalldata, behvSig, bounds)
   where
-    behvCalldata = makeCalldata iface
-    behvSig = ifaceToSig iface
+    behvCalldata = makeCalldata behvName iface
+    behvSig = ifaceToSig behvName iface
 
 translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> ActT m (EVM.Expr EVM.End, ContractMap)
 translateBehvCase cmap cdataprops bounds preconds (casecond, (upds, ret)) = do
@@ -354,11 +355,11 @@ applyUpdate readMap writeMap (Update typ ref e) = do
     updateNonce (EVM.GVar _) = error "Internal error: contract cannot be a global variable"
 
     isCreate (Create _ _ _ _) = True
-    isCreate (Address _ (Create _ _ _ _)) = True
+    isCreate (Address _ _ (Create _ _ _ _)) = True
     isCreate _ = False
 
 createCastedContract :: Monad m => ContractMap -> ContractMap -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActT m ContractMap
-createCastedContract readMap writeMap freshAddr (Address _ (Create pn cid args b)) =
+createCastedContract readMap writeMap freshAddr (Address _ _ (Create pn cid args b)) =
  createContract readMap writeMap freshAddr (Create pn cid args b)
 createCastedContract _ _ _ _ = error "Internal error: constructor call expected"
 
@@ -479,7 +480,7 @@ substExp subst expr = case expr of
 
   Create pn a b c -> Create pn a (substArgs subst b) (substExp subst <$> c)
 
-  Address c x -> Address c (substExp subst x)
+  Address pn c x -> Address pn c (substExp subst x)
 
   Mapping pn k t a ->
     Mapping pn k t ((\(ke,e) -> (substExp subst ke, substExp subst e)) <$> a)
@@ -726,7 +727,7 @@ toExpr cmap =  fmap stripMods . go
 
       e@(ITE _ _ _ _) -> error $ "Internal error: expecting flat expression. got: " <> show e
 
-      (Address _ e') -> toExpr cmap e'
+      (Address _ _ e') -> toExpr cmap e'
       e ->  error $ "TODO: " <> show e
 
     op2 :: Monad m => forall b c. (EVM.Expr (ExprType c) -> EVM.Expr (ExprType c) -> b) -> Exp c -> Exp c -> ActT m b
@@ -763,7 +764,7 @@ accessStorage :: ContractMap -> EVM.Expr EVM.EWord -> EVM.Expr EVM.EAddr -> EVM.
 accessStorage cmap slot addr = case M.lookup addr cmap of
   Just (EVM.C _ storage _ _ _, _) -> EVM.SLoad slot storage
   Just (EVM.GVar _, _) -> error "Internal error: contract cannot be a global variable"
-  Nothing -> error "Internal error: contract not found"
+  Nothing -> error $ "Internal error: contract not found " <> show addr <> "\nmap:" <> show cmap
 
 
 inRange :: TValueType AInteger -> Exp AInteger -> Exp ABoolean
@@ -784,7 +785,7 @@ checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere (TInteger 256 Unsigned) e1 (LitIn
                             (Eq nowhere (TInteger 256 Unsigned) e2 (Div nowhere (Mul nowhere e1 e2) e1)))
 checkOp (Div _ _ _) = LitBool nowhere True
 checkOp (Mod _ _ _) = LitBool nowhere True
-checkOp (Address _ _) = LitBool nowhere True
+checkOp (Address _ _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"
 checkOp (IntMin _ _)  = error "Internal error: invalid in range expression"
 checkOp (IntMax _ _)  = error "Internal error: invalid in range expression"
@@ -811,8 +812,8 @@ checkEquiv solvers l1 l2 = do
 
 -- | Create the initial contract state before analysing a contract
 -- | Assumes that all calldata variables have unique names
-getInitContractState :: App m => SolverGroup -> Interface -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
-getInitContractState solvers iface preconds cmap = do
+getInitContractState :: App m => SolverGroup -> Id -> Interface -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
+getInitContractState solvers cname iface preconds cmap = do
   let casts = castsFromIFace iface
   let casts' = groupBy (\x y -> fst x == fst y) casts
   (cmaps, checks) <- mapAndUnzipM getContractState (fmap nub casts')
@@ -835,8 +836,8 @@ getInitContractState solvers iface preconds cmap = do
       codemap <- getCodemap
       case M.lookup cid codemap of
         -- TODO: handle multiple cases
-        Just (Contract (Constructor _ iface' _ preconds' ((_,upds):_) _ _) _, _, bytecode) -> do
-          (icmap, check) <- getInitContractState solvers iface' preconds' M.empty
+        Just (Contract (Constructor cname' iface' _ preconds' ((_,upds):_) _ _) _, _, bytecode) -> do
+          (icmap, check) <- getInitContractState solvers cname' iface' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty
                                , EVM.tStorage = EVM.ConcreteStore mempty
@@ -869,7 +870,7 @@ getInitContractState solvers iface preconds cmap = do
     checkQueries queries = do
       conf <- readConfig
       res <- liftIO $ checkSat solvers Nothing (assertProps conf queries)
-      checkResult (makeCalldata iface) Nothing [toVRes msg res]
+      checkResult (makeCalldata cname iface) Nothing [toVRes msg res]
 
     makeSymAddr n = EVM.WAddr (EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show n))
     neqProp a1 a2 = EVM.PNeg (EVM.PEq a1 a2)
@@ -890,10 +891,10 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor _ iface _ preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface _ preconds _ _ _)  _) = do
   -- Construct the initial contract state
-  (actinitmap, checks) <- getInitContractState solvers iface preconds M.empty
-  let hevminitmap = translateCmap actinitmap
+  (actinitmap, checks) <- getInitContractState solvers cname iface preconds M.empty
+  let hevminitmap = translateCmap (traceShowId actinitmap)
   -- Translate Act constructor to Expr
   fresh <- getFresh
   (actbehvs, calldata, sig, bounds) <- translateConstructor runtimecode ctor actinitmap
@@ -1113,7 +1114,7 @@ checkAbi solver contract cmap = do
   checkResult (txdata, []) Nothing (fmap (toVRes msg) res)
 
   where
-    actSig (Behaviour _ _ iface _ _ _ _) = T.pack $ makeIface iface
+    actSig (Behaviour bname _ iface _ _ _ _) = T.pack $ makeIface bname iface
     actSigs (Contract _ behvs) = actSig <$> behvs
 
     checkBehv :: [EVM.Prop] -> EVM.Expr EVM.End -> [EVM.Prop]
