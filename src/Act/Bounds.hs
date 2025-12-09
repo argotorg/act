@@ -10,7 +10,6 @@ import Data.Type.Equality
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit
--- import Act.Type (globalEnv)
 
 
 {-|
@@ -83,8 +82,9 @@ mkEthEnvBounds = mapMaybe mkBound . nub
     mkBound :: EthEnv -> Maybe (Exp ABoolean)
     mkBound e = Just $ bound (ethEnv e) (IntEnv nowhere e)
 
-isIntegerType :: TValueType a -> Maybe (a :~: AInteger)
-isIntegerType t = testEquality (toSType t) SInteger
+isBoundedIntegerType :: TValueType a -> Maybe (a :~: AInteger)
+isBoundedIntegerType TUnboundedInt = Nothing
+isBoundedIntegerType t = testEquality (toSType t) SInteger
 
 refToRHS :: Ref k -> Ref RHS
 refToRHS (SVar p t i ci) = SVar p t i ci
@@ -101,7 +101,7 @@ mkRefsBounds refs = concatMap mkTRefBound refs
     mkTRefBound (TRef t@TAddress _ ref) = [mkRefBound t ref]
     mkTRefBound (TRef t@(TArray _ _) _ ref) =
       let bt = fst (flattenValueType t) in
-      case isIntegerType bt of
+      case isBoundedIntegerType bt of
         Just Refl -> mkRefBound bt <$> expandTRef t ref
         Nothing -> []
     mkTRefBound _ = []

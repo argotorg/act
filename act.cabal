@@ -56,7 +56,7 @@ library
   default-language:   Haskell2010
   exposed-modules:
     Act.CLI
-    Act.Decompile
+    --Act.Decompile
     Act.Error
     Act.Print
     Act.SMT

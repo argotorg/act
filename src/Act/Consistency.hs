@@ -7,9 +7,8 @@
 {-# LANGUAGE KindSignatures #-}
 
 module Act.Consistency (
-  checkCases,
-  checkArrayBounds,
-  checkRewriteAliasing
+  --checkArrayBounds,
+  --checkRewriteAliasing
 ) where
 
 
@@ -21,7 +20,7 @@ import System.Exit (exitFailure)
 import Data.Maybe
 import Data.Type.Equality ((:~:)(..), TestEquality (testEquality))
 import Data.Singletons (sing, SingI)
-import Data.Semigroup (Arg (..))
+import qualified Data.Semigroup as Semi (Arg (..))
 
 import Control.Monad.Reader
 import Control.Monad (forM, forM_, zipWithM)
@@ -33,78 +32,10 @@ import Act.SMT as SMT
 import Act.Print
 
 import qualified EVM.Solvers as Solvers
-
--- | Create a query for cases
--- TODO remove (depricated). This check is now part of the typechecker
-mkCaseQuery :: ([Exp ABoolean] -> Exp ABoolean) -> [Behaviour] -> (Id, SMTExp, (SolverInstance -> IO Model))
-mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) preconds _ _ _ _):_) =
-  (ifaceName, smt, getModel)
-  where
-    locs = nub $ concatMap locsFromExp (preconds <> caseconds)
-    (slocs, clocs) = partitionLocs locs
-    env = concatMap ethEnvFromBehaviour behvs
-    pres = mkAssert ifaceName <$> preconds
-    caseconds = concatMap _caseconditions behvs
-
-    smt = SMTExp
-      { _storage = concatMap (declareLocation ifaceName) slocs
-      , _calldata = (declareArg ifaceName <$> decls) <> concatMap (declareLocation ifaceName) clocs
-      , _environment = declareEthEnv <$> env
-      , _assertions = (mkAssert ifaceName $ props caseconds) : pres
-      }
-
-    getModel solver = do
-      prestate <- mapM (getLocationValue solver ifaceName Pre) slocs
-      calldata <- mapM (getCalldataValue solver ifaceName) decls
-      calllocs <- mapM (getLocationValue solver ifaceName Pre) clocs
-      environment <- mapM (getEnvironmentValue solver) env
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = (ifaceName, calldata)
-        , _mcalllocs = calllocs
-        , _menvironment = environment
-        , _minitargs = []
-        }
-mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"
-
--- | Checks nonoverlapping and exhaustiveness of cases
--- TODO remove (depricated). This check is now part of the typechecker
-checkCases :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-checkCases (Act _ contracts) solver' smttimeout debug = do
-  let groups = concatMap (\(Contract _ behvs) -> groupBy sameIface behvs) contracts
-  let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
-  solver <- spawnSolver config
-  let qs = mkCaseQuery mkNonoverlapAssertion <$> groups
-  r <- forM qs (\(name, q, getModel) -> do
-                        res <- checkSat solver getModel q
-                        pure (name, res))
-  mapM_ (checkRes "nonoverlapping") r
-  let qs' = mkCaseQuery mkExhaustiveAssertion <$> groups
-  r' <- forM qs' (\(name, q, getModel) -> do
-                          res <- checkSat solver getModel q
-                          pure (name, res))
-  mapM_ (checkRes "exhaustive") r'
-
-    where
-
-      sameIface (Behaviour _ _ iface _ _ _ _ _) (Behaviour _ _ iface' _ _ _ _ _) =
-        makeIface iface == makeIface iface'
-
-      checkRes :: String -> (Id, SMT.SMTResult) -> IO ()
-      checkRes check (name, res) =
-        case res of
-          Sat model -> failMsg ("Cases are not " <> check <> " for behavior " <> name <> ".") (prettyAnsi model)
-          Unsat -> pure ()
-          Unknown -> errorMsg $ "Solver timeour. Cannot prove that cases are " <> check <> " for behavior " <> name <> "."
-          SMT.Error _ err -> errorMsg $ "Solver error: " <> err <> "\nCannot prove that cases are " <>  check <> " for behavior " <> name <> "."
-
-      failMsg str model = render (red (pretty str) <> line <> model <> line) >> exitFailure
-      errorMsg str = render (pretty str <> line) >> exitFailure
-
+import Debug.Trace
 
 --- ** Array Bounds Checking ** ---
-
+{-
 type ModelCtx = Reader Model
 
 mkBounds :: TypedExp -> Int -> [Exp ABoolean]
@@ -112,24 +43,24 @@ mkBounds (TExp (TInteger _ _) e) b = [LEQ nowhere (LitInt nowhere 0) e, LT nowhe
 mkBounds _ _ = error "Internal Error: Expected Integral Index"
 
 mkRefBounds :: Ref a -> [Exp ABoolean]
-mkRefBounds (SArray _ ref _ tes) = concatMap (uncurry mkBounds) tes <> mkRefBounds ref
-mkRefBounds (SMapping _ ref _ _) = mkRefBounds ref
-mkRefBounds (SField _ ref _ _) = mkRefBounds ref
+mkRefBounds (RArrIdx _ ref _ tes) = concatMap (uncurry mkBounds) tes <> mkRefBounds ref
+mkRefBounds (RMapIdx _ ref _) = mkRefBounds ref
+mkRefBounds (RField _ ref _ _) = mkRefBounds ref
 mkRefBounds _ = []
 
-mkStorageBounds :: Location -> [Exp ABoolean]
-mkStorageBounds (Loc _ _ (Item _ ref)) = mkRefBounds ref
+mkStorageBounds :: TypedRef -> [Exp ABoolean]
+mkStorageBounds (TRef _ _ ref) = mkRefBounds ref
 
 -- TODO: There are locs that don't need to be checked, e.g. assignment locs cannot be out of bounds
-mkConstrArrayBoundsQuery :: Constructor -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
-mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) preconds _ _ initialStorage) =
+mkConstrArrayBoundsQuery :: Constructor -> (Id, [TypedRef], SMTExp, SolverInstance -> IO Model)
+mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) _ preconds cases _ _) =
   (ifaceName, arrayLocs, smt, getModel)
   where
     -- Declare vars
     activeLocs = locsFromConstructor constructor
     envs = ethEnvFromConstructor constructor
 
-    arrayLocs = filter (\(Loc _ _ item) -> isArrayItem item && posnFromItem item /= nowhere) activeLocs
+    arrayLocs = filter (\(TRef _ _ ref) -> isArrayRef ref && posnFromItem ref /= nowhere) activeLocs
     boundsExps = concatMap mkStorageBounds arrayLocs
     assertion = mkOrNot boundsExps
 
@@ -138,15 +69,15 @@ mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) 
 
     getModel = getCtorModel constructor
 
-mkBehvArrayBoundsQuery :: Behaviour -> (Id, [Location], SMTExp, SolverInstance -> IO Model)
-mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) preconds caseconds _ stateUpdates _) =
+mkBehvArrayBoundsQuery :: Behaviour -> (Id, [TypedRef], SMTExp, SolverInstance -> IO Model)
+mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) preconds cases _ _) =
   (ifaceName, arrayLocs, smt, getModel)
   where
     -- Declare vars
     activeLocs = locsFromBehaviour behv
     envs = ethEnvFromBehaviour behv
 
-    arrayLocs = filter (\(Loc _ _ item) -> isArrayItem item && posnFromItem item /= nowhere) activeLocs
+    arrayLocs = filter (\(TRef _ _ ref) -> isArrayItem ref && posnFromItem ref /= nowhere) activeLocs
     boundsExps = concatMap mkStorageBounds arrayLocs
     assertion = mkOrNot boundsExps
 
@@ -172,7 +103,7 @@ checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
                           pure (name, locs, res))
     mapM_ (checkRes "behaviour") r' )
   where
-    checkRes :: String -> (Id, [Location], SMT.SMTResult) -> IO ()
+    checkRes :: String -> (Id, [TypedRef], SMT.SMTResult) -> IO ()
     checkRes transition (name, locs, res) =
       case res of
         Sat model -> failMsg ("Array indices are not within bounds for " <> transition <> " " <> name <> ".")
@@ -181,7 +112,7 @@ checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
         Unknown -> errorMsg $ "Solver timeour. Cannot prove that array indices are within bounds for " <> transition <> " " <> name <> "."
         SMT.Error _ err -> errorMsg $ "Solver error: " <> err <> "\nCannot prove that array indices are within bounds for " <> transition <> " " <> name <> "."
 
-    printOutOfBounds :: Model -> [Location] -> DocAnsi
+    printOutOfBounds :: Model -> [TypedRef] -> DocAnsi
     printOutOfBounds model locs =
       indent 2 ( underline (string "Out of bounds:"))
       <> line <> vsep printedLocs
@@ -197,13 +128,13 @@ checkBound (TExp (TInteger _ _) e) b =
 checkBound _ _ = error "Internal Error: Expected Integer indices"
 
 checkRefBounds :: Ref a -> ModelCtx Bool
-checkRefBounds (SArray _ ref _ idcs) = liftA2 (&&) (and <$> mapM (uncurry checkBound) idcs) (checkRefBounds ref)
-checkRefBounds (SMapping _ ref _ _) = checkRefBounds ref
-checkRefBounds (SField _ ref _ _) = checkRefBounds ref
+checkRefBounds (RArrIdx _ ref _ idcs) = liftA2 (&&) (and <$> mapM (uncurry checkBound) idcs) (checkRefBounds ref)
+checkRefBounds (RMapIdx _ ref _) = checkRefBounds ref
+checkRefBounds (RField _ ref _ _) = checkRefBounds ref
 checkRefBounds _ = pure True
 
-checkLocationBounds :: Location -> ModelCtx DocAnsi
-checkLocationBounds (Loc _ _ item@(Item _ ref)) = do
+checkLocationBounds :: TypedRef -> ModelCtx DocAnsi
+checkLocationBounds (TRef _ _ ref) = do
   cond <- checkRefBounds ref
   if cond then pure $ string ""
   else do
@@ -228,34 +159,34 @@ printIdx te@(TExp (TInteger _ _) e) b = do
 printIdx _ _ = error "Internal Error: Expected Integer indices"
 
 printOutOfBoundsRef :: Ref a -> ModelCtx DocAnsi
-printOutOfBoundsRef (SArray _ ref _ idcs) =
+printOutOfBoundsRef (RArrIdx _ ref _ idcs) =
   liftA2 (<>) (printOutOfBoundsRef ref) (concatWith (<>) <$> mapM (uncurry printIdx) idcs)
-printOutOfBoundsRef (SMapping _ ref _ idcs) =
+printOutOfBoundsRef (RMapIdx _ ref idcs) =
   liftA2 (<>) (printOutOfBoundsRef ref) (concatWith (<>)
     <$> mapM (\te -> pure $ string "[" <> string (prettyTypedExp te) <> string "]") idcs)
-printOutOfBoundsRef (SField _ ref _ id') =
+printOutOfBoundsRef (RField _ ref _ id') =
   liftA2 (<>) (printOutOfBoundsRef ref) (pure $ string $ "." ++ id')
-printOutOfBoundsRef (SVar _ _ id') = pure $ string id'
+printOutOfBoundsRef (SVar _ _ _ id') = pure $ string id'
 printOutOfBoundsRef (CVar _ _ id') = pure $ string id'
 
-printOutOfBoundsItem :: TItem a k-> ModelCtx DocAnsi
-printOutOfBoundsItem (Item _ ref) = printOutOfBoundsRef ref
+printOutOfBoundsItem :: TypedRef -> ModelCtx DocAnsi
+printOutOfBoundsItem (TRef _ _ ref) = printOutOfBoundsRef ref
 
 
 --- ** No rewrite aliasing ** ---
 
-mkAliasingAssertion :: [Location] -> Exp ABoolean
+mkAliasingAssertion :: [TypedRef] -> Exp ABoolean
 mkAliasingAssertion ls = mkOr $ map (uncurry mkEqualityAssertion) $ combine ls
 
-mkAliasingQuery :: Behaviour -> (Id, [[Location]], SMTExp, SolverInstance -> IO Model)
-mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) preconds caseconds _ stateUpdates _) =
+mkAliasingQuery :: Behaviour -> (Id, [[TypedRef]], SMTExp, SolverInstance -> IO Model)
+mkAliasingQuery behv@(Behaviour _ _ (Interface ifaceName decls) _ preconds cases _) =
   (ifaceName, groupedLocs, smt, getModel)
   where
     updatedLocs = locFromUpdate <$> stateUpdates
-    updatedLocsIds = (\l@(Loc _ _ item) -> Arg (idsFromItem item) l) <$> updatedLocs
-    groupedLocs = fmap (\(Arg _ b) -> b) <$> group (sort updatedLocsIds)
+    updatedLocsIds = (\l@(TRef _ _ item) -> Semi.Arg (idsFromItem item) l) <$> updatedLocs
+    groupedLocs = fmap (\(Semi.Arg _ b) -> b) <$> group (sort updatedLocsIds)
 
-    activeLocs = nub $ concatMap (\(Loc _ rk item) -> locsFromItem rk item) updatedLocs
+    activeLocs = nub $ concatMap (\(TRef _ rk item) -> locsFromItem rk item) updatedLocs
                <> concatMap locsFromExp preconds
                <> concatMap locsFromExp caseconds
 
@@ -292,7 +223,7 @@ checkRewriteAliasing (Act _ contracts)  solver' smttimeout debug =
                           pure (name, groupedLocs, res))
     mapM_ (checkRes "behaviour") r' )
   where
-    checkRes :: String -> (Id, [[Location]], SMT.SMTResult) -> IO ()
+    checkRes :: String -> (Id, [[TypedRef]], SMT.SMTResult) -> IO ()
     checkRes transition (name, locs, res) =
       case res of
         Sat model -> failMsg ("Rewrites are aliased for " <> transition <> " " <> name <> ".") (prettyAnsi model) (printLocs model locs)
@@ -300,7 +231,7 @@ checkRewriteAliasing (Act _ contracts)  solver' smttimeout debug =
         Unknown -> errorMsg $ "Solver timeour. Cannot prove that rewrites are not aliased for " <> transition <> " " <> name <> "."
         SMT.Error _ err -> errorMsg $ "Solver error: " <> err <> "\nSolver timeour. Cannot prove that rewrites are not aliased for"  <> transition <> " " <> name <> "."
 
-    printLocs :: Model -> [[Location]] -> DocAnsi
+    printLocs :: Model -> [[TypedRef]] -> DocAnsi
     printLocs model locs =
       indent 2 $ underline (string "Rewrites:") <> line <> line <>
       vsep (runReader (mapM findAliased locs) model)
@@ -309,11 +240,11 @@ checkRewriteAliasing (Act _ contracts)  solver' smttimeout debug =
     errorMsg str = render (pretty str <> line) >> exitFailure
 
 
-findAliased :: [Location] -> ModelCtx DocAnsi
+findAliased :: [TypedRef] -> ModelCtx DocAnsi
 findAliased locs =
   vsep <$> (mapM checkAliasing $ combine locs)
 
-checkAliasing :: (Location, Location) -> ModelCtx DocAnsi
+checkAliasing :: (TypedRef, TypedRef) -> ModelCtx DocAnsi
 checkAliasing (l1, l2) = do
   isRewrite <- and <$> Control.Monad.zipWithM compareIdx ixs1 ixs2
   if isRewrite then
@@ -339,17 +270,17 @@ printAliased te@(TExp (TInteger _ _) e) = do
 printAliased _ = error "Internal Error: Expected Integer indices"
 
 printAliasedRef :: Ref a -> ModelCtx DocAnsi
-printAliasedRef (SArray _ ref _ idcs) =
+printAliasedRef (RArrIdx _ ref _ idcs) =
   liftA2 (<>) (printAliasedRef ref) (concatWith (<>) <$> mapM (printAliased . fst) idcs)
-printAliasedRef (SMapping _ ref _ idcs) =
+printAliasedRef (RMapIdx _ ref idcs) =
   liftA2 (<>) (printAliasedRef ref) (concatWith (<>) <$> mapM (\te -> pure $ string "[" <> string (prettyTypedExp te) <> string "]") idcs)
-printAliasedRef (SField _ ref _ id') =
+printAliasedRef (RField _ ref _ id') =
   liftA2 (<>) (printAliasedRef ref) (pure $ string id')
-printAliasedRef (SVar _ _ id') = pure $ string id'
+printAliasedRef (SVar _ _ _ id') = pure $ string id'
 printAliasedRef (CVar _ _ id') = pure $ string id'
 
-printAliasedLoc :: Location -> ModelCtx DocAnsi
-printAliasedLoc (Loc _ _ (Item _ ref)) = do
+printAliasedLoc :: TypedRef -> ModelCtx DocAnsi
+printAliasedLoc (TRef _ _ ref) = do
   r <- printAliasedRef ref
   pure $ string "Line " <> string (show l) <> string " Column " <> string (show c) <> string ": " <> r
   where
@@ -363,14 +294,14 @@ modelExpand (TArray _ TByteStr) (Array _ l) = pure l
 modelExpand (TArray _ (TContract _)) (Array _ l) = pure l
 modelExpand (TArray _ (TStruct _)) (Array _ l) = pure l
 modelExpand (TArray _ t@(TArray _ _)) (Array _ l) = concat <$> mapM (modelExpand t) l
-modelExpand typ (VarRef _ whn SStorage item) = do
+modelExpand typ (VarRef _ whn item) = do
   model <- ask
   case lookup (_Loc SStorage item) $ if whn == Pre then _mprestate model else _mpoststate model of
     Just (TExp sType e') -> case testEquality typ sType of
       Just Refl -> pure $ expandArrayExpr sType e'
       _ -> error "modelEval: Storage Location given does not match type"
     _ -> error $ "modelEval: Storage Location not found in model" <> show item
-modelExpand typ (VarRef _ _ SCalldata item) = do
+modelExpand typ (VarRef _ _ item) = do
   model <- ask
   case lookup (_Loc SCalldata item) $ _mcalllocs model of
     Just (TExp sType e') -> case testEquality typ sType of
@@ -439,8 +370,8 @@ modelEval e = case e of
   Array _ l -> case (sing @a) of
     SSArray SType -> mapM modelEval l
 
-  Create _ _ _ -> error "modelEval of contracts not supported"
-  VarRef _ whn SStorage item@(Item vt _) -> do
+  Create _ _ _ _ -> error "modelEval of contracts not supported"
+  VarRef _ vt item -> do
     model <- ask
     case lookup (_Loc SStorage item) $ if whn == Pre then _mprestate model else _mpoststate model of
       Just (TExp vType e') -> case testEquality vt vType of
@@ -452,7 +383,7 @@ modelEval e = case e of
           _ -> error "modelEval: Model did not return a literal"
         _ -> error "modelEval: Storage Location given does not match type"
       _ -> error $ "modelEval: Storage Location not found in model" <> show item
-  VarRef _ _ SCalldata item@(Item vt _) -> do
+  VarRef _ vt item -> do
     model <- ask
     case lookup (_Loc SCalldata item) $ _mcalllocs model of
       Just (TExp vType e') -> case testEquality vt vType of
@@ -475,3 +406,4 @@ modelEval e = case e of
         _ -> error "modelEval: Environmental variable given does not match type"
       _ -> error "modelEval: Enviromental variable not found in model"
   _ -> error "modelEval: TODO"
+  -}
