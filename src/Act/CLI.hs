@@ -154,7 +154,7 @@ type' f solver' smttimeout' debug' = do
   contents <- readFile f
   proceed contents (addBounds <$> compile contents) $ \claims -> do
     --checkArrayBounds claims solver' smttimeout' debug'
-    checkCases claims solver' smttimeout' debug'
+    -- checkCases claims solver' smttimeout' debug'
     --checkRewriteAliasing claims solver' smttimeout' debug'
     B.putStrLn $ encode claims
 

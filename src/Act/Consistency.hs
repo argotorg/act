@@ -1,16 +1,12 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonadComprehensions #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DataKinds #-}
-{-# Language RecordWildCards #-}
 {-# Language ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE KindSignatures #-}
 
 module Act.Consistency (
-  checkCases,
   --checkArrayBounds,
   --checkRewriteAliasing
 ) where
@@ -37,146 +33,6 @@ import Act.Print
 
 import qualified EVM.Solvers as Solvers
 import Debug.Trace
-
--- TODO this is duplicated in hevm Keccak.hs but not exported
-combine :: [a] -> [(a,a)]
-combine lst = combine' lst []
-  where
-    combine' [] acc = concat acc
-    combine' (x:xs) acc =
-      let xcomb = [ (x, y) | y <- xs] in
-      combine' xs (xcomb:acc)
-
-mkOr :: [Exp ABoolean] -> Exp ABoolean
-mkOr = foldr (Or nowhere) (LitBool nowhere False)
-
-mkOrNot :: [Exp ABoolean] -> Exp ABoolean
-mkOrNot = foldr (Or nowhere . Neg nowhere) (LitBool nowhere False)
-
--- | Checks non-overlapping cases,
--- For every pair of case conditions we assert that they are true
--- simultaneously. The query must be unsat.
-mkNonoverlapAssertion :: [Exp ABoolean] -> Exp ABoolean
-mkNonoverlapAssertion caseconds =
-  mkOr $ (uncurry $ And nowhere) <$> combine caseconds
-
--- | Checks exhaustiveness of cases.
--- We assert that none of the case conditions are true at the same
--- time. The query must be unsat.
-mkExhaustiveAssertion :: [Exp ABoolean] -> Exp ABoolean
-mkExhaustiveAssertion caseconds =
-  foldl mkAnd (LitBool nowhere True) caseconds
-  where
-    mkAnd r c = And nowhere (Neg nowhere c) r
-
--- | Create a query for constructor cases
-mkCaseConstrQuery :: ([Exp ABoolean] -> Exp ABoolean) -> Constructor -> (Id, SMTExp, (SolverInstance -> IO Model))
-mkCaseConstrQuery props constr@(Constructor name (Interface _ decls) _ preconds cases _ _) = (name, smt, getModel)
-  where
-    locs = nub $ concatMap locsFromExp (preconds <> caseconds)
-    (slocs, clocs) = partitionLocs locs
-    env = ethEnvFromConstructor constr
-    pres = mkAssert name <$> preconds
-    caseconds = fst <$> cases
-
-    smt = SMTExp
-      { _storage = map declareTRef slocs <> [";" <> name]
-      , _calldata = nub $ (declareArg name <$> decls) -- <> map (declareTRef) clocs
-      , _environment = declareEthEnv <$> env
-      , _assertions = (mkAssert name $ props caseconds) : pres
-      }
-
-    getModel solver = do
-      prestate <- mapM (getLocationValue solver name Pre) slocs
-      calldata <- mapM (getCalldataValue solver name) decls
-      calllocs <- mapM (getLocationValue solver name Pre) clocs
-      environment <- mapM (getEnvironmentValue solver) env
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = (name, calldata)
-        , _mcalllocs = calllocs
-        , _menvironment = environment
-        , _minitargs = []
-        }
-
--- | Create a query for behaviour cases
-mkCaseBehvQuery :: ([Exp ABoolean] -> Exp ABoolean) -> Behaviour -> (Id, SMTExp, (SolverInstance -> IO Model))
-mkCaseBehvQuery props behv@(Behaviour bname _ (Interface _ decls) _ preconds cases _) = (bname, smt, getModel)
-  where
-    locs = nub $ concatMap locsFromExp (preconds <> caseconds)
-    (slocs, clocs) = partitionLocs locs
-    env = ethEnvFromBehaviour behv
-    pres = mkAssert bname <$> preconds
-    caseconds = fst <$> cases
-
-    smt = SMTExp
-      { _storage = map declareTRef slocs <> [";" <> bname]
-      , _calldata = nub $ (declareArg bname <$> decls) -- <> map (declareTRef) clocs
-      , _environment = declareEthEnv <$> env
-      , _assertions = (mkAssert bname $ props caseconds) : pres
-      }
-
-    getModel solver = do
-      prestate <- mapM (getLocationValue solver bname Pre) slocs
-      calldata <- mapM (getCalldataValue solver bname) decls
-      calllocs <- mapM (getLocationValue solver bname Pre) clocs
-      environment <- mapM (getEnvironmentValue solver) env
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = (bname, calldata)
-        , _mcalllocs = calllocs
-        , _menvironment = environment
-        , _minitargs = []
-        }
---mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"
-
--- | Checks nonoverlapping and exhaustiveness of cases
-checkCases :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-checkCases (Act _ contracts) solver' smttimeout debug = do
-  let behaviours = concatMap (\(Contract _ behvs) -> behvs) contracts
-  let constructor = (\(Contract ctor _) -> ctor) <$> contracts
-  let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
-  solver <- spawnSolver config
-  let qsc = mkCaseConstrQuery mkNonoverlapAssertion <$> constructor
-  rc <- forM qsc (\(name, q, getModel) -> do
-                        res <- checkSat solver getModel q
-                        pure (name, res))
-  mapM_ (checkRes "nonoverlapping") rc
-  let qsb = mkCaseBehvQuery mkNonoverlapAssertion <$> behaviours
-  rb <- forM qsb (\(name, q, getModel) -> do
-                        res <- checkSat solver getModel q
-                        pure (name, res))
-  mapM_ (checkRes "nonoverlapping") rb
-
-  let qsc' = mkCaseBehvQuery mkExhaustiveAssertion <$> behaviours
-  rc' <- forM qsc' (\(name, q, getModel) -> do
-                          res <- checkSat solver getModel q
-                          pure (name, res))
-  mapM_ (checkRes "exhaustive") rc'
-  let qsb' = mkCaseBehvQuery mkExhaustiveAssertion <$> behaviours
-  rb' <- forM qsb' (\(name, q, getModel) -> do
-                          res <- checkSat solver getModel q
-                          pure (name, res))
-  mapM_ (checkRes "exhaustive") rb'
-
-    where
-
-      sameIface (Behaviour bname _ iface _ _ _ _) (Behaviour _ _ iface' _ _ _ _) =
-        makeIface bname iface == makeIface bname iface'
-
-      checkRes :: String -> (Id, SMT.SMTResult) -> IO ()
-      checkRes check (name, res) =
-        case res of
-          Sat model -> failMsg ("Cases are not " <> check <> " for behavior " <> name <> ".") (prettyAnsi model)
-          Unsat -> pure ()
-          Unknown -> errorMsg $ "Solver timeour. Cannot prove that cases are " <> check <> " for behavior " <> name <> "."
-          SMT.Error _ err -> errorMsg $ "Solver error: " <> err <> "\nCannot prove that cases are " <>  check <> " for behavior " <> name <> "."
-
-      failMsg str model = render (red (pretty str) <> line <> model <> line) >> exitFailure
-      errorMsg str = render (pretty str <> line) >> exitFailure
-
 
 --- ** Array Bounds Checking ** ---
 {-

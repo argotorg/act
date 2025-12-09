@@ -15,8 +15,7 @@ import Act.Syntax.TypedExplicit
 {-|
 
 Module      : Bounds
-Description : This pass adds integer add integer type bounds as preconditions
-and postconditions.
+Description : This pass adds integer type bounds as preconditions.
 -}
 
 -- | Adds preconditions and postconditions to constructors and behaviors that
@@ -78,7 +77,7 @@ addBoundsInvariant (Constructor _ (Interface _ decls) _ _ _ _ _) inv@(Invariant 
       --(nonlocalLocs, localLocs) = partition (not . isLocalLoc) locs
 
 mkEthEnvBounds :: [EthEnv] -> [Exp ABoolean]
-mkEthEnvBounds vars = catMaybes $ mkBound <$> nub vars
+mkEthEnvBounds = mapMaybe mkBound . nub
   where
     mkBound :: EthEnv -> Maybe (Exp ABoolean)
     mkBound e = Just $ bound (ethEnv e) (IntEnv nowhere e)

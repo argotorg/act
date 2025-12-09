@@ -64,7 +64,7 @@ iff
 
 creates
    A a := y.a
-   B b := y 
+   B b := new B(42) 
 
 transition change()
 
