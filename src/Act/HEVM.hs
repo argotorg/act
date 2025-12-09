@@ -287,19 +287,20 @@ applyUpdates readMap writeMap callenv upds = foldM (\wm -> applyUpdate readMap w
 applyUpdate :: Monad m => ContractMap -> ContractMap -> CallEnv -> StorageUpdate -> ActT m ContractMap
 applyUpdate readMap writeMap callenv (Update typ ref e) = do
   caddr' <- baseAddr writeMap callenv ref
-  (addr, offset, size) <- refOffset writeMap callenv ref
+  (addr, offset, size, lmode) <- refOffset writeMap callenv ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
   case typ of
     TAddress | isCreate e -> do
         fresh <- getFreshIncr
         let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
-        writeMap' <- localCaddr freshAddr $ createCastedContract readMap writeMap freshAddr e
+        writeMap' <- localCaddr freshAddr $ createCastedContract readMap writeMap callenv freshAddr e
         pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
     TContract _ | isCreate e -> do
         fresh <- getFreshIncr
         let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
         writeMap' <- localCaddr freshAddr $ createContract readMap writeMap callenv freshAddr e
         pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
+    TContract _ -> error "TODO?"
     TByteStr -> error "Bytestrings not supported"
     TInteger _ _ -> do
         e' <- toExpr readMap callenv e
@@ -312,7 +313,7 @@ applyUpdate readMap writeMap callenv (Update typ ref e) = do
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
     TAddress -> do
-        e' <- toExpr readMap e
+        e' <- toExpr readMap callenv e
         let prevValue = readStorage addr contract
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
@@ -413,8 +414,8 @@ typedExpToWord cmap callenv te = do
             TStruct _ -> error "TODO structs"
             TMapping _ _ -> error "TODO Mappings" -- TODO
 
-expToBuf :: Monad m => forall a. ContractMap -> CallEnv -> SType a -> Exp a  -> ActT m (EVM.Expr EVM.Buf)
-expToBuf cmap callenv styp e = do
+expToBuf :: Monad m => forall a. ContractMap -> CallEnv -> TValueType a -> Exp a  -> ActT m (EVM.Expr EVM.Buf)
+expToBuf cmap callenv vtyp e = do
   case vtyp of
     (TInteger _ _) -> do
       e' <- toExpr cmap callenv e
@@ -445,7 +446,7 @@ getPosition layout cid name =
 
 -- | For the given storage reference, it returs the memory slot, the offset
 -- of the value within the slot, and the size of the value.
-refOffset :: Monad m => ContractMap -> CallEnv -> Ref k -> ActT m (EVM.Expr EVM.EWord, EVM.Expr EVM.EWord, Int)
+refOffset :: Monad m => ContractMap -> CallEnv -> Ref k -> ActT m (EVM.Expr EVM.EWord, EVM.Expr EVM.EWord, Int, LayoutMode)
 refOffset _ _ (CVar _ _ _) = error "Internal error: ill-typed entry"
 refOffset _ _ (SVar _ _ cid name) = do
   layout <- getLayout
@@ -623,7 +624,7 @@ toExpr cmap callenv =  fmap stripMods . go
 
       e@(ITE _ _ _ _) -> error $ "Internal error: expecting flat expression. got: " <> show e
 
-      (Address _ _ e') -> toExpr cmap e'
+      (Address _ _ e') -> toExpr cmap callenv e'
       e ->  error $ "TODO: " <> show e
 
     op2 :: Monad m => forall b c. (EVM.Expr (ExprType c) -> EVM.Expr (ExprType c) -> b) -> Exp c -> Exp c -> ActT m b
