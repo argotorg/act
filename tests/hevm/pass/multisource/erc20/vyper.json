@@ -1,0 +1,10 @@
+{
+  "specifications" : ["erc20.act"],
+  "sources" : {
+    "erc20.vy" : { "language" : "Vyper" }
+  },
+  "contracts" : {
+    "Token" : { "source" : "erc20.vy"}
+  }
+}
+

@@ -1,38 +1,37 @@
 Require Import SafeMath.SafeMath.
 Require Import ActLib.ActLib.
-Require Import Coq.ZArith.ZArith.
+Require Import Stdlib.ZArith.ZArith.
+From Stdlib Require Import Lia.
 Open Scope Z_scope.
 
 Import SafeMath.
 
 (* trivial observation that there is only one possible state *)
-Lemma state_constant : forall s, s = state.
+Lemma state_constant : forall s, exists a, s = state a.
 Proof.
   intros.
   destruct s.
+  exists addr0.
   reflexivity.
 Qed.
 
 Theorem mul_correct : forall e s x y,
+  nextAddrConstraint e s ->
   range256 x /\ range256 y /\ range256 (x * y) <-> mul0_ret e s x y (x * y).
 Proof.
   intros.
   split. {
     intros.
-    destruct H as [Hx [Hy Hxy]].
+    destruct H0 as [Hx [Hy Hxy]].
+    unfold range256 in *.
     apply mul0_ret_intro.
-    - split; [ assumption | ].
-      split; assumption.
-    - assumption.
-    - assumption.
-    - assumption.
-    - assumption.
-    - eauto.
+    - constructor;
+      repeat split; try lia.
+      assumption.
+    - trivial.
   } {
-    intros. destruct H.
-    split. assumption.
-    split. assumption.
-    easy.
+    intros Hmul_ret. destruct Hmul_ret. destruct H0.
+    split; unfold range256;  lia.
   }
 Qed.
 

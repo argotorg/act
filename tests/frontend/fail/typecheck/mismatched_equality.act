@@ -1,5 +1,6 @@
-constructor of Fail
-interface constructor(string y)
+contract Fail
+
+constructor(string y)
 
 creates
 

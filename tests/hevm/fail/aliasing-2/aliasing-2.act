@@ -1,5 +1,6 @@
-constructor of C
-interface constructor(uint z1)
+contract C
+
+constructor(uint z1)
 
 iff
     CALLVALUE == 0
@@ -7,30 +8,28 @@ iff
 creates
     uint z := z1
 
-constructor of A
-interface constructor(uint x1)
+contract A
+
+constructor(uint x1)
 
 iff
     CALLVALUE == 0
 
 creates
     uint x := x1
-    C c := create C(42)
+    C c := new C(42)
 
 
-behaviour c of A
-interface c()
+transition c() : C
 
 iff
     CALLVALUE == 0
 
 returns (pre(c))
 
-constructor of B
-interface constructor(address x)
+contract B
 
-pointers
-  x |-> A
+constructor(address<A> x)
 
 iff
     CALLVALUE == 0

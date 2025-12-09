@@ -31,6 +31,12 @@ deriving instance Show (Time t)
 -- | Encodes choice between referencing the pre- or the poststate.
 type When = Time Timed
 
+data Mode t where
+  T :: Mode Timed
+  U :: Mode Untimed
+deriving instance Eq (Mode t)
+deriving instance Show (Mode t)
+
 -- | True iff the input is `Pre` or `Post`.
 isTimed :: Time t -> Bool
 isTimed Neither = False

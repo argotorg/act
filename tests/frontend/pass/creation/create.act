@@ -6,8 +6,9 @@
 // perspective, it defines the storage layout of the contract, by explicit
 // typing of storage variables.
 
-constructor of Modest
-interface constructor()
+contract Modest
+
+constructor()
 
 creates
     // storage variables must be given an explicit initial value

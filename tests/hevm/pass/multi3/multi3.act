@@ -1,7 +1,8 @@
 // contract A
 
-constructor of A
-interface constructor(uint z)
+contract A
+
+constructor(uint z)
 
 iff
    CALLVALUE == 0
@@ -11,8 +12,7 @@ creates
    uint x := z + 1
 
 
-behaviour x of A
-interface x()
+transition x() : uint256
 
 iff
    CALLVALUE == 0
@@ -20,8 +20,7 @@ iff
 returns
    pre(x)
 
-behaviour add_x of A
-interface add_x(uint y)
+transition add_x(uint y)
 
 iff
    CALLVALUE == 0
@@ -29,22 +28,22 @@ iff
 
 storage
 
-  x => x + y
+  x := x + y
 
 
 // contract B
-constructor of B
-interface constructor(uint i)
+contract B
+
+constructor(uint i)
 iff
    CALLVALUE == 0
    inRange(uint256, i + 42)
 
 creates
    uint z := i + 42
-   A a := create A(i)
+   A a := new A(i)
 
-behaviour incr_z of B
-interface incr_z()
+transition incr_z()
 
 iff
    CALLVALUE == 0
@@ -52,10 +51,9 @@ iff
 
 storage
 
-  z => z + 1
+  z := z + 1
 
-behaviour a_add_x of B
-interface a_add_x(uint y)
+transition a_add_x(uint y)
 
 iff
    CALLVALUE == 0
@@ -63,12 +61,13 @@ iff
 
 storage
 
-  a.x => a.x + y
+  a.x := a.x + y
 
 
 // contract C
-constructor of C
-interface constructor(uint u)
+contract C
+
+constructor(uint u)
 
 iff
    CALLVALUE == 0
@@ -77,12 +76,11 @@ iff
 
 creates
    uint y := 0
-   A a := create A(u)
-   B b := create B(u)
+   A a := new A(u)
+   B b := new B(u)
 
 
-behaviour remote of C
-interface remote(uint z)
+transition remote(uint z) : uint256
 
 iff
    CALLVALUE == 0
@@ -91,7 +89,7 @@ iff
 
 storage
 
-  b.z => b.z + 1
-  b.a.x => b.a.x + z
+  b.z := b.z + 1
+  b.a.x := b.a.x + z
 
 returns z

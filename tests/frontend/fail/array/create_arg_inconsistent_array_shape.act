@@ -1,9 +1,11 @@
-constructor of A
-interface constructor(int32[3][2] n2)
+contract A
+
+constructor(int32[3][2] n2)
 
 
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
-  A a := create A([[1,2,3],[4,5]])
+  A a := new A([[1,2,3],[4,5]])

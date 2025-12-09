@@ -1,18 +1,15 @@
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 creates
 
   uint x := 100
 
 
-constructor of B
-interface constructor(address a)
+contract B
 
-pointers
-
-  a |-> A
-
+constructor(address<A> a)
 
 creates
 

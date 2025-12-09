@@ -42,6 +42,8 @@ common common
                  data-dword         >= 0.3.2.1,
                  prettyprinter,
                  prettyprinter-ansi-terminal,
+                 base16,
+                 filepath
   if flag(ci)
       ghc-options: -O2 -Wall -Werror -Wno-orphans -Wno-unticked-promoted-constructors
   else

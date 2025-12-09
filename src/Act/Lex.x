@@ -8,6 +8,8 @@ module Act.Lex
   , showposn
   , name
   , value
+  , nowhere
+  , lastPos
   ) where
 
 import Prelude hiding (EQ, GT, LT)
@@ -27,10 +29,10 @@ tokens :-
   $white+                               ;
 
   -- reserved words
+  contract                              { mk CONTRACT }
   constructor                           { mk CONSTRUCTOR }
-  behaviour                             { mk BEHAVIOUR }
+  transition                            { mk TRANSITION }
   of                                    { mk OF }
-  interface                             { mk INTERFACE }
   creates                               { mk CREATES }
   case                                  { mk CASE }
   returns                               { mk RETURNS }
@@ -40,13 +42,12 @@ tokens :-
   iff $white+ in $white+ range          { mk IFFINRANGE }
   inRange                               { mk INRANGE }
   iff                                   { mk IFF }
-  pointers                              { mk POINTERS }
   and                                   { mk AND }
   not                                   { mk NOT }
   or                                    { mk OR }
   true                                  { mk TRUE }
   false                                 { mk FALSE }
-  create                                { mk CREATE }
+  new                                   { mk NEW }
   as                                    { mk AS }
   mapping                               { mk MAPPING }
   ensures                               { mk ENSURES }
@@ -57,7 +58,9 @@ tokens :-
   at                                    { mk AT }
   pre                                   { mk PRE }
   post                                  { mk POST }
-
+  with                                  { mk WITH }
+  value                                 { mk VALUE }
+  payable                               { mk PAYABLE }
   -- builtin types
   uint $digit+                          { \ p s -> L (UINT (read (drop 4 s))) p }
   int  $digit+                          { \ p s -> L (INT  (read (drop 3 s))) p }
@@ -89,10 +92,10 @@ tokens :-
 
   -- symbols
   ":="                                  { mk ASSIGN }
-  "=>"                                  { mk ARROW }
-  "|->"                                 { mk POINTSTO }
+  "==>"                                 { mk ARROW }
+  "=>"                                  { mk MAPSTO }
   "=="                                  { mk EQEQ }
-  "=/="                                 { mk NEQ }
+  "!="                                  { mk NEQ }
   ">="                                  { mk GE }
   "<="                                  { mk LE }
   "++"                                  { mk CAT }
@@ -126,10 +129,10 @@ tokens :-
 data LEX =
 
   -- reserved words
-    BEHAVIOUR
+    CONTRACT
   | CONSTRUCTOR
+  | TRANSITION
   | OF
-  | INTERFACE
   | CREATES
   | CASE
   | RETURNS
@@ -139,7 +142,7 @@ data LEX =
   | INRANGE
   | IFF
   | POINTERS
-  | POINTSTO
+  | MAPSTO
   | AND
   | NOT
   | OR
@@ -156,7 +159,10 @@ data LEX =
   | AT
   | PRE
   | POST
-
+  | PAYABLE
+  | VALUE
+  | NEW
+  | WITH
   -- builtin types
   | UINT  Int
   | INT   Int
@@ -227,6 +233,12 @@ showposn (AlexPn _ line column) =
 
 posn :: Lexeme -> AlexPosn
 posn (L _ p) = p
+
+nowhere :: AlexPosn
+nowhere = AlexPn 0 0 0
+
+lastPos :: AlexPosn
+lastPos = AlexPn (-1) (-1) (-1)
 
 name :: Lexeme -> String
 name (L (ID s) _) = s

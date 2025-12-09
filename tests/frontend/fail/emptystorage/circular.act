@@ -1,5 +1,6 @@
-constructor of LValue
-interface constructor()
+contract LValue
+
+constructor()
 
 creates
 

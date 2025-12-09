@@ -27,6 +27,7 @@
               pkgs.cvc5
               pkgs.solc
               pkgs.vyper
+              pkgs.bitwuzla
             ];
           });
       in rec {
@@ -55,6 +56,7 @@
             pkgs.secp256k1
             pkgs.libff
             pkgs.vyper
+            pkgs.bitwuzla
           ];
           withHoogle = true;
           shellHook = ''

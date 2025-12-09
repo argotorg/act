@@ -1,11 +1,11 @@
-constructor of C
-interface constructor()
+contract C
+
+constructor()
 
 creates
    uint x := 0
 	
-behaviour bar of C
-interface bar(uint z)
+transition bar(uint z)
 
 iff
    CALLVALUE == 0
@@ -13,9 +13,9 @@ iff
 case z == 0:
 
 storage
-  x => z
+  x := z
 
 case z >= 1:
 
 storage
-  x => z + 1
+  x := z + 1

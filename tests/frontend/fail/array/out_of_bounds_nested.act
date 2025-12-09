@@ -1,5 +1,6 @@
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
 
@@ -9,11 +10,10 @@ creates
                        [ [ 0,0 ], [ 0,0 ], [ 0,0 ] ],
                        [ [ 0,0 ], [ 0,0 ], [ 0,0 ] ] ]
 
-behaviour f of B
-interface f()
+transition f()
 
 
 
 storage
 
-  x[1][2][4] => 4
+  x[1][2][4] := 4

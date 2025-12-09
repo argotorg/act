@@ -67,8 +67,8 @@ debugActConfig = defaultActConfig { dumpQueries = True, dumpExprs = True, dumpEn
 makeCalldata :: Interface -> Calldata
 makeCalldata iface@(Interface _ decls) =
   let
-    mkArg :: Decl -> CalldataFragment
-    mkArg (Decl typ x) = symAbiArg (T.pack x) typ
+    mkArg :: Arg -> CalldataFragment
+    mkArg (Arg argtype x) = symAbiArg (T.pack x) $ argToAbiType argtype
     makeSig = T.pack $ makeIface iface
     calldatas = fmap mkArg decls
     (cdBuf, props) = combineFragments calldatas (EVM.ConcreteBuf "")
@@ -81,8 +81,8 @@ makeCalldata iface@(Interface _ decls) =
 makeCtrCalldata :: Interface -> Calldata
 makeCtrCalldata (Interface _ decls) =
   let
-    mkArg :: Decl -> CalldataFragment
-    mkArg (Decl typ x) = symAbiArg (T.pack x) typ
+    mkArg :: Arg -> CalldataFragment
+    mkArg (Arg argtype x) = symAbiArg (T.pack x) $ argToAbiType argtype
     calldatas = fmap mkArg decls
     -- We need to use a concrete buf as a base here because hevm bails when trying to execute with an abstract buf
     -- This is because hevm ends up trying to execute a codecopy with a symbolic size, which is unsupported atm
@@ -118,9 +118,9 @@ iterConfig = IterConfig
   }
 
 -- | decompiles the given EVM bytecode into a list of Expr branches
-getRuntimeBranches :: App m => SolverGroup -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> Calldata -> Int -> m [EVM.Expr EVM.End]
-getRuntimeBranches solvers contracts calldata fresh = do
-  prestate <- liftIO $ stToIO $ abstractVM contracts calldata fresh
+getRuntimeBranches :: App m => SolverGroup -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> Calldata -> [EVM.Prop] -> Int -> m [EVM.Expr EVM.End]
+getRuntimeBranches solvers contracts calldata precond fresh = do
+  prestate <- liftIO $ stToIO $ abstractVM contracts calldata precond fresh
   expr <- interpret (Fetch.oracle solvers Nothing) iterConfig prestate runExpr
   let simpl = simplify expr
   let nodes = flattenExpr simpl
@@ -145,11 +145,12 @@ abstractInitVM contractCode contracts cd precond fresh = do
   vm <- loadSymVM (EVM.SymAddr "entrypoint", EVM.initialContract code) contracts value cd True fresh
   pure $ vm { constraints = vm.constraints <> precond }
 
-abstractVM :: [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> Int -> ST s (EVM.VM EVM.Symbolic s)
-abstractVM contracts cd fresh = do
+abstractVM :: [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> [EVM.Prop] -> Int -> ST s (EVM.VM EVM.Symbolic s)
+abstractVM contracts cd precond fresh = do
   let value = EVM.TxValue
   let (c, cs) = findInitContract
-  loadSymVM c cs value cd False fresh
+  vm <- loadSymVM c cs value cd False fresh
+  pure $ vm { constraints = vm.constraints <> precond }
 
   where
     findInitContract :: ((EVM.Expr 'EVM.EAddr, EVM.Contract), [(EVM.Expr 'EVM.EAddr, EVM.Contract)])

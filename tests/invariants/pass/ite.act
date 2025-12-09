@@ -1,5 +1,6 @@
-constructor of ITE
-interface constructor(uint256 y)
+contract ITE
+
+constructor(uint256 y)
 
 creates
 
@@ -9,20 +10,19 @@ invariants
 
     x < 5
 
-behaviour f of ITE
-interface f(int56 z)
+transition f(int56 z)
 
 case z < 10:
 
     storage
 
-        x => if z == 5 then 4 else 1
+        x := if z == 5 then 4 else 1
 
 case 10 <= z and z < 100:
 
     storage
 
-        x => if z == 50 then 3 else 2
+        x := if z == 50 then 3 else 2
 
 
 
@@ -30,4 +30,4 @@ case z >= 100:
 
     storage
 
-        x => if z == 50 then 3 else 2
+        x := if z == 50 then 3 else 2

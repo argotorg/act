@@ -1,4 +1,5 @@
-behaviour f of A
-interface f(uint x)
+contract A
+
+transition f(uint x) : uint256
 
 returns 1

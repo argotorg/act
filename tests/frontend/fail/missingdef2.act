@@ -1,5 +1,6 @@
-constructor of C
-interface constructor()
+contract C
+
+constructor()
 
 creates
 
@@ -7,17 +8,17 @@ creates
     uint y := 1
 
 
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
 
     uint a := 1
     uint b := 1
 
-behaviour f of B
-interface f()
+transition f()
 
 storage C
 
-    x => y
+    x := y

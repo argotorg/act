@@ -1,5 +1,6 @@
-constructor of Map
-interface constructor()
+contract Map
+
+constructor()
 
 iff
 
@@ -7,12 +8,11 @@ iff
 
 creates
   uint128 val := 11
-  mapping(uint => uint128) f := [11 := 42, 42 := 1]
-  mapping(uint128 => bool) g := [22 := true, 1 := false]
+  mapping(uint => uint128) f := [11 => 42, 42 => 1]
+  mapping(uint128 => bool) g := [22 => true, 1 => false]
   
 
-behaviour val of Map
-interface val()
+transition val() : uint128
 
 iff
 
@@ -20,8 +20,7 @@ iff
 
 returns pre(val)
 
-behaviour f of Map
-interface f(uint x)
+transition f(uint x) : uint128
 
 iff
 
@@ -30,8 +29,7 @@ iff
 returns pre(f[x])
 
 
-behaviour g of Map
-interface g(uint128 x)
+transition g(uint128 x) : bool
 
 iff
 
@@ -41,8 +39,7 @@ returns pre(g[x])
 
 
 
-behaviour setf of Map
-interface setf(uint128 value, uint key)
+transition setf(uint128 value, uint key) : uint256
 
 iff
 
@@ -50,13 +47,12 @@ iff
 
 storage
 
-  f[key] => value
+  f[key] := value
 
 returns 1
 
 
-behaviour setg of Map
-interface setg(bool value,  uint128 key)
+transition setg(bool value,  uint128 key) : uint256
 
 iff
 
@@ -64,6 +60,6 @@ iff
 
 storage
 
-  g[key] => value
+  g[key] := value
 
 returns 1

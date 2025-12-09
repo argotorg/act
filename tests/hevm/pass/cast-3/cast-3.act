@@ -1,14 +1,14 @@
-constructor of Token
-interface constructor(uint _supply)
+contract Token
+
+constructor(uint _supply)
 
 iff
     CALLVALUE == 0
 
 creates
-    mapping(address => uint) balanceOf :=  [CALLER := _supply]
+    mapping(address => uint) balanceOf :=  [CALLER => _supply]
 
-behaviour balanceOf of Token
-interface balanceOf(address a)
+transition balanceOf(address a) : uint256
 
 iff
 
@@ -17,21 +17,20 @@ iff
 returns pre(balanceOf[a])
 
 
-behaviour transfer of Token
-interface transfer(address to, uint256 value)
+transition transfer(address to, uint256 value) : uint256
 
 iff
 
   CALLVALUE == 0
-  CALLER =/= to => inRange(uint256, balanceOf[to] + value)
+  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
   inRange(uint256,balanceOf[CALLER] - value)
 
-case CALLER =/= to:
+case CALLER != to:
 
   storage
 
-    balanceOf[CALLER]  => balanceOf[CALLER] - value
-    balanceOf[to]    => balanceOf[to] + value
+    balanceOf[CALLER]  := balanceOf[CALLER] - value
+    balanceOf[to]    := balanceOf[to] + value
 
   returns 1
 
@@ -40,35 +39,32 @@ case CALLER == to:
   returns 1
 
 
-constructor of TransferOneToken
-interface constructor(address _tokenAddress)
+contract TransferOneToken
 
-pointers
-    _tokenAddress |-> Token
+constructor(address<Token> _tokenAddress)
 
 iff
 
     CALLVALUE == 0
-    _tokenAddress =/= 0
+    _tokenAddress != 0
 
 creates
 
     Token token := _tokenAddress
 
-behaviour transfer of TransferOneToken
-interface transfer()
+transition transfer() : uint256
 
 iff
     CALLVALUE == 0    
-    THIS =/= CALLER => inRange(uint256, token.balanceOf[CALLER] + 1)
+    THIS != CALLER ==> inRange(uint256, token.balanceOf[CALLER] + 1)
     inRange(uint256,token.balanceOf[THIS] - 1)
 
-case CALLER =/= THIS:
+case CALLER != THIS:
 
 storage
 
-    token.balanceOf[CALLER] => token.balanceOf[CALLER] + 1
-    token.balanceOf[THIS]  => token.balanceOf[THIS] - 1
+    token.balanceOf[CALLER] := token.balanceOf[CALLER] + 1
+    token.balanceOf[THIS]  := token.balanceOf[THIS] - 1
 
 returns 1
 

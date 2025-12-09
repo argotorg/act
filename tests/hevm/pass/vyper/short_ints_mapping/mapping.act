@@ -1,0 +1,24 @@
+contract A
+
+constructor()
+iff
+  CALLVALUE == 0
+
+creates
+  mapping(uint64 => mapping(uint128 => uint32)) m := []
+
+
+transition setm(uint64 a, uint128 b, uint32 c)
+
+iff
+  CALLVALUE == 0
+
+storage
+  m[a][b] := c
+
+
+transition m(uint64 idx1, uint128 idx2) : uint32
+
+iff CALLVALUE == 0
+
+returns pre(m[idx1][idx2])

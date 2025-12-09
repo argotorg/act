@@ -1,5 +1,6 @@
-constructor of A
-interface constructor()
+contract A
+
+constructor()
 
 creates
 
@@ -7,12 +8,9 @@ creates
 
 
 
-constructor of B
-interface constructor(address a)
+contract B
 
-pointers
-
-  a |-> A
+constructor(address<A> a)
 
 creates
 

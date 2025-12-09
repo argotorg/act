@@ -1,0 +1,76 @@
+// contract A
+contract A
+
+constructor(uint z)
+
+iff
+   CALLVALUE == 0
+
+creates
+   uint x := z
+
+
+transition x() : uint256
+
+iff
+   CALLVALUE == 0
+
+returns
+   pre(x)
+
+transition set_x(uint z)
+
+iff 
+   CALLVALUE == 0
+
+storage
+  x := z
+
+// contract B
+contract B
+
+constructor(uint z)
+iff
+   CALLVALUE == 0
+
+creates
+   uint y := z
+   A a := new A(0)
+
+transition y() : uint256
+
+iff
+   CALLVALUE == 0
+
+returns
+   pre(y)
+
+transition a() : address<A>
+
+iff
+   CALLVALUE == 0
+
+returns
+   pre(a)
+
+
+// contract C
+contract C
+
+constructor(address<B> y)
+
+iff
+   CALLVALUE == 0
+
+creates
+   A a := y.a
+   B b := y 
+
+transition change()
+
+iff
+
+  CALLVALUE == 0
+  
+storage
+  b.a.x := 17

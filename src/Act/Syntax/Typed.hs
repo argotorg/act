@@ -50,21 +50,21 @@ import Data.Type.Equality (TestEquality(..), (:~:)(..))
 
 -- Reexports
 
-import Act.Parse          as Act.Syntax.Typed (nowhere)
+import Act.Lex            as Act.Syntax.Typed (nowhere)
 import Act.Syntax.Types   as Act.Syntax.Typed
 import Act.Syntax.Timing  as Act.Syntax.Typed
-import Act.Syntax.Untyped as Act.Syntax.Typed (Id, Pn, Interface(..), EthEnv(..), Decl(..), SlotType(..), ValueType(..), Pointer(..), makeIface)
+import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..), makeIface, ethEnv, IsPayable(..))
 
 -- AST post typechecking
-data Act t = Act Store [Contract t]
+data Act t = Act StorageTyping [Contract t]
   deriving (Show, Eq)
 
 data Contract t = Contract (Constructor t) [Behaviour t]
   deriving (Show, Eq)
 
--- For each contract, it stores the type of a storage variables and
--- the order in which they are declared
-type Store = Map Id (Map Id (SlotType, Integer))
+-- For each contract, we store the type of a storage variables and the order in
+-- which they are declared
+type StorageTyping = Map Id (Map Id (ValueType, Integer))
 
 
 -- | Represents a contract level invariant. The invariant is defined in the
@@ -92,70 +92,57 @@ data InvariantPred (t :: Timing) where
 deriving instance Show (InvariantPred t)
 deriving instance Eq (InvariantPred t)
 
+-- type Case a t = (Exp ABoolean t, a)
+type Cases a t = [(Exp ABoolean t, a)]
+
 data Constructor t = Constructor
   { _cname :: Id
   , _cinterface :: Interface
-  , _cpointers :: [Pointer]
+  , _cisPayable :: IsPayable
   , _cpreconditions :: [Exp ABoolean t]
+  , _ccases :: Cases [StorageUpdate t] t
   , _cpostconditions :: [Exp ABoolean t]
   , _invariants :: [Invariant t]
-  , _initialStorage :: [StorageUpdate t]
   } deriving (Show, Eq)
-
-
+  
 -- After typing each behavior may be split to multiple behaviors, one for each case branch.
 -- In this case, only the `_caseconditions`, `_stateUpdates`, and `_returns` fields are different.
 data Behaviour t = Behaviour
   { _name :: Id
   , _contract :: Id
   , _interface :: Interface
-  , _pointers :: [Pointer]
+  , _isPayable :: IsPayable
   , _preconditions :: [Exp ABoolean t]  -- if preconditions are not satisfied execution is reverted
-  , _caseconditions :: [Exp ABoolean t] -- if preconditions are satisfied and the case conditions are not, some other instance of the behavior should apply
+  , _cases :: Cases ([StorageUpdate t], Maybe (TypedExp t)) t
   , _postconditions :: [Exp ABoolean Timed]
-  , _stateUpdates :: [StorageUpdate t]
-  , _returns :: Maybe (TypedExp Timed)
   } deriving (Show, Eq)
 
 data StorageUpdate (t :: Timing) where
-  Update :: SType a -> TItem a Storage t -> Exp a t -> StorageUpdate t
+  Update :: TValueType a -> Ref LHS t -> Exp a t -> StorageUpdate t
 deriving instance Show (StorageUpdate t)
 
 instance Eq (StorageUpdate t) where
   (==) :: StorageUpdate t -> StorageUpdate t -> Bool
-  Update SType i1 e1 == Update SType i2 e2 = eqS' i1 i2 && eqS e1 e2
+  Update vt1@VType r1 e1 == Update vt2@VType r2 e2 = eqS'' vt1 vt2 && r1 == r2 && eqS e1 e2
 
-_Update :: SingI a => TItem a Storage t -> Exp a t -> StorageUpdate t
-_Update item expr = Update sing item expr
-
-data Location (t :: Timing) where
-  Loc :: SType a -> SRefKind k -> TItem a k t -> Location t
-deriving instance Show (Location t)
-
-instance Eq (Location t) where
-  Loc SType SRefKind i1 == Loc SType SRefKind i2 = eqTypeKind i1 i2
-
-_Loc :: SRefKind k -> TItem a k t -> Location t
-_Loc k item@(Item t _ _) = Loc t k item
-
--- | Distinguish the type of Refs to calldata variables and storage
-data RefKind = Storage | Calldata
+-- | Distinguish the references that are updatable.
+data RefKind = RHS | LHS
   deriving (Show, Eq)
 
 data SRefKind (k :: RefKind) where
-  SStorage  :: SRefKind Storage
-  SCalldata :: SRefKind Calldata
+  SLHS  :: SRefKind LHS
+  SRHS :: SRefKind RHS
 
 type instance Sing = SRefKind
 
 instance Show (SRefKind a) where
   show = \case
-    SStorage -> "SSTorage"
-    SCalldata -> "SCalldata"
+    SLHS -> "SLHS"
+    SRHS -> "SRHS"
 
 instance TestEquality SRefKind where
-  testEquality SStorage SStorage = Just Refl
-  testEquality SCalldata SCalldata = Just Refl
+  testEquality SLHS SLHS = Just Refl
+  testEquality SRHS SRHS = Just Refl
   testEquality _ _ = Nothing
   
 -- | Helper pattern to retrieve the 'SingI' instances of the type represented by
@@ -163,6 +150,10 @@ instance TestEquality SRefKind where
 pattern SRefKind :: () => (SingI a) => SRefKind a
 pattern SRefKind <- Sing
 {-# COMPLETE SRefKind #-}
+
+-- | Compare equality of two Items parametrized by different RefKinds.
+eqKind' :: forall (a :: RefKind) (b :: RefKind) f t. (SingI a, SingI b, Eq (f a t)) => f a t -> f b t -> Bool
+eqKind' fa fb = maybe False (\Refl -> fa == fb) $ testEquality (sing @a) (sing @b)
 
 -- | Compare equality of two Items parametrized by different RefKinds.
 eqKind :: forall (a :: RefKind) (b :: RefKind) f t t'. (SingI a, SingI b, Eq (f t a t')) => f t a t' -> f t b t' -> Bool
@@ -176,56 +167,44 @@ eqTypeKind fa fb = maybe False (\Refl ->
                        $ testEquality (sing @c) (sing @d))
                          $ testEquality (sing @a) (sing @b)
 
--- | Reference to an item in storage or a variable. It can be either a
--- storage or calldata variable, a map lookup, or a field selector.
--- annotated with two identifiers: the contract that they belong to
--- and their name.
+-- | Variable References
 data Ref (k :: RefKind) (t :: Timing) where
-  CVar :: Pn -> AbiType -> Id -> Ref Calldata t     -- Calldata variable
-  SVar :: Pn -> Id -> Id -> Ref Storage t           -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
-  SArray :: Pn -> Ref k t -> ValueType -> [(TypedExp t, Int)] -> Ref k t
-                                                    -- Array access. `Int` in indices list stores the corresponding index upper bound
-  SMapping :: Pn -> Ref k t -> ValueType -> [TypedExp t] -> Ref k t
-  SField :: Pn -> Ref k t -> Id -> Id -> Ref k t    -- Field access (for accessing storage variables of contracts).
-                                                    -- The first `Id` is the name of the contract that the field belongs to.
+  CVar :: Pn -> ArgType -> Id -> Ref RHS t               -- Calldata variable  
+  SVar :: Pn -> Time t -> Id -> Id -> Ref k t            -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
+  RArrIdx :: Pn -> Ref k t -> Exp AInteger t -> Int -> Ref k t
+                                                         -- Array access. `Int` in indices list stores the corresponding index upper bound
+  RMapIdx :: Pn -> TypedRef t -> TypedExp t -> Ref RHS t
+  RField :: Pn -> Ref k t -> Id -> Id -> Ref k t         -- Field access (for accessing storage variables of contracts). Mapp
+                                                         -- The first `Id` is the name of the contract that the field belongs to.
 deriving instance Show (Ref k t)
 
 instance Eq (Ref k t) where
   CVar _ at x         == CVar _ at' x'          = at == at' && x == x'
-  SVar _ c x          == SVar _ c' x'           = c == c' && x == x'
-  SArray _ r ts ixs   == SArray _ r' ts' ixs'   = r == r' && ts == ts' && ixs == ixs'
-  SMapping _ r ts ixs == SMapping _ r' ts' ixs' = r == r' && ts == ts' && ixs == ixs'
-  SField _ r c x      == SField _ r' c' x'      = r == r' && c == c' && x == x'
+  SVar _ t c x        == SVar _ t' c' x'        = t == t' && c == c' && x == x'
+  RArrIdx _ r t ix    == RArrIdx _ r' t' ix'    = r == r' && t == t' && ix == ix'
+  RMapIdx _ r ix      == RMapIdx _ r' ix'       = r == r' &&  ix == ix'
+  RField _ r c x      == RField _ r' c' x'      = r == r' && c == c' && x == x'
   _                   == _                      = False
 
--- | Item is a reference together with its Act type. The type is
--- parametrized on a timing `t`, a type `a`, and the reference kind
--- `k`. `t` can be either `Timed` or `Untimed` and indicates whether
--- any indices that reference items in storage explicitly refer to the
--- pre-/post-state, or not. `a` is the type of the item that is
--- referenced. Items are also annotated with the original ValueType
--- that carries more precise type information (e.g., the exact
--- contract type).
-data TItem (a :: ActType) (k :: RefKind) (t :: Timing) where
-  Item :: SType a -> ValueType -> Ref k t -> TItem a k t
-deriving instance Show (TItem a k t)
-deriving instance Eq (TItem a k t)
+data TypedRef (t :: Timing) where
+  TRef :: TValueType a -> SRefKind k -> Ref k t -> TypedRef t
+deriving instance Show (TypedRef t)
 
-_Item :: SingI a => ValueType -> Ref k t -> TItem a k t
-_Item = Item sing
+instance Eq (TypedRef t) where
+  TRef vt1@VType SRefKind r1 == TRef vt2@VType SRefKind r2 = eqS'' vt1 vt2 && eqKind' r1 r2
+
 
 -- | Expressions for which the return type is known.
 data TypedExp t
-  = forall a. TExp (SType a) (Shape (ActShape a)) (Exp a t)
+  = forall (a :: ActType). SingI a => TExp (TValueType a) (Exp a t)
 deriving instance Show (TypedExp t)
 
 instance Eq (TypedExp t) where
   (==) :: TypedExp t -> TypedExp t -> Bool
-  TExp (SSArray SType) s1 e1 == TExp (SSArray SType) s2 e2 = eqS e1 e2 && s1 == s2
-  TExp SType _ e1 == TExp SType _ e2 = eqS e1 e2
+  TExp vt1 e1 == TExp vt2 e2 = eqS'' vt1 vt2 && eqS e1 e2
 
-_TExp :: SingI a => Shape (ActShape a) -> Exp a t -> TypedExp t
-_TExp shape expr = TExp sing shape expr
+--_TExp :: SingI a => Exp a t -> TypedExp t
+--_TExp expr = TExp sing expr
 
 -- | Expressions parametrized by a timing `t` and a type `a`. `t` can be either `Timed` or `Untimed`.
 -- All storage entries within an `Exp a t` contain a value of type `Time t`.
@@ -258,7 +237,7 @@ data Exp (a :: ActType) (t :: Timing) where
   IntMax :: Pn -> Int -> Exp AInteger t
   UIntMin :: Pn -> Int -> Exp AInteger t
   UIntMax :: Pn -> Int -> Exp AInteger t
-  InRange :: Pn -> AbiType -> Exp AInteger t -> Exp ABoolean t
+  InRange :: Pn -> TValueType AInteger -> Exp AInteger t -> Exp ABoolean t
   -- bytestrings
   Cat :: Pn -> Exp AByteStr t -> Exp AByteStr t -> Exp AByteStr t
   Slice :: Pn -> Exp AByteStr t -> Exp AInteger t -> Exp AInteger t -> Exp AByteStr t
@@ -268,17 +247,20 @@ data Exp (a :: ActType) (t :: Timing) where
 
   Array :: Pn -> [Exp a t] -> Exp (AArray a) t
   -- contracts
-  Create   :: Pn -> Id -> [TypedExp t] -> Exp AInteger t
+  Create   :: Pn -> Id -> [TypedExp t] -> Maybe (Exp AInteger t) -> Exp AContract t
   -- polymorphic
-  Eq  :: Pn -> SType a -> Exp a t -> Exp a t -> Exp ABoolean t
-  NEq :: Pn -> SType a -> Exp a t -> Exp a t -> Exp ABoolean t
+  Eq  :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
+  NEq :: Pn -> TValueType a -> Exp a t -> Exp a t -> Exp ABoolean t
   ITE :: Pn -> Exp ABoolean t -> Exp a t -> Exp a t -> Exp a t
-  -- Calldata references and storage variable references. 
-  -- Note that the timing annotation does not make a difference 
-  -- when the variable refers to calldata
-  VarRef :: Pn -> Time t -> SRefKind k -> TItem a k t -> Exp a t
-
+  -- variable references
+  VarRef :: Pn -> TValueType a -> Ref RHS t -> Exp a t
+  -- address of contract
+  Address :: Pn -> Id -> Exp AContract t -> Exp AInteger t
+  -- mappings
+  Mapping :: Pn -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
+  MappingUpd :: Pn -> Ref LHS t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
 deriving instance Show (Exp a t)
+
 
 -- Equality modulo source file position.
 instance Eq (Exp a t) where
@@ -314,13 +296,23 @@ instance Eq (Exp a t) where
   ByLit _ a == ByLit _ b = a == b
   ByEnv _ a == ByEnv _ b = a == b
 
-  Eq _ SType a b == Eq _ SType c d = eqS a c && eqS b d
-  NEq _ SType a b == NEq _ SType c d = eqS a c && eqS b d
+  Eq _ vt1@VType a b == Eq _ vt2@VType c d = eqS'' vt1 vt2 && eqS a c && eqS b d
+  NEq _ vt1@VType a b == NEq _ vt2@VType c d = eqS'' vt1 vt2 && eqS a c && eqS b d
 
   ITE _ a b c == ITE _ d e f = a == d && b == e && c == f
-  VarRef _ a SRefKind t == VarRef _ b SRefKind u = a == b && eqKind t u
-  Create _ a b == Create _ c d = a == c && b == d
-
+  VarRef _ a t == VarRef _ b u = a == b && t == u
+  Create _ a b c == Create _ d e f = a == d && b == e && c == f
+  Array _ a == Array _ b = a == b
+  Address _ _ a == Address _ _ b = a == b
+  Mapping _ (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == Mapping _ (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
+    (testEquality (sing @a1) (sing @a2) >>= \Refl ->
+     testEquality (sing @b1) (sing @b2) >>= \Refl ->
+     pure $ m == m' && vt1 == vt3 && vt2 == vt4) == Just True
+  MappingUpd _ r (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == MappingUpd _ r' (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
+    r == r' &&
+    (testEquality (sing @a1) (sing @a2) >>= \Refl ->
+     testEquality (sing @b1) (sing @b2) >>= \Refl ->
+     pure $ m == m' && vt1 == vt3 && vt2 == vt4) == Just True
   _ == _ = False
 
 
@@ -332,7 +324,7 @@ instance Monoid (Exp ABoolean t) where
 
 instance Timable TypedExp where
   setTime :: When -> TypedExp Untimed -> TypedExp Timed
-  setTime time (TExp t s expr) = TExp t s $ setTime time expr
+  setTime time (TExp t expr) = TExp t $ setTime time expr
 
 instance Timable (Exp a) where
   setTime :: When -> Exp a Untimed -> Exp a Timed
@@ -372,28 +364,32 @@ instance Timable (Exp a) where
     ByLit p x -> ByLit p x
     ByEnv p x -> ByEnv p x
     -- contracts
-    Create p x y -> Create p x (go <$> y)
+    Create p x y z -> Create p x (go <$> y) (go <$> z)
 
     -- polymorphic
     Eq  p s x y -> Eq p s (go x) (go y)
     NEq p s x y -> NEq p s (go x) (go y)
     ITE p x y z -> ITE p (go x) (go y) (go z)
-    VarRef p _ k item -> VarRef p time k (go item)
+    VarRef p vt item -> VarRef p vt (go item)
+    Address p c e -> Address p c (go e)
+    -- mappings
+    Mapping p kt vt kvs -> Mapping p kt vt (bimap go go <$> kvs)
+    MappingUpd p r kt vt kvs -> MappingUpd p (go r) kt vt (bimap go go <$> kvs)
     where
       go :: Timable c => c Untimed -> c Timed
       go = setTime time
 
 
-instance Timable (TItem a k) where
-   setTime :: When -> TItem a k Untimed -> TItem a k Timed
-   setTime time (Item t vt ref) = Item t vt $ setTime time ref
+instance Timable TypedRef where
+   setTime :: When -> TypedRef Untimed -> TypedRef Timed
+   setTime time (TRef t k ref) = TRef t k $ setTime time ref
 
 instance Timable (Ref k) where
   setTime :: When -> Ref k Untimed -> Ref k Timed
-  setTime time (SMapping p e ts ixs) = SMapping p (setTime time e) ts (setTime time <$> ixs)
-  setTime time (SArray p e ts ixs) = SArray p (setTime time e) ts ((first (setTime time)) <$> ixs)
-  setTime time (SField p e c x) = SField p (setTime time e) c x
-  setTime _ (SVar p c ref) = SVar p c ref
+  setTime time (RMapIdx p e ix) = RMapIdx p (setTime time e) (setTime time ix)
+  setTime time (RArrIdx p e ix n) = RArrIdx p (setTime time e) (setTime time ix) n
+  setTime time (RField p e c x) = RField p (setTime time e) c x
+  setTime time (SVar p _ c ref) = SVar p time c ref
   setTime _ (CVar p at ref) = CVar p at ref
 
 
@@ -414,7 +410,7 @@ instance ToJSON (Contract t) where
                                        , "constructor" .= toJSON ctor
                                        , "behaviours" .= toJSON behv ]
 
-storeJSON :: Store -> Value
+storeJSON :: StorageTyping -> Value
 storeJSON storages = object [ "kind" .= String "Storages"
                             , "storages" .= toJSON storages]
 
@@ -422,23 +418,19 @@ instance ToJSON (Constructor t) where
   toJSON Constructor{..} = object [ "kind" .= String "Constructor"
                                   , "contract" .= _cname
                                   , "interface" .= toJSON _cinterface
-                                  , "pointers" .= toJSON _cpointers
                                   , "preConditions" .= toJSON _cpreconditions
                                   , "postConditions" .= toJSON _cpostconditions
                                   , "invariants" .= listValue toJSON _invariants
-                                  , "initialStorage" .= toJSON _initialStorage  ]
+                                  , "cases" .= toJSON _ccases  ]
 
 instance ToJSON (Behaviour t) where
   toJSON Behaviour{..} = object [ "kind" .= String "Behaviour"
                                 , "name" .= _name
                                 , "contract" .= _contract
                                 , "interface" .= toJSON _interface
-                                , "pointers" .= toJSON _pointers
                                 , "preConditions" .= toJSON _preconditions
-                                , "case" .= toJSON _caseconditions
-                                , "postConditions" .= toJSON _postconditions
-                                , "stateUpdates" .= toJSON _stateUpdates
-                                , "returns" .= toJSON _returns ]
+                                , "cases" .= toJSON _cases
+                                , "postConditions" .= toJSON _postconditions ]
 
 instance ToJSON Interface where
   toJSON (Interface x decls) = object [ "kind" .= String "Interface"
@@ -446,16 +438,11 @@ instance ToJSON Interface where
                                       , "args" .= toJSON decls
                                       ]
 
-instance ToJSON Decl where
-  toJSON (Decl abitype x) = object [ "kind" .= String "Declaration"
+instance ToJSON Arg where
+  toJSON (Arg abitype x) = object [ "kind" .= String "Declaration"
                                    , "id" .= pack (show x)
                                    , "abitype" .= toJSON abitype
                                    ]
-
-instance ToJSON Pointer where
-  toJSON (PointsTo _ x c) = object [ "kind" .= String "PointsTo"
-                                   , "var" .= x
-                                   , "contract" .= c ]
 
 instance ToJSON (Invariant t) where
   toJSON Invariant{..} = object [ "kind" .= String "Invariant"
@@ -471,27 +458,26 @@ instance ToJSON (InvariantPred t) where
                                                , "prefpredicate" .= toJSON predpre
                                                , "prefpredicate" .= toJSON predpost ]
 
-instance ToJSON (Location t) where
-  toJSON (Loc _ _ a) = object [ "location" .= toJSON a ]
-
 instance ToJSON (StorageUpdate t) where
   toJSON (Update _ a b) = object [ "location" .= toJSON a ,"value" .= toJSON b ]
 
-instance ToJSON (TItem a k t) where
-  toJSON (Item t _ a) = object [ "item" .= toJSON a
+instance ToJSON (TypedRef t) where
+  toJSON (TRef t k r) = object [ "ref" .= toJSON r
                                , "type" .=  show t
+                               , "kind" .=  show k
                                ]
 
 instance ToJSON (Ref k t) where
-  toJSON (SVar _ c x) = object [ "kind" .= pack "SVar"
-                               , "svar" .=  pack x
-                               , "contract" .= pack c ]
+  toJSON (SVar _ t c x) = object [ "kind" .= pack "SVar"
+                                 , "svar" .=  pack x
+                                 , "time" .=  pack (show t)
+                                 , "contract" .= pack c ]
   toJSON (CVar _ at x) = object [ "kind" .= pack "Var"
                                 , "var" .=  pack x
                                 , "abitype" .=  toJSON at ]
-  toJSON (SArray _ e _ xs) = array e xs
-  toJSON (SMapping _ e _ xs) = mapping e xs
-  toJSON (SField _ e c x) = field e c x
+  toJSON (RArrIdx _ e x _) = array e x
+  toJSON (RMapIdx _ e x) = mapping e x
+  toJSON (RField _ e c x) = field e c x
 
 array :: (ToJSON a1, ToJSON a2) => a1 -> a2 -> Value
 array a b = object [ "kind"      .= pack "Array"
@@ -512,7 +498,7 @@ field a c x = object [ "kind"      .= pack "Field"
 
 
 instance ToJSON (TypedExp t) where
-  toJSON (TExp typ _ a) = object [ "kind"       .= pack "TypedExpr"
+  toJSON (TExp typ a) = object [ "kind"       .= pack "TypedExpr"
                                  , "type"       .= pack (show typ)
                                  , "expression" .= toJSON a ]
 
@@ -565,14 +551,27 @@ instance ToJSON (Exp a t) where
                               , "type" .= pack "bytestring" ]
   toJSON (ByEnv _ a) = object [ "ethEnv" .= pack (show a)
                               , "type" .= pack "bytestring" ]
-  toJSON (VarRef _ t _ a) = object [ "var"  .= toJSON a
-                                   , "timing" .= show t ]
-  toJSON (Create _ f xs) = object [ "symbol" .= pack "create"
-                                  , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
-                                  , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) ]
+  toJSON (VarRef _ t a) = object [ "var"  .= toJSON a
+                                 , "timing" .= show t ]
+  toJSON (Create _ f xs v) = object [ "symbol" .= pack "create"
+                                    , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
+                                    , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) 
+                                    , "value"  .= toJSON v ]
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
                               , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
                               , "args" .= Data.Aeson.Array (fromList (map toJSON l)) ]
+  toJSON (Address _ _ x) = object [ "symbol" .= pack "addr"
+                                , "arity" .= Data.Aeson.Types.Number 1
+                                , "arg" .= toJSON x ]
+  toJSON (Mapping _ kt vt kvs) = object [ "symbol" .= pack "mapping"
+                                        , "keyType" .= show kt
+                                        , "valueType" .= show vt
+                                        , "entries" .= toJSON kvs ]
+  toJSON (MappingUpd _ r kt vt kvs) = object [ "symbol" .= pack "mappingUpd"
+                                             , "ref" .= toJSON r
+                                             , "keyType" .= show kt
+                                             , "valueType" .= show vt
+                                             , "entries" .= toJSON kvs ]
 
   toJSON v = error $ "todo: json ast for: " <> show v
 
@@ -619,18 +618,21 @@ eval e = case e of
   ByLit _ s     -> pure s
 
   -- TODO better way to write these?
-  Eq _ SInteger x y -> [ x' == y' | x' <- eval x, y' <- eval y]
-  Eq _ SBoolean x y -> [ x' == y' | x' <- eval x, y' <- eval y]
-  Eq _ SByteStr x y -> [ x' == y' | x' <- eval x, y' <- eval y]
+  Eq _ (TInteger _ _) x y -> [ x' == y' | x' <- eval x, y' <- eval y]
+  Eq _ TBoolean x y -> [ x' == y' | x' <- eval x, y' <- eval y]
+  Eq _ TByteStr x y -> [ x' == y' | x' <- eval x, y' <- eval y]
 
-  NEq _ SInteger x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
-  NEq _ SBoolean x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
-  NEq _ SByteStr x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
+  NEq _ (TInteger _ _) x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
+  NEq _ TBoolean x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
+  NEq _ TByteStr x y -> [ x' /= y' | x' <- eval x, y' <- eval y]
   ITE _ a b c   -> eval a >>= \cond -> if cond then eval b else eval c
 
   Array _ l -> mapM eval l
 
-  Create _ _ _ -> error "eval of contracts not supported"
+  Create _ _ _ _ -> error "eval of contracts not supported"
+  Address _ _ _ -> error "eval of contracts not supported"
+  Mapping _ _ _ _ -> error "eval of mappings not supported"
+  MappingUpd _ _ _ _ _ -> error "eval of mapping updates not supported"
   _              -> empty
 
 intmin :: Int -> Integer
@@ -645,8 +647,8 @@ uintmin _ = 0
 uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
-_Var :: SingI a => AbiType -> Id -> Exp a Timed
-_Var at x = VarRef nowhere Pre SCalldata (Item sing (PrimitiveType at) (CVar nowhere at x))
+_Var :: SingI a => TValueType a -> Id -> Exp a Timed
+_Var vt x = VarRef nowhere vt (CVar nowhere (toArgType vt) x)
 
-_Array :: SingI a => AbiType -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
-_Array at x ix = VarRef nowhere Pre SCalldata (Item sing (PrimitiveType at) (SArray nowhere (CVar nowhere at x) (PrimitiveType at) ix))
+-- _Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed
+-- _Array vt x ix = VarRef nowhere vt SRHS (RArrIdx nowhere (CVar nowhere (toArgType vt) x) (fromAbiType (toAbiType vt)) ix)

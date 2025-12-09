@@ -1,5 +1,6 @@
-constructor of B
-interface constructor()
+contract B
+
+constructor()
 
 creates
 
@@ -7,25 +8,24 @@ creates
   int y := 0
   int[3] a := [1,2,3]
 
-behaviour f of B
-interface f()
+transition f()
 
 case -2 <= x and x < 0:
 
   storage
 
-    a[0-x] => a[1]
+    a[0-x] := a[1]
 
 case 0 <= x and x <= 2:
 
   storage
 
-    a[x+1] => 4
+    a[x+1] := 4
 
 case x < -2 or 2 < x:
 
   storage
 
-    a[1] => 0
+    a[1] := 0
   
 

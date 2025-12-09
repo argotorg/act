@@ -20,9 +20,6 @@ instance TraversableTerm (Exp a t) where
 instance TraversableTerm (TypedExp t) where
   mapTermM = mapTypedExpM
 
-instance TraversableTerm (TItem k a t) where
-  mapTermM = mapTItemM
-
 instance TraversableTerm (Ref k t) where
   mapTermM = mapRefM
 
@@ -121,9 +118,10 @@ mapExpM f = \case
 
   --contracts
 
-  Create p n as -> do
+  Create p n as v -> do
     as' <- mapM (mapTypedExpM f) as
-    f (Create p n as')
+    v' <- mapM (mapExpM f) v
+    f (Create p n as' v')
 
   --polymorphic
 
@@ -141,32 +139,49 @@ mapExpM f = \case
     b' <- mapExpM f b
     c' <- mapExpM f c
     f (ITE p a' b' c')
-  VarRef p t k i -> do
-    i' <- mapTItemM f i
-    f (VarRef p t k i')
+  VarRef p t r -> do
+    r' <- mapRefM f r
+    f (VarRef p t r')
+  Address p c x -> do
+    x' <- mapExpM f x
+    f (Address p c x')
+  Mapping p kt vt kvs -> do
+    kvs' <- mapM (\(k, v) -> do
+      k' <- mapExpM f k
+      v' <- mapExpM f v
+      pure (k', v')) kvs
+    f (Mapping p kt vt kvs')
+  MappingUpd p r kt vt kvs -> do
+    r' <- mapRefM f r
+    kvs' <- mapM (\(k, v) -> do
+      k' <- mapExpM f k
+      v' <- mapExpM f v
+      pure (k', v')) kvs
+    f (MappingUpd p r' kt vt kvs')
 
 mapTypedExpM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedExp t -> m (TypedExp t)
-mapTypedExpM f (TExp t s e) = do
+mapTypedExpM f (TExp t e) = do
   e' <- f e
-  pure $ TExp t s e'
-
-mapTItemM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TItem k b t -> m (TItem k b t)
-mapTItemM f (Item s v r) = do
-  r' <- mapRefM f r
-  pure $ Item s v r'
+  pure $ TExp t e'
 
 mapRefM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> Ref k t -> m (Ref k t)
 mapRefM f = \case
-  SVar p a b -> pure (SVar p a b)
+  SVar p time c a -> pure (SVar p time c a)
   CVar p a b -> pure (CVar p a b)
-  SArray p a ts b -> do
+  RArrIdx p a b n -> do
     a' <- mapRefM f a
-    b' <- mapM (mapTypedExpM f . fst) b
-    pure $ SMapping p a' ts b'
-  SMapping p a ts b -> do
-    a' <- mapRefM f a
-    b' <- mapM (mapTypedExpM f) b
-    pure $ SMapping p a' ts b'
-  SField p r a b -> do
+    b' <- mapExpM f b
+    pure $ RArrIdx p a' b' n
+  RMapIdx p a b -> do
+    a' <- mapTypedRefM f a
+    b' <- mapTypedExpM f b
+    pure $ RMapIdx p a' b'
+  RField p r a b -> do
     r' <- mapRefM f r
-    pure $ SField p r' a b
+    pure $ RField p r' a b
+
+
+mapTypedRefM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedRef t -> m (TypedRef t)
+mapTypedRefM f (TRef t k r) = do
+  r' <- mapRefM f r
+  pure $ TRef t k r'

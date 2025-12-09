@@ -1,5 +1,6 @@
-constructor of AllEnvVars
-interface constructor()
+contract AllEnvVars
+
+constructor()
 
 creates
 	address caller := CALLER

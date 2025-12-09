@@ -11,17 +11,15 @@ Definition address := Z.
 Record Env : Set :=
   { Callvalue : Z;
     Caller : address;
-    Blockhash : Z;
-    Blocknumber : Z;
-    Difficulty : Z;
-    Timestamp : Z;
-    Gaslimit : Z;
-    Coinbase : address;
-    Chainid : Z;
     This : address;
-    Origin : address;
-    Nonce : Z;
-    Calldepth : Z }.
+    Origin : address }.
+
+Definition CallEnv (value : Z) (caller : address) (ENV : Env) : Env :=
+  {| Callvalue := value;
+     Caller := caller;
+     This := This ENV;
+     Origin := Origin ENV |}.
+
 
 (** * integer bounds *)
 Definition UINT_MIN (n : Z) := 0.

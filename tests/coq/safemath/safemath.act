@@ -1,16 +1,15 @@
-constructor of SafeMath
-interface constructor()
+contract SafeMath
 
-behaviour add of SafeMath
-interface add(uint256 x, uint256 y)
+constructor()
+
+transition add(uint256 x, uint256 y) : uint256
 
 iff in range uint256
     x + y
 
 returns x + y
 
-behaviour mul of SafeMath
-interface mul(uint256 x, uint256 y)
+transition mul(uint256 x, uint256 y) : uint256
 
 iff in range uint256
     x * y
