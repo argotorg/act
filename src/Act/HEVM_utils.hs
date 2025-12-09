@@ -64,12 +64,12 @@ defaultActConfig = Config
 debugActConfig :: Config
 debugActConfig = defaultActConfig { dumpQueries = True, dumpExprs = True, dumpEndStates = True, debug = True }
 
-makeCalldata :: Interface -> Calldata
-makeCalldata iface@(Interface _ decls) =
+makeCalldata :: Id -> Interface -> Calldata
+makeCalldata name iface@(Interface _ decls) =
   let
     mkArg :: Arg -> CalldataFragment
     mkArg (Arg argtype x) = symAbiArg (T.pack x) $ argToAbiType argtype
-    makeSig = T.pack $ makeIface iface
+    makeSig = T.pack $ makeIface name iface
     calldatas = fmap mkArg decls
     (cdBuf, props) = combineFragments calldatas (EVM.ConcreteBuf "")
     withSelector = writeSelector cdBuf makeSig
