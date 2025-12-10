@@ -1,15 +1,16 @@
 [book]
 authors = ["dxo"]
 language = "en"
-multilingual = false
 src = "src"
 title = "The Act Book"
 
 [preprocessor]
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
+optional = true
 [preprocessor.katex]
 after = ["links"]
+optional = true
 
 [output]
 [output.html]
