@@ -1,7 +1,0 @@
-contract B
-
-constructor()
-
-creates
-
-  mapping(uint => uint) m := [-1,-2]

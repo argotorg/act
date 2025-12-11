@@ -1,7 +1,0 @@
-contract B
-
-constructor()
-
-creates
-
-  bytes1[2][2] n1 := [[1,2,3],[4,5]]

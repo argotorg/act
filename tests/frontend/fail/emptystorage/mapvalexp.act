@@ -1,8 +1,0 @@
-contract ReadMapping
-
-constructor(uint _x, uint _y)
-
-creates
-  uint                x := _x
-  uint                y := _y
-  mapping(uint=>uint) m := [_x => y + 5]

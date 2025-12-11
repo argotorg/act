@@ -1,7 +1,0 @@
-contract C
-
-constructor()
-
-creates
-
-    int totalSupply := -1

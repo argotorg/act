@@ -47,7 +47,7 @@ import Act.Error
   'contract'                  { L CONTRACT _ }  
   'new'                       { L NEW _ }
   'with'                      { L WITH _ }
-  'value'                     { L VALUE _ }
+  'callvalue'                 { L VALUE _ }
   
   -- builtin types
   'uint'                      { L (UINT $$) _ }
@@ -289,7 +289,7 @@ Expr : '(' Expr ')'                                   { $2 }
   | 'if' Expr 'then' Expr 'else' Expr                 { EITE (posn $1) $2 $4 $6 }
   | Ref                                               { ERef $1 }
   | 'new' id '(' seplist(Expr, ',') ')'               { ECreate (posn $1) (name $2) $4 Nothing }
-  | 'new' id '(' seplist(Expr, ',') ')' 'with' 'value' '(' Expr ')' 
+  | 'new' id '(' seplist(Expr, ',') ')' 'with' 'callvalue' '(' Expr ')' 
                                                       { ECreate (posn $1) (name $2) $4 (Just $9) }
   | 'address' '(' Expr ')'                            { AddrOf (posn $1) $3 }
 

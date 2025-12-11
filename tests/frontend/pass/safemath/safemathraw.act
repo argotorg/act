@@ -1,9 +1,0 @@
-contract SafeAdd
-
-transition add(uint256 x, uint256 y) : uint256
-
-iff
-    inRange(uint256, x + y)
-    CALLVALUE == 0
-
-returns x + y

@@ -59,7 +59,7 @@ tokens :-
   pre                                   { mk PRE }
   post                                  { mk POST }
   with                                  { mk WITH }
-  value                                 { mk VALUE }
+  callvalue                             { mk VALUE }
   payable                               { mk PAYABLE }
   -- builtin types
   uint $digit+                          { \ p s -> L (UINT (read (drop 4 s))) p }
