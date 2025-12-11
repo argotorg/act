@@ -1,0 +1,14 @@
+contract A
+
+constructor()
+
+creates
+  uint[2][2] x := [[0,0],[0,0]]
+
+transition f()
+
+storage
+
+  x := [[1,2],[3,4]]
+  x[0] := [10,20]
+  x[0][1] := 42

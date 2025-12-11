@@ -1,0 +1,7 @@
+contract B
+
+constructor()
+
+creates
+
+  uint[2] y := 3

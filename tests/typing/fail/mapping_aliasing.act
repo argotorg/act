@@ -1,0 +1,16 @@
+contract A
+
+constructor()
+
+creates
+
+  uint x := 0
+  uint y := 0
+  mapping(uint => uint) m := [ 0 => 0 ]
+
+transition f()
+
+storage
+
+  m[x] := 0
+  m[y] := 1

@@ -1,0 +1,11 @@
+contract A
+
+constructor(int32[3][2] n2)
+
+
+contract B
+
+constructor()
+
+creates
+  A a := new A([[1,2,3],[4,5]])

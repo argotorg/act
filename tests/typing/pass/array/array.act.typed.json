@@ -1,0 +1,193 @@
+{
+  "contracts": [
+    {
+      "behaviours": [
+        {
+          "case": [
+            {
+              "literal": "True",
+              "type": "bool"
+            }
+          ],
+          "contract": "A",
+          "interface": {
+            "args": [
+              {
+                "abitype": {
+                  "abitype": {
+                    "arrayType": {
+                      "type": "Address"
+                    },
+                    "size": "2",
+                    "type": "Array"
+                  },
+                  "kind": "AbiArgument"
+                },
+                "id": "\"xs\"",
+                "kind": "Declaration"
+              }
+            ],
+            "id": "\"f\"",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "f",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            [
+                              {
+                                "expression": {
+                                  "literal": "1",
+                                  "type": "int"
+                                },
+                                "kind": "TypedExpr",
+                                "type": "int"
+                              },
+                              2
+                            ]
+                          ],
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "arrayType": {
+                                "type": "Address"
+                              },
+                              "size": "2",
+                              "type": "Array"
+                            },
+                            "kind": "Var",
+                            "var": "xs"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "Pre",
+                      "var": {
+                        "item": {
+                          "indexes": [
+                            [
+                              {
+                                "expression": {
+                                  "literal": "1",
+                                  "type": "int"
+                                },
+                                "kind": "TypedExpr",
+                                "type": "int"
+                              },
+                              2
+                            ]
+                          ],
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "arrayType": {
+                                "type": "Address"
+                              },
+                              "size": "2",
+                              "type": "Array"
+                            },
+                            "kind": "Var",
+                            "var": "xs"
+                          }
+                        },
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "literal": "1461501637330902918203684832716283019655932542975",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            }
+          ],
+          "returns": {
+            "expression": {
+              "timing": "Pre",
+              "var": {
+                "item": {
+                  "indexes": [
+                    [
+                      {
+                        "expression": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "TypedExpr",
+                        "type": "int"
+                      },
+                      2
+                    ]
+                  ],
+                  "kind": "Array",
+                  "reference": {
+                    "abitype": {
+                      "arrayType": {
+                        "type": "Address"
+                      },
+                      "size": "2",
+                      "type": "Array"
+                    },
+                    "kind": "Var",
+                    "var": "xs"
+                  }
+                },
+                "type": "int"
+              }
+            },
+            "kind": "TypedExpr",
+            "type": "int"
+          },
+          "stateUpdates": []
+        }
+      ],
+      "constructor": {
+        "contract": "A",
+        "initialStorage": [],
+        "interface": {
+          "args": [],
+          "id": "\"A\"",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": []
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {}
+    }
+  }
+}

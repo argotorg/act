@@ -1,0 +1,8 @@
+contract LValue
+
+constructor()
+
+creates
+
+	uint x := 2
+	bool x := false

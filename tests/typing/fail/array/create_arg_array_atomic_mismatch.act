@@ -1,0 +1,11 @@
+contract A
+
+constructor(uint[2] y)
+
+
+contract B
+
+constructor()
+
+creates
+  A a := new A(3)

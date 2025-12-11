@@ -1,0 +1,119 @@
+{
+  "contracts": [
+    {
+      "behaviours": [],
+      "constructor": {
+        "contract": "Modest",
+        "initialStorage": [
+          {
+            "location": {
+              "item": {
+                "contract": "Modest",
+                "kind": "SVar",
+                "svar": "x"
+              },
+              "type": "int"
+            },
+            "value": {
+              "literal": "1",
+              "type": "int"
+            }
+          },
+          {
+            "location": {
+              "item": {
+                "contract": "Modest",
+                "kind": "SVar",
+                "svar": "y"
+              },
+              "type": "int"
+            },
+            "value": {
+              "ethEnv": "Caller",
+              "type": "int"
+            }
+          }
+        ],
+        "interface": {
+          "args": [],
+          "id": "\"Modest\"",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "pointers": [],
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "ethEnv": "Caller",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "ethEnv": "Caller",
+                    "type": "int"
+                  },
+                  {
+                    "literal": "1461501637330902918203684832716283019655932542975",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "Modest": {
+        "x": [
+          {
+            "kind": "ValueType",
+            "valueType": {
+              "abiType": {
+                "size": "256",
+                "type": "UInt"
+              },
+              "kind": "AbiType"
+            }
+          },
+          0
+        ],
+        "y": [
+          {
+            "kind": "ValueType",
+            "valueType": {
+              "abiType": {
+                "type": "Address"
+              },
+              "kind": "AbiType"
+            }
+          },
+          1
+        ]
+      }
+    }
+  }
+}

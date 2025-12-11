@@ -1,0 +1,11 @@
+contract LValue
+
+constructor()
+
+creates
+
+    uint x := x
+    
+invariants
+
+    x == 0

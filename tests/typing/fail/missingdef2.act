@@ -1,0 +1,24 @@
+contract C
+
+constructor()
+
+creates
+
+    uint x := 1
+    uint y := 1
+
+
+contract B
+
+constructor()
+
+creates
+
+    uint a := 1
+    uint b := 1
+
+transition f()
+
+storage C
+
+    x := y

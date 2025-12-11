@@ -1,0 +1,14 @@
+contract B
+
+constructor()
+
+creates
+
+  int[2] a := [0,0]
+
+transition f() : int
+
+
+case a[0] < 0:
+
+returns post(a[100])

@@ -1,0 +1,11 @@
+contract Fail
+
+constructor(uint y)
+
+creates
+
+  uint x := y
+
+ensures
+
+  x >= y

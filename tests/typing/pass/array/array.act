@@ -1,0 +1,9 @@
+contract A
+
+constructor()
+creates
+
+transition f(address[2] xs) : address
+storage
+
+returns xs[1]
