@@ -28,7 +28,7 @@ import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
 
-
+import Debug.Trace
 
 type Err = Error String
 
@@ -379,11 +379,11 @@ checkRef env kind mode (U.RIndex p en idx) =
     TArray len typ@VType ->
         checkExpr env mode defaultUInteger idx `bindValidation` \(idx', cnstr') ->
         pure (ValueType typ, RArrIdx p ref idx' len, makeArrayBoundConstraint p env len idx':cnstr ++ cnstr')
-    mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) ->
+    TMapping (ValueType keytyp) (ValueType valtyp) ->
         checkExpr env mode keytyp idx `bindValidation` \(ix, cnstr') ->
         case kind of
             SLHS -> throw (p, "Cannot use mapping indexing as LHS reference")
-            SRHS -> pure (ValueType valtyp, RMapIdx p (TRef mtyp kind ref) (TExp keytyp ix), cnstr ++ cnstr')
+            SRHS -> pure (ValueType valtyp, RMapIdx p (TRef styp kind ref) (TExp keytyp ix), cnstr ++ cnstr')
     _ -> throw (p, "An indexed reference should have an array or mapping type" <> show en)
 checkRef env kind mode (U.RField p en x) =
   checkRef env kind mode en `bindValidation` \(ValueType styp, ref :: Ref k t, cnstr) ->
@@ -476,8 +476,8 @@ fitsIn _ TAddress = False
 checkExpr :: forall t a. Env -> Mode t -> TValueType a -> U.Expr -> Err (Exp a t, [Constraint t])
 -- Mapping Expressions
 checkExpr env mode mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) (U.MappingUpd p ref map) = do
-    checkRef env SLHS mode ref `bindValidation` \(ValueType rtyp, tref, cnstr1) -> do
-        checkEqType p mtyp rtyp
+    checkRef env SRHS mode ref `bindValidation` \(ValueType rtyp, tref, cnstr1) -> do
+        trace "checking mapping update" $ traceShow (mtyp, rtyp) $ checkEqType p mtyp rtyp
         updsc <- unzip <$> traverse (\(k,v) -> do
             kc <- checkExpr env mode keytyp k
             vc <- checkExpr env mode valtyp v

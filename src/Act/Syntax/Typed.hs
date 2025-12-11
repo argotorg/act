@@ -258,7 +258,7 @@ data Exp (a :: ActType) (t :: Timing) where
   Address :: Pn -> Id -> Exp AContract t -> Exp AInteger t
   -- mappings
   Mapping :: Pn -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
-  MappingUpd :: Pn -> Ref LHS t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
+  MappingUpd :: Pn -> Ref RHS t -> TValueType a -> TValueType b ->  [(Exp a t, Exp b t)] -> Exp AMapping t
 deriving instance Show (Exp a t)
 
 

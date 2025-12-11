@@ -16,19 +16,19 @@ iff
 
 case y < 3:
 storage
-returns post(z)[pre(y)]
+returns z[y]
 
 
 case y <= 10 and 3 <= y and yn < y - 7:
 storage
-returns post(z)[pre(yn)]
+returns z[yn]
 
 
 case y > 10:
 storage
-returns post(z)[xs[1] - 1]
+returns z[xs[1] - 1]
 
 
 case y <= 10 and 3 <= y and yn >= y - 7:
 storage
-returns post(z)[xs[1] / 2]
+returns z[xs[1] / 2]

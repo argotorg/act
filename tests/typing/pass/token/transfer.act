@@ -29,7 +29,7 @@ case CALLER != to:
 
   storage
 
-     balanceOf := balanceOf[CALLER => balanceOf[CALLER] - value, to => balanceOf[to] + value]
+    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - value, to => balanceOf[to] + value]
 
   returns 1
 
@@ -70,7 +70,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance := allowance[ src => allowance[src][CALLER] - amount ]
+    allowance := allowance[ src => allowance[src][CALLER => allowance[src][CALLER] - amount ]]
     balanceOf := balanceOf[ src => balanceOf[src] - amount
                           , dst => balanceOf[dst] + amount ]
 

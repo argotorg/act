@@ -162,7 +162,7 @@ locsFromExp = nub . go
       Address _ _ e' -> locsFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
       Typed.MappingUpd _ r t1@VType t2@VType kvs -> 
-        locsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SLHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
+        locsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SRHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
 createsFromExp :: Exp a t -> [Id]
 createsFromExp = nub . go
@@ -205,7 +205,7 @@ createsFromExp = nub . go
       Address _ _ e' -> createsFromExp e'
       Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
       Typed.MappingUpd _ r t1@VType t2@VType kvs ->
-        createsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SLHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
+        createsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SRHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
 createsFromTRef :: TypedRef t -> [Id]
 createsFromTRef ref = concatMap createsFromTypedExp (ixsFromTRef ref)

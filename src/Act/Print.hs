@@ -47,7 +47,7 @@ prettyCtor (Constructor name interface _ pres cases posts invs)
     
 prettyTValueType :: TValueType a -> String
 prettyTValueType (TContract n) = n
-prettyTValueType TUnboundedInt = "Unbounded"
+prettyTValueType TUnboundedInt = "integer"
 prettyTValueType (TMapping keytype maptype) =
   "mapping(" ++ prettyValueType keytype ++ " => " ++ prettyValueType maptype ++ ")"
 prettyTValueType t = T.unpack (abiTypeSolidity (toAbiType t))
