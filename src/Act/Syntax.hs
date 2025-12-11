@@ -104,10 +104,6 @@ partitionLocs locs = foldMap sepTRef locs
     sepTRef tref@(TRef _ _ r) | isCalldata r = ([],[tref])
     sepTRef tref@(TRef _ _ _) = ([tref],[])
 
-locsFromCaseUpdatesRet :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [TypedRef t]
-locsFromCaseUpdatesRet (_, (rewrites, mret)) = nub $
-  concatMap locsFromUpdate rewrites <> maybe [] locsFromTypedExp mret
-
 locsFromUpdate :: StorageUpdate t -> [TypedRef t]
 locsFromUpdate update = nub $ case update of
   (Update t ref e) -> locsFromTRef (TRef t SLHS ref) <> locsFromExp e
@@ -116,8 +112,8 @@ locsFromUpdateRHS :: StorageUpdate t -> [TypedRef t]
 locsFromUpdateRHS update = nub $ case update of
   (Update _ _ e) -> locsFromExp e
 
-locFromUpdate :: StorageUpdate t -> TypedRef t
-locFromUpdate (Update typ item _) = TRef typ SLHS item
+locFromUpdate :: StorageUpdate t -> Ref LHS t
+locFromUpdate (Update _ item _) = item
 
 locsFromTRef :: TypedRef t -> [TypedRef t]
 locsFromTRef ref@(TRef (toSType -> SType) _ _) = ref : concatMap locsFromTypedExp (ixsFromTRef ref)

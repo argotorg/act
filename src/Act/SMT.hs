@@ -39,8 +39,6 @@ module Act.SMT (
   getCtorModel,
   getPostconditionModel,
   mkAssert,
-  --declareInitialLocation,
-  --declareLocation,
   declareTRef,
   declareArg,
   declareEthEnv,
@@ -186,42 +184,22 @@ data SolverInstance = SolverInstance
 --- ** Analysis Passes ** ---
 
 -- | Produces an SMT expression in a format that services most SMT passes.
-mkDefaultSMT :: Bool -> [TypedRef] -> [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp ABoolean] -> [StorageUpdate] -> Exp ABoolean -> SMTExp
-mkDefaultSMT isCtor activeSLocs activeCLocs envs ifaceName decls preconds extraconds stateUpdates = mksmt
+mkDefaultSMT :: [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp ABoolean] -> Exp ABoolean -> SMTExp
+mkDefaultSMT refs envs ifaceName decls preconds extraconds = mksmt
   where
-    -- If called for a constructor, declare only the post-state for local storage,
-    -- and both states for other locations.
-    -- Otherwise, when called for a behaviour, declare declare both states for all locations.
-    storage = declareTRef <$> (activeSLocs <> activeCLocs)
-    -- if isCtor
-    --  then let (localSLocs, nonlocalSLocs) = partition isStorageTRef (activeSLocs) in nub $
-    --    concatMap (declareInitialLocation ifaceName) localSLocs <> concatMap (declareLocation ifaceName) nonlocalSLocs
-    --  else nub $ concatMap (declareLocation ifaceName) activeSLocs
-
     -- Declare calldata arguments and locations, and environmental variables
-    ifaceArgs = declareArg ifaceName <$> decls
-    activeArgs = declareTRef <$> activeCLocs
-    args = nub ifaceArgs <> activeArgs
-
-    env = declareEthEnv <$> envs
-
-    -- Collect all locations not tautologically equal to the updated locations,
-    -- to encode the conditions under which they stay constant.
-    -- For constructors this should involve only locations not from local storage.
-    updatedLocs = locFromUpdate <$> stateUpdates
-    maybeConstSLocs = let unUpdated = (nub activeSLocs) \\ updatedLocs in
-      if isCtor then filter (not . isStorageTRef) unUpdated else unUpdated
+    storage = traceShowId $ nub $ (declareTRef <$> refs)
+    ifaceArgs = traceShowId $ nub $ (declareArg ifaceName <$> decls) \\ storage
+    env = nub $ declareEthEnv <$> envs
 
     -- Constraints
     pres = mkAssert ifaceName <$> preconds <> extraconds
-    updates = encodeUpdate ifaceName <$> stateUpdates
-    constants = encodeConstant ifaceName updatedLocs maybeConstSLocs
 
     mksmt e = SMTExp
       { _storage = storage
-      , _calldata = args
+      , _calldata = ifaceArgs
       , _environment = env
-      , _assertions = [mkAssert ifaceName e] <> pres <> updates <> constants
+      , _assertions = [mkAssert ifaceName e] <> pres
       }
 
 {-
@@ -419,7 +397,7 @@ sendCommand (SolverInstance _ stdin stdout _ _) cmd =
   if null cmd || ";" `isPrefixOf` cmd then pure "success" -- blank lines and comments do not produce any output from the solver
   else do
     hPutStr stdin (cmd <> "\n")
-    --traceM cmd
+    traceM cmd
     hFlush stdin
     hGetLine stdout
 
@@ -705,25 +683,16 @@ declareTRef (TRef typ _ ref) = declareRef typ name ref
     name = nameFromRef ref -- case rk of
       --SRHS -> flip nameFromItem item <$> times -- TODO: this is most definitely wrong
       --SLHS -> [nameFromRef ref]
+    -- This is kind of dumb, recursion over the reference is used to reconstruct the type.
+    -- In the future we should probably make declarations from StorageTyping.
     declareRef :: TValueType a -> Id -> Ref k -> SMT2
     declareRef t@VType n (RMapIdx _ (TRef _ _ r) (TExp et _)) = declareRef (TMapping (ValueType et) (ValueType t)) n r
     declareRef t n (RArrIdx _ r _ b) = declareRef (TArray b t) n r
     declareRef t n (CVar _ _ _) = constant n t
     declareRef t n (SVar _ _ _ _) = constant n t
-    declareRef _ _ (RField _ ref' cid _) = declareRef (TContract cid) cid ref'
+    declareRef t n (RField _ _ _ _) = constant n t
 
-
----- | declares a storage location that is created by the constructor, these
-----   locations have no prestate, so we declare a post var only
---declareInitialLocation :: Id -> TypedRef -> [SMT2]
---declareInitialLocation ifaceName item = declareLoc ifaceName [Post] item
---
----- | declares a storage location that exists both in the pre state and the post
-----   state (i.e. anything except a loc created by a constructor claim)
---declareLocation :: Id -> TypedRef -> [SMT2]
---declareLocation ifaceName item = declareLoc ifaceName [Pre, Post] item
---
----- | produces an SMT2 expression declaring the given decl as a symbolic constant
+-- | produces an SMT2 expression declaring the given decl as a symbolic constant
 declareArg :: Id -> Arg -> SMT2
 declareArg ifaceName d@(Arg atyp@((fromAbiType . argToAbiType) -> ValueType typ) _) =
   case flattenArrayAbiType (argToAbiType atyp) of

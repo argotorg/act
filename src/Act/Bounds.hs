@@ -2,7 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Act.Bounds (addBounds, mkRefsBounds) where
+module Act.Bounds (addBounds, mkRefsBounds, mkEthEnvBounds) where
 
 import Data.Maybe
 import Data.List (nub)

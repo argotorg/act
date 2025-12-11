@@ -585,7 +585,7 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
                       | otherwise = TUnboundedInt
 
   U.EArray p l -> (unzip <$> traverse (inferExpr env mode) l) `bindValidation` \(tes, cs) ->
-    (flip (,)) (concat cs) <$> gatherElements tes
+    flip (,) (concat cs) <$> gatherElements tes
     where
       gatherElements :: [TypedExp t] -> Err (TypedExp t)
       gatherElements (TExp t1 te1:tes) =  TExp (TArray (length l) t1) <$> (Array p . (:) te1 <$> traverse (checkElement t1) tes)
