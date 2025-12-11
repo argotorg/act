@@ -477,7 +477,7 @@ checkExpr :: forall t a. Env -> Mode t -> TValueType a -> U.Expr -> Err (Exp a t
 -- Mapping Expressions
 checkExpr env mode mtyp@(TMapping (ValueType keytyp) (ValueType valtyp)) (U.MappingUpd p ref map) = do
     checkRef env SRHS mode ref `bindValidation` \(ValueType rtyp, tref, cnstr1) -> do
-        trace "checking mapping update" $ traceShow (mtyp, rtyp) $ checkEqType p mtyp rtyp
+        checkEqType p mtyp rtyp
         updsc <- unzip <$> traverse (\(k,v) -> do
             kc <- checkExpr env mode keytyp k
             vc <- checkExpr env mode valtyp v
