@@ -11,6 +11,7 @@
 {-# LANGUAGE NoFieldSelectors #-}
 
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Act.HEVM where
 
@@ -54,6 +55,7 @@ import EVM.Effects
 import EVM.Format as Format
 import EVM.Traversals
 import Debug.Trace
+import qualified Data.Bifunctor as Bifunctor
 
 type family ExprType a where
   ExprType 'AInteger  = EVM.EWord
@@ -104,9 +106,10 @@ makeLayout VyperLayout ((name,_):vars) _ slot =
 
 -- size of a storage item in bytes
 sizeOfValue :: ValueType -> Int
-sizeOfValue (ValueType t) = sizeOfAbiType $ toAbiType t
+sizeOfValue (ValueType t) = sizeOfTValue t
 
 sizeOfTValue :: TValueType a -> Int
+sizeOfTValue (TMapping _ t) = sizeOfValue t
 sizeOfTValue t = sizeOfAbiType $ toAbiType t
 
 sizeOfAbiType :: AbiType -> Int
@@ -281,11 +284,38 @@ translateBehvCase cmap cdataprops bounds preconds (casecond, (upds, ret)) = do
   let acmap = abstractCmap initAddr cmap'
   pure (simplify $ EVM.Success (preconds' <> bounds <> [casecond'] <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap)
 
+
+refToRHS :: Ref k -> Ref RHS
+refToRHS (SVar p t i ci) = SVar p t i ci
+refToRHS (CVar p t i) = CVar p t i
+refToRHS (RMapIdx p r i) = RMapIdx p r i
+refToRHS (RArrIdx p r i n) = RArrIdx p (refToRHS r) i n
+refToRHS (RField p r i n) = RField p (refToRHS r) i n
+-- TODO: move this if it even survives
+expandMappingUpdate :: TypedRef -> Exp AMapping -> [(TypedRef, TypedExp)]
+expandMappingUpdate ref (Mapping _ keyType@VType valType@VType es) =
+  let refPairs = (\(k,v) -> (TRef valType SRHS (RMapIdx nowhere ref (TExp keyType k)), v)) <$> es in
+  case toSType valType of
+    SMapping -> concatMap (uncurry expandMappingUpdate) refPairs
+    _ -> map (Bifunctor.second (TExp valType)) refPairs
+expandMappingUpdate (TRef _ _ r) (MappingUpd _ r' _ _ _) | refToRHS r /= refToRHS r' =
+  error "Mapping update reference inconsistency, past typing"
+expandMappingUpdate ref (MappingUpd _ _ keyType@VType valType@VType es) =
+  let refPairs = (\(k,v) -> (TRef valType SRHS (RMapIdx nowhere ref (TExp keyType k)), v)) <$> es in
+  case toSType valType of
+    SMapping -> concatMap (uncurry expandMappingUpdate) refPairs
+    _ -> map (Bifunctor.second (TExp valType)) refPairs
+expandMappingUpdate _ e@(ITE _ _ _ _) = error $ "Internal error: expecting flat expression. got: " <> show e
+expandMappingUpdate _ (VarRef _ _ _) = error $ "Internal error: variable assignment of mappings not expected"
+
 applyUpdates :: Monad m => ContractMap -> ContractMap -> CallEnv -> [StorageUpdate] -> ActT m ContractMap
 applyUpdates readMap writeMap callenv upds = foldM (\wm -> applyUpdate readMap wm callenv) writeMap upds
 
 applyUpdate :: Monad m => ContractMap -> ContractMap -> CallEnv -> StorageUpdate -> ActT m ContractMap
-applyUpdate readMap writeMap callenv (Update typ ref e) = do
+applyUpdate readMap writeMap callenv (Update typ@VType ref e) = writeToRef readMap writeMap callenv (TRef typ SLHS ref) (TExp typ e)
+
+writeToRef :: Monad m => ContractMap -> ContractMap -> CallEnv -> TypedRef -> TypedExp -> ActT m ContractMap
+writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
   caddr' <- baseAddr writeMap callenv ref
   (addr, offset, size, lmode) <- refOffset writeMap callenv ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
@@ -317,9 +347,11 @@ applyUpdate readMap writeMap callenv (Update typ ref e) = do
         let prevValue = readStorage addr contract
         let e'' = storedValue e' prevValue offset size
         pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
+    TMapping _ _ -> do
+        let expansion = expandMappingUpdate tref e
+        foldM (\wm -> uncurry $ writeToRef readMap wm callenv) writeMap expansion
     TArray _ _ -> error "arrays TODO"
     TStruct _ -> error "structs TODO"
-    TMapping _ _ -> error "mappings TODO"
     TUnboundedInt -> error "Internal error: Unbounded Integer after typechecking"
 -- TODO test with out of bounds assignments
   where
@@ -478,7 +510,7 @@ baseAddr cmap callenv (RField _ ref _ _) = do
     EVM.WAddr symaddr -> pure symaddr
     e -> error $ "Internal error: did not find a symbolic address: " <> show e
 baseAddr cmap callenv (RMapIdx _ (TRef _ _ ref) _) = baseAddr cmap callenv ref
-baseAddr _ _ (RArrIdx _ _ _ _) = error "TODO"
+baseAddr cmap callenv (RArrIdx _ ref _ _) = baseAddr cmap callenv ref
 
 
 ethEnvToWord :: Monad m => EthEnv -> ActT m (EVM.Expr EVM.EWord)
