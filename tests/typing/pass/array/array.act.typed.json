@@ -3,11 +3,44 @@
     {
       "behaviours": [
         {
-          "case": [
-            {
-              "literal": "True",
-              "type": "bool"
-            }
+          "cases": [
+            [
+              {
+                "literal": "True",
+                "type": "bool"
+              },
+              [
+                [],
+                {
+                  "expression": {
+                    "timing": "TAddress",
+                    "var": {
+                      "indexes": {
+                        "literal": "1",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "abitype": {
+                          "abitype": {
+                            "arrayType": {
+                              "type": "Address"
+                            },
+                            "size": "2",
+                            "type": "Array"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "xs"
+                      }
+                    }
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TAddress"
+                }
+              ]
+            ]
           ],
           "contract": "A",
           "interface": {
@@ -27,7 +60,7 @@
                 "kind": "Declaration"
               }
             ],
-            "id": "\"f\"",
+            "id": "AlexPn 47 6 13",
             "kind": "Interface"
           },
           "kind": "Behaviour",
@@ -43,24 +76,15 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TAddress",
                       "var": {
-                        "item": {
-                          "indexes": [
-                            [
-                              {
-                                "expression": {
-                                  "literal": "1",
-                                  "type": "int"
-                                },
-                                "kind": "TypedExpr",
-                                "type": "int"
-                              },
-                              2
-                            ]
-                          ],
-                          "kind": "Array",
-                          "reference": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "abitype": {
                             "abitype": {
                               "arrayType": {
                                 "type": "Address"
@@ -68,11 +92,11 @@
                               "size": "2",
                               "type": "Array"
                             },
-                            "kind": "Var",
-                            "var": "xs"
-                          }
-                        },
-                        "type": "int"
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "xs"
+                        }
                       }
                     }
                   ],
@@ -82,24 +106,15 @@
                 {
                   "args": [
                     {
-                      "timing": "Pre",
+                      "timing": "TAddress",
                       "var": {
-                        "item": {
-                          "indexes": [
-                            [
-                              {
-                                "expression": {
-                                  "literal": "1",
-                                  "type": "int"
-                                },
-                                "kind": "TypedExpr",
-                                "type": "int"
-                              },
-                              2
-                            ]
-                          ],
-                          "kind": "Array",
-                          "reference": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "abitype": {
                             "abitype": {
                               "arrayType": {
                                 "type": "Address"
@@ -107,11 +122,11 @@
                               "size": "2",
                               "type": "Array"
                             },
-                            "kind": "Var",
-                            "var": "xs"
-                          }
-                        },
-                        "type": "int"
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "xs"
+                        }
                       }
                     },
                     {
@@ -126,53 +141,23 @@
               "arity": 2,
               "symbol": "and"
             }
-          ],
-          "returns": {
-            "expression": {
-              "timing": "Pre",
-              "var": {
-                "item": {
-                  "indexes": [
-                    [
-                      {
-                        "expression": {
-                          "literal": "1",
-                          "type": "int"
-                        },
-                        "kind": "TypedExpr",
-                        "type": "int"
-                      },
-                      2
-                    ]
-                  ],
-                  "kind": "Array",
-                  "reference": {
-                    "abitype": {
-                      "arrayType": {
-                        "type": "Address"
-                      },
-                      "size": "2",
-                      "type": "Array"
-                    },
-                    "kind": "Var",
-                    "var": "xs"
-                  }
-                },
-                "type": "int"
-              }
-            },
-            "kind": "TypedExpr",
-            "type": "int"
-          },
-          "stateUpdates": []
+          ]
         }
       ],
       "constructor": {
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
+            },
+            []
+          ]
+        ],
         "contract": "A",
-        "initialStorage": [],
         "interface": {
           "args": [],
-          "id": "\"A\"",
+          "id": "AlexPn 23 3 12",
           "kind": "Interface"
         },
         "invariants": [],

@@ -3,142 +3,49 @@
     {
       "behaviours": [],
       "constructor": {
-        "contract": "Modest",
-        "initialStorage": [
-          {
-            "location": {
-              "item": {
-                "contract": "Modest",
-                "kind": "SVar",
-                "svar": "x"
-              },
-              "type": "int"
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
             },
-            "value": {
-              "literal": "1",
-              "type": "int"
-            }
-          },
-          {
-            "location": {
-              "item": {
-                "contract": "Modest",
-                "kind": "SVar",
-                "svar": "y"
+            [
+              {
+                "location": {
+                  "contract": "Modest",
+                  "kind": "SVar",
+                  "svar": "x",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "1",
+                  "type": "int"
+                }
               },
-              "type": "int"
-            },
-            "value": {
-              "ethEnv": "Caller",
-              "type": "int"
-            }
-          }
+              {
+                "location": {
+                  "contract": "Modest",
+                  "kind": "SVar",
+                  "svar": "y",
+                  "time": "Pre"
+                },
+                "value": {
+                  "ethEnv": "Caller",
+                  "type": "int"
+                }
+              }
+            ]
+          ]
         ],
+        "contract": "Modest",
         "interface": {
           "args": [],
-          "id": "\"Modest\"",
+          "id": "AlexPn 452 11 12",
           "kind": "Interface"
         },
         "invariants": [],
         "kind": "Constructor",
-        "postConditions": [
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "contract": "Modest",
-                        "kind": "SVar",
-                        "svar": "x"
-                      },
-                      "type": "int"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "contract": "Modest",
-                        "kind": "SVar",
-                        "svar": "x"
-                      },
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "contract": "Modest",
-                        "kind": "SVar",
-                        "svar": "y"
-                      },
-                      "type": "int"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "contract": "Modest",
-                        "kind": "SVar",
-                        "svar": "y"
-                      },
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "literal": "1461501637330902918203684832716283019655932542975",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          }
-        ],
+        "postConditions": [],
         "preConditions": [
           {
             "args": [
@@ -173,6 +80,94 @@
             ],
             "arity": 2,
             "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "contract": "Modest",
+                      "kind": "SVar",
+                      "svar": "x",
+                      "time": "Pre"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "contract": "Modest",
+                      "kind": "SVar",
+                      "svar": "x",
+                      "time": "Pre"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TAddress",
+                    "var": {
+                      "contract": "Modest",
+                      "kind": "SVar",
+                      "svar": "y",
+                      "time": "Pre"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TAddress",
+                    "var": {
+                      "contract": "Modest",
+                      "kind": "SVar",
+                      "svar": "y",
+                      "time": "Pre"
+                    }
+                  },
+                  {
+                    "literal": "1461501637330902918203684832716283019655932542975",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
           }
         ]
       },
@@ -186,26 +181,14 @@
       "Modest": {
         "x": [
           {
-            "kind": "ValueType",
-            "valueType": {
-              "abiType": {
-                "size": "256",
-                "type": "UInt"
-              },
-              "kind": "AbiType"
-            }
+            "size": "256",
+            "type": "UInt"
           },
           0
         ],
         "y": [
           {
-            "kind": "ValueType",
-            "valueType": {
-              "abiType": {
-                "type": "Address"
-              },
-              "kind": "AbiType"
-            }
+            "type": "Address"
           },
           1
         ]

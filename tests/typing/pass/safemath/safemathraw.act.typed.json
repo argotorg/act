@@ -3,11 +3,54 @@
     {
       "behaviours": [
         {
-          "case": [
-            {
-              "literal": "True",
-              "type": "bool"
-            }
+          "cases": [
+            [
+              {
+                "literal": "True",
+                "type": "bool"
+              },
+              [
+                [],
+                {
+                  "expression": {
+                    "args": [
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "x"
+                        }
+                      },
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "y"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "+"
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TInteger 256 Unsigned"
+                }
+              ]
+            ]
           ],
           "contract": "SafeAdd",
           "interface": {
@@ -35,7 +78,7 @@
                 "kind": "Declaration"
               }
             ],
-            "id": "\"add\"",
+            "id": "AlexPn 55 6 15",
             "kind": "Interface"
           },
           "kind": "Behaviour",
@@ -51,17 +94,17 @@
                       "type": "UInt"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "x"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "x"
                       }
                     }
                   ],
@@ -77,17 +120,17 @@
                           "type": "UInt"
                         },
                         {
-                          "timing": "Pre",
+                          "timing": "TInteger 256 Unsigned",
                           "var": {
-                            "item": {
+                            "abitype": {
                               "abitype": {
                                 "size": "256",
                                 "type": "UInt"
                               },
-                              "kind": "Var",
-                              "var": "y"
+                              "kind": "AbiArgument"
                             },
-                            "type": "int"
+                            "kind": "Var",
+                            "var": "y"
                           }
                         }
                       ],
@@ -103,31 +146,31 @@
                         {
                           "args": [
                             {
-                              "timing": "Pre",
+                              "timing": "TInteger 256 Unsigned",
                               "var": {
-                                "item": {
+                                "abitype": {
                                   "abitype": {
                                     "size": "256",
                                     "type": "UInt"
                                   },
-                                  "kind": "Var",
-                                  "var": "x"
+                                  "kind": "AbiArgument"
                                 },
-                                "type": "int"
+                                "kind": "Var",
+                                "var": "x"
                               }
                             },
                             {
-                              "timing": "Pre",
+                              "timing": "TInteger 256 Unsigned",
                               "var": {
-                                "item": {
+                                "abitype": {
                                   "abitype": {
                                     "size": "256",
                                     "type": "UInt"
                                   },
-                                  "kind": "Var",
-                                  "var": "y"
+                                  "kind": "AbiArgument"
                                 },
-                                "type": "int"
+                                "kind": "Var",
+                                "var": "y"
                               }
                             }
                           ],
@@ -169,17 +212,17 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "x"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "x"
                       }
                     }
                   ],
@@ -189,17 +232,17 @@
                 {
                   "args": [
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "x"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "x"
                       }
                     },
                     {
@@ -223,17 +266,17 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "y"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "y"
                       }
                     }
                   ],
@@ -243,17 +286,17 @@
                 {
                   "args": [
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "y"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "y"
                       }
                     },
                     {
@@ -302,54 +345,23 @@
               "arity": 2,
               "symbol": "and"
             }
-          ],
-          "returns": {
-            "expression": {
-              "args": [
-                {
-                  "timing": "Pre",
-                  "var": {
-                    "item": {
-                      "abitype": {
-                        "size": "256",
-                        "type": "UInt"
-                      },
-                      "kind": "Var",
-                      "var": "x"
-                    },
-                    "type": "int"
-                  }
-                },
-                {
-                  "timing": "Pre",
-                  "var": {
-                    "item": {
-                      "abitype": {
-                        "size": "256",
-                        "type": "UInt"
-                      },
-                      "kind": "Var",
-                      "var": "y"
-                    },
-                    "type": "int"
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "+"
-            },
-            "kind": "TypedExpr",
-            "type": "int"
-          },
-          "stateUpdates": []
+          ]
         }
       ],
       "constructor": {
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
+            },
+            []
+          ]
+        ],
         "contract": "SafeAdd",
-        "initialStorage": [],
         "interface": {
           "args": [],
-          "id": "\"SafeAdd\"",
+          "id": "AlexPn 29 3 12",
           "kind": "Interface"
         },
         "invariants": [],

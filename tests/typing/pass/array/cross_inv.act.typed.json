@@ -3,31 +3,38 @@
     {
       "behaviours": [],
       "constructor": {
-        "contract": "A",
-        "initialStorage": [
-          {
-            "location": {
-              "item": {
-                "contract": "A",
-                "kind": "SVar",
-                "svar": "x"
-              },
-              "type": "int"
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
             },
-            "value": {
-              "literal": "100",
-              "type": "int"
-            }
-          }
+            [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "x",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "100",
+                  "type": "int"
+                }
+              }
+            ]
+          ]
         ],
+        "contract": "A",
         "interface": {
           "args": [],
-          "id": "\"A\"",
+          "id": "AlexPn 23 3 12",
           "kind": "Interface"
         },
         "invariants": [],
         "kind": "Constructor",
-        "postConditions": [
+        "postConditions": [],
+        "preConditions": [
           {
             "args": [
               {
@@ -37,14 +44,12 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Unsigned",
                     "var": {
-                      "item": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "x"
-                      },
-                      "type": "int"
+                      "contract": "A",
+                      "kind": "SVar",
+                      "svar": "x",
+                      "time": "Pre"
                     }
                   }
                 ],
@@ -54,14 +59,12 @@
               {
                 "args": [
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Unsigned",
                     "var": {
-                      "item": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "x"
-                      },
-                      "type": "int"
+                      "contract": "A",
+                      "kind": "SVar",
+                      "svar": "x",
+                      "time": "Pre"
                     }
                   },
                   {
@@ -76,45 +79,50 @@
             "arity": 2,
             "symbol": "and"
           }
-        ],
-        "preConditions": []
+        ]
       },
       "kind": "Contract"
     },
     {
       "behaviours": [],
       "constructor": {
-        "contract": "B",
-        "initialStorage": [
-          {
-            "location": {
-              "item": {
-                "contract": "B",
-                "kind": "SVar",
-                "svar": "arr"
-              },
-              "type": "int array"
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
             },
-            "value": {
-              "args": [
-                {
-                  "literal": "1",
-                  "type": "int"
+            [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "arr",
+                  "time": "Pre"
                 },
-                {
-                  "literal": "2",
-                  "type": "int"
-                },
-                {
-                  "literal": "3",
-                  "type": "int"
+                "value": {
+                  "args": [
+                    {
+                      "literal": "1",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "2",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "3",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 3,
+                  "symbol": "[]"
                 }
-              ],
-              "arity": 3,
-              "symbol": "[]"
-            }
-          }
+              }
+            ]
+          ]
         ],
+        "contract": "B",
         "interface": {
           "args": [
             {
@@ -126,565 +134,29 @@
               "kind": "Declaration"
             }
           ],
-          "id": "\"B\"",
+          "id": "AlexPn 77 12 12",
           "kind": "Interface"
         },
-        "invariants": [
-          {
-            "contract": "B",
-            "kind": "Invariant",
-            "preconditions": [
-              {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "literal": "0",
-                        "type": "int"
-                      },
-                      {
-                        "arg": {
-                          "timing": "Pre",
-                          "var": {
-                            "item": {
-                              "abitype": {
-                                "type": "Address"
-                              },
-                              "kind": "Var",
-                              "var": "a"
-                            },
-                            "type": "contract"
-                          }
-                        },
-                        "arity": 1,
-                        "symbol": "addr"
-                      }
-                    ],
-                    "arity": 2,
-                    "symbol": "<="
-                  },
-                  {
-                    "args": [
-                      {
-                        "arg": {
-                          "timing": "Pre",
-                          "var": {
-                            "item": {
-                              "abitype": {
-                                "type": "Address"
-                              },
-                              "kind": "Var",
-                              "var": "a"
-                            },
-                            "type": "contract"
-                          }
-                        },
-                        "arity": 1,
-                        "symbol": "addr"
-                      },
-                      {
-                        "literal": "1461501637330902918203684832716283019655932542975",
-                        "type": "int"
-                      }
-                    ],
-                    "arity": 2,
-                    "symbol": "<="
-                  }
-                ],
-                "arity": 2,
-                "symbol": "and"
-              },
-              {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "literal": "0",
-                        "type": "int"
-                      },
-                      {
-                        "timing": "Pre",
-                        "var": {
-                          "item": {
-                            "contract": "A",
-                            "field": "x",
-                            "kind": "Field",
-                            "reference": {
-                              "abitype": {
-                                "type": "Address"
-                              },
-                              "kind": "Var",
-                              "var": "a"
-                            }
-                          },
-                          "type": "int"
-                        }
-                      }
-                    ],
-                    "arity": 2,
-                    "symbol": "<="
-                  },
-                  {
-                    "args": [
-                      {
-                        "timing": "Pre",
-                        "var": {
-                          "item": {
-                            "contract": "A",
-                            "field": "x",
-                            "kind": "Field",
-                            "reference": {
-                              "abitype": {
-                                "type": "Address"
-                              },
-                              "kind": "Var",
-                              "var": "a"
-                            }
-                          },
-                          "type": "int"
-                        }
-                      },
-                      {
-                        "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                        "type": "int"
-                      }
-                    ],
-                    "arity": 2,
-                    "symbol": "<="
-                  }
-                ],
-                "arity": 2,
-                "symbol": "and"
-              }
-            ],
-            "predicate": {
-              "kind": "PredUntimed",
-              "prefpredicate": {
-                "args": [
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "timing": "Post",
-                                "var": {
-                                  "item": {
-                                    "contract": "A",
-                                    "field": "x",
-                                    "kind": "Field",
-                                    "reference": {
-                                      "abitype": {
-                                        "type": "Address"
-                                      },
-                                      "kind": "Var",
-                                      "var": "a"
-                                    }
-                                  },
-                                  "type": "int"
-                                }
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": ">="
-              }
-            },
-            "storagebounds": [
-              {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "literal": "0",
-                        "type": "int"
-                      },
-                      {
-                        "timing": "Pre",
-                        "var": {
-                          "item": {
-                            "indexes": [
-                              [
-                                {
-                                  "expression": {
-                                    "timing": "Pre",
-                                    "var": {
-                                      "item": {
-                                        "contract": "A",
-                                        "field": "x",
-                                        "kind": "Field",
-                                        "reference": {
-                                          "abitype": {
-                                            "type": "Address"
-                                          },
-                                          "kind": "Var",
-                                          "var": "a"
-                                        }
-                                      },
-                                      "type": "int"
-                                    }
-                                  },
-                                  "kind": "TypedExpr",
-                                  "type": "int"
-                                },
-                                3
-                              ]
-                            ],
-                            "kind": "Array",
-                            "reference": {
-                              "contract": "B",
-                              "kind": "SVar",
-                              "svar": "arr"
-                            }
-                          },
-                          "type": "int"
-                        }
-                      }
-                    ],
-                    "arity": 2,
-                    "symbol": "<="
-                  },
-                  {
-                    "args": [
-                      {
-                        "timing": "Pre",
-                        "var": {
-                          "item": {
-                            "indexes": [
-                              [
-                                {
-                                  "expression": {
-                                    "timing": "Pre",
-                                    "var": {
-                                      "item": {
-                                        "contract": "A",
-                                        "field": "x",
-                                        "kind": "Field",
-                                        "reference": {
-                                          "abitype": {
-                                            "type": "Address"
-                                          },
-                                          "kind": "Var",
-                                          "var": "a"
-                                        }
-                                      },
-                                      "type": "int"
-                                    }
-                                  },
-                                  "kind": "TypedExpr",
-                                  "type": "int"
-                                },
-                                3
-                              ]
-                            ],
-                            "kind": "Array",
-                            "reference": {
-                              "contract": "B",
-                              "kind": "SVar",
-                              "svar": "arr"
-                            }
-                          },
-                          "type": "int"
-                        }
-                      },
-                      {
-                        "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                        "type": "int"
-                      }
-                    ],
-                    "arity": 2,
-                    "symbol": "<="
-                  }
-                ],
-                "arity": 2,
-                "symbol": "and"
-              }
-            ]
-          }
-        ],
+        "invariants": [],
         "kind": "Constructor",
-        "postConditions": [
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "0",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "0",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "1",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "1",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "2",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "Post",
-                    "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "2",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "arr"
-                        }
-                      },
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          }
-        ],
+        "postConditions": [],
         "preConditions": [
           {
             "args": [
               {
-                "timing": "Pre",
+                "timing": "TInteger 256 Unsigned",
                 "var": {
-                  "item": {
-                    "contract": "A",
-                    "field": "x",
-                    "kind": "Field",
-                    "reference": {
-                      "abitype": {
-                        "type": "Address"
-                      },
-                      "kind": "Var",
-                      "var": "a"
-                    }
-                  },
-                  "type": "int"
+                  "contract": "A",
+                  "field": "x",
+                  "kind": "Field",
+                  "reference": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "a"
+                  }
                 }
               },
               {
@@ -705,16 +177,14 @@
                   },
                   {
                     "arg": {
-                      "timing": "Pre",
+                      "timing": "TContract \"A\"",
                       "var": {
-                        "item": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "Var",
-                          "var": "a"
+                        "abitype": {
+                          "kind": "ContractArgument",
+                          "name": "A"
                         },
-                        "type": "contract"
+                        "kind": "Var",
+                        "var": "a"
                       }
                     },
                     "arity": 1,
@@ -728,16 +198,14 @@
                 "args": [
                   {
                     "arg": {
-                      "timing": "Pre",
+                      "timing": "TContract \"A\"",
                       "var": {
-                        "item": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "Var",
-                          "var": "a"
+                        "abitype": {
+                          "kind": "ContractArgument",
+                          "name": "A"
                         },
-                        "type": "contract"
+                        "kind": "Var",
+                        "var": "a"
                       }
                     },
                     "arity": 1,
@@ -764,21 +232,19 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Pre",
+                    "timing": "TInteger 256 Unsigned",
                     "var": {
-                      "item": {
-                        "contract": "A",
-                        "field": "x",
-                        "kind": "Field",
-                        "reference": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "Var",
-                          "var": "a"
-                        }
-                      },
-                      "type": "int"
+                      "contract": "A",
+                      "field": "x",
+                      "kind": "Field",
+                      "reference": {
+                        "abitype": {
+                          "kind": "ContractArgument",
+                          "name": "A"
+                        },
+                        "kind": "Var",
+                        "var": "a"
+                      }
                     }
                   }
                 ],
@@ -788,21 +254,251 @@
               {
                 "args": [
                   {
-                    "timing": "Pre",
+                    "timing": "TInteger 256 Unsigned",
                     "var": {
-                      "item": {
-                        "contract": "A",
-                        "field": "x",
-                        "kind": "Field",
-                        "reference": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "Var",
-                          "var": "a"
-                        }
+                      "contract": "A",
+                      "field": "x",
+                      "kind": "Field",
+                      "reference": {
+                        "abitype": {
+                          "kind": "ContractArgument",
+                          "name": "A"
+                        },
+                        "kind": "Var",
+                        "var": "a"
+                      }
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "1",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "1",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "2",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "2",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "3",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "literal": "3",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "arr",
+                        "time": "Pre"
+                      }
                     }
                   },
                   {
@@ -829,14 +525,8 @@
       "A": {
         "x": [
           {
-            "kind": "ValueType",
-            "valueType": {
-              "abiType": {
-                "size": "256",
-                "type": "UInt"
-              },
-              "kind": "AbiType"
-            }
+            "size": "256",
+            "type": "UInt"
           },
           0
         ]
@@ -844,18 +534,12 @@
       "B": {
         "arr": [
           {
-            "kind": "ValueType",
-            "valueType": {
-              "abiType": {
-                "arrayType": {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                "size": "3",
-                "type": "Array"
-              },
-              "kind": "AbiType"
-            }
+            "arrayType": {
+              "size": "256",
+              "type": "UInt"
+            },
+            "size": "3",
+            "type": "Array"
           },
           0
         ]

@@ -3,16 +3,29 @@
     {
       "behaviours": [
         {
-          "case": [
-            {
-              "literal": "True",
-              "type": "bool"
-            }
+          "cases": [
+            [
+              {
+                "literal": "True",
+                "type": "bool"
+              },
+              [
+                [],
+                {
+                  "expression": {
+                    "literal": "1",
+                    "type": "int"
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TInteger 256 Unsigned"
+                }
+              ]
+            ]
           ],
           "contract": "B",
           "interface": {
             "args": [],
-            "id": "\"f\"",
+            "id": "AlexPn 86 11 13",
             "kind": "Interface"
           },
           "kind": "Behaviour",
@@ -22,37 +35,24 @@
             {
               "args": [
                 {
-                  "timing": "Pre",
+                  "timing": "TInteger 256 Signed",
                   "var": {
-                    "item": {
-                      "indexes": [
-                        [
-                          {
-                            "expression": {
-                              "timing": "Pre",
-                              "var": {
-                                "item": {
-                                  "contract": "B",
-                                  "kind": "SVar",
-                                  "svar": "x"
-                                },
-                                "type": "int"
-                              }
-                            },
-                            "kind": "TypedExpr",
-                            "type": "int"
-                          },
-                          3
-                        ]
-                      ],
-                      "kind": "Array",
-                      "reference": {
+                    "indexes": {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
                         "contract": "B",
                         "kind": "SVar",
-                        "svar": "a"
+                        "svar": "x",
+                        "time": "Pre"
                       }
                     },
-                    "type": "int"
+                    "kind": "Array",
+                    "reference": {
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "a",
+                      "time": "Pre"
+                    }
                   }
                 },
                 {
@@ -66,14 +66,12 @@
             {
               "args": [
                 {
-                  "timing": "Pre",
+                  "timing": "TInteger 256 Unsigned",
                   "var": {
-                    "item": {
-                      "contract": "B",
-                      "kind": "SVar",
-                      "svar": "x"
-                    },
-                    "type": "int"
+                    "contract": "B",
+                    "kind": "SVar",
+                    "svar": "x",
+                    "time": "Pre"
                   }
                 },
                 {
@@ -93,37 +91,24 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Signed",
                       "var": {
-                        "item": {
-                          "indexes": [
-                            [
-                              {
-                                "expression": {
-                                  "timing": "Pre",
-                                  "var": {
-                                    "item": {
-                                      "contract": "B",
-                                      "kind": "SVar",
-                                      "svar": "x"
-                                    },
-                                    "type": "int"
-                                  }
-                                },
-                                "kind": "TypedExpr",
-                                "type": "int"
-                              },
-                              3
-                            ]
-                          ],
-                          "kind": "Array",
-                          "reference": {
+                        "indexes": {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
                             "contract": "B",
                             "kind": "SVar",
-                            "svar": "a"
+                            "svar": "x",
+                            "time": "Pre"
                           }
                         },
-                        "type": "int"
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "B",
+                          "kind": "SVar",
+                          "svar": "a",
+                          "time": "Pre"
+                        }
                       }
                     }
                   ],
@@ -133,37 +118,24 @@
                 {
                   "args": [
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Signed",
                       "var": {
-                        "item": {
-                          "indexes": [
-                            [
-                              {
-                                "expression": {
-                                  "timing": "Pre",
-                                  "var": {
-                                    "item": {
-                                      "contract": "B",
-                                      "kind": "SVar",
-                                      "svar": "x"
-                                    },
-                                    "type": "int"
-                                  }
-                                },
-                                "kind": "TypedExpr",
-                                "type": "int"
-                              },
-                              3
-                            ]
-                          ],
-                          "kind": "Array",
-                          "reference": {
+                        "indexes": {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
                             "contract": "B",
                             "kind": "SVar",
-                            "svar": "a"
+                            "svar": "x",
+                            "time": "Pre"
                           }
                         },
-                        "type": "int"
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "B",
+                          "kind": "SVar",
+                          "svar": "a",
+                          "time": "Pre"
+                        }
                       }
                     },
                     {
@@ -187,14 +159,12 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "x",
+                        "time": "Pre"
                       }
                     }
                   ],
@@ -204,14 +174,12 @@
                 {
                   "args": [
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "x"
-                        },
-                        "type": "int"
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "x",
+                        "time": "Pre"
                       }
                     },
                     {
@@ -226,72 +194,68 @@
               "arity": 2,
               "symbol": "and"
             }
-          ],
-          "returns": {
-            "expression": {
-              "literal": "1",
-              "type": "int"
-            },
-            "kind": "TypedExpr",
-            "type": "int"
-          },
-          "stateUpdates": []
+          ]
         }
       ],
       "constructor": {
-        "contract": "B",
-        "initialStorage": [
-          {
-            "location": {
-              "item": {
-                "contract": "B",
-                "kind": "SVar",
-                "svar": "x"
-              },
-              "type": "int"
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
             },
-            "value": {
-              "literal": "0",
-              "type": "int"
-            }
-          },
-          {
-            "location": {
-              "item": {
-                "contract": "B",
-                "kind": "SVar",
-                "svar": "a"
-              },
-              "type": "int array"
-            },
-            "value": {
-              "args": [
-                {
-                  "literal": "1",
-                  "type": "int"
+            [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "x",
+                  "time": "Pre"
                 },
-                {
-                  "literal": "2",
-                  "type": "int"
-                },
-                {
-                  "literal": "3",
+                "value": {
+                  "literal": "0",
                   "type": "int"
                 }
-              ],
-              "arity": 3,
-              "symbol": "[]"
-            }
-          }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "literal": "1",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "2",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "3",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 3,
+                  "symbol": "[]"
+                }
+              }
+            ]
+          ]
         ],
+        "contract": "B",
         "interface": {
           "args": [],
-          "id": "\"B\"",
+          "id": "AlexPn 23 3 12",
           "kind": "Interface"
         },
         "invariants": [],
         "kind": "Constructor",
-        "postConditions": [
+        "postConditions": [],
+        "preConditions": [
           {
             "args": [
               {
@@ -301,14 +265,12 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Unsigned",
                     "var": {
-                      "item": {
-                        "contract": "B",
-                        "kind": "SVar",
-                        "svar": "x"
-                      },
-                      "type": "int"
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "x",
+                      "time": "Pre"
                     }
                   }
                 ],
@@ -318,14 +280,12 @@
               {
                 "args": [
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Unsigned",
                     "var": {
-                      "item": {
-                        "contract": "B",
-                        "kind": "SVar",
-                        "svar": "x"
-                      },
-                      "type": "int"
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "x",
+                      "time": "Pre"
                     }
                   },
                   {
@@ -349,30 +309,19 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Signed",
                     "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "0",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a"
-                        }
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
                     }
                   }
                 ],
@@ -382,30 +331,19 @@
               {
                 "args": [
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Signed",
                     "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "0",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a"
-                        }
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
                     }
                   },
                   {
@@ -429,30 +367,19 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Signed",
                     "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "1",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a"
-                        }
+                      "indexes": {
+                        "literal": "1",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
                     }
                   }
                 ],
@@ -462,30 +389,19 @@
               {
                 "args": [
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Signed",
                     "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "1",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a"
-                        }
+                      "indexes": {
+                        "literal": "1",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
                     }
                   },
                   {
@@ -509,30 +425,19 @@
                     "type": "int"
                   },
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Signed",
                     "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "2",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a"
-                        }
+                      "indexes": {
+                        "literal": "2",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
                     }
                   }
                 ],
@@ -542,30 +447,77 @@
               {
                 "args": [
                   {
-                    "timing": "Post",
+                    "timing": "TInteger 256 Signed",
                     "var": {
-                      "item": {
-                        "indexes": [
-                          [
-                            {
-                              "expression": {
-                                "literal": "2",
-                                "type": "int"
-                              },
-                              "kind": "TypedExpr",
-                              "type": "int"
-                            },
-                            3
-                          ]
-                        ],
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a"
-                        }
+                      "indexes": {
+                        "literal": "2",
+                        "type": "int"
                       },
-                      "type": "int"
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
+                    }
+                  },
+                  {
+                    "literal": "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "-57896044618658097711785492504343953926634992332820282019728792003956564819968",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Signed",
+                    "var": {
+                      "indexes": {
+                        "literal": "3",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Signed",
+                    "var": {
+                      "indexes": {
+                        "literal": "3",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
                     }
                   },
                   {
@@ -580,8 +532,7 @@
             "arity": 2,
             "symbol": "and"
           }
-        ],
-        "preConditions": []
+        ]
       },
       "kind": "Contract"
     }
@@ -593,31 +544,19 @@
       "B": {
         "a": [
           {
-            "kind": "ValueType",
-            "valueType": {
-              "abiType": {
-                "arrayType": {
-                  "size": "256",
-                  "type": "Int"
-                },
-                "size": "3",
-                "type": "Array"
-              },
-              "kind": "AbiType"
-            }
+            "arrayType": {
+              "size": "256",
+              "type": "Int"
+            },
+            "size": "3",
+            "type": "Array"
           },
           1
         ],
         "x": [
           {
-            "kind": "ValueType",
-            "valueType": {
-              "abiType": {
-                "size": "256",
-                "type": "UInt"
-              },
-              "kind": "AbiType"
-            }
+            "size": "256",
+            "type": "UInt"
           },
           0
         ]

@@ -3,11 +3,24 @@
     {
       "behaviours": [
         {
-          "case": [
-            {
-              "literal": "True",
-              "type": "bool"
-            }
+          "cases": [
+            [
+              {
+                "literal": "True",
+                "type": "bool"
+              },
+              [
+                [],
+                {
+                  "expression": {
+                    "literal": "1",
+                    "type": "int"
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TInteger 256 Unsigned"
+                }
+              ]
+            ]
           ],
           "contract": "A",
           "interface": {
@@ -24,7 +37,7 @@
                 "kind": "Declaration"
               }
             ],
-            "id": "\"f\"",
+            "id": "AlexPn 47 6 13",
             "kind": "Interface"
           },
           "kind": "Behaviour",
@@ -40,17 +53,17 @@
                       "type": "int"
                     },
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "x"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "x"
                       }
                     }
                   ],
@@ -60,17 +73,17 @@
                 {
                   "args": [
                     {
-                      "timing": "Pre",
+                      "timing": "TInteger 256 Unsigned",
                       "var": {
-                        "item": {
+                        "abitype": {
                           "abitype": {
                             "size": "256",
                             "type": "UInt"
                           },
-                          "kind": "Var",
-                          "var": "x"
+                          "kind": "AbiArgument"
                         },
-                        "type": "int"
+                        "kind": "Var",
+                        "var": "x"
                       }
                     },
                     {
@@ -85,24 +98,23 @@
               "arity": 2,
               "symbol": "and"
             }
-          ],
-          "returns": {
-            "expression": {
-              "literal": "1",
-              "type": "int"
-            },
-            "kind": "TypedExpr",
-            "type": "int"
-          },
-          "stateUpdates": []
+          ]
         }
       ],
       "constructor": {
+        "cases": [
+          [
+            {
+              "literal": "True",
+              "type": "bool"
+            },
+            []
+          ]
+        ],
         "contract": "A",
-        "initialStorage": [],
         "interface": {
           "args": [],
-          "id": "\"A\"",
+          "id": "AlexPn 23 3 12",
           "kind": "Interface"
         },
         "invariants": [],
