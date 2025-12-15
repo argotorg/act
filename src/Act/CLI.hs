@@ -407,28 +407,3 @@ proceed contents comp continue = validation (prettyErrs contents) continue (comp
 
 compile :: String -> Error String (Act, [Constraint Timed])
 compile = pure . (first annotate) <==< typecheck <==< parse . lexer
-
-prettyErrs :: Traversable t => String -> t (Pn, String) -> IO ()
-prettyErrs contents errs = mapM_ prettyErr errs >> exitFailure
-  where
-  prettyErr (pn, msg) | pn == nowhere = do
-    hPutStrLn stderr "Internal error:"
-    hPutStrLn stderr msg
-  prettyErr (pn, msg) | pn == lastPos = do
-    let culprit = last $ lines contents
-        line' = length (lines contents) - 1
-        col  = length culprit
-    hPutStrLn stderr $ show line' <> " | " <> culprit
-    hPutStrLn stderr $ unpack (Text.replicate (col + length (show line' <> " | ") - 1) " " <> "^")
-    hPutStrLn stderr msg
-  prettyErr (AlexPn _ line' col, msg) = do
-    let cxt = safeDrop (line' - 1) (lines contents)
-    hPutStrLn stderr $ msg <> ":"
-    hPutStrLn stderr $ show line' <> " | " <> head cxt
-    hPutStrLn stderr $ unpack (Text.replicate (col + length (show line' <> " | ") - 1) " " <> "^")
-    where
-      safeDrop :: Int -> [a] -> [a]
-      safeDrop 0 a = a
-      safeDrop _ [] = []
-      safeDrop _ [a] = [a]
-      safeDrop n (_:xs) = safeDrop (n-1) xs
