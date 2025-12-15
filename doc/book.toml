@@ -1,17 +1,15 @@
 [book]
-authors = ["dxo"]
+authors = ["Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, Alexis Terry"]
 language = "en"
 src = "src"
 title = "The Act Book"
 
 [preprocessor]
+
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
-optional = true
-[preprocessor.katex]
-after = ["links"]
-optional = true
 
 [output]
+
 [output.html]
-additional-js =["mermaid.min.js", "mermaid-init.js"]
+additional-js = ["mermaid.min.js", "mermaid-init.js"]

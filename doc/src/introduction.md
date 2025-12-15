@@ -8,8 +8,8 @@ specification, which can then either be used "upwards" to prove higher level pro
 Act currently integrates with the following tools:
 
 - Hevm: automated refinement proof between the act spec and a given evm bytecode object
-- SMT: automated proof of invariants and postconditions
-- Coq: manual proof of high level properties against a model derived from the Act spec
+<!-- - SMT: automated proof of invariants and postconditions -->
+- Rocq: manual proof of high level properties against a model derived from the Act spec
 
 ## Overview
 
@@ -29,7 +29,7 @@ applied.
 Alternatively, they can be thought of as an initial state and a set of state transitions,
 determining an inductively defined state transition system.
 
-## Types
+<!-- ## Types
 
 The types of Act consist of three basic primitives: Integers, Booleans and Bytestrings. Integers are
 unbounded, with true integer operations. However, as our integer expressions will often represent
@@ -71,4 +71,4 @@ Given any pair of integers `x` and `y`, s.t. `0 <= x < 2^256` and `0 <= y < 2^25
 
 - store `x + y` in `result` and return `x + y` if `0 <= x + y < 2^256`
 - revert otherwise
-
+ -->

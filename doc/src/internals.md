@@ -50,7 +50,7 @@ flowchart LR;
     Type --> Annotate;
     Annotate --> Enrich;
     Enrich --> SMT;
-    Enrich --> Coq;
+    Enrich --> Rocq;
     Enrich --> Hevm;
     Enrich --> K;
 ```
