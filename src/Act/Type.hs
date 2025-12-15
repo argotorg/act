@@ -9,7 +9,7 @@
 {-# Language TypeOperators #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Act.Type (typecheck, Err) where
+module Act.Type (typecheck, Err, Constraint(..), Env(..)) where
 
 import Prelude hiding (GT, LT)
 import Data.Map.Strict    (Map)
@@ -27,6 +27,7 @@ import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
+import Data.Text.Internal.Read (T)
 
 type Err = Error String
 
@@ -85,6 +86,10 @@ data Constraint t =
   | CallCnstr Pn String Env [TypedExp t] Id
     deriving (Show, Eq)
 
+instance Annotatable Constraint where
+  annotate :: Constraint Untimed -> Constraint Timed
+  annotate (BoolCnstr p msg env e) = BoolCnstr p msg env (setPre e)
+  annotate (CallCnstr p msg env es i) = CallCnstr p msg env (setPre <$> es) i
 
 makeIntegerBoundConstraint :: Pn -> String -> Env -> TValueType AInteger -> Exp AInteger t -> Constraint t
 makeIntegerBoundConstraint p str env t e = BoolCnstr p str env (InRange nowhere t e)
@@ -93,9 +98,9 @@ makeArrayBoundConstraint :: Pn -> String -> Env -> Int -> Exp AInteger t -> Cons
 makeArrayBoundConstraint p str env len e = BoolCnstr p str env (LT p e (LitInt p (fromIntegral len)))
 
 -- | Top-level typechecking function
-typecheck :: U.Act -> Err (Act, [Constraint Untimed])
+typecheck :: U.Act -> Err (Act, [Constraint Timed])
 typecheck (U.Main contracts) = do
-    (\(storageTyping, tcontracts, cnstrs) -> (Act storageTyping tcontracts, cnstrs)) <$> checkContracts' contracts
+    (\(storageTyping, tcontracts, cnstrs) -> (Act storageTyping tcontracts, annotate <$> cnstrs)) <$> checkContracts' contracts
 
 checkContracts' :: [U.Contract] -> Err (StorageTyping, [Contract], [Constraint Untimed])
 checkContracts' cs = (\(s, tcs, cnstrs) -> (storage s, tcs, cnstrs)) <$> checkContracts emptyEnv cs
