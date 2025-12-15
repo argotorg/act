@@ -214,8 +214,8 @@ aliasingCondition (Update _ r1 _) (Update _ r2 _) = if ids1 == ids2 then zipWith
 aliasingCandidates :: [StorageUpdate] -> [((StorageUpdate, StorageUpdate), [Exp ABoolean])]
 aliasingCandidates upds = mapMaybe (\p -> (p,) <$> uncurry aliasingCondition p) $ combine upds
 
-checkCaseUpdateAliasing :: Id -> [Arg] -> [Exp ABoolean] -> (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> (Id, [(StorageUpdate, StorageUpdate)], SMTExp, SolverInstance -> IO Model)
-checkCaseUpdateAliasing bname decls preconds (casecond, (upds,_)) =
+checkCaseUpdateAliasing :: Id -> [Arg] -> [Exp ABoolean] -> Bcase -> (Id, [(StorageUpdate, StorageUpdate)], SMTExp, SolverInstance -> IO Model)
+checkCaseUpdateAliasing bname decls preconds (Case _ casecond (upds, _)) =
   (bname, fst <$> maybeAliasedPairs, mkDefaultSMT activeRefs envs bname decls preconds integerBounds assertion, getModel)
   where
     maybeAliasedPairs = aliasingCandidates upds

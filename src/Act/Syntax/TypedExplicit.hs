@@ -14,7 +14,7 @@ import qualified Act.Syntax.Typed as Typed
 import Act.Syntax.Typed (Timing(..),setPre,setPost)
 
 -- Reexports
-import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,Cases,StorageUpdate,TypedRef,Exp,TypedExp,Ref)
+import Act.Syntax.Typed as Act.Syntax.TypedExplicit hiding (Timing(..),Timable(..),Time,Neither,Act,Contract,Invariant,InvariantPred,Constructor,Behaviour,Cases,StorageUpdate,TypedRef,Exp,TypedExp,Ref,Bcase,Ccase)
 import Act.Syntax.Typed as Act.Syntax.TypedExplicit (pattern Act, pattern Contract, pattern Invariant, pattern Constructor, pattern Behaviour, pattern Exp)
 
 
@@ -31,6 +31,8 @@ type TypedRef         = Typed.TypedRef         Timed
 type Ref            k = Typed.Ref            k Timed
 type Exp            a = Typed.Exp            a Timed
 type TypedExp         = Typed.TypedExp         Timed
+type Ccase            = Typed.Ccase            Timed
+type Bcase            = Typed.Bcase            Timed
 
 ------------------------------------------
 -- * How to make all timings explicit * --
@@ -75,9 +77,9 @@ instance Annotatable Typed.StorageUpdate where
   annotate :: Typed.StorageUpdate Untimed -> Typed.StorageUpdate Timed
   annotate (Update typ item expr) = Update typ (setPre item) (setPre expr)
 
-annotateCCase :: (Typed.Exp ABoolean Untimed, [Typed.StorageUpdate Untimed]) -> (Typed.Exp ABoolean Timed, [Typed.StorageUpdate Timed])
-annotateCCase (cond, upds) = (setPre cond, annotate <$> upds)
+annotateCCase :: Case [Typed.StorageUpdate Untimed] Untimed -> Case [Typed.StorageUpdate Timed] Timed
+annotateCCase (Case pn cond upds) = Case pn (setPre cond) (annotate <$> upds)
 
-annotateCase :: (Typed.Exp ABoolean Untimed, ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Untimed))) 
-             -> (Typed.Exp ABoolean Timed, ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)))
-annotateCase (cond, (upds, ret)) = (setPre cond, (annotate <$> upds, annotate <$> ret))
+annotateCase :: Case ([Typed.StorageUpdate Untimed], Maybe (Typed.TypedExp Untimed)) Untimed
+             -> Case ([Typed.StorageUpdate Timed], Maybe (Typed.TypedExp Timed)) Timed
+annotateCase (Case pn cond (upds, ret)) = Case pn (setPre cond) (annotate <$> upds, annotate <$> ret)

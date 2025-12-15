@@ -28,8 +28,6 @@ import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
 
-import Debug.Trace
-
 type Err = Error String
 
 -- | A map containing the interfaces of all available constructors, a payable flag, and the constructor preconditions.
@@ -83,21 +81,16 @@ clearLocalEnv env =
 -- An integer constraint constrains an integer expression to fit within the bounds of a given type.
 -- A call constraint constrains the arguments of a constructor call to satisfy the constructor's preconditions.
 data Constraint t =
-    BoolCnstr Pn Env (Exp ABoolean t)
-  | CallCnstr Pn Env [TypedExp t] Id
+    BoolCnstr Pn String Env (Exp ABoolean t)
+  | CallCnstr Pn String Env [TypedExp t] Id
     deriving (Show, Eq)
 
--- Note Lefteris: probably move this, but is useful for timing of return expressions to typecheck
-instance Annotatable Constraint where
-  annotate :: Constraint Untimed -> Constraint Timed
-  annotate (BoolCnstr p env e) = BoolCnstr p env (setPre e)
-  annotate (CallCnstr p env es i) = CallCnstr p env (setPre <$> es) i
 
-makeIntegerBoundConstraint :: Pn -> Env -> TValueType AInteger -> Exp AInteger t -> Constraint t
-makeIntegerBoundConstraint p env t e = BoolCnstr p env (InRange nowhere t e)
+makeIntegerBoundConstraint :: Pn -> String -> Env -> TValueType AInteger -> Exp AInteger t -> Constraint t
+makeIntegerBoundConstraint p str env t e = BoolCnstr p str env (InRange nowhere t e)
 
-makeArrayBoundConstraint :: Pn -> Env -> Int -> Exp AInteger t -> Constraint t
-makeArrayBoundConstraint p env len e = BoolCnstr p env (LT p e (LitInt p (fromIntegral len)))
+makeArrayBoundConstraint :: Pn -> String -> Env -> Int -> Exp AInteger t -> Constraint t
+makeArrayBoundConstraint p str env len e = BoolCnstr p str env (LT p e (LitInt p (fromIntegral len)))
 
 -- | Top-level typechecking function
 typecheck :: U.Act -> Err (Act, [Constraint Untimed])
@@ -168,15 +161,15 @@ checkConstrCases env cases = do
   where
     checkCases :: [U.Case U.Creates] -> Err (Cases [StorageUpdate], [Constraint Untimed])
     checkCases [] = pure ([], [])
-    checkCases ((U.Case _ cond assigns):cases) =
-        checkExpr env U TBoolean cond `bindValidation` \(cond, cnstr1) -> do
-        let env' = addPreconds [cond] env
+    checkCases ((U.Case p cond assigns):cs) =
+        checkExpr env U TBoolean cond `bindValidation` \(ccond, cnstr1) -> do
+        let env' = addPreconds [ccond] env
         r2 <- unzip <$> traverse (checkAssign env') assigns
-        r3 <- checkCases cases
+        r3 <- checkCases cs
         -- because we use applicative-do we need to do all of the bindings inside pure
         pure $ let (cases', cnstr3) = r3 in
                let (updates, cnstr2) = r2 in
-               ((cond, updates):cases', cnstr1 ++ concat cnstr2 ++ cnstr3)
+               ((Case p ccond updates):cases', cnstr1 ++ concat cnstr2 ++ cnstr3)
 
     checkStorageTyping :: [U.Case U.Creates] -> Err (Map Id (ValueType, Integer))
     checkStorageTyping [] = pure mempty
@@ -236,7 +229,7 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface p params)
 
 
 checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)
-              -> Err ((Exp ABoolean Untimed, ([StorageUpdate], Maybe (TypedExp Untimed))), [Constraint Untimed])
+              -> Err (Bcase Untimed, [Constraint Untimed])
 checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     checkExpr env U TBoolean cond `bindValidation` \(cond', cnstr1) ->
     let env' = addPreconds [cond'] env in
@@ -251,7 +244,7 @@ checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     pure $ let (mret', cnstr3) = case res of
                   Just (e, cs) -> (Just e, cs)
                   Nothing -> (Nothing, [])
-            in ((cond', (tupdates, mret')), cnstr1 ++ concat cnstr2 ++ cnstr3)
+            in (Case p cond' (tupdates, mret'), cnstr1 ++ concat cnstr2 ++ cnstr3)
     where
         checkOrderedUpdates :: [StorageUpdate] -> Err ()
         checkOrderedUpdates [] = pure ()
@@ -290,12 +283,16 @@ mkAnd (c:cs) = foldr (And nowhere) c cs
 
 checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
 checkCaseConsistency env cases = 
-    [ BoolCnstr nowhere env (mkNonoverlapAssertion conds)
-    , BoolCnstr nowhere env (Neg nowhere (mkExhaustiveAssertion conds))
+    [ BoolCnstr getCasePos "Cases are not mutually exclusive" env (mkNonoverlapAssertion conds)
+    , BoolCnstr getCasePos "Cases are not exhaustive" env (Neg nowhere (mkExhaustiveAssertion conds))
     ]
     where 
+        getCasePos = case cases of
+            [] -> nowhere
+            (Case p _ _ : _) -> p
+
         conds :: [Exp ABoolean Untimed]
-        conds = map fst cases
+        conds = map (\(Case _ cond _) -> cond) cases
         -- For every pair of case conditions we assert that they are true
         -- simultaneously. The query must be unsat.
         mkNonoverlapAssertion :: [Exp ABoolean Untimed] -> Exp ABoolean Untimed
@@ -378,7 +375,8 @@ checkRef env kind mode (U.RIndex p en idx) =
   case styp of
     TArray len typ@VType ->
         checkExpr env mode defaultUInteger idx `bindValidation` \(idx', cnstr') ->
-        pure (ValueType typ, RArrIdx p ref idx' len, makeArrayBoundConstraint p env len idx':cnstr ++ cnstr')
+        let arrmsg = "Array index in not guaranteed to be in range for array of length " <> show len in
+        pure (ValueType typ, RArrIdx p ref idx' len, makeArrayBoundConstraint p arrmsg env len idx':cnstr ++ cnstr')
     TMapping (ValueType keytyp) (ValueType valtyp) ->
         checkExpr env mode keytyp idx `bindValidation` \(ix, cnstr') ->
         case kind of
@@ -498,11 +496,12 @@ checkExpr env mode (TMapping (ValueType keytyp) (ValueType valtyp)) (U.Mapping p
 -- Integer Expressions
 checkExpr env mode t1@(TInteger _ _) e =
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) -> do
+    let msg = "Integer expression of type " <> prettyTValueType t2 <> " is not guaranteed to fit in type " <> prettyTValueType t1
     case t2 of
         (TInteger _ _) ->
             if t2 `fitsIn` t1 then pure (te, cs)
-            else pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) env t1 te])
-        TUnboundedInt -> pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) env t1 te])
+            else pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) msg env t1 te])
+        TUnboundedInt -> pure (te, cs ++ [makeIntegerBoundConstraint (getPosn e) msg env t1 te])
         _ -> typeMismatchErr (getPosn e) t1 t2
 checkExpr env mode t1@TUnboundedInt e =
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) -> do
@@ -529,15 +528,18 @@ checkExpr env mode t@(TArray _ _) (U.EITE p e1 e2 e3) = do
                (te3, cnstr3) = r3
            in (ITE p te1 te2 te3, cnstr1 ++ cnstr2 ++ cnstr3)
 checkExpr env mode t1@(TArray _ _) e = 
+    -- Question: do we allow array subtyping here?
     let pn = getPosn e in
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) -> 
         flip (maybe (typeMismatchErr pn t1 t2)) (relaxedtestEquality t1 t2) $ \Refl ->
             case (fst $ flattenValueType t1, fst $ flattenValueType t2) of
                 (bt1@(TInteger _ _), bt2@(TInteger _ _)) ->
+                    let msg = "Array element integer expression of type " <> prettyTValueType bt2 <> " is not guaranteed to fit in type " <> prettyTValueType bt1 in
                     if bt2 `fitsIn` bt1 then pure (te, cs)
-                    else pure (te, cs ++ (makeIntegerBoundConstraint (getPosn e) env bt1 <$> expandArrayExpr t2 te))
+                    else pure (te, cs ++ (makeIntegerBoundConstraint (getPosn e) msg env bt1 <$> expandArrayExpr t2 te))
                 (bt1@(TInteger _ _), TUnboundedInt) ->
-                    pure (te, cs ++ (makeIntegerBoundConstraint (getPosn e) env bt1 <$> expandArrayExpr t2 te))
+                    let msg = "Array element integer expression of type " <> prettyTValueType TUnboundedInt <> " is not guaranteed to fit in type " <> prettyTValueType bt1 in
+                    pure (te, cs ++ (makeIntegerBoundConstraint (getPosn e) msg env bt1 <$> expandArrayExpr t2 te))
                 (TUnboundedInt, TInteger _ _) -> pure (te, cs)
                 (TUnboundedInt, TUnboundedInt) -> pure (te, cs)
                 _ -> typeMismatchErr (getPosn e) t1 t2
@@ -609,7 +611,8 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
         argsc <- checkArgs env mode p (argToValueType <$> sig) args
         pure $ let (args', cnstr1) = argsc
                    (cv, cnstr2) = cvc
-                   callcnstr = CallCnstr p env args' c
+                   callcnstr = CallCnstr p msg env args' c
+                   msg = "Preconditions of constructor call to " <> show c <> " are not guaranteed to hold"
                 in (TExp (TContract c) (Create p c args' cv), callcnstr:cnstr1 ++ cnstr2)
     Nothing -> throw (p, "Unknown constructor " <> show c)
    -- Control
