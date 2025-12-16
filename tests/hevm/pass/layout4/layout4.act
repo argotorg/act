@@ -18,7 +18,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(val)
+storage
+returns val
 
 transition f(uint x) : uint128
 
@@ -26,7 +27,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(f[x])
+storage
+returns f[x]
 
 
 transition g(uint128 x) : bool
@@ -35,7 +37,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(g[x])
+storage
+returns g[x]
 
 
 
@@ -47,7 +50,7 @@ iff
 
 storage
 
-  f[key] := value
+  f := f[key => value]
 
 returns 1
 
@@ -60,6 +63,6 @@ iff
 
 storage
 
-  g[key] := value
+  g := g[key => value]
 
 returns 1

@@ -11,8 +11,8 @@ transition balanceOf(address x) : uint256
 
 iff CALLVALUE == 0
 
-returns
-  pre(balanceOf[x])
+storage
+returns balanceOf[x]
 
 transition transfer(uint256 value, address to) : uint256
 
@@ -26,11 +26,12 @@ case CALLER != to:
   
   storage
 
-    balanceOf[CALLER]  := balanceOf[CALLER] - value
-    balanceOf[to]      := balanceOf[to] + value
+    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - value
+                          , to => balanceOf[to] + value]
 
   returns 1
 
 case CALLER == to:
 
+  storage
   returns 1

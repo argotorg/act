@@ -1,4 +1,3 @@
-// contract A
 contract A
 
 constructor(uint z)
@@ -15,8 +14,8 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
-returns
-   pre(x)
+storage
+returns x
 
 transition set_x(uint z)
 
@@ -26,7 +25,6 @@ iff
 storage
   x := z
 
-// contract B
 contract B
 
 constructor(uint z)
@@ -42,19 +40,18 @@ transition y() : uint256
 iff
    CALLVALUE == 0
 
-returns
-   pre(y)
+storage
+returns y
 
 transition a() : address<A>
 
 iff
    CALLVALUE == 0
 
-returns
-   pre(a)
+storage
+returns a
 
 
-// contract C
 contract C
 
 constructor(address<B> y)
@@ -64,7 +61,8 @@ iff
 
 creates
    A a := y.a
-   B b := new B(42) 
+   B b := y
+   //B b := new B(42) 
 
 transition change()
 

@@ -29,11 +29,12 @@ case CALLER != THIS and token0.allowance[CALLER][THIS] == 2^256 - 1:
 
 storage
 
-    token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
-    token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
+    token0.balanceOf := token0.balanceOf[ CALLER => token0.balanceOf[CALLER] - amt
+                                        , THIS => token0.balanceOf[THIS] + amt]
 
-    token1.balanceOf[THIS]   := token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
-    token1.balanceOf[CALLER] := token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+    token1.balanceOf :=
+        token1.balanceOf[ THIS => token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+                        , CALLER => token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))]
 
 returns 1
 
@@ -52,6 +53,7 @@ returns 1
 
 case CALLER == THIS:
 
+storage
 returns 1
 
 ensures

@@ -13,4 +13,5 @@ transition f() : uint128
 iff
   CALLVALUE == 0
 
-returns post(x)
+storage
+returns x

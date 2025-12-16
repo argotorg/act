@@ -9,6 +9,7 @@ iff
 creates
   uint128 val := 11
   mapping(uint => uint128) f := [11 => 42]
+  //mapping(uint => uint256) f := [11 => 42]
 
 transition val() : uint128
 
@@ -16,7 +17,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(val)
+storage
+returns val
 
 transition f(uint x) : uint128
 
@@ -24,9 +26,11 @@ iff
 
   CALLVALUE == 0
 
-returns pre(f[x])
+storage
+returns f[x]
 
 
+//transition set(uint256 value, uint key) : uint256
 transition set(uint128 value, uint key) : uint256
 
 iff
@@ -35,6 +39,6 @@ iff
 
 storage
 
-  f[key] := value
+  f := f[key => value]
 
 returns 1

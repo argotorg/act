@@ -47,7 +47,7 @@ import Act.Bounds
 import EVM.ABI (Sig(..))
 import qualified EVM hiding (bytecode)
 import qualified EVM.Types as EVM hiding (FrameState(..))
-import EVM.Expr hiding (op2, inRange, div, xor, readStorage, Array)
+import EVM.Expr hiding (op2, inRange, div, xor, not, readStorage, Array)
 import EVM.SymExec hiding (isPartial, reachable)
 import EVM.SMT (assertProps)
 import EVM.Solvers
@@ -88,7 +88,7 @@ slotMap store lmap =
       let vars = sortOn (snd . snd) $ M.toList cstore
           layoutMode = fromJust $ M.lookup cid lmap
       in
-      (layoutMode, M.fromList $ makeLayout layoutMode vars 0 0)
+      (layoutMode, M.fromList $ traceShowId $ makeLayout layoutMode vars 0 0)
   ) store
 
 makeLayout :: LayoutMode -> [(String, (ValueType, Integer))] -> Int -> Int -> [(Id, (Int,Int,Int))]
@@ -109,7 +109,7 @@ sizeOfValue :: ValueType -> Int
 sizeOfValue (ValueType t) = sizeOfTValue t
 
 sizeOfTValue :: TValueType a -> Int
-sizeOfTValue (TMapping _ t) = sizeOfValue t
+sizeOfTValue (TMapping _ _) = 32
 sizeOfTValue t = sizeOfAbiType $ toAbiType t
 
 sizeOfAbiType :: AbiType -> Int
@@ -189,7 +189,7 @@ getCaller = do
 storageBounds :: forall m . Monad m => ContractMap -> [TypedRef] -> ActT m [EVM.Prop]
 storageBounds contractMap locs = do
   -- TODO what env should we use here?
-  mapM (toProp contractMap emptyEnv) $ mkRefsBounds $ filter (Prelude.not . locInCalldata) locs
+  mapM (toProp contractMap emptyEnv) $ mkRefsBounds $ filter (not . locInCalldata) locs
   where
     locInCalldata :: TypedRef -> Bool
     locInCalldata (TRef _ _ ref) = refInCalldata ref
@@ -291,6 +291,7 @@ refToRHS (CVar p t i) = CVar p t i
 refToRHS (RMapIdx p r i) = RMapIdx p r i
 refToRHS (RArrIdx p r i n) = RArrIdx p (refToRHS r) i n
 refToRHS (RField p r i n) = RField p (refToRHS r) i n
+
 -- TODO: move this if it even survives
 expandMappingUpdate :: TypedRef -> Exp AMapping -> [(TypedRef, TypedExp)]
 expandMappingUpdate ref (Mapping _ keyType@VType valType@VType es) =
@@ -330,7 +331,11 @@ writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
         let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
         writeMap' <- localCaddr freshAddr $ createContract readMap writeMap callenv freshAddr e
         pure $ M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr (EVM.WAddr freshAddr)) contract), cid) writeMap'
-    TContract _ -> error "TODO?"
+    TContract _ -> do
+        e' <- toExpr readMap callenv e
+        let prevValue = readStorage addr contract
+        let e'' = storedValue e' prevValue offset size
+        pure $ M.insert caddr' (updateStorage (EVM.SStore addr e'') contract, cid) writeMap
     TByteStr -> error "Bytestrings not supported"
     TInteger _ _ -> do
         e' <- toExpr readMap callenv e
@@ -484,19 +489,23 @@ refOffset _ _ (SVar _ _ cid name) = do
   layout <- getLayout
   let (slot, off, size, layoutMode) = getPosition layout cid name
   pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size, layoutMode)
-refOffset cmap callenv (RMapIdx _ (TRef _ _ ref) ix) = do
-  (slot, _, size, layoutMode) <- refOffset cmap callenv ref
+refOffset cmap callenv (RMapIdx _ (TRef (TMapping _ t) _ ref) ix) = do
+  (slot, _, _, layoutMode) <- refOffset cmap callenv ref
   buf <- typedExpToBuf cmap callenv ix
   let concatenation = case layoutMode of
         SolidityLayout -> buf <> (wordToBuf slot)
         VyperLayout -> (wordToBuf slot) <> buf
   let addr = (EVM.keccak concatenation)
+  let size =  case layoutMode of
+        SolidityLayout -> sizeOfValue t
+        VyperLayout -> 32
   pure (addr, EVM.Lit 0, size, layoutMode)
 refOffset _ _ (RField _ _ cid name) = do
   layout <- getLayout
   let (slot, off, size, layoutMode) = getPosition layout cid name
   pure (EVM.Lit (fromIntegral slot), EVM.Lit $ fromIntegral off, size, layoutMode)
 refOffset _ _ (RArrIdx _ _ _ _) = error "TODO"
+refOffset _ _ (RMapIdx _ (TRef _ _ _) _) = error "Internal error: Map Index into non-map reference"
 
 
 -- | Get the address of the contract whoose storage contrains the given
@@ -827,7 +836,7 @@ checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contrac
 checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface _ preconds _ _ _)  _) = do
   -- Construct the initial contract state
   (actinitmap, checks) <- getInitContractState solvers cname iface preconds M.empty
-  let hevminitmap = translateCmap (traceShowId actinitmap)
+  let hevminitmap = translateCmap actinitmap
   -- Translate Act constructor to Expr
   fresh <- getFresh
   (actbehvs, calldata, sig, bounds) <- translateConstructor runtimecode ctor actinitmap

@@ -15,8 +15,9 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
+storage
 returns
-   pre(x)
+   x
 
 transition set_x(uint z)
 

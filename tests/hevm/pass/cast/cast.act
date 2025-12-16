@@ -15,7 +15,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(x)
+storage
+returns x
 
 
 transition setx(uint x1)

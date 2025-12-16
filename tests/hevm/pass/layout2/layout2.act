@@ -47,9 +47,10 @@ iff
 
   CALLVALUE == 0
 
+storage
 returns
 
-  pre(flag)
+  flag
 
 
 transition set_y_if_flag(uint128 v) : uint256
@@ -66,5 +67,6 @@ storage
 returns 1
 
 case (not flag):
+storage
 returns 1
 

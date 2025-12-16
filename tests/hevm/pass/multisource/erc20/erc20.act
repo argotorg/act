@@ -11,25 +11,26 @@ creates
   mapping(address => mapping(address => uint)) allowance := []
 
 
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 _value, address to) : uint256
 
 iff
 
   CALLVALUE == 0
-  inRange(uint256, balanceOf[CALLER] - value)
-  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
+  inRange(uint256, balanceOf[CALLER] - _value)
+  CALLER != to ==> inRange(uint256, balanceOf[to] + _value)
 
 case CALLER != to:
 
   storage
 
-     balanceOf[CALLER] := balanceOf[CALLER] - value
-     balanceOf[to]     := balanceOf[to] + value
+    balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
+                          , to     => balanceOf[to] + _value]
 
   returns 1
 
 case CALLER == to:
 
+  storage
   returns 1
 
 
@@ -46,8 +47,8 @@ case src != dst and CALLER == src:
 
   storage
 
-     balanceOf[src] := balanceOf[src] - amount
-     balanceOf[dst] := balanceOf[dst] + amount
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount]
 
   returns 1
 
@@ -55,8 +56,8 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
   storage
 
-     balanceOf[src] := balanceOf[src] - amount
-     balanceOf[dst] := balanceOf[dst] + amount
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount]
 
   returns 1
 
@@ -64,9 +65,9 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance[src][CALLER] := allowance[src][CALLER] - amount
-    balanceOf[src]         := balanceOf[src] - amount
-    balanceOf[dst]         := balanceOf[dst] + amount
+    allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount]
 
   returns 1
 
@@ -74,12 +75,13 @@ case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   storage
 
-    allowance[src][CALLER] := allowance[src][CALLER] - amount
+    allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
 
   returns 1
 
 case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
 
+  storage
   returns 1
 
 
@@ -94,12 +96,13 @@ case CALLER != spender:
 
   storage
 
-    allowance[CALLER][spender] := amount
+    allowance := allowance[ CALLER => [ spender => amount ] ]
 
   returns 1
 
 case CALLER == spender:
 
+  storage
   returns 1
 
 
@@ -114,7 +117,7 @@ iff
 storage
 
   totalSupply := totalSupply - amount
-  balanceOf[CALLER] := balanceOf[CALLER] - amount
+  balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - amount ]
 
 returns 1
 
@@ -132,7 +135,7 @@ case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
   storage
 
     totalSupply := totalSupply - amount
-    balanceOf[src] := balanceOf[src] - amount
+    balanceOf := balanceOf[ src =>  balanceOf[src] - amount ]
 
   returns 1
 
@@ -141,8 +144,8 @@ case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
   storage
 
     totalSupply := totalSupply - amount
-    allowance[src][CALLER] := allowance[src][CALLER] - amount
-    balanceOf[src]         := balanceOf[src] - amount
+    allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
   returns 1
 
@@ -151,30 +154,26 @@ case CALLER == src:
   storage
 
     totalSupply := totalSupply - amount
-    balanceOf[src] := balanceOf[src] - amount
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
   returns 1
 
 ensures
 
-  pre(balanceOf[src]) - post(balanceOf[src]) == pre(totalSupply) - post(totalSupply)
+  pre(balanceOf)[src] - post(balanceOf)[src] == pre(totalSupply) - post(totalSupply)
 
 
 transition mint(address dst, uint256 amount) : uint256
 
-iff in range uint256
-
-  totalSupply + amount
-  balanceOf[dst] + amount
-
 iff
-
   CALLVALUE == 0
+  inRange(uint256, totalSupply + amount)
+  inRange(uint256, balanceOf[dst] + amount)
 
 storage
 
   totalSupply := totalSupply + amount
-  balanceOf[dst] := balanceOf[dst] + amount
+    balanceOf := balanceOf[ dst => balanceOf[dst] + amount ]
 
 returns 1
 
@@ -187,7 +186,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(totalSupply)
+storage
+returns totalSupply
 
 transition balanceOf(address idx) : uint256
 
@@ -195,7 +195,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(balanceOf[idx])
+storage
+returns balanceOf[idx]
 
 transition allowance(address idx1, address idx2) : uint256
 
@@ -203,4 +204,5 @@ iff
 
   CALLVALUE == 0
 
-returns pre(allowance[idx1][idx2])
+storage
+returns allowance[idx1][idx2]

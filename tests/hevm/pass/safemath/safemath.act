@@ -1,36 +1,31 @@
 contract SafeAdd
 
+constructor ()
+creates
+
 transition add(uint256 x, uint256 y) : uint256
 
-iff in range uint256
-
-    x + y
-
 iff
+    inRange(uint256, x+y)
     CALLVALUE == 0
 
+storage
 returns x + y
 
 transition mul(uint256 x, uint256 y) : uint256
 
-iff in range uint256
-
-    x * y
-
 iff
-
+    inRange(uint256, x*y)
     CALLVALUE == 0
 
+storage
 returns x * y
 
 transition double(uint256 x) : uint256
 
-iff in range uint256
-
-    2 * x
-
 iff
-
+    inRange(uint256, 2*x)
     CALLVALUE == 0
 
+storage
 returns 2 * x

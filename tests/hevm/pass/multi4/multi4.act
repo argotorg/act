@@ -1,5 +1,3 @@
-// contract A
-
 contract A
 
 constructor(uint z)
@@ -17,8 +15,8 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
-returns
-   pre(x)
+storage
+returns x
 
 transition add_x(uint y)
 
@@ -31,7 +29,6 @@ storage
   x := x + y
 
 
-// contract B
 contract B
 
 constructor(uint i)

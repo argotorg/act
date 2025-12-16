@@ -16,7 +16,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(val)
+storage
+returns val
 
 transition f(uint x) : uint256
 
@@ -24,7 +25,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(f[x])
+storage
+returns f[x]
 
 
 transition set(uint value, uint key) : uint256
@@ -35,6 +37,6 @@ iff
 
 storage
 
-  f[key] := value
+  f := f[key => value]
 
 returns 1
