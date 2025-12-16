@@ -1,5 +1,5 @@
 [book]
-authors = ["Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, Alexis Terry"]
+authors = ["Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, dxo"]
 language = "en"
 src = "src"
 title = "The Act Book"
@@ -8,6 +8,9 @@ title = "The Act Book"
 
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
+
+[preprocessor.katex]
+after = ["links"]
 
 [output]
 
