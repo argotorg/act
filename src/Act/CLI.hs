@@ -155,7 +155,7 @@ parse' f = do
 type' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+  proceed contents (compile contents) $ \(spec, cnstrs) -> do
     checkEntailment solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
     B.putStrLn $ encode spec

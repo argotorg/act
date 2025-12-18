@@ -184,12 +184,13 @@ data SolverInstance = SolverInstance
 --- ** Analysis Passes ** ---
 
 -- | Produces an SMT expression in a format that services most SMT passes.
+-- Zoe: Can we merge preconds and extraconds?
 mkDefaultSMT :: [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp ABoolean] -> Exp ABoolean -> SMTExp
-mkDefaultSMT refs envs ifaceName decls preconds extraconds = mksmt
+mkDefaultSMT refs envs ifaceName args preconds extraconds = mksmt
   where
     -- Declare calldata arguments and locations, and environmental variables
     storage = traceShowId $ nub $ (declareTRef <$> refs)
-    ifaceArgs = traceShowId $ nub $ (declareArg ifaceName <$> decls) \\ storage
+    ifaceArgs = traceShowId $ nub $ (declareArg ifaceName <$> args) \\ storage
     env = nub $ declareEthEnv <$> envs
 
     -- Constraints

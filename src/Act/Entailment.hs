@@ -27,6 +27,7 @@ import Act.Print
 import Act.Syntax.Timing
 import Act.Error
 import Act.Syntax
+import Act.Traversable
 
 import qualified EVM.Solvers as Solvers
 
@@ -62,34 +63,70 @@ mkEntailmentSMT (BoolCnstr p str env e) =
   where
     iff = annotate <$> preconds env
     locs = nub $ concatMap locsFromExp (e:iff)
-    (slocs, clocs) = partitionLocs locs
     ethEnv = ethEnvFromExp e
     calldataVars = calldataToList (calldata env)
-    query = mkDefaultSMT 
+    query = mkDefaultSMT locs ethEnv "" calldataVars iff [] (Neg p e)
 
     getModel solver = do
-      prestate <- mapM (getStorageValue solver "" Pre) locs
-      calldata <- mapM (getCalldataValue solver "" ) calldataVars
+      prestate <- mapM (getLocationValue solver "" Pre) locs
+      calldata <- mapM (getCalldataValue solver "") calldataVars
+      calllocs <- mapM (getLocationValue solver "" Pre) locs
       environment <- mapM (getEnvironmentValue solver) ethEnv
       pure $ Model
         { _mprestate = prestate
         , _mpoststate = []
         , _mcalldata = ("", calldata)
+        , _mcalllocs = calllocs
         , _menvironment = environment
         , _minitargs = []
         }
-      prestate <- mapM (getStorageValue solver ifaceName Pre) locs
-      calldata <- mapM (getCalldataValue solver ifaceName) calldataVars
-      environment <- mapM (getEnvironmentValue solver) ethEnv
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = ("", calldata)
-        , _menvironment = environment
-        , _minitargs = []
-        }
-mkEntailmentSMT _ = error "Internal error: only boolean constraints are supported"
+mkEntailmentSMT (CallConstr p msg env args cid) =
   
+  (query, p, str, getModel)
+  
+  where
+    -- current preconditions
+    iffs = annotate <$> preconds env
+
+    -- called constructors preconditions. Can only refer to args and eth env.
+    (calledCalldata, calledPreconds) = case M.lookup cid (constructors env) of
+                        Just (Constructor _ _ preconds _) -> (calldataToList (calldata env), annotate <$> preconds)
+                        Nothing -> error $ "Internal error: constructor " <> show cid <> " not found in environment."
+    
+
+    subst = M.fromList $ zip calledCalldata args
+
+
+
+
+applySubstRef :: M.Map Id TypedExp -> Ref k t -> TypedExp
+applySubstRef subst (CVar p t x) = 
+    case M.lookup x subst of
+      Just (Typed.TExp _ e) -> case e of
+                                 VarRef _ _ (CVar _ _ y) -> CVar p t y
+                                 _ -> CVar p t x
+      Nothing -> error $ "Internal error: variable " <> show x <> " not found in substitution."
+applySubstRef subst (RArrIdx p a b n) =
+    case applySubstRef subst a of
+      VarRef p' tv ref -> RArrIdx p ref (applySubst subst b) n
+      _ -> error "Internal error: expected VarRef in array index reference substitution."
+applySubstRef subst (RMapping p kt vt kvs) = error "Internal error: Calldata cannot have mapping type."
+applySubstRef subst (RField p r c x) =
+    case applySubstRef subst r of
+      VarRef p' tv ref -> RField p ref c (applySubst subst x)
+      _ -> error "TODO: expected VarRef in field reference substitution." -- TODO what if it is constructor call? Plan: evaluate the constructor call. 
+applySubstRef _ (SVar _ _ _ _) = error "Internal error: storage variable found in calldata substitution."
+
+applySubst :: M.Map Id TypedExp -> Exp a -> Exp a
+applySubst subst exp = mapTerm substRefInExp exp
+    where
+        substRefInExp :: Exp a -> Exp a
+        substRefInExp (VarRef p t ref) = case applySubstRef subst ref of
+          TyExp t' e -> case testEquality t t' of
+            Just Refl -> VarRef p t e
+            Nothing -> error "Internal error: type mismatch in substitution."
+        substRefInExp e = e 
+
 {- 
 
 -- | Create a query for cases
