@@ -2,61 +2,104 @@
 
 **Goal of this section**
 
-Give the reader an intuition for what an Act specification looks like and how it relates to Solidity, without explaining every construct yet.
+Give the reader an intuition for what an Act specification looks like and how it relates to Solidity/Vyper.
 
-## From Solidity to Act (at a Glance)
-We start from a familiar ERC20-style contract written in Solidity:
+## From EVM Smart Contract to Act
+We start from an ERC20-style contract written in Solidity respectively Vyper:
 
-*(excerpt: function signatures only)*
+*(code snippet contains storage and function signatures only)*
 
 ```solidity
 contract Token {
+    uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    constructor(uint256 totalSupply);
+    constructor(uint256 _totalSupply);
     function transfer(address to, uint256 value) public;
     function transferFrom(address from, address to, uint256 value) public;
+    ...
 }
 ```
 
+```vyper
+  totalSupply: public(uint256)
+  balanceOf: public(HashMap[address, uint256])
+  allowance: public(HashMap[address, HashMap[address, uint256]])
 
-An Act specification describes the **externally observable behavior** of this contract. At a high level, an Act contract consists of:
-- a constructor, describing how storage is initialized
-- a set of behaviours, one for each externally callable function
-- explicit preconditions under which calls succeed
-- explicit storage updates describing the resulting state
+  @deploy
+  def __init__(_totalSupply: uint256)
+  @external
+  def transfer(value_: uint256, to: address) -> bool
+  @external
+  def transferFrom(from_: address, to: address, value_: uint256) -> bool
+  ...
+``` 
+
+  <!-- function approve(address spender, uint256 value) public;
+  function burn(uint256 value) public;
+  function burnFrom(address account, uint256 value) public;
+  function mint(address account, uint256 value) public; -->
+
+An **ERC20 token** is a standard type of smart contract on Ethereum that represents a fungible asset, meaning all units of the token are interchangeable (like dollars or euros, rather than NFTs). The contract maintains a ledger that records how many tokens each address owns and provides a small, fixed interface for moving tokens between addresses. The core piece of state is the `balanceOf` mapping, which assigns to every address its current token balance; the sum of all balances represents the total supply of the token. 
+
+A token holder can move tokens directly using `transfer`, which subtracts a specified amount from the caller’s balance and adds it to the recipient’s balance, provided the caller has sufficient funds. 
+
+In addition to direct transfers, ERC20 supports delegated transfers through the `allowance` mechanism: an address can authorize another address (a “spender”) to transfer up to a certain number of tokens on its behalf. These authorizations are recorded in the `allowance` mapping, which maps an owner and a spender to an approved amount. The `transferFrom` function uses this mechanism to move tokens from one address to another while decreasing both the owner’s balance and the remaining allowance of the spender. Together, `balanceOf`, `allowance`, `transfer`, and `transferFrom` define a simple but powerful accounting model that enables tokens to be held, transferred, and used by third-party contracts without giving them unrestricted control over a user’s funds.
+
+An **Act specification** describes the **externally observable behavior** of this contract. At a high level, an Act specification consists of one or more contracts, where each contract has:
+- a **constructor**, describing what storage is created and how it is initialized
+- a set of **behaviors**, one for each callable function
+- explicit **preconditions** under which function calls succeed
+- explicit **storage updates** describing the resulting state
 
 
 ## The Shape of an Act Contract
-Here is the top-level structure of the ERC20 Act specification:
+The translation of the code above into an act specification has the following top-level structure:
 
-*(excerpt from erc20.act, headers only)*
+*(snippet from erc20.act, headers only)*
 
 ```act 
 contract Token:
 
-constructor(uint256 totalSupply)
+constructor(uint256 _totalSupply)
 iff CALLVALUE == 0
-storage
-  ...
+    ...
+creates
+  uint256 totalSupply := _totalSupply
+  mapping(address => uint) balanceOf :=  [CALLER => _totalSupply]
+  mapping(address => mapping(address => uint)) allowance := []
 
-behaviour balanceOf(address owner)
-returns uint256
+transition transfer(uint256 value, address to)
 iff CALLVALUE == 0
-  ...
+    ...
+case CALLER != to:
+  storage
+    ...
+case CALLER == to:
+  storage
+    ...
 
-behaviour transfer(uint256 value, address to)
+transition transferFrom(address from, address to, uint256 value)
 iff CALLVALUE == 0
-  ...
+...
 
-behaviour transferFrom(address from, address to, uint256 value)
-iff CALLVALUE == 0
-  ...
 ```
 
-Even without understanding the details, several features are already visible:
-- Act specifications are declarative: they describe what must hold, not how to execute.
+Even without understanding the details, several aspects are already visible:
+- For each contract the act spec starts with `contract <NAME>:`.
+- Afterwards the constructor `contructor(<input_vars>)` follows.
+- Lastly all smart contract functions are listed as transitions `transition <fct_name>(<input_vars>)`
+- Within the constructor and the transitions:
+  - The list of preconditions (the `iff` block) comes first and lists the necessary and sufficient conditions on when this "operation" succeeds. If the `iff` block is not satisfied, the corresponding function in Solidity/Vyper would revert.
+  - In the constructor the `creates` block is next. It lists all the storage a contract has and initializes it. As expected, it mirrors the Solidity/Vyper code closely. The `creates` block is the last in the constructor.
+  - Similar to `creates` for constructors works the `storage` block for transitions. It updates all the changes to the storage. Therby, summarizing the effects a transition has on the storage.
+  - If there is any control flow in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a `case`. In the ERC20 example, that happens in line 14 and line 17: depending on whether the function caller `CALLER` is the same address as the one where the money is supposed to be transfered to `to` the storage is updated differently.
+- Act is aware of some Ethereum environment variables such as the caller of a function `CALLER` or the amount that was "paid" to a contract upon a function call `CALLVALUE`.
+
+<!-- - Act specifications are declarative: they describe what must hold, not how to execute.
 - Each behaviour explicitly states when it is defined (iff ...).
-- Storage updates are separated from control flow.
+- Storage updates are separated from control flow. -->
+
+
 In the next sections, we will build up the meaning of these pieces by incrementally refining the ERC20 specification.

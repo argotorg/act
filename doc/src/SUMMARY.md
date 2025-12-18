@@ -10,7 +10,7 @@
     - [Arithmetic Safety](./arith_safety.md)
     - [Mappings and Updates](./mappings_updates.md)
 - [From Specification to Guarantees](./part3.md)
-    - [Correctness of a Specification](./correct_spec.md)
+    - [Correctness of a Specification](./equiv.md)
     - [Proving Properties of Specs](./rocq.md) 
 - [Advanced Topics](./part4.md)
     - [Aliasing and Unique Ownership](./aliasing.md)
