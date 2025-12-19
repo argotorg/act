@@ -41,11 +41,12 @@ contract Token {
   function burnFrom(address account, uint256 value) public;
   function mint(address account, uint256 value) public; -->
 
-An **ERC20 token** is a standard type of smart contract on Ethereum that represents a fungible asset, meaning all units of the token are interchangeable (like dollars or euros, rather than NFTs). The contract maintains a ledger that records how many tokens each address owns and provides a small, fixed interface for moving tokens between addresses. The core piece of state is the `balanceOf` mapping, which assigns to every address its current token balance; the sum of all balances represents the total supply of the token. 
 
-A token holder can move tokens directly using `transfer`, which subtracts a specified amount from the caller’s balance and adds it to the recipient’s balance, provided the caller has sufficient funds. 
-
-In addition to direct transfers, ERC20 supports delegated transfers through the `allowance` mechanism: an address can authorize another address (a “spender”) to transfer up to a certain number of tokens on its behalf. These authorizations are recorded in the `allowance` mapping, which maps an owner and a spender to an approved amount. The `transferFrom` function uses this mechanism to move tokens from one address to another while decreasing both the owner’s balance and the remaining allowance of the spender. Together, `balanceOf`, `allowance`, `transfer`, and `transferFrom` define a simple but powerful accounting model that enables tokens to be held, transferred, and used by third-party contracts without giving them unrestricted control over a user’s funds.
+> An **ERC20 token** is a standard type of smart contract on Ethereum that represents a fungible asset, meaning all units of the token are interchangeable (like dollars or euros, rather than NFTs). The contract maintains a ledger that records how many tokens each address owns and provides a small, fixed interface for moving tokens between addresses. The core piece of state is the `balanceOf` mapping, which assigns to every address its current token balance; the sum of all balances represents the total supply of the token. 
+>
+> A token holder can move tokens directly using `transfer`, which subtracts a specified amount from the caller’s balance and adds it to the recipient’s balance, provided the caller has sufficient funds. 
+>
+> In addition to direct transfers, ERC20 supports delegated transfers through the `allowance` mechanism: an address can authorize another address (a “spender”) to transfer up to a certain number of tokens on its behalf. These authorizations are recorded in the `allowance` mapping, which maps an owner and a spender to an approved amount. The `transferFrom` function uses this mechanism to move tokens from one address to another while decreasing both the owner’s balance and the remaining allowance of the spender. Together, `balanceOf`, `allowance`, `transfer`, and `transferFrom` define a simple but powerful accounting model that enables tokens to be held, transferred, and used by third-party contracts without giving them unrestricted control over a user’s funds.
 
 An **Act specification** describes the **externally observable behavior** of this contract. At a high level, an Act specification consists of one or more contracts, where each contract has:
 - a **constructor**, describing what storage is created and how it is initialized
@@ -59,7 +60,7 @@ The translation of the code above into an act specification has the following to
 
 *(snippet from erc20.act, headers only)*
 
-```act 
+```act,editable 
 contract Token:
 
 constructor(uint256 _totalSupply)
@@ -83,7 +84,6 @@ case CALLER == to:
 transition transferFrom(address from, address to, uint256 value)
 iff CALLVALUE == 0
 ...
-
 ```
 
 Even without understanding the details, several aspects are already visible:
@@ -91,10 +91,10 @@ Even without understanding the details, several aspects are already visible:
 - Afterwards the constructor `contructor(<input_vars>)` follows.
 - Lastly all smart contract functions are listed as transitions `transition <fct_name>(<input_vars>)`
 - Within the constructor and the transitions:
-  - The list of preconditions (the `iff` block) comes first and lists the necessary and sufficient conditions on when this "operation" succeeds. If the `iff` block is not satisfied, the corresponding function in Solidity/Vyper would revert.
+  - The list of preconditions (the `iff` block) comes first and lists the necessary and sufficient conditions on when this operation succeeds. If the `iff` block is not satisfied, the corresponding function in Solidity/Vyper would revert.
   - In the constructor the `creates` block is next. It lists all the storage a contract has and initializes it. As expected, it mirrors the Solidity/Vyper code closely. The `creates` block is the last in the constructor.
-  - Similar to `creates` for constructors works the `storage` block for transitions. It updates all the changes to the storage. Therby, summarizing the effects a transition has on the storage.
-  - If there is any control flow in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a `case`. In the ERC20 example, that happens in line 14 and line 17: depending on whether the function caller `CALLER` is the same address as the one where the money is supposed to be transfered to `to` the storage is updated differently.
+  - Similar to `creates` for constructors works the `storage` block for transitions. It updates all the changes to the storage. Thereby, summarizing the effects a transition has on the storage.
+  - If there are any branches in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a `case`. In the ERC20 example, that happens in line 14 and line 17: depending on whether the function caller `CALLER` is the same address as the one where the money is supposed to be transfered to `to` the storage is updated differently.
 - Act is aware of some Ethereum environment variables such as the caller of a function `CALLER` or the amount that was "paid" to a contract upon a function call `CALLVALUE`.
 
 <!-- - Act specifications are declarative: they describe what must hold, not how to execute.

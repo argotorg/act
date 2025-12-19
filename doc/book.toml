@@ -16,3 +16,8 @@ after = ["links"]
 
 [output.html]
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+[output.html.playground]
+editable = true
+copy-js = true
+line-numbers = true
