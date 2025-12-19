@@ -15,8 +15,10 @@
 - [Advanced Topics](./part4.md)
     - [Aliasing and Unique Ownership](./aliasing.md)
 - [Practical Usage](./part5.md)
+    - [Installation](./installation.md) 
     - [Layout and Tooling](./layout_tooling.md)
     - [How to Write Your Own Spec](./how_to.md)
+    
 <!-- - [Language Reference](./language.md)
 - [Backends](./backends.md)
   - [SMT](./smt.md)

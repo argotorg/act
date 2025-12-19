@@ -22,6 +22,54 @@ specification, which can either be used
 
 A more detailed explanation of act's formal verification backends together with examples can be found in [From Specification to Guarantees](./part3.md).
 
+## Act Verification Pipeline
+
+Act provides two main verification backends that work with the same specification:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Act Specification                        │
+│                   (High-level .act file)                        │
+└────────────────┬───────────────────────────────┬────────────────┘
+                 │                               │
+                 │                               │
+                 ▼                               ▼
+    ┌────────────────────────┐      ┌──────────────────────────┐
+    │    HEVM Backend        │      │     Rocq Backend         │
+    │  (Automated Proofs)    │      │   (Manual Proofs)        │
+    └────────────┬───────────┘      └──────────┬───────────────┘
+                 │                             │
+       ┌─────────┴─────────┐                   │
+       │                   │                   │
+       ▼                   ▼                   ▼
+┌─────────────┐    ┌─────────────┐  ┌──────────────────────────┐
+│  Solidity   │    │   Vyper     │  │  Transition System       │
+│ .sol file   │    │  .vy file   │  │  Export to Rocq          │
+└──────┬──────┘    └──────┬──────┘  └───────────┬──────────────┘
+       │                  │                     │
+       └────────┬─────────┘                     │
+                ▼                               ▼
+    ┌────────────────────────┐      ┌──────────────────────────┐
+    │  Symbolic Execution    │      │ Interactive Theorem      │
+    │  of EVM Bytecode       │      │ Proving (Gallina/Ltac)   │
+    └────────────┬───────────┘      └──────────┬───────────────┘
+                 │                             │
+                 ▼                             │
+    ┌────────────────────────┐                 │
+    │ Equivalence Checking   │                 │
+    │ Spec ≡ Implementation  │                 │
+    │ (via SMT solvers)      │                 │
+    └────────────┬───────────┘                 │
+                 │                             │
+                 ▼                             ▼
+    Bytecode conforms              Higher-level properties
+    to specification              proven about the spec
+```
+
+**HEVM Backend**: Automatically proves that EVM bytecode (compiled from Solidity or Vyper) correctly implements the Act specification. It uses symbolic execution to explore all possible execution paths and SMT solvers (CVC5, Z3, or Bitwuzla) to verify equivalence.
+
+**Rocq Backend**: Exports the specification as a formal transition system to the Rocq proof assistant (formerly Coq), enabling manual proofs of arbitrarily complex properties about the contract's behavior.
+
 <!-- have ERC20 example already here? -->
 
 Further key properties/features/capabilities of act: (Alternatively call it: further good reasons to use act:)
