@@ -97,9 +97,11 @@ Even without understanding the details, several aspects are already visible:
   - If there are any branches in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a `case`. In the ERC20 example, that happens in line 14 and line 17: depending on whether the function caller `CALLER` is the same address as the one where the money is supposed to be transfered to `to` the storage is updated differently.
 - Act is aware of some Ethereum environment variables such as the caller of a function `CALLER` or the amount that was "paid" to a contract upon a function call `CALLVALUE`.
 
+In the next sections, we will build up the meaning of these pieces by incrementally refining the ERC20 specification.
+
+Jump to [Running the ERC20 Example](./layout_tooling.md#running-the-erc20-example) if you want to try out running the ERC20 example with verification backends.
+
 <!-- - Act specifications are declarative: they describe what must hold, not how to execute.
 - Each behaviour explicitly states when it is defined (iff ...).
 - Storage updates are separated from control flow. -->
 
-
-In the next sections, we will build up the meaning of these pieces by incrementally refining the ERC20 specification.
