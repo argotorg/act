@@ -17,3 +17,5 @@ applied.
 
 Alternatively, they can be thought of as an initial state and a set of state transitions,
 determining an inductively defined state transition system.
+
+*add syntax info: `contract XXX: <constructor> <list of transitions>`*

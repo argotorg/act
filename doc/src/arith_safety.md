@@ -28,3 +28,5 @@ By writing `inRange` explicitly, the specification:
 ## Failure Is Explicit and Local
 If an `inRange` condition fails, the behaviour reverts and no storage updates occur.
 This aligns with Solidity’s execution model and allows Act to precisely characterize the contract’s input space.
+
+*KIM to also briefly list supported logic and arithmetic*

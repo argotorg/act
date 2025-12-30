@@ -1,5 +1,7 @@
 # Behaviors as State Transitions
 
+*KIM: specificity relation in updates*
+
 **Goal of this section**
 
 Explain how behaviours define **state transitions**, focusing on `transfer`.
