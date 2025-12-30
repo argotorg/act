@@ -9,7 +9,7 @@ iff
 
 creates
 
-    Token token0 := t0 
+    Token token0 := t0
     Token token1 := t1
 
 transition swap0(uint256 amt) : uint256
