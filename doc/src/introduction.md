@@ -72,15 +72,15 @@ Act provides two main verification backends that work with the same specificatio
 
 <!-- have ERC20 example already here? -->
 
-Further key properties/features/capabilities of act: (Alternatively call it: further good reasons to use act:)
+Further key capabilities of Act:
 <!-- mention formally defined semantics + type safety + soundness -->
-- The semantics of act is fully formally defined. Type safety and soundness are proven in detail.
+- **The semantics of Act is fully formally defined.** Type safety and soundness are proven in detail. <span style="color:green">A full tech report will be available shortly.</span>
 <!-- talk about language agnostics -->
-- Act is language agnostic: Conceptually, act could support conformity of spec and implementation written in all programming languages that compile to EVM bytecode. Currently (in v1.0), Solidity and Vyper are supported.
+- **Act is language agnostic**: Conceptually, Act could support conformity of spec and implementation written in all programming languages that compile to EVM bytecode. Currently (in v1.0), Solidity and Vyper are supported.
 <!-- loops  -->
-- Act exhaustively describes a contract's behavior. To do so, symbolic execution is used. For symbolic execution to be sound unbounded loops cannot be supported.
+- **Act exhaustively describes a contract's behavior.** To do so, symbolic execution is used. For symbolic execution to be sound unbounded loops cannot be supported.
 <!-- and aliasing -->
-- Act achieves a sound but purely functional interpretation of a contract's specification. This can be accomplished if the storage of the contract does not contain any aliased reference to another contract. Hence, alaising of contract names is not allowed in act: this unique ownership property is verified automatically for Act specifications using symbolic execution and SMT solving.
+- **Act achieves a purely functional interpretation of a contract's specification** (in a sound way, for contracts without aliasing). This can be accomplished if the *storage of the contract does not contain any aliased reference to another contract*. Hence, aliasing of contract names is not allowed in Act: this unique ownership property is verified automatically for Act specifications using symbolic execution and SMT solving.
 
 
 
