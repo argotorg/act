@@ -37,7 +37,7 @@ prettyCtor (Constructor name interface _ pres cases posts invs)
   <> prettyInvs invs
   where
     prettyCreates [] = ""
-    prettyCreates cs = header "creates" >-< block (concatMap (\(cond, updates) -> prettyExp cond : map prettyUpdate' updates) cs)
+    prettyCreates cs = header "creates" >-< block (concatMap (\(Case _ cond updates) -> prettyExp cond : map prettyUpdate' updates) cs)
 
     prettyInvs [] = ""
     prettyInvs _ = error "TODO: pretty print invariants"
@@ -66,7 +66,7 @@ prettyBehaviour (Behaviour name contract interface _ preconditions cases postcon
     prettyCases' [] = ""
     prettyCases' cs = header "cases" >-< block (concatMap prettyCase cs)
     
-    prettyCase (cond, (updates, mret)) = 
+    prettyCase (Case _ cond (updates, mret)) = 
       [prettyExp cond <> ":"] 
       ++ map (("  " <>) . prettyUpdate) updates
       ++ maybe [] (\ret -> ["  returns " <> prettyTypedExp ret]) mret

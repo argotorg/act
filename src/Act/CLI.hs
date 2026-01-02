@@ -44,20 +44,23 @@ import Act.Error
 import Act.Lex (lexer, AlexPosn(..))
 import Act.Parse
 import Act.Syntax.TypedExplicit hiding (_Array)
+import Act.Syntax.Timing 
 import Act.Bounds
 import Act.SMT as SMT
-import Act.Type
+import Act.Type hiding (Env)
 import Act.Coq hiding (indent, (<+>))
 import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
 import Act.Lex (lastPos)
+import Act.Entailment
 --import Act.Decompile
 
 import qualified EVM.Solvers as Solvers
 import EVM.Solidity
 import EVM.Effects
+import Control.Arrow (Arrow(first))
 
 --command line options
 data Command w
@@ -152,11 +155,10 @@ parse' f = do
 type' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (addBounds <$> compile contents) $ \claims -> do
-    --checkArrayBounds claims solver' smttimeout' debug'
-    -- checkCases claims solver' smttimeout' debug'
+  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+    checkEntailment solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
-    B.putStrLn $ encode claims
+    B.putStrLn $ encode spec
 
 parseSolver :: Maybe Text -> IO Solvers.Solver
 parseSolver s = case s of
@@ -230,11 +232,10 @@ prove file' solver' smttimeout' debug' = do
 coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 coq' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (compile contents) $ \claims -> do
-    --checkArrayBounds claims solver' smttimeout' debug'
-    --checkCases claims solver' smttimeout' debug'
+  proceed contents (compile contents) $ \(spec, cnstrs) -> do
+    checkEntailment solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
-    TIO.putStr $ coq claims
+    TIO.putStr $ coq spec
 
 decompile' :: FilePath -> Text -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 decompile' _ _ _ _ _ = error "Decompile TBD"
@@ -264,7 +265,8 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   cores <- liftM fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processSources
   specsContents <- intercalate "\n" <$> traverse readFile actspecs
-  proceed specsContents (addBounds <$> compile specsContents) $ \ (Act store contracts) -> do
+  proceed specsContents (first addBounds <$> compile specsContents) $ \ (Act store contracts, constraints) -> do
+    checkEntailment solver' timeout debug' constraints
     cmap <- createContractMap contracts inputsMap
     res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
       checkContracts solvers store cmap
@@ -403,8 +405,8 @@ toCode fromFile t = case BS16.decodeBase16Untyped (encodeUtf8 t) of
 proceed :: Validate err => String -> err (NonEmpty (Pn, String)) a -> (a -> IO ()) -> IO ()
 proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
 
-compile :: String -> Error String Act
-compile = pure . annotate <==< fmap fst . typecheck <==< parse . lexer
+compile :: String -> Error String (Act, [Constraint Timed])
+compile = pure . (first annotate) <==< typecheck <==< parse . lexer
 
 prettyErrs :: Traversable t => String -> t (Pn, String) -> IO ()
 prettyErrs contents errs = mapM_ prettyErr errs >> exitFailure

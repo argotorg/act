@@ -7,9 +7,8 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TupleSections #-}
 
-module Act.Consistency (
-  --checkArrayBounds,
-  checkUpdateAliasing
+module Act.Entailment (
+  checkEntailment
 ) where
 
 
@@ -31,11 +30,17 @@ import Act.Lex (AlexPosn(..))
 import Act.Syntax
 import Act.Syntax.TypedExplicit
 import Act.SMT as SMT
-import Act.Bounds
+import Act.Type
 import Act.Print
+import Act.Syntax.Timing
 
 import qualified EVM.Solvers as Solvers
+
 import Debug.Trace
+
+
+checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO ()
+checkEntailment solver smttimeout debug constraints = pure ()
 
 --- ** Array Bounds Checking ** ---
 {-
@@ -175,7 +180,7 @@ printOutOfBoundsItem :: TypedRef -> ModelCtx DocAnsi
 printOutOfBoundsItem (TRef _ _ ref) = printOutOfBoundsRef ref
   -}
 
-
+{-
 type ModelCtx = Reader Model
 
 --- ** No rewrite aliasing ** ---
@@ -424,3 +429,5 @@ modelEval e = case e of
         _ -> error "modelEval: Environmental variable given does not match type"
       _ -> error "modelEval: Enviromental variable not found in model"
   _ -> error "modelEval: TODO"
+
+-}

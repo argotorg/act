@@ -38,8 +38,8 @@ locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
   <> concatMap locsFromExp postconds
   <> concatMap locsFromCase cases
 
-locsFromCase :: (TypedExplicit.Exp ABoolean, ([TypedExplicit.StorageUpdate], Maybe (TypedExplicit.TypedExp))) -> [TypedExplicit.TypedRef]
-locsFromCase (cond, (rewrites, mret)) = nub $
+locsFromCase :: Bcase Timed -> [TypedExplicit.TypedRef]
+locsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
   locsFromExp cond <> concatMap locsFromUpdate rewrites <> maybe [] locsFromTypedExp mret
 
 locsFromConstructor :: TypedExplicit.Constructor -> [TypedExplicit.TypedRef]
@@ -49,8 +49,8 @@ locsFromConstructor (TypedExplicit.Constructor _ _ _ pre cases post inv) = nub $
   <> concatMap locsFromConstrInvariant inv
   <> concatMap locsFromConstrCase cases
 
-locsFromConstrCase :: (TypedExplicit.Exp ABoolean, [TypedExplicit.StorageUpdate]) -> [TypedExplicit.TypedRef]
-locsFromConstrCase (cond, creates) = nub $
+locsFromConstrCase :: Ccase Timed -> [TypedExplicit.TypedRef]
+locsFromConstrCase (Typed.Case _ cond creates) = nub $
   locsFromExp cond <> concatMap locsFromUpdate creates
 
 locsFromInvariant :: TypedExplicit.Invariant -> [TypedExplicit.TypedRef]
@@ -217,8 +217,8 @@ createsFromContract :: Contract t -> [Id]
 createsFromContract (Contract constr behvs) =
   createsFromConstructor constr <> concatMap createsFromBehaviour behvs
 
-createsFromConstrCase :: (Exp ABoolean t, [StorageUpdate t]) -> [Id]
-createsFromConstrCase (cond, rewrites) = nub $
+createsFromConstrCase :: Ccase t -> [Id]
+createsFromConstrCase (Typed.Case _ cond rewrites) = nub $
   createsFromExp cond <> concatMap createsFromUpdate rewrites
 
 createsFromConstructor :: Constructor t -> [Id]
@@ -240,8 +240,8 @@ createsFromUpdate :: StorageUpdate t ->[Id]
 createsFromUpdate update = nub $ case update of
   TypedExplicit.Update t ref e -> createsFromTRef (TRef t SLHS ref) <> createsFromExp e
 
-createsFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [Id]
-createsFromCase (cond, (rewrites, mret)) = nub $
+createsFromCase :: Bcase t -> [Id]
+createsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
   createsFromExp cond <> concatMap createsFromUpdate rewrites <> maybe [] createsFromTypedExp mret
 
 createsFromBehaviour :: Behaviour t -> [Id]
@@ -267,8 +267,8 @@ pointerFromDecl :: Arg -> Maybe (Id, Id)
 pointerFromDecl (Arg (ContractArg _ c) name) = Just (name,c)
 pointerFromDecl _ = Nothing
 
-ethEnvFromCase :: (Exp ABoolean t, ([StorageUpdate t], Maybe (TypedExp t))) -> [EthEnv]
-ethEnvFromCase (cond, (rewrites, mret)) = nub $
+ethEnvFromCase :: Bcase t -> [EthEnv]
+ethEnvFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites <> maybe [] ethEnvFromTypedExp mret
 
 ethEnvFromBehaviour :: Behaviour t -> [EthEnv]
@@ -277,8 +277,8 @@ ethEnvFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
   <> concatMap ethEnvFromCase cases
   <> concatMap ethEnvFromExp postconds
 
-ethEnvFromConstrCase :: (Exp ABoolean t, [StorageUpdate t]) -> [EthEnv]
-ethEnvFromConstrCase (cond, rewrites) = nub $
+ethEnvFromConstrCase :: Ccase t -> [EthEnv]
+ethEnvFromConstrCase (Typed.Case _ cond rewrites) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites
 
 ethEnvFromConstructor :: TypedExplicit.Constructor -> [EthEnv]

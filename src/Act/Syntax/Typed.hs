@@ -20,11 +20,11 @@ Module      : Syntax.Typed
 Description : Typed AST datatype.
 
 This module contains the datatype for the typed AST of an Act specification.
-The typed AST is constructed during type checking. The type of each node is 
-annotated with its Act type, so that it is well-typed by construction. 
+The typed AST is constructed during type checking. The type of each node is
+annotated with its Act type, so that it is well-typed by construction.
 The type of expressions is also annotated with a timing index: when the index
-is `Timed` then all references to storage must be explicitly timed with `Pre` 
-or `Post`. When the index is `Untimed` then expressions are not annotated with 
+is `Timed` then all references to storage must be explicitly timed with `Pre`
+or `Post`. When the index is `Untimed` then expressions are not annotated with
 a time. After typechecking, in a separate pass, all expressions become `Timed`.
 
 -}
@@ -70,9 +70,9 @@ type StorageTyping = Map Id (Map Id (ValueType, Integer))
 -- | Represents a contract level invariant. The invariant is defined in the
 -- context of the constructor, but must also be checked against each behaviour
 -- in the contract, and thus may reference variables (i.e., constructor
--- arguments) that are not present in a given behavior so we additionally 
--- attach some constraints over the variables referenced by the predicate in 
--- the `_ipreconditions` field. The `_istoragebounds` field contains bound 
+-- arguments) that are not present in a given behavior so we additionally
+-- attach some constraints over the variables referenced by the predicate in
+-- the `_ipreconditions` field. The `_istoragebounds` field contains bound
 -- constraints for the storage variables referenced by the invariant predicate.
 data Invariant t = Invariant
   { _icontract :: Id
@@ -92,8 +92,17 @@ data InvariantPred (t :: Timing) where
 deriving instance Show (InvariantPred t)
 deriving instance Eq (InvariantPred t)
 
--- type Case a t = (Exp ABoolean t, a)
-type Cases a t = [(Exp ABoolean t, a)]
+data Case a t = Case Pn (Exp ABoolean t) a
+deriving instance (Show a) => Show (Case a t)
+
+instance (Eq a) => Eq (Case a t) where
+  (==) :: Case a t -> Case a t -> Bool
+  Case _ c1 b1 == Case _ c2 b2 = c1 == c2 && b1 == b2
+
+type Ccase t = Case [StorageUpdate t] t
+type Bcase t = Case ([StorageUpdate t], Maybe (TypedExp t)) t
+
+type Cases a t = [Case a t]
 
 data Constructor t = Constructor
   { _cname :: Id
@@ -104,7 +113,7 @@ data Constructor t = Constructor
   , _cpostconditions :: [Exp ABoolean t]
   , _invariants :: [Invariant t]
   } deriving (Show, Eq)
-  
+
 -- After typing each behavior may be split to multiple behaviors, one for each case branch.
 -- In this case, only the `_caseconditions`, `_stateUpdates`, and `_returns` fields are different.
 data Behaviour t = Behaviour
@@ -144,7 +153,7 @@ instance TestEquality SRefKind where
   testEquality SLHS SLHS = Just Refl
   testEquality SRHS SRHS = Just Refl
   testEquality _ _ = Nothing
-  
+
 -- | Helper pattern to retrieve the 'SingI' instances of the type represented by
 -- an 'SKind'.
 pattern SRefKind :: () => (SingI a) => SRefKind a
@@ -169,7 +178,7 @@ eqTypeKind fa fb = maybe False (\Refl ->
 
 -- | Variable References
 data Ref (k :: RefKind) (t :: Timing) where
-  CVar :: Pn -> ArgType -> Id -> Ref RHS t               -- Calldata variable  
+  CVar :: Pn -> ArgType -> Id -> Ref RHS t               -- Calldata variable
   SVar :: Pn -> Time t -> Id -> Id -> Ref k t            -- Storage variable. First `Id` is the contract the var belongs to and the second the name.
   RArrIdx :: Pn -> Ref k t -> Exp AInteger t -> Int -> Ref k t
                                                          -- Array access. `Int` in indices list stores the corresponding index upper bound
@@ -304,11 +313,11 @@ instance Eq (Exp a t) where
   Create _ a b c == Create _ d e f = a == d && b == e && c == f
   Array _ a == Array _ b = a == b
   Address _ _ a == Address _ _ b = a == b
-  Mapping _ (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == Mapping _ (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
+  Mapping _ (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == Mapping _ (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' =
     (testEquality (sing @a1) (sing @a2) >>= \Refl ->
      testEquality (sing @b1) (sing @b2) >>= \Refl ->
      pure $ m == m' && vt1 == vt3 && vt2 == vt4) == Just True
-  MappingUpd _ r (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == MappingUpd _ r' (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' = 
+  MappingUpd _ r (vt1@VType :: TValueType a1) (vt2@VType :: TValueType b1) m == MappingUpd _ r' (vt3@VType :: TValueType a2) (vt4@VType :: TValueType b2) m' =
     r == r' &&
     (testEquality (sing @a1) (sing @a2) >>= \Refl ->
      testEquality (sing @b1) (sing @b2) >>= \Refl ->
@@ -431,6 +440,10 @@ instance ToJSON (Behaviour t) where
                                 , "preConditions" .= toJSON _preconditions
                                 , "cases" .= toJSON _cases
                                 , "postConditions" .= toJSON _postconditions ]
+
+instance ToJSON a => ToJSON (Case a t) where
+  toJSON (Case _ cond body) = object [ "caseCondition" .= toJSON cond
+                                     , "body" .= toJSON body ]
 
 instance ToJSON Interface where
   toJSON (Interface x decls) = object [ "kind" .= String "Interface"
@@ -555,7 +568,7 @@ instance ToJSON (Exp a t) where
                                  , "timing" .= show t ]
   toJSON (Create _ f xs v) = object [ "symbol" .= pack "create"
                                     , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
-                                    , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs]) 
+                                    , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs])
                                     , "value"  .= toJSON v ]
   toJSON (Array _ l) = object [ "symbol" .= pack "[]"
                               , "arity" .= Data.Aeson.Types.Number (fromIntegral $ length l)
