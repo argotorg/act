@@ -26,7 +26,7 @@ creates
   mapping(address => mapping(address => uint256)) allowance := []
 ```
 
-For each storage variable its initialization has the shape `<type> <name> := <expression>`. The Act storage corresponds directly to the EVM state variables, but with two important differences:
+For each storage variable its initialization has the shape `<type> <name> := <storage_expression>`. The Act storage corresponds directly to the EVM state variables, but with two important differences:
 1. All storage is immutable by default.
     Storage can only change through explicit updates inside transitions.
 2. Types are explicit and checked. Which types storage can have is detailed next.
@@ -111,40 +111,37 @@ That means in function parameters and return values, mapping types and contract 
 
 ## Expressions
 
-Expressions appear throughout constructor declarations: in preconditions (`iff` blocks), case conditions, and storage initialization (in `creates` blocks). Act distinguishes between three kinds of expressions, each serving different purposes:
+Expressions appear throughout constructor and transition declarations: in preconditions (`iff` blocks), case conditions, storage initialization and updates (in `creates` and `storage` blocks) as well as in `return` statements of transitions. Act distinguishes between three kinds of expressions, each serving different purposes:
 
 ### Overview of Expression Types
 
-1. **Storage Expressions (Slot Expressions)**: Expressions that refer to or manipulate storage data. Used in the `creates` block to initialize storage variables. Examples: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `Token(100)`.
+1. **Storage Expressions (Slot Expressions)**: Expressions that manipulate storage data. Used in the `creates` and `storage` block to initialize or update storage variables. Examples in the ERC20 constructor: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `Token(100)`.
 
-2. **References**: Variable references that denote storage locations or calldata. Used in preconditions, case conditions, and to reference existing values. Examples: `x`, `totalSupply`, `pre(balance)`, `mapping[key]`.
+2. **References**: Variable references that denote storage locations or calldata. Used in preconditions, case conditions, and to reference existing values (as it is done in storage updates). Examples in the ERC20: `totalSupply`, `balanceOf[CALLER]`, `CALLVALUE`, `allowance`.
 
-3. **Base Expressions**: Composite expressions built from operators and literals. Include arithmetic, boolean logic, comparisons, and conditionals. Used in all contexts (preconditions, cases, storage initialization). Examples: `x + y`, `true`, `x == 5`, `if condition then a else b`.
+3. **Base Expressions**: Composite expressions built from operators and literals. Include arithmetic, boolean logic, comparisons, and conditionals. Used in all contexts (preconditions, cases, storage, returns). Examples: `x + y`, `true`, `x == 5`, `if z > 0 then a else b`.
 
 ### Storage Expressions
 
-Storage expressions describe the initial values assigned to storage variables in the `creates` block. They can be:
+Storage expressions describe the initial values assigned to storage variables in the `creates` block and the values they are updated to in the `storage` block. The syntax for initializing in the `creates` block is `<type> <name> := <storage_expression>`. For updating in the `storage` block, it is `<name> := <storage_expression>`.
+Storage expressions can be:
 
-- **Variable references**: `_totalSupply` (a constructor parameter)
-- **Literal values**: `100`, `true`, `0x123...`
-- **Constructed mappings**: `[CALLER => _totalSupply]` (a mapping with one entry), `[]` (empty mapping)
-- **Array literals**: `[1, 2, 3]`
-- **Contract creation**: `Token(100)` (creates a new contract)
-- **Concatenation**: `a ++ b`
-- **Environment variables**: `CALLER`, `CALLVALUE`, `ORIGIN`, `THIS`
-- **Composite expressions**: `x + y`, `if condition then a else b`
+- **Base Expressions**: literals, composed expressions  or certain Variable References: `100`, `x + y`, `if condition then a else b`. See Base Expressions below for details.
+- **Mappings**: Expressions that have mapping typ. The syntax of **defining new mappings** is the following:
+    - `[<key1> => <value1>, <key2> => <value2>, ...]` (a mapping with multiple entries)
+    - `[]` (an empty mapping where all keys map to the default value)
+Every key not explicitly mentioned maps to the default value of the mapping's value type.
+Further, exists the syntax for **adapting mappings** (used in `storage` blocks of transitions):
+    - `my_map[my_key => my_value]` (defines a mapping, where  `my_key` maps to `my_value` and every other key has value `my_map[key]`)
+    - similarly, multple entries can be changed at once: `my_map[key1 => value1, key2 => value2,...]`
+- **Contract creation**: `Token(100)` (creates a new ERC20 contract instance with total supply 100)
+- **references to existing contracts**: `erc_token` (a reference to a deployed contract instance)
+- **Addresses of existing contracts**: `token_addr` (an address of a deployed contract instance)
 
-**Example from AMM constructor:**
 
-```act
-creates
-    Token token0 := t0
-    Token token1 := t1
-```
+**Example from the ERC20 contract:**
 
-Here, `t0` and `t1` are storage expressions that assign constructor parameters to storage variables.
-
-**Example from ERC20 constructor:**
+In the ERC20 constructor, the storage is initialized as:
 
 ```act
 creates
@@ -154,36 +151,63 @@ creates
 ```
 
 Here we see:
-- A parameter reference: `_totalSupply`
-- A mapping initialization: `[CALLER => _totalSupply]` which assigns the entire supply to the caller
-- An empty mapping: `[]` where all addresses map to 0
+- A base expression: `_totalSupply`
+- A new mapping: `[CALLER => _totalSupply]` which assigns the entire supply to the caller and defaults to 0 for all other addresses
+- An new empty mapping: `[]` where all addresses map to the default map from `address` to `uint`, which is `0`.
 
-### References
+In a transfer transition of the ERC20 contract the storage is updated as:
+```act
+  storage
 
-References denote storage locations or parameters and are used in:
+     balanceOf[CALLER] := balanceOf[CALLER] - value
+     balanceOf[to]     := balanceOf[to] + value
+```
+
+Here we see two base expressions, including variable references (`balanceOf[CALLER]` and `balanceOf[to]`), a parameter `value`, subtraction and addition.
+
+
+
+
+
+### Variable References
+
+References denote storage locations or parameters and are used as building blocks in:
 - **Preconditions** (`iff` blocks): e.g., `t0 != t1`
 - **Case conditions**: e.g., `case CALLVALUE > 0:`
 - **Storage updates in transitions**: (covered in the Transitions section)
 
 Basic references include:
-- **Variable names**: `totalSupply`, `x`, `y`
-- **Parameter names**: `_totalSupply`, `t0`, `t1`
+- **Storage Variable names**: `totalSupply`, `balanceOf`, `allowance`
+- **Parameter names**: `_totalSupply`, `to`, `value`
 - **Environment variables**: `CALLER`, `CALLVALUE`, `ORIGIN`, `THIS`
-- **Pre/post references**: `pre(balance)`, `post(balance)` (used primarily in transitions)
-- **Indexed references**: `mapping[key]`, `array[index]`
-- **Chained accesses**: `nested[key1][key2]`, `mapping.field`
+    Environment variables represent special values provided by the EVM:
+    - `CALLER`: the address of the entity (externally owned account or contract)
+        that invoked the current function.
+    - `CALLVALUE`: the amount of Ether (in wei) sent with the current call.
+    - `ORIGIN`: the address of the original external account that started the transaction.
+    - `THIS`: the address of the current contract.
+- **Pre/post references**: `pre(balanceOf)`, `post(balanceOf)` (used primarily in transitions) <span style="color:red"> (do we need pre post at all without invariants?) </span>
+- **Mapping references**: `balanceOf[CALLER]`
+- **Field references**:  `t0.balanceOf` (if `t0` is a contract reference)
 
-**Example from AMM precondition:**
+**Example from ERC20 transfer transition:**
+
+The preconditions in the transfer transition use references:
+
+*snippet from transfer transition in erc20.act*
 
 ```act
-iff t0 != t1
+iff
+  inRange(uint256, balanceOf[CALLER] - value)
+  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
+
 ```
 
-The precondition uses two parameter references `t0` and `t1` to ensure they are distinct.
+The precondition uses the mapping references `balanceOf[CALLER]` and `balanceOf[to]`, the parameter names `value`, and `to`, and the environment variable `CALLER`. The precondition ensures that the transfer does not cause an underflow or overflow in the balances.
 
 ### Base Expressions
 
-Base expressions are composite expressions built using operators and literals. They are used wherever an expression is needed: in preconditions, case conditions, and during storage initialization.
+Base expressions are composite expressions built using operators, literals and variable references of certain types. They are used wherever an expression is needed: in preconditions, case conditions, during storage initialization and updates, and in return statements.
 
 **Arithmetic operators** (for integer types):
 - Addition: `x + y`
@@ -192,7 +216,6 @@ Base expressions are composite expressions built using operators and literals. T
 - Division: `x / y`
 - Modulo: `x % y`
 - Exponentiation: `x ^ y`
-- Concatenation: `a ++ b`
 
 **Boolean operators**:
 - Conjunction: `condition1 and condition2`
@@ -208,39 +231,43 @@ Base expressions are composite expressions built using operators and literals. T
 - Greater than: `x > y`
 - Greater than or equal: `x >= y`
 
-**Special expressions**:
-- Literals: `5`, `true`, `false`
+**Other operators**:
 - Conditionals: `if condition then expr1 else expr2`
-- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type)
-- Contract creation: `new Token(100)`, `new Token(100) with value (msg)`
-- Address conversion: `address(expr)`
+- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Arithmetic Safety](./arith_safety.md) for details.
 
-**Examples from Homogeneous contract:**
+**Literals and Other Expressions**:
+- Literals: `5`, `true`, `false`
+- Variable references of ABI types (integers, booleans, addresses, and annotated address type `address<ContractType>`), e.g. `totalSupply`, `CALLER`, `value`
+- Address conversion of deployed contracts: `addr(t0)` (if `t0` is a contract reference)
 
-```act
-behaviour init of Homogeneous
-interface constructor()
+**Examples of Base Expressions**:
 
-creates
-    uint256 x := 3
-    uint256 y := 5
-    uint256 z := 15
+Consider the following `case` blocks from the `transferFrom` transition of the ERC20 contract:
 
-invariants
-    x * y == z
-```
-
-Here, the invariant uses base expressions with multiplication and comparison: `x * y == z`.
-
-In a transition:
+*snippet from transferFrom transition in erc20.act*
 
 ```act
-behaviour f of Homogeneous
-interface f(uint256 scalar)
+transition transferFrom(address src, address dst, uint amount) : uint256
 
 iff
-    x * scalar > x
-    z * scalar > z
+    ...
+
+case src != dst and CALLER == src:
+    ...
+
+case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+    ...
+
+case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+    ...
+
+case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+    ...
+
+case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
+    ...
+
 ```
 
-The precondition combines two comparisons using implicit conjunction (both conditions must hold).
+Here, various base expressions with exponentiations, comparisons and boolean operators are used. Moreover, variable references like `allowance[src][CALLER]`, `src`, `dst`, and `CALLER` are used to build these expressions.
+
