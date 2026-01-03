@@ -114,13 +114,13 @@ initPrecs i conds = inductive
       , [ initPrecsType <+> nextAddrVar <+> envVar <+> arguments i ]
       ]
 
-ctorCreates :: StorageTyping -> Id -> Interface -> (Exp ABoolean, [StorageUpdate]) -> Fresh T.Text
-ctorCreates store name iface (_, updates) = do
+ctorCreates :: StorageTyping -> Id -> Interface -> Ccase -> Fresh T.Text
+ctorCreates store name iface (Case _ _ updates) = do
   name' <- freshId name
   let createsName = name' <> "_creates"
   pure $ base store name createsName iface updates
 
-ctorCall :: Id -> Interface -> [(Exp ABoolean, [StorageUpdate])] -> T.Text
+ctorCall :: Id -> Interface -> [Ccase] -> T.Text
 ctorCall name iface cases = case unsnoc (zip ([0..] :: [Int]) cases) of
   Just (cases', (lastCaseNum, _)) ->
     definition (T.pack name <> "_call") (nextAddrDecl <+> envDecl <+> interface iface)
@@ -129,8 +129,8 @@ ctorCall name iface cases = case unsnoc (zip ([0..] :: [Int]) cases) of
   where
     caseText i = T.pack (name <> show i) <> "_creates" <+> nextAddrVar <+> envVar <+> arguments iface
 
-    iteCase :: (Int, (Exp ABoolean, [StorageUpdate])) -> T.Text -> T.Text
-    iteCase (i, (casecond, _)) elseText =
+    iteCase :: (Int, Ccase) -> T.Text -> T.Text
+    iteCase (i, (Case _ casecond _)) elseText =
       "if" <+> (coqbool casecond) <+>
       "then" <+> caseText i <+>
       "else" <+> elseText
@@ -142,8 +142,8 @@ initState name i cases = inductive
   where
     baseval n = parens $ "snd" <+> parens (T.pack n <+> nextAddrVar <+> envVar <+> arguments i)
 
-    caseCtor :: (Exp ABoolean, [StorageUpdate]) -> Fresh (T.Text, Maybe T.Text, T.Text)
-    caseCtor (caseCond, _) = do
+    caseCtor :: Ccase -> Fresh (T.Text, Maybe T.Text, T.Text)
+    caseCtor (Case _ caseCond _) = do
       name' <- freshId name
       let createsName = name' <> "_creates"
       let body = (indent 2) . implication . concat $
@@ -162,8 +162,8 @@ initStateBefore name i cases = inductive
     baseval n = parens $ "snd" <+> parens (T.pack n <+> nextAddrVar <+> envVar <+> arguments i)
     finalAddr n = parens $ "fst" <+> parens (T.pack n <+> nextAddrVar <+> envVar <+> arguments i)
 
-    caseCtor :: (Exp ABoolean, [StorageUpdate]) -> Fresh (T.Text, Maybe T.Text, T.Text)
-    caseCtor (caseCond, _) = do
+    caseCtor :: Ccase -> Fresh (T.Text, Maybe T.Text, T.Text)
+    caseCtor (Case _ caseCond _) = do
       name' <- freshId name
       let createsName = name' <> "_creates"
       let body = (indent 2) . implication . concat $
@@ -204,14 +204,14 @@ behvConds name i conds = do
       , [ (T.pack n <> "_conds") <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i ]
       ]
 
-behvUpdates :: StorageTyping -> Id -> Id -> Interface -> (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> Fresh T.Text
-behvUpdates store name cname iface (_, (updates, _)) = do
+behvUpdates :: StorageTyping -> Id -> Id -> Interface -> Bcase -> Fresh T.Text
+behvUpdates store name cname iface (Case _ _ (updates, _)) = do
   name' <- freshId name
   let createsName = name' <> "_updates"
   pure $ transition store createsName cname iface updates
 
 
-behvCall :: Id -> Interface -> [(Exp ABoolean, ([StorageUpdate], Maybe TypedExp))] -> T.Text
+behvCall :: Id -> Interface -> [Bcase] -> T.Text
 behvCall name iface cases = case unsnoc (zip ([0..] :: [Int]) cases) of
   Just (cases', (lastCaseNum, _)) ->
     definition (T.pack name <> "_call") (nextAddrDecl <+> envDecl <+> stateDecl <+> interface iface)
@@ -220,20 +220,20 @@ behvCall name iface cases = case unsnoc (zip ([0..] :: [Int]) cases) of
   where
     caseText i = T.pack (name <> show i) <> "_updates" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments iface
 
-    iteCase :: (Int, (Exp ABoolean, ([StorageUpdate], Maybe TypedExp))) -> T.Text -> T.Text
-    iteCase (i, (casecond, _)) elseText =
+    iteCase :: (Int, Bcase) -> T.Text -> T.Text
+    iteCase (i, (Case _ casecond _)) elseText =
       "if" <+> (coqbool casecond) <+>
       "then" <+> caseText i <+>
       "else" <+> elseText
 
-behvPred :: Id -> Interface -> [(Exp ABoolean, ([StorageUpdate], Maybe TypedExp))] -> T.Text
+behvPred :: Id -> Interface -> [Bcase] -> T.Text
 behvPred name i cases = inductive
   (T.pack name <> "_transition") "" (nextAddrType <+> "->" <+> nextAddrType <+> "->" <+> envType <+> "->" <+> stateType <+> "->" <+> stateType <+> interfaceType i <+> "-> Prop") caseCtors
   where
     caseCtors = (evalSeq caseCtor cases)
 
-    caseCtor :: (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> Fresh (T.Text, Maybe T.Text, T.Text)
-    caseCtor (caseCond, (_, _))= do
+    caseCtor :: Bcase -> Fresh (T.Text, Maybe T.Text, T.Text)
+    caseCtor (Case _ caseCond (_, _))= do
       name' <- fresh name
       pure (name' <> stepSuffix, Just $ nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> interface i <+> stateDecl, caseBody caseCond name')
 
@@ -529,8 +529,8 @@ transition store name cname i rewrites =
 
 -- | inductive definition of a return claim
 -- ignores claims that do not specify a return value
-retVal :: Id -> Interface -> (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> Fresh T.Text
-retVal name i (caseCond, (_, Just ret)) = do
+retVal :: Id -> Interface -> Bcase -> Fresh T.Text
+retVal name i (Case _ caseCond (_, Just ret)) = do
   name' <- fresh name
   --fresh name >>= continuation where
   return $ inductive
