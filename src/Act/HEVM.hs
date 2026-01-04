@@ -221,8 +221,8 @@ translateConstructor bytecode (Constructor cid iface _ preconds cases _ _) cmap 
                          , EVM.nonce   = Just 1
                          }
 
-translateConstructorCase :: Monad m => BS.ByteString -> ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> (Exp ABoolean, [StorageUpdate]) -> ActT m (EVM.Expr EVM.End, ContractMap)
-translateConstructorCase bytecode initmap cdataprops bounds preconds (casecond, upds) = do
+translateConstructorCase :: Monad m => BS.ByteString -> ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Ccase -> ActT m (EVM.Expr EVM.End, ContractMap)
+translateConstructorCase bytecode initmap cdataprops bounds preconds (Case _ casecond upds) = do
   preconds' <- mapM (toProp initmap emptyEnv) preconds
   casecond' <- toProp initmap emptyEnv casecond
   cmap' <- applyUpdates initmap initmap emptyEnv upds
@@ -275,8 +275,8 @@ translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
     behvCalldata = makeCalldata behvName iface
     behvSig = ifaceToSig behvName iface
 
-translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> (Exp ABoolean, ([StorageUpdate], Maybe TypedExp)) -> ActT m (EVM.Expr EVM.End, ContractMap)
-translateBehvCase cmap cdataprops bounds preconds (casecond, (upds, ret)) = do
+translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Bcase -> ActT m (EVM.Expr EVM.End, ContractMap)
+translateBehvCase cmap cdataprops bounds preconds (Case _ casecond (upds, ret)) = do
   preconds' <- mapM (toProp cmap emptyEnv) preconds
   casecond' <- toProp cmap emptyEnv casecond
   ret' <- returnsToExpr cmap emptyEnv ret
@@ -306,7 +306,7 @@ expandMappingUpdate ref (MappingUpd _ _ keyType@VType valType@VType es) =
     SMapping -> concatMap (uncurry expandMappingUpdate) refPairs
     _ -> map (Bifunctor.second (TExp valType)) refPairs
 expandMappingUpdate _ e@(ITE _ _ _ _) = error $ "Internal error: expecting flat expression. got: " <> show e
-expandMappingUpdate _ (VarRef _ _ _) = error $ "Internal error: variable assignment of mappings not expected"
+expandMappingUpdate _ (VarRef _ _ _) = error "Internal error: variable assignment of mappings not expected"
 
 applyUpdates :: Monad m => ContractMap -> ContractMap -> CallEnv -> [StorageUpdate] -> ActT m ContractMap
 applyUpdates readMap writeMap callenv upds = foldM (\wm -> applyUpdate readMap wm callenv) writeMap upds
@@ -390,7 +390,7 @@ createContract readMap writeMap callenv freshAddr (Create _ cid args _) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
     -- TODO: handle multiple cases
-    Just (Contract (Constructor _ iface _ _ ((_, upds):_) _ _) _, _, bytecode) -> do
+    Just (Contract (Constructor _ iface _ _ ((Case _ _ upds):_) _ _) _, _, bytecode) -> do
       let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                            , EVM.storage = EVM.ConcreteStore mempty
                            , EVM.tStorage = EVM.ConcreteStore mempty
@@ -769,7 +769,7 @@ getInitContractState solvers cname iface preconds cmap = do
       codemap <- getCodemap
       case M.lookup cid codemap of
         -- TODO: handle multiple cases
-        Just (Contract (Constructor cname' iface' _ preconds' ((_,upds):_) _ _) _, _, bytecode) -> do
+        Just (Contract (Constructor cname' iface' _ preconds' ((Case _ _ upds):_) _ _) _, _, bytecode) -> do
           (icmap, check) <- getInitContractState solvers cname' iface' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty

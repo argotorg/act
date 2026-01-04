@@ -9,7 +9,7 @@
 {-# Language TypeOperators #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Act.Type (typecheck, Err, Constraint(..), Env(..)) where
+module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors) where
 
 import Prelude hiding (GT, LT)
 import Data.Map.Strict    (Map)
@@ -27,7 +27,6 @@ import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
-import Data.Text.Internal.Read (T)
 
 type Err = Error String
 

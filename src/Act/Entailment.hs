@@ -98,18 +98,18 @@ mkEntailmentSMT (CallCnstr p msg env args cid) =
     query = mkDefaultSMT locs ethEnv "" calldataVars iffs [] (Neg p cond)
 
 
-applySubstRef :: Constructors -> M.Map Id TypedExp -> Ref k -> TypedExp
-applySubstRef cnstrs subst (CVar _ _ x) =
+applySubstRef :: M.Map Id TypedExp -> Ref k -> TypedExp
+applySubstRef subst (CVar _ _ x) =
     case M.lookup x subst of
       Just te -> te
       Nothing -> error $ "Internal error: variable " <> show x <> " not found in substitution."
-applySubstRef cnstrs subst (RArrIdx p a b n) =
-    case applySubstRef cnstrs subst a of
+applySubstRef subst (RArrIdx p a b n) =
+    case applySubstRef subst a of
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RArrIdx p ref (applySubst subst b) n))
       _ -> error "Internal error: expected VarRef in array index reference substitution."
 applySubstRef _ (RMapIdx _ _ _) = error "Internal error: Calldata cannot have mapping type."
-applySubstRef cnstrs subst (RField p r c x) =
-    case applySubstRef cnstrs subst r of
+applySubstRef subst (RField p r c x) =
+    case applySubstRef subst r of
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RField p ref c x))
       TExp t (Create p' c' args _) -> error "Internal error: upsupported constructor call in arguments."
       _ -> error "Internal error: expected VarRef or constructor call in field reference substitution."
@@ -126,20 +126,20 @@ applySubst subst e = mapExp substRefInExp e
         substRefInExp e = e
 
 
-getModel :: [Location] -> [CalldataVar] -> [EthEnvVar] -> SolverInstance -> IO Model
+getModel :: [TypedRef] -> [Arg] -> [EthEnv] -> SolverInstance -> IO Model
 getModel locs calldataVars ethEnv solver = do
     prestate <- mapM (getLocationValue solver "" Pre) locs
     calldata <- mapM (getCalldataValue solver "") calldataVars
     calllocs <- mapM (getLocationValue solver "" Pre) locs
     environment <- mapM (getEnvironmentValue solver) ethEnv
     pure $ Model
-    { _mprestate = prestate
-    , _mpoststate = []
-    , _mcalldata = ("", calldata)
-    , _mcalllocs = calllocs
-    , _menvironment = environment
-    , _minitargs = []
-    }
+        { _mprestate = prestate
+        , _mpoststate = []
+        , _mcalldata = ("", calldata)
+        , _mcalllocs = calllocs
+        , _menvironment = environment
+        , _minitargs = []
+        }
 
 
 {-

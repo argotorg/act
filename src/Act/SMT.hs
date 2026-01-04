@@ -189,7 +189,7 @@ mkDefaultSMT :: [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp 
 mkDefaultSMT refs envs ifaceName args preconds extraconds = mksmt
   where
     -- Declare calldata arguments and locations, and environmental variables
-    storage = traceShowId $ nub $ (declareTRef <$> refs)
+    storage = traceShowId $ nub (declareTRef <$> refs)
     ifaceArgs = traceShowId $ nub $ (declareArg ifaceName <$> args) \\ storage
     env = nub $ declareEthEnv <$> envs
 
