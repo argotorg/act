@@ -61,7 +61,7 @@ calldataToList m = [ Arg t n | (n,t) <- M.toList m ]
 
 mkEntailmentSMT :: Constraint Timed -> (SMTExp, Pn, String, (SolverInstance -> IO Model))
 mkEntailmentSMT (BoolCnstr p str env e) =
-  (query, p, str, getModel)
+  (query, p, str, getModel locs calldataVars ethEnv)
   where
     iff = setPre <$> preconds env
     locs = nub $ concatMap locsFromExp (e:iff)
@@ -69,26 +69,17 @@ mkEntailmentSMT (BoolCnstr p str env e) =
     calldataVars = calldataToList (calldata env)
     query = mkDefaultSMT locs ethEnv "" calldataVars iff [] (Neg p e)
 
-    getModel solver = do
-      prestate <- mapM (getLocationValue solver "" Pre) locs
-      calldata <- mapM (getCalldataValue solver "") calldataVars
-      calllocs <- mapM (getLocationValue solver "" Pre) locs
-      environment <- mapM (getEnvironmentValue solver) ethEnv
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = ("", calldata)
-        , _mcalllocs = calllocs
-        , _menvironment = environment
-        , _minitargs = []
-        }
 mkEntailmentSMT (CallCnstr p msg env args cid) =
-  
-  (query, p, msg, getModel)
-  
+  (query, p, msg, getModel locs calldataVars ethEnv)
+
   where
     -- current preconditions
-    iffs = setPre <$> preconds env    
+    iffs = setPre <$> preconds env
+
+    locs = nub $ concatMap locsFromExp (cond:iffs)
+    ethEnv = concatMap ethEnvFromExp (cond:iffs)
+    calldataVars = calldataToList (calldata env)
+
     -- constructor being called
     cnstr = case M.lookup cid (constructors env) of
         Just cnstr ->  cnstr
@@ -103,42 +94,26 @@ mkEntailmentSMT (CallCnstr p msg env args cid) =
 
     cond = andExps (applySubst subst <$> calledPreconds)
 
-    locs = nub $ concatMap locsFromExp (cond:iffs)
-    ethEnv = concatMap ethEnvFromExp (cond:iffs)
-    calldataVars = calldataToList (calldata env)
 
     query = mkDefaultSMT locs ethEnv "" calldataVars iffs [] (Neg p cond)
 
-    -- TODO remove duplication
-    getModel solver = do
-      prestate <- mapM (getLocationValue solver "" Pre) locs
-      calldata <- mapM (getCalldataValue solver "") calldataVars
-      calllocs <- mapM (getLocationValue solver "" Pre) locs
-      environment <- mapM (getEnvironmentValue solver) ethEnv
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = ("", calldata)
-        , _mcalllocs = calllocs
-        , _menvironment = environment
-        , _minitargs = []
-        }
 
-applySubstRef :: M.Map Id TypedExp -> Ref k -> TypedExp
-applySubstRef subst (CVar _ _ x) =
+applySubstRef :: Constructors -> M.Map Id TypedExp -> Ref k -> TypedExp
+applySubstRef cnstrs subst (CVar _ _ x) =
     case M.lookup x subst of
       Just te -> te
       Nothing -> error $ "Internal error: variable " <> show x <> " not found in substitution."
-applySubstRef subst (RArrIdx p a b n) =
-    case applySubstRef subst a of
+applySubstRef cnstrs subst (RArrIdx p a b n) =
+    case applySubstRef cnstrs subst a of
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RArrIdx p ref (applySubst subst b) n))
       _ -> error "Internal error: expected VarRef in array index reference substitution."
 applySubstRef _ (RMapIdx _ _ _) = error "Internal error: Calldata cannot have mapping type."
-applySubstRef subst (RField p r c x) =
-    case applySubstRef subst r of
+applySubstRef cnstrs subst (RField p r c x) =
+    case applySubstRef cnstrs subst r of
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RField p ref c x))
-      _ -> error "Internal error: expected VarRef or constructor call in field reference substitution." 
-applySubstRef _ (SVar _ _ _ _) = error "Internal error: found storage variable in preconditions."
+      TExp t (Create p' c' args _) -> error "Internal error: upsupported constructor call in arguments."
+      _ -> error "Internal error: expected VarRef or constructor call in field reference substitution."
+applySubstRef _ (SVar _ _ _ _) = error "Internal error: found storage variable reference in constructor."
 
 applySubst :: M.Map Id TypedExp -> Exp a -> Exp a
 applySubst subst e = mapExp substRefInExp e
@@ -149,6 +124,23 @@ applySubst subst e = mapExp substRefInExp e
             Just Refl -> e
             Nothing -> error "Internal error: type mismatch in substitution."
         substRefInExp e = e
+
+
+getModel :: [Location] -> [CalldataVar] -> [EthEnvVar] -> SolverInstance -> IO Model
+getModel locs calldataVars ethEnv solver = do
+    prestate <- mapM (getLocationValue solver "" Pre) locs
+    calldata <- mapM (getCalldataValue solver "") calldataVars
+    calllocs <- mapM (getLocationValue solver "" Pre) locs
+    environment <- mapM (getEnvironmentValue solver) ethEnv
+    pure $ Model
+    { _mprestate = prestate
+    , _mpoststate = []
+    , _mcalldata = ("", calldata)
+    , _mcalllocs = calllocs
+    , _menvironment = environment
+    , _minitargs = []
+    }
+
 
 {-
 -- | Create a query for cases
@@ -165,7 +157,7 @@ mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) _ preconds _
       { _storage = concatMap (declareStorage [Pre]) locs
       , _calldata = declareArg ifaceName <$> calldataToList (calldata env)
       , _environment = declareEthEnv <$> env
-      , _assertions = (mkAssert "" $ props caseconds) : pres 
+      , _assertions = (mkAssert "" $ props caseconds) : pres
       }
 
     getModel solver = do
@@ -179,6 +171,6 @@ mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) _ preconds _
         , _menvironment = environment
         , _minitargs = []
         }
-mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"    
+mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"
 
 -}
