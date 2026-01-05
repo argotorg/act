@@ -233,7 +233,7 @@ behvPred name i cases = inductive
     caseCtors = (evalSeq caseCtor cases)
 
     caseCtor :: Bcase -> Fresh (T.Text, Maybe T.Text, T.Text)
-    caseCtor (Case _ caseCond (_, _))= do
+    caseCtor (Case _ caseCond _) = do
       name' <- fresh name
       pure (name' <> stepSuffix, Just $ nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> interface i <+> stateDecl, caseBody caseCond name')
 

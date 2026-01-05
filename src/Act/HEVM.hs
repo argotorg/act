@@ -223,7 +223,7 @@ translateConstructor bytecode (Constructor cid iface _ preconds cases _ _) cmap 
                          , EVM.nonce   = Just 1
                          }
 
-translateConstructorCase :: Monad m => BS.ByteString -> ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Ccase -> ActT m [(EVM.Expr EVM.End, ContractMap)]
+translateConstructorCase :: Monad m => BS.ByteString -> ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Ccase -> ActT m (EVM.Expr EVM.End, ContractMap)
 translateConstructorCase bytecode initmap cdataprops bounds preconds (Case _ casecond upds) = do
   preconds' <- mapM (toProp initmap emptyEnv) preconds
   casecond' <- toProp initmap emptyEnv casecond
@@ -278,7 +278,7 @@ translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
     behvCalldata = makeCalldata behvName iface
     behvSig = ifaceToSig behvName iface
 
-translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Bcase -> ActT m [(EVM.Expr EVM.End, ContractMap)]
+translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Bcase -> ActT m (EVM.Expr EVM.End, ContractMap)
 translateBehvCase cmap cdataprops bounds preconds (Case _ casecond (upds, ret)) = do
   preconds' <- mapM (toProp cmap emptyEnv) preconds
   casecond' <- toProp cmap emptyEnv casecond
@@ -311,7 +311,7 @@ expandMappingUpdate ref (MappingUpd _ _ keyType@VType valType@VType es) =
     SMapping -> concatMap (uncurry expandMappingUpdate) refPairs
     _ -> map (Bifunctor.second (TExp valType)) refPairs
 expandMappingUpdate _ e@(ITE _ _ _ _) = error $ "Internal error: expecting flat expression. got: " <> show e
-expandMappingUpdate _ (VarRef _ _ _) = error $ "Internal error: variable assignment of mappings not expected"
+expandMappingUpdate _ (VarRef _ _ _) = error "Internal error: variable assignment of mappings not expected"
 
 applyUpdates :: Monad m => ContractMap -> ContractMap -> CallEnv -> [StorageUpdate] -> ActT m [(ContractMap, [EVM.Prop])]
 applyUpdates readMap writeMap callenv upds = foldM (\wms upd -> concatMapM (\(wm,cs) -> (fmap $ second (cs ++)) <$> applyUpdate readMap wm callenv upd) wms) [(writeMap,[])] upds

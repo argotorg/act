@@ -641,3 +641,9 @@ defaultInteger = TInteger 256 Signed
 
 defaultUInteger :: TValueType AInteger
 defaultUInteger = TInteger 256 Unsigned
+
+-- | Helper to create to create a conjunction out of a list of expressions
+andExps :: [Exp ABoolean t] -> Exp ABoolean t
+andExps [] = LitBool nowhere True
+andExps (c:cs) = foldr (And nowhere) c cs
+

@@ -9,7 +9,7 @@
 {-# Language TypeOperators #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Act.Type (typecheck, Err, Constraint(..), Env(..)) where
+module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors) where
 
 import Prelude hiding (GT, LT)
 import Data.Map.Strict    (Map)
@@ -27,12 +27,11 @@ import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
-import Data.Text.Internal.Read (T)
 
 type Err = Error String
 
 -- | A map containing the interfaces of all available constructors, a payable flag, and the constructor preconditions.
-type Constructors = Map Id ([ArgType], IsPayable, [Exp ABoolean Untimed])
+type Constructors = Map Id Constructor
 
 -- | The type checking environment.
 data Env = Env
@@ -66,9 +65,9 @@ addConstrStorage :: Id -> Map Id (ValueType, Integer) -> Env -> Env
 addConstrStorage cid storageTyping env =
     env { storage = Map.insert cid storageTyping (storage env) }
 
-addConstructor :: Id -> [ArgType] -> IsPayable -> [Exp ABoolean Untimed] -> Env -> Env
-addConstructor cid args payable iffs env =
-  env { constructors = Map.insert cid (args, payable, iffs) (constructors env) }
+addConstructor :: Id -> Constructor -> Env -> Env
+addConstructor cid cnstr env =
+  env { constructors = Map.insert cid cnstr (constructors env) }
 
 addPreconds :: [Exp ABoolean Untimed] -> Env -> Env
 addPreconds pres env =
@@ -76,7 +75,7 @@ addPreconds pres env =
 
 clearLocalEnv :: Env -> Env
 clearLocalEnv env =
-    env { calldata = mempty, preconds = mempty }
+  env { calldata = mempty, preconds = mempty }
 
 -- | Constraints generated during type checking.
 -- An integer constraint constrains an integer expression to fit within the bounds of a given type.
@@ -136,18 +135,17 @@ checkConstructor env cid (U.Constructor posn (Interface p params) payable iffs c
     let env'' = addPreconds iffs' env' in
     (checkConstrCases env'' cases) `bindValidation` \(storageType, cases', cnstr2) -> do
     -- construct the new environment
-    let env''' = addConstrStorage cid storageType $ addConstructor cid argTypes payable iffs' env''
+    let env''' = addConstrStorage cid storageType env''
     -- check case consistency
     let casecnstrs = checkCaseConsistency env' cases'
     -- check postconditions
     ensures <- fst . unzip <$> traverse (checkExpr env''' U TBoolean) posts
-    -- return the constructor and the new environment
-    pure (Constructor cid (Interface p params) payable iffs' cases' ensures [], clearLocalEnv env''', concat cnstr1 ++ cnstr2 ++ casecnstrs)
+    pure $ let cnstr = Constructor cid (Interface p params) payable iffs' cases' ensures []
+               env'''' = addConstructor cid cnstr env''' in
+            -- return the constructor and the new environment
+            (cnstr, clearLocalEnv env'''', concat cnstr1 ++ cnstr2 ++ casecnstrs)
     where
         env' = addCalldata params env
-
-        argTypes :: [ArgType]
-        argTypes = map (\(Arg typ _) -> typ) params
 
 checkParams :: Env -> U.Arg -> Err ()
 checkParams Env{storage} (Arg (ContractArg p c) _) =
@@ -397,7 +395,6 @@ checkRef env kind mode (U.RField p en x) =
         Nothing -> throw (p, "Contract " <> c <> " does not have field " <> x)
       Nothing -> error $ "Internal error: Invalid contract type " <> show c
     _ -> throw (p, "Reference should have a contract type" <> show en)
-checkRef _ _ _ _ = error "Internal error: invalid reference"
 
 -- | If an `inrange e` predicate appears in the source code, then the inrange
 -- predicate is propagated to all subexpressions of `e`.
@@ -607,7 +604,9 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
 
   -- Constructor calls
   U.ECreate p c args callvalue -> case Map.lookup c constructors of
-    Just (sig, payable, iffs) -> do
+    Just cnstr -> do
+        let sig = map (\(Arg typ _) -> typ) (case _cinterface cnstr of Interface _ as -> as)
+            payable = _cisPayable cnstr
         cvc <- case (payable, callvalue) of
                 (NonPayable, Just _) -> throw (p, "Constructor " <> show c <> " is not payable, but call value provided")
                 (Payable, Just cvExpr) -> first Just <$> checkExpr env mode (TInteger 256 Unsigned) cvExpr
@@ -620,7 +619,7 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
                    msg = "Preconditions of constructor call to " <> show c <> " are not guaranteed to hold"
                 in (TExp (TContract c) (Create p c args' cv), callcnstr:cnstr1 ++ cnstr2)
     Nothing -> throw (p, "Unknown constructor " <> show c)
-   -- Control
+  -- Control
   U.EITE p e1 e2 e3 ->
     ((,,) <$> (checkExpr env mode TBoolean e1) <*> (inferExpr env mode e2) <*> (inferExpr env mode e3))
     `bindValidation` \((te1, cnstr1), (TExp t2 te2, cnstr2), (TExp t3 te3, cnstr3)) ->
@@ -659,12 +658,6 @@ inferExpr env@Env{calldata, constructors} mode e = case e of
         case relaxedtestEquality t1 t2 of
           Nothing   -> typeMismatchErr pn t1 t2
           Just Refl -> pure (cons pn t1 te1 te2, c1 ++ c2)
-
--- | Helper to create to create a conjunction out of a list of expressions
-andExps :: [Exp ABoolean t] -> Exp ABoolean t
-andExps [] = LitBool nowhere True
-andExps (c:cs) = foldr (And nowhere) c cs
-
 
 checkArgs :: forall t. Env -> Mode t -> Pn -> [ValueType] -> [U.Expr] -> Err ([TypedExp t], [Constraint t])
 checkArgs _ _ _ [] [] = pure ([], [])

@@ -8,6 +8,7 @@ import Prelude hiding (GT, LT)
 import Data.ByteString.UTF8 (toString)
 import Prettyprinter hiding (brackets)
 import qualified Prettyprinter.Render.Terminal as Term
+import qualified Prettyprinter.Render.String as Str
 import qualified Data.Text as Text
 
 import System.IO (stdout)
@@ -239,6 +240,10 @@ render :: DocAnsi -> IO ()
 render doc =
   let opts = LayoutOptions { layoutPageWidth = AvailablePerLine 120 0.9 } in
   Term.renderIO stdout (layoutPretty opts doc)
+
+renderString :: DocAnsi -> String
+renderString =
+    Str.renderString . layoutPretty defaultLayoutOptions
 
 underline :: DocAnsi -> DocAnsi
 underline = annotate Term.underlined

@@ -7,8 +7,8 @@ import Act.Bounds
 
 import qualified Data.Text as T
 
-writeCoqFile :: FilePath -> FilePath -> IO ()
-writeCoqFile src trg = do
-    contents <- readFile src
-    proceed contents (addBounds <$> compile contents) $ \claims ->
-      writeFile trg . T.unpack $ coq claims
+-- writeCoqFile :: FilePath -> FilePath -> IO ()
+-- writeCoqFile src trg = do
+--     contents <- readFile src
+--     proceed contents (addBounds <$> compile contents) $ \claims ->
+--       writeFile trg . T.unpack $ coq claims
