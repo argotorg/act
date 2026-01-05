@@ -7,16 +7,17 @@ Target release data: 15/1/2025
   - [ ] Ordering of contracts in multiple files in DAG order
 
 - Parser
-  - [ ] New syntax
+  - [X] New syntax
+  - CALLVALUE == 0 implicit when constructor/behv non-payable
 
 - Typing
-  - [ ] New typechecker (WIP)
-  - [ ] Entailment check
+  - [X] New typechecker
+  - [ ] Entailment check (WIP)
   - [ ] Correct handling of Eth environment vars + balance
 
 - HEVM
-  - [ ] Merge environment PR
-  - [ ] Constructor Cases
+  - [X] Merge environment PR
+  - [ ] Constructor Cases (WIP)
   - [ ] Equivalence checking time (AMM?)
   - [ ] Clean up? 
   - [ ] Correct handling of Eth environment vars + balance
@@ -35,6 +36,13 @@ Target release data: 15/1/2025
     - [ ] other Eth env
     - Constructor cases
   - Maybe cleanup test directory
+  - Add example with non-local side effects for transitions
+
+- Think about: 
+
+  - constructor (addr a) {
+      a.send(10);
+    }
 
 - Callvalue must subtract from balance!!!
 

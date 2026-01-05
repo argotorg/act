@@ -35,7 +35,6 @@ import Act.Bounds
 import Act.Print
 
 import qualified EVM.Solvers as Solvers
-import Debug.Trace
 
 --- ** Array Bounds Checking ** ---
 {-

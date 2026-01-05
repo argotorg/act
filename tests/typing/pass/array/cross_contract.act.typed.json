@@ -4,12 +4,8 @@
       "behaviours": [],
       "constructor": {
         "cases": [
-          [
-            {
-              "literal": "True",
-              "type": "bool"
-            },
-            [
+          {
+            "body": [
               {
                 "location": {
                   "contract": "A",
@@ -36,8 +32,12 @@
                   "symbol": "[]"
                 }
               }
-            ]
-          ]
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
         ],
         "contract": "A",
         "interface": {
@@ -48,240 +48,7 @@
         "invariants": [],
         "kind": "Constructor",
         "postConditions": [],
-        "preConditions": [
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "0",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "0",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "1",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "1",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "2",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "2",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "3",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "3",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "kind": "SVar",
-                        "svar": "ar",
-                        "time": "Pre"
-                      }
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          }
-        ]
+        "preConditions": []
       },
       "kind": "Contract"
     },
@@ -289,12 +56,8 @@
       "behaviours": [],
       "constructor": {
         "cases": [
-          [
-            {
-              "literal": "True",
-              "type": "bool"
-            },
-            [
+          {
+            "body": [
               {
                 "location": {
                   "contract": "B",
@@ -326,8 +89,12 @@
                   }
                 }
               }
-            ]
-          ]
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
         ],
         "contract": "B",
         "interface": {
@@ -394,50 +161,6 @@
                   },
                   {
                     "literal": "1461501637330902918203684832716283019655932542975",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "contract": "B",
-                      "kind": "SVar",
-                      "svar": "y",
-                      "time": "Pre"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "contract": "B",
-                      "kind": "SVar",
-                      "svar": "y",
-                      "time": "Pre"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
                     "type": "int"
                   }
                 ],

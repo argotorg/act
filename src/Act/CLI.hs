@@ -53,7 +53,6 @@ import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
-import Act.Lex (lastPos)
 import Act.Entailment
 --import Act.Decompile
 
@@ -61,6 +60,8 @@ import qualified EVM.Solvers as Solvers
 import EVM.Solidity
 import EVM.Effects
 import Control.Arrow (Arrow(first))
+
+import Debug.Trace
 
 --command line options
 data Command w
@@ -155,9 +156,9 @@ parse' f = do
 type' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (compile contents) $ \(spec, cnstrs) -> do
-    checkEntailment solver' smttimeout' debug' cnstrs
-    --checkRewriteAliasing claims solver' smttimeout' debug'
+  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+    checkTypeConstraints contents solver' smttimeout' debug' cnstrs
+    checkUpdateAliasing spec solver' smttimeout' debug'
     B.putStrLn $ encode spec
 
 parseSolver :: Maybe Text -> IO Solvers.Solver
@@ -171,6 +172,12 @@ parseSolver s = case s of
 
 prove :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 prove _ _ _ _ = error "SMT TBD"
+
+checkTypeConstraints :: String -> Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO ()
+checkTypeConstraints contents solver' smttimeout' debug' cnstrs = do
+  errs <- checkEntailment solver' smttimeout' debug' cnstrs
+  proceed contents errs $ \_ -> pure ()
+
 {-
 prove file' solver' smttimeout' debug' = do
   let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout') debug'
@@ -232,8 +239,8 @@ prove file' solver' smttimeout' debug' = do
 coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 coq' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (compile contents) $ \(spec, cnstrs) -> do
-    checkEntailment solver' smttimeout' debug' cnstrs
+  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+    checkTypeConstraints contents solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
     TIO.putStr $ coq spec
 
@@ -265,8 +272,8 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   cores <- liftM fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processSources
   specsContents <- intercalate "\n" <$> traverse readFile actspecs
-  proceed specsContents (first addBounds <$> compile specsContents) $ \ (Act store contracts, constraints) -> do
-    checkEntailment solver' timeout debug' constraints
+  proceed specsContents (first addBounds <$> compile specsContents) $ \(Act store contracts, constraints) -> do
+    checkTypeConstraints specsContents solver' timeout debug' constraints
     cmap <- createContractMap contracts inputsMap
     res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
       checkContracts solvers store cmap

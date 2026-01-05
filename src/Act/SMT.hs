@@ -189,8 +189,8 @@ mkDefaultSMT :: [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp 
 mkDefaultSMT refs envs ifaceName args preconds extraconds = mksmt
   where
     -- Declare calldata arguments and locations, and environmental variables
-    storage = traceShowId $ nub (declareTRef <$> refs)
-    ifaceArgs = traceShowId $ nub $ (declareArg ifaceName <$> args) \\ storage
+    storage = nub (declareTRef <$> refs)
+    ifaceArgs = nub $ (declareArg ifaceName <$> args) \\ storage
     env = nub $ declareEthEnv <$> envs
 
     -- Constraints
@@ -398,7 +398,7 @@ sendCommand (SolverInstance _ stdin stdout _ _) cmd =
   if null cmd || ";" `isPrefixOf` cmd then pure "success" -- blank lines and comments do not produce any output from the solver
   else do
     hPutStr stdin (cmd <> "\n")
-    traceM cmd
+    -- traceM cmd
     hFlush stdin
     hGetLine stdout
 

@@ -27,6 +27,9 @@ import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
+import Act.Bounds
+import Control.Monad.Accum (MonadAccum(add))
+import GHC.IO (noDuplicate)
 
 type Err = Error String
 
@@ -140,12 +143,31 @@ checkConstructor env cid (U.Constructor posn (Interface p params) payable iffs c
     let casecnstrs = checkCaseConsistency env' cases'
     -- check postconditions
     ensures <- fst . unzip <$> traverse (checkExpr env''' U TBoolean) posts
-    pure $ let cnstr = Constructor cid (Interface p params) payable iffs' cases' ensures []
-               env'''' = addConstructor cid cnstr env''' in
+    pure $ let bounds = boundsConstructor (Constructor cid (Interface p params) payable iffs' cases' ensures [])
+               constr = Constructor cid (Interface p params) payable (iffs' <> bounds) cases' ensures []
+               -- add the constructor to the environment
+               env'''' = addConstructor cid constr env'''
+               -- capture the preconditions that includ e the added bounds
+               cnstrs = addIffs bounds $ concat cnstr1 ++ cnstr2 ++ casecnstrs    
+           in
             -- return the constructor and the new environment
-            (cnstr, clearLocalEnv env'''', concat cnstr1 ++ cnstr2 ++ casecnstrs)
+            (constr, clearLocalEnv env'''', cnstrs)
     where
         env' = addCalldata params env
+
+
+addIffs :: [Exp ABoolean Untimed] -> [Constraint Untimed] -> [Constraint Untimed]
+addIffs iffs cnstrs = addIff <$> cnstrs
+  where
+    addIff :: Constraint Untimed -> Constraint Untimed
+    addIff (BoolCnstr p msg env e) =
+        BoolCnstr p msg (addPreconds iffs env) e
+    addIff (CallCnstr p msg env args cid) =
+        CallCnstr p msg (addPreconds iffs env) args cid
+
+    addPreconds :: [Exp ABoolean Untimed] -> Env -> Env
+    addPreconds pres env =
+      env { preconds = pres <> preconds env }
 
 checkParams :: Env -> U.Arg -> Err ()
 checkParams Env{storage} (Arg (ContractArg p c) _) =
@@ -179,8 +201,15 @@ checkConstrCases env cases = do
     checkStorageTyping ((U.Case _ _ assigns):_) = do
         let typing = makeStorageTyping assigns 0
         consistentStorageTyping typing cases
+        noDuplicates assigns
         pure $ Map.fromList typing
 
+    noDuplicates :: [U.Assign] -> Err ()
+    noDuplicates [] = pure ()
+    noDuplicates ((U.StorageVar p _ name, _):rest) =
+        (assert (p, "Duplicate storage variable " <> show name) (not (any (\(U.StorageVar _ _ n, _) -> n == name) rest))) *>
+        noDuplicates rest
+    
     -- make the storage typing from a list of assignments
     makeStorageTyping :: [U.Assign] -> Integer ->  [(Id, (ValueType, Integer))]
     makeStorageTyping [] _ = []
@@ -190,7 +219,7 @@ checkConstrCases env cases = do
     consistentStorageTyping :: [(Id, (ValueType, Integer))] -> [U.Case U.Creates] -> Err ()
     consistentStorageTyping _ [] = pure ()
     consistentStorageTyping typing ((U.Case p _ assigns):cases) =
-        let typing' = makeStorageTyping assigns 0 in
+        let typing' = makeStorageTyping assigns 0 in        
         consistentStorageTyping typing cases *>
         assert (p, "Inconsistent storage typing in constructor cases") (typing == typing')
 
@@ -228,7 +257,10 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface p params)
     pure $ let (iffs', cnstrs1) = iffsc
                (cases', cnstrs2) = casesc
                casecnstrs = checkCaseConsistency env' cases'
-           in  (Behaviour name contract iface payable iffs' cases' ensures, concat cnstrs1 ++ concat cnstrs2 ++ casecnstrs) 
+               bounds = boundsBehaviour $ Behaviour name contract iface payable iffs' cases' ensures
+               behaviour = Behaviour name contract iface payable (iffs' <> bounds) cases' ensures
+               cnstrs = addIffs bounds $ concat cnstrs1 ++ concat cnstrs2 ++ casecnstrs
+           in  (Behaviour name contract iface payable iffs' cases' ensures, cnstrs) 
 
 
 checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)
@@ -287,7 +319,7 @@ mkAnd (c:cs) = foldr (And nowhere) c cs
 checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
 checkCaseConsistency env cases = 
     [ BoolCnstr getCasePos "Cases are not mutually exclusive" env (mkNonoverlapAssertion conds)
-    , BoolCnstr getCasePos "Cases are not exhaustive" env (Neg nowhere (mkExhaustiveAssertion conds))
+    , BoolCnstr getCasePos "Cases are not exhaustive" env (mkExhaustiveAssertion conds)
     ]
     where 
         getCasePos = case cases of
@@ -372,7 +404,7 @@ checkRef Env{contract, calldata, storage} kind mode (U.RVar p tag name) =
                     (U.Post, T)    -> pure (typ, SVar p Post contract name, [])
                     _              -> throw (p, "Mismatched timing for storage variable " <> show name <> ": declared " <> show tag <> ", used in " <> show mode)
             Nothing -> throw (p, "Unbound variable " <> show name)
-        Nothing -> throw (nowhere, "Contract " <> contract <> " undefined") -- unreachable
+        Nothing -> throw (p, "Unbound variable " <> show name) -- accessing storage variable not yet created
 checkRef env kind mode (U.RIndex p en idx) =
   checkRef env kind mode en `bindValidation` \(ValueType styp, ref :: Ref k t, cnstr) ->
   case styp of
