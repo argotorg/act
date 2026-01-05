@@ -80,9 +80,7 @@ creates
 Act interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. This balance is not part of the user-facing contract storage, and therefore cannot be initialized or modified by the user.
 
 Nonetheless, the user can write conditions on the callvalue sent during construction using the special variable `CALLVALUE`. See e.g. the payable constructor example above.
-
-
-*have a subsection about environment variables somewhere here*
+There are 4 such special variables (called environment variables) related to the call environment that the user can access as explained in [Variable References](./store_type.md#variable-references).
 
 ## Constructor Preconditions
 Consider the following constructor from an automated market maker (AMM) contract:
@@ -109,7 +107,7 @@ As mentioned before, the `iff` block cannot be skipped even if the condition is 
 
 ## Initializing Storage
 
-The storage is created in the `creates` block, where each storage variable is initialized as `<type> <name> := <expression>`. The allowed types and expressions are explained in [Storage and Typing](./store_type.md). 
+The storage is created in the `creates` block, where each storage variable is initialized as `<type> <name> := <expression>`. The allowed types and expressions are explained in [Storage, Typing and Expressions](./store_type.md). 
 
 We revisit the storage initialization of the ERC20 constructor:
 

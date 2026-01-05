@@ -6,7 +6,7 @@
 - [Specification Language Act](./part2.md)
     - [Storage, Typing and Expressions](./store_type.md)
     - [Contructors and Initial State](./constructors.md)
-    - [Behaviors as State Transitions](./behaviors.md)
+    - [Transitions and Storage Updates](./transitions.md)
     - [Arithmetic Safety](./arith_safety.md)
     - [Mappings and Updates](./mappings_updates.md)
 - [From Specification to Guarantees](./part3.md)

@@ -40,6 +40,7 @@ Storage in Act can have the following types:
 
 - **base types** e.g. line 2 in the snippet above: `uint256 totalSupply`
     - unsigned integers of various sizes: `uint8`, `uint16`, `uint32`, `uint64`, `uint128`, `uint256`, 
+    where `uint` is a shorthand for `uint256`.
     - signed integers of various sizes: `int8`, `int16`, `int32`, `int64`, `int128`, `int256`, 
     - booleans: `bool` 
     - addresses:`address`
@@ -51,7 +52,7 @@ Storage in Act can have the following types:
     "Advanced Topics: Aliasing and Unique Ownership" (?)
     </span>).   
 
-    - Artificial example: Another contract `OtherContract` uses in its storage a reference to an ERC20 `Token` contract: In `OtherContract`'s storage we would have a field of type `Token`, which can be initialized with an address of a specific deployed ERC20 contract.~
+    - Artificial example: Another contract `OtherContract` uses in its storage a reference to an ERC20 `Token` contract: In `OtherContract`'s storage we would have a field of type `Token`, which can be initialized with (an address of) a specific deployed ERC20 contract instance. An example of this is shown in [Constructor Preconditions](./constructors.md#constructor-preconditions).
 
 
 ### Mapping Types and Defaults
@@ -134,7 +135,11 @@ Every key not explicitly mentioned maps to the default value of the mapping's va
 Further, exists the syntax for **adapting mappings** (used in `storage` blocks of transitions):
     - `my_map[my_key => my_value]` (defines a mapping, where  `my_key` maps to `my_value` and every other key has value `my_map[key]`)
     - similarly, multple entries can be changed at once: `my_map[key1 => value1, key2 => value2,...]`
-- **Contract creation**: `Token(100)` (creates a new ERC20 contract instance with total supply 100)
+- **Contract creation**: An instance of another contract (an ERC20 `Token` for example) can be part of a contract's storage. The corresponding storage expression is `Token(100)`. It creates a new ERC20 contract instance with total supply 100.
+
+    Depending on whether this other contract's constructor is `payable` or not (see [Payable and Non-Payable Constructors](./constructors.md#payable-and-non-payable-constructors)), the storage expression requires to specify the amount of Ether to send.
+    - For a non-payable constructor, no Ether is sent and therefore nothing extra has to be specified. Hence `Token(100)` suffices.
+    - For a payable constructor, the amount of Ether to send must be specified. Assume there is a payable constructor `TokenPayable`, then the storage expression would be e.g. `TokenPayable(100) with value 10` to create a new instance of `TokenPayable` with initial supply `100` and send `10` wei during construction.
 - **references to existing contracts**: `erc_token` (a reference to a deployed contract instance)
 - **Addresses of existing contracts**: `token_addr` (an address of a deployed contract instance)
 
@@ -186,7 +191,6 @@ Basic references include:
     - `CALLVALUE`: the amount of Ether (in wei) sent with the current call.
     - `ORIGIN`: the address of the original external account that started the transaction.
     - `THIS`: the address of the current contract.
-- **Pre/post references**: `pre(balanceOf)`, `post(balanceOf)` (used primarily in transitions) <span style="color:red"> (do we need pre post at all without invariants?) </span>
 - **Mapping references**: `balanceOf[CALLER]`
 - **Field references**:  `t0.balanceOf` (if `t0` is a contract reference)
 
