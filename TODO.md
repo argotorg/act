@@ -8,7 +8,8 @@ Target release data: 15/1/2025
 
 - Parser
   - [X] New syntax
-  - CALLVALUE == 0 implicit when constructor/behv non-payable
+  - [ ] CALLVALUE == 0 implicit when constructor/behv non-payable
+  - [ ] Parsing -1 does not work
 
 - Typing
   - [X] New typechecker
