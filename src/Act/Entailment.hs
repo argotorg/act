@@ -3,9 +3,7 @@
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE DataKinds #-}
 {-# Language ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE TupleSections #-}
 
 module Act.Entailment (
   checkEntailment
@@ -22,7 +20,6 @@ import Control.Monad
 import Data.Type.Equality (TestEquality(..), (:~:)(..))
 
 import Act.Syntax.TypedExplicit
-import qualified Act.Syntax.Typed as Typed
 import Act.SMT as SMT
 import Act.Type
 import Act.Print
@@ -30,19 +27,25 @@ import Act.Syntax.Timing
 import Act.Error
 import Act.Syntax
 import Act.Traversals
+import System.IO (hPutStrLn, stderr)
 
 import qualified EVM.Solvers as Solvers
 
 import Debug.Trace
-import Control.Lens (cons)
 
+-- | Check whether a set of constraints generated during typing is always valid
 checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
 checkEntailment solver smttimeout debug constraints = do
-    let config = SMT.SMTConfig solver (fromMaybe 20000 smttimeout) debug
+    solver' <- case solver of
+          Solvers.Bitwuzla -> do 
+            hPutStrLn stderr "Warning: Using CVC5 solver instead of Bitwuzla for type checking." 
+            pure Solvers.CVC5
+          s -> pure s
+    let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
     smtSolver <- spawnSolver config
     let qs = mkEntailmentSMT <$> constraints
-    r <- forM qs (\(smtQuery, line, msg, getModel) -> do
-                           res <- checkSat smtSolver getModel smtQuery
+    r <- forM qs (\(smtQuery, line, msg, model) -> do
+                           res <- checkSat smtSolver model smtQuery
                            pure (res, line, msg))
     sequenceA_ <$> mapM checkRes r
   where

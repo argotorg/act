@@ -326,7 +326,7 @@ runQuery solver query@(Inv (Invariant _ _ _ predicate) (ctor, ctorSMT) behvs) = 
 -- provided `modelFn` to extract a model if the solver returns `sat`
 checkSat :: SolverInstance -> (SolverInstance -> IO Model) -> SMTExp -> IO SMTResult
 checkSat solver modelFn smt = do
-  -- render (pretty smt)
+  -- traceM $ "Entailment SMT Query:\n" <> renderString (prettyAnsi smt)
   err <- sendLines solver ("(reset)" : (lines . show . prettyAnsi $ smt))
   case err of
     Nothing -> do

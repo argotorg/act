@@ -16,6 +16,7 @@ import Prelude hiding (GT, LT)
 
 import Prettyprinter hiding (group)
 import System.Exit (exitFailure)
+import System.IO (hPutStrLn, stderr)
 import Data.Maybe
 import Data.Type.Equality ((:~:)(..), TestEquality (testEquality))
 import Data.Singletons (sing, SingI)
@@ -109,9 +110,12 @@ checkBehvUpdateAliasing (Behaviour bname _ (Interface _ decls) _ preconds cases 
 
 
 checkUpdateAliasing :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-checkUpdateAliasing (Act _ contracts)  solver' smttimeout debug =
+checkUpdateAliasing (Act _ contracts)  solver' smttimeout debug = do
+  let solver'' = case solver' of
+                   Solvers.Bitwuzla -> Solvers.CVC5
+                   s -> s
   forM_ contracts (\(Contract _ behvs) -> do
-    let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
+    let config = SMT.SMTConfig solver'' (fromMaybe 20000 smttimeout) debug
     solver <- spawnSolver config
     let behvQs = concatMap checkBehvUpdateAliasing behvs
     r' <- forM behvQs (\(name, updPairs, q, getModel) -> do
