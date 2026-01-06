@@ -1,0 +1,17 @@
+// Test that typecheck correctly detects when constructor preconditions are violated
+// This test fails because when creating B, the precondition (x > 0) of constructor A
+// is not necessarily satisfied, since y could be 0 or negative
+
+contract A
+
+constructor(uint x)
+iff
+    x > 0
+creates
+    uint val := x
+
+contract B
+
+constructor(uint y)
+creates
+    A a := new A(y)

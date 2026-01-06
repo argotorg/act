@@ -32,7 +32,6 @@ import System.IO (hPutStrLn, stderr)
 
 import qualified EVM.Solvers as Solvers
 
-import Debug.Trace
 
 -- | Check whether a set of constraints generated during typing is always valid
 checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
@@ -110,10 +109,11 @@ constructorArgs constr = (\(Arg _ name) -> name) <$> (case _cinterface constr of
 
 -- | Apply a substitution to a variable reference
 applySubstRef :: Constructors -> M.Map Id TypedExp -> Ref k -> TypedExp
-applySubstRef _ subst (CVar _ _ x) =
+applySubstRef _ subst v@(CVar p at x) =
     case M.lookup x subst of
       Just te -> te
-      Nothing -> error $ "Internal error: variable " <> show x <> " not found in substitution."
+      Nothing -> case argToValueType at of
+                    ValueType vt -> TExp vt (VarRef p vt v)
 applySubstRef ctors subst (RArrIdx p a b n) =
     case applySubstRef ctors subst a of
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RArrIdx p ref (applySubst ctors subst b) n))

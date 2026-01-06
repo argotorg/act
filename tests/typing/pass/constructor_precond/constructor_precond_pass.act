@@ -1,0 +1,24 @@
+// Test that typecheck and entailment correctly verify constructor preconditions hold
+// This test passes because when creating B, the precondition (x > 0) of constructor A is satisfied
+
+contract A
+
+constructor(uint x)
+iff
+    x > 0
+creates
+    uint val := x
+
+contract B
+
+constructor(uint y)
+iff
+    y > 0
+creates
+    A a := new A(y)
+
+transition update(uint z)
+iff
+    z > 0
+storage
+    a := new A(z)

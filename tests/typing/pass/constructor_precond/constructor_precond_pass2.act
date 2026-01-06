@@ -1,0 +1,33 @@
+contract A
+
+constructor(uint x, uint y)
+iff
+    x + y > 42
+creates
+    uint a := x
+    uint b := y
+
+contract B
+
+constructor(uint p, uint q)
+iff
+    p > 30
+    q > 20
+creates
+    A a := new A(p, q)
+
+transition foo(uint m, uint n)
+iff
+    m > 30
+    n > 50
+storage
+    a := new A(m, n)
+
+contract C
+
+constructor(uint alpha, uint beta)
+iff
+    alpha > 100
+    beta >= 21
+creates
+    B b := new B(alpha, beta)
