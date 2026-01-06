@@ -8,21 +8,17 @@
 {-# LANGUAGE TupleSections #-}
 
 module Act.Consistency (
-  --checkArrayBounds,
   checkUpdateAliasing
 ) where
 
 
 import Prelude hiding (GT, LT)
 
-import Data.List
 import Prettyprinter hiding (group)
 import System.Exit (exitFailure)
 import Data.Maybe
 import Data.Type.Equality ((:~:)(..), TestEquality (testEquality))
 import Data.Singletons (sing, SingI)
-import qualified Data.Bifunctor as Bif
-import qualified Data.Semigroup as Semi (Arg (..))
 
 import Control.Monad.Reader
 import Control.Monad (forM, forM_, zipWithM)
@@ -36,148 +32,12 @@ import Act.Print
 
 import qualified EVM.Solvers as Solvers
 
---- ** Array Bounds Checking ** ---
-{-
-
-mkBounds :: TypedExp -> Int -> [Exp ABoolean]
-mkBounds (TExp (TInteger _ _) e) b = [LEQ nowhere (LitInt nowhere 0) e, LT nowhere e (LitInt nowhere $ toInteger b)]
-mkBounds _ _ = error "Internal Error: Expected Integral Index"
-
-mkRefBounds :: Ref a -> [Exp ABoolean]
-mkRefBounds (RArrIdx _ ref _ tes) = concatMap (uncurry mkBounds) tes <> mkRefBounds ref
-mkRefBounds (RMapIdx _ ref _) = mkRefBounds ref
-mkRefBounds (RField _ ref _ _) = mkRefBounds ref
-mkRefBounds _ = []
-
-mkStorageBounds :: TypedRef -> [Exp ABoolean]
-mkStorageBounds (TRef _ _ ref) = mkRefBounds ref
-
--- TODO: There are locs that don't need to be checked, e.g. assignment locs cannot be out of bounds
-mkConstrArrayBoundsQuery :: Constructor -> (Id, [TypedRef], SMTExp, SolverInstance -> IO Model)
-mkConstrArrayBoundsQuery constructor@(Constructor _ (Interface ifaceName decls) _ preconds cases _ _) =
-  (ifaceName, arrayLocs, smt, getModel)
-  where
-    -- Declare vars
-    activeLocs = locsFromConstructor constructor
-    envs = ethEnvFromConstructor constructor
-
-    arrayLocs = filter (\(TRef _ _ ref) -> isArrayRef ref && posnFromItem ref /= nowhere) activeLocs
-    boundsExps = concatMap mkStorageBounds arrayLocs
-    assertion = mkOrNot boundsExps
-
-    (activeSLocs, activeCLocs) = partitionLocs activeLocs
-    smt = mkDefaultSMT True activeSLocs activeCLocs envs ifaceName decls preconds [] initialStorage assertion
-
-    getModel = getCtorModel constructor
-
-mkBehvArrayBoundsQuery :: Behaviour -> (Id, [TypedRef], SMTExp, SolverInstance -> IO Model)
-mkBehvArrayBoundsQuery behv@(Behaviour _ _ (Interface ifaceName decls) preconds cases _ _) =
-  (ifaceName, arrayLocs, smt, getModel)
-  where
-    -- Declare vars
-    activeLocs = locsFromBehaviour behv
-    envs = ethEnvFromBehaviour behv
-
-    arrayLocs = filter (\(TRef _ _ ref) -> isArrayItem ref && posnFromItem ref /= nowhere) activeLocs
-    boundsExps = concatMap mkStorageBounds arrayLocs
-    assertion = mkOrNot boundsExps
-
-    (activeSLocs, activeCLocs) = partitionLocs activeLocs
-    smt = mkDefaultSMT False activeSLocs activeCLocs envs ifaceName decls preconds caseconds stateUpdates assertion
-
-    getModel = getPostconditionModel (Behv behv)
-
-checkArrayBounds :: Act -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-checkArrayBounds (Act _ contracts)  solver' smttimeout debug =
-  forM_ contracts (\(Contract constr behvs) -> do
-    let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
-    solver <- spawnSolver config
-    let constrQs = mkConstrArrayBoundsQuery constr
-    let behvQs = mkBehvArrayBoundsQuery <$> behvs
-
-    r <- (\(name, locs, q, getModel) -> do
-                          res <- checkSat solver getModel q
-                          pure (name, locs, res)) constrQs
-    checkRes "Constructor" r
-    r' <- forM behvQs (\(name, locs, q, getModel) -> do
-                          res <- checkSat solver getModel q
-                          pure (name, locs, res))
-    mapM_ (checkRes "behaviour") r' )
-  where
-    checkRes :: String -> (Id, [TypedRef], SMT.SMTResult) -> IO ()
-    checkRes transition (name, locs, res) =
-      case res of
-        Sat model -> failMsg ("Array indices are not within bounds for " <> transition <> " " <> name <> ".")
-          (prettyAnsi model) (printOutOfBounds model locs)
-        Unsat -> pure ()
-        Unknown -> errorMsg $ "Solver timeour. Cannot prove that array indices are within bounds for " <> transition <> " " <> name <> "."
-        SMT.Error _ err -> errorMsg $ "Solver error: " <> err <> "\nCannot prove that array indices are within bounds for " <> transition <> " " <> name <> "."
-
-    printOutOfBounds :: Model -> [TypedRef] -> DocAnsi
-    printOutOfBounds model locs =
-      indent 2 ( underline (string "Out of bounds:"))
-      <> line <> vsep printedLocs
-      where
-        printedLocs = runReader (mapM checkLocationBounds locs) model
-
-    failMsg str model oobs = render (red (pretty str) <> line <> model <> line <> oobs <> line) >> exitFailure
-    errorMsg str = render (pretty str <> line) >> exitFailure
-
-checkBound :: TypedExp -> Int -> ModelCtx Bool
-checkBound (TExp (TInteger _ _) e) b =
-  [ (0 <= toInteger idx) && (toInteger idx < toInteger b) | idx <- modelEval e ]
-checkBound _ _ = error "Internal Error: Expected Integer indices"
-
-checkRefBounds :: Ref a -> ModelCtx Bool
-checkRefBounds (RArrIdx _ ref _ idcs) = liftA2 (&&) (and <$> mapM (uncurry checkBound) idcs) (checkRefBounds ref)
-checkRefBounds (RMapIdx _ ref _) = checkRefBounds ref
-checkRefBounds (RField _ ref _ _) = checkRefBounds ref
-checkRefBounds _ = pure True
-
-checkLocationBounds :: TypedRef -> ModelCtx DocAnsi
-checkLocationBounds (TRef _ _ ref) = do
-  cond <- checkRefBounds ref
-  if cond then pure $ string ""
-  else do
-    i <- printOutOfBoundsItem item
-    pure $ indent 4 $ string "Line " <> string (show l) <> string " Column " <> string (show c) <> string ": " <> i
-  where
-    (AlexPn _ l c) = posnFromRef ref
-
-printIdx :: TypedExp -> Int -> ModelCtx DocAnsi
-printIdx te@(TExp (TInteger _ _) e) b = do
-  idx <- modelEval e
-  if (toInteger idx < toInteger b) && (0 <= toInteger idx)
-    then pure $ string "[" <> string (prettyTypedExp te) <> string "]"
-    else
-      case e of
-        LitInt _ _ -> pure $
-          string "[" <> red (string (show idx))
-          <> string " | " <>  green (string (show b)) <> string "]"
-        _ -> pure $
-          string "[(" <> string (prettyTypedExp te) <> string ") = " <> red (string ( show idx))
-          <> string " | " <>  green (string (show b)) <> string "]"
-printIdx _ _ = error "Internal Error: Expected Integer indices"
-
-printOutOfBoundsRef :: Ref a -> ModelCtx DocAnsi
-printOutOfBoundsRef (RArrIdx _ ref _ idcs) =
-  liftA2 (<>) (printOutOfBoundsRef ref) (concatWith (<>) <$> mapM (uncurry printIdx) idcs)
-printOutOfBoundsRef (RMapIdx _ ref idcs) =
-  liftA2 (<>) (printOutOfBoundsRef ref) (concatWith (<>)
-    <$> mapM (\te -> pure $ string "[" <> string (prettyTypedExp te) <> string "]") idcs)
-printOutOfBoundsRef (RField _ ref _ id') =
-  liftA2 (<>) (printOutOfBoundsRef ref) (pure $ string $ "." ++ id')
-printOutOfBoundsRef (SVar _ _ _ id') = pure $ string id'
-printOutOfBoundsRef (CVar _ _ id') = pure $ string id'
-
-printOutOfBoundsItem :: TypedRef -> ModelCtx DocAnsi
-printOutOfBoundsItem (TRef _ _ ref) = printOutOfBoundsRef ref
-  -}
-
 
 type ModelCtx = Reader Model
 
 --- ** No rewrite aliasing ** ---
+-- Checks that there is no aliasing between array storage updates in behaviours and cases.
+
 
 combine :: [a] -> [(a,a)]
 combine lst = combine' lst []

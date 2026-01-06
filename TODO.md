@@ -48,6 +48,16 @@ Target release data: 15/1/2025
 - Callvalue must subtract from balance!!!
 
 
+- Current limitations: 
+  - Constraint environment is empty when checking preconditions. 
+    meaning that the following wouldn't be a valid spec: 
+    
+    iff 
+      x <= 41
+      arr[x] = 0
 
+    For an array with size 42
+
+- 
 
 balance := balance - 10 
