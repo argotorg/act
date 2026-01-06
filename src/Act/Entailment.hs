@@ -20,6 +20,7 @@ import Control.Monad
 import Data.Type.Equality (TestEquality(..), (:~:)(..))
 
 import Act.Syntax.TypedExplicit
+import qualified Act.Syntax.Typed as Typed
 import Act.SMT as SMT
 import Act.Type
 import Act.Print
@@ -37,8 +38,8 @@ import Debug.Trace
 checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
 checkEntailment solver smttimeout debug constraints = do
     solver' <- case solver of
-          Solvers.Bitwuzla -> do 
-            hPutStrLn stderr "Warning: Using CVC5 solver instead of Bitwuzla for type checking." 
+          Solvers.Bitwuzla -> do
+            hPutStrLn stderr "Warning: Using CVC5 solver instead of Bitwuzla for type checking."
             pure Solvers.CVC5
           s -> pure s
     let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
@@ -49,7 +50,6 @@ checkEntailment solver smttimeout debug constraints = do
                            pure (res, line, msg))
     sequenceA_ <$> mapM checkRes r
   where
-
     checkRes :: (SMT.SMTResult, Pn, String) -> IO (Err ())
     checkRes (res, pn, msg) =
         case res of
@@ -58,121 +58,135 @@ checkEntailment solver smttimeout debug constraints = do
           Unknown -> pure $ throw (pn, msg <> "\nSolver timeout.")
           SMT.Error _ err -> pure $ throw (pn, msg <> "Solver Error\n" <> err)
 
+-- | Convert calldata map to list of Args
 calldataToList :: M.Map Id ArgType -> [Arg]
 calldataToList m = [ Arg t n | (n,t) <- M.toList m ]
 
+-- | Create an SMT query for an entailment constraint, along with a function
+-- to extract a model if the solver returns `sat`
 mkEntailmentSMT :: Constraint Timed -> (SMTExp, Pn, String, (SolverInstance -> IO Model))
 mkEntailmentSMT (BoolCnstr p str env e) =
-  (query, p, str, getModel locs calldataVars ethEnv)
+  (query, p, str, getModel locs calldataVars ethVars)
   where
+    -- current preconditions
     iff = setPre <$> preconds env
+    -- all locations referenced in the expressions
     locs = nub $ concatMap locsFromExp (e:iff)
-    ethEnv = concatMap ethEnvFromExp (e:iff)
+    -- all ethereum environment variables referenced in the expressions
+    ethVars = concatMap ethEnvFromExp (e:iff)
+    -- calldata variables
     calldataVars = calldataToList (calldata env)
-    query = mkDefaultSMT locs ethEnv "" calldataVars iff [] (Neg p e)
-
+    -- the SMT query
+    query = mkDefaultSMT locs ethVars "" calldataVars iff [] (Neg p e)
 mkEntailmentSMT (CallCnstr p msg env args cid) =
-  (query, p, msg, getModel locs calldataVars ethEnv)
+  (query, p, msg, getModel locs calldataVars ethVars)
 
   where
     -- current preconditions
     iffs = setPre <$> preconds env
-
+    -- all locations referenced in the expressions
     locs = nub $ concatMap locsFromExp (cond:iffs)
-    ethEnv = concatMap ethEnvFromExp (cond:iffs)
+    -- all ethereum environment variables referenced in the expressions
+    ethVars = concatMap ethEnvFromExp (cond:iffs)
+    -- calldata variables
     calldataVars = calldataToList (calldata env)
-
     -- constructor being called
-    cnstr = case M.lookup cid (constructors env) of
-        Just cnstr ->  cnstr
-        Nothing -> error $ "Internal error: constructor " <> show cid <> " not found in environment."
+    cnstr = fromMaybe (error $ "Internal error: constructor " <> show cid <> " not found in environment.") $ M.lookup cid (constructors env)
     -- called constructors preconditions. Can only refer to args and eth env.
     calledPreconds = setPre <$> (_cpreconditions cnstr)
-
-    calledCalldata = map (\(Arg _ name) -> name) (case _cinterface cnstr of Interface _ as -> as)
-
+    -- names of formal parameters of the called constructor
+    calledCalldata = constructorArgs cnstr
+    -- substitution from formal parameters to actual arguments
     subst :: M.Map Id TypedExp
     subst = M.fromList $ zip calledCalldata args
+    -- substituted preconditions of the called constructor
+    cond = andExps (applySubst (constructors env) subst <$> calledPreconds)
+    -- the SMT query
+    query = mkDefaultSMT locs ethVars "" calldataVars iffs [] (Neg p cond)
 
-    cond = andExps (applySubst subst <$> calledPreconds)
 
+constructorArgs :: Typed.Constructor t -> [Id]
+constructorArgs constr = (\(Arg _ name) -> name) <$> (case _cinterface constr of Interface _ as -> as)
 
-    query = mkDefaultSMT locs ethEnv "" calldataVars iffs [] (Neg p cond)
-
-
-applySubstRef :: M.Map Id TypedExp -> Ref k -> TypedExp
-applySubstRef subst (CVar _ _ x) =
+-- | Apply a substitution to a variable reference
+applySubstRef :: Constructors -> M.Map Id TypedExp -> Ref k -> TypedExp
+applySubstRef _ subst (CVar _ _ x) =
     case M.lookup x subst of
       Just te -> te
       Nothing -> error $ "Internal error: variable " <> show x <> " not found in substitution."
-applySubstRef subst (RArrIdx p a b n) =
-    case applySubstRef subst a of
-      TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RArrIdx p ref (applySubst subst b) n))
+applySubstRef ctors subst (RArrIdx p a b n) =
+    case applySubstRef ctors subst a of
+      TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RArrIdx p ref (applySubst ctors subst b) n))
       _ -> error "Internal error: expected VarRef in array index reference substitution."
-applySubstRef _ (RMapIdx _ _ _) = error "Internal error: Calldata cannot have mapping type."
-applySubstRef subst (RField p r c x) =
-    case applySubstRef subst r of
+applySubstRef _ _ (RMapIdx _ _ _) = error "Internal error: Calldata cannot have mapping type."
+applySubstRef ctors subst (RField p r c x) =
+    case applySubstRef ctors subst r of
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RField p ref c x))
-      TExp t (Create p' c' args _) -> error "Internal error: upsupported constructor call in arguments."
+      TExp _ (Create _ c' args _) ->
+        let args' = map (applySubstTExp ctors subst) args in
+        evalConstrCall ctors args' c' x
       _ -> error "Internal error: expected VarRef or constructor call in field reference substitution."
-applySubstRef _ s@(SVar _ _ _ _) = error $ "Internal error: found storage variable reference in constructor: " <> show s
+applySubstRef _ _ s@(SVar _ _ _ _) = error $ "Internal error: found storage variable reference in constructor: " <> show s
 
-applySubst :: M.Map Id TypedExp -> Exp a -> Exp a
-applySubst subst e = mapExp substRefInExp e
+evalConstrCall :: Constructors -> [TypedExp] -> Id -> Id -> TypedExp
+evalConstrCall ctors args cid cfield = applySubstTExp ctors subst (evalCases cases)
+  where
+    -- Find the constructor in the environment
+    constr = annotate <$> fromMaybe (error $ "Internal error: constructor " <> show cid <> " not found in environment.") $ M.lookup cid ctors
+    -- Constructor cases
+    cases = _ccases constr
+    -- Constructor formal argument names
+    cargs = constructorArgs constr
+    -- Substitution from formal arguments to actual arguments
+    subst = M.fromList $ zip cargs args
+
+    -- Evaluate the cases to find the field
+    evalCases :: [Ccase] -> TypedExp
+    evalCases [] = error $ "Internal error: field " <> show cfield <> " not found in constructor cases."
+    evalCases [Case _ _ creates] = findStorageField creates
+    evalCases ((Case _ c creates):rest) =
+        case findStorageField creates of
+          TExp t fieldExp -> case evalCases rest of
+            TExp t' restExp ->
+              case testEquality t t' of
+                Just Refl -> TExp t (ITE nowhere c fieldExp restExp)
+                Nothing  -> error "Internal error: type mismatch in constructor field extraction."
+
+    -- Find the field in the creates of a case
+    findStorageField :: [StorageUpdate] -> TypedExp
+    findStorageField [] = error $ "Internal error: field " <> show cfield <> " not found in constructor."
+    findStorageField ((Update tv@VType (SVar _ _ _ x) e):upds) =
+        if x == cfield then (TExp tv e) else findStorageField upds
+    findStorageField (_:_) = error "Internal error: unexpected non-storage update in constructor."
+
+-- | Apply a substitution to a typed expression
+applySubstTExp :: Constructors -> M.Map Id TypedExp -> TypedExp -> TypedExp
+applySubstTExp ctors subst (TExp t e) = TExp t (applySubst ctors subst e)
+
+-- | Apply a substitution to an expression
+applySubst :: Constructors -> M.Map Id TypedExp -> Exp a -> Exp a
+applySubst ctors subst = mapExp substRefInExp
     where
         substRefInExp :: Exp a -> Exp a
-        substRefInExp (VarRef _ t ref) = case applySubstRef subst ref of
+        substRefInExp (VarRef _ t ref) = case applySubstRef ctors subst ref of
           TExp t' e -> case testEquality t t' of
             Just Refl -> e
             Nothing -> error "Internal error: type mismatch in substitution."
         substRefInExp e = e
 
 
+-- | Create a model extraction function for an entailment constraint
 getModel :: [TypedRef] -> [Arg] -> [EthEnv] -> SolverInstance -> IO Model
-getModel locs calldataVars ethEnv solver = do
+getModel locs calldataVars ethVars solver = do
     prestate <- mapM (getLocationValue solver "" Pre) locs
-    calldata <- mapM (getCalldataValue solver "") calldataVars
+    callvars <- mapM (getCalldataValue solver "") calldataVars
     calllocs <- mapM (getLocationValue solver "" Pre) locs
-    environment <- mapM (getEnvironmentValue solver) ethEnv
+    environment <- mapM (getEnvironmentValue solver) ethVars
     pure $ Model
         { _mprestate = prestate
         , _mpoststate = []
-        , _mcalldata = ("", calldata)
+        , _mcalldata = ("", callvars)
         , _mcalllocs = calllocs
         , _menvironment = environment
         , _minitargs = []
         }
-
-
-{-
--- | Create a query for cases
-mkCaseQuery :: ([Exp ABoolean] -> Exp ABoolean) -> [Behaviour] -> (Id, SMTExp, (SolverInstance -> IO Model))
-mkCaseQuery props behvs@((Behaviour _ _ (Interface ifaceName decls) _ preconds _ _ _ _):_) =
-  (ifaceName, mkSMT, getModel)
-  where
-    locs = nub $ concatMap locsFromExp (preconds <> caseconds)
-    env = concatMap ethEnvFromBehaviour behvs
-    pres = mkAssert ifaceName <$> preconds
-    caseconds = concatMap _caseconditions behvs
-
-    mkSMT = SMTExp
-      { _storage = concatMap (declareStorage [Pre]) locs
-      , _calldata = declareArg ifaceName <$> calldataToList (calldata env)
-      , _environment = declareEthEnv <$> env
-      , _assertions = (mkAssert "" $ props caseconds) : pres
-      }
-
-    getModel solver = do
-      prestate <- mapM (getStorageValue solver ifaceName Pre) locs
-      calldata <- mapM (getCalldataValue solver ifaceName) decls
-      environment <- mapM (getEnvironmentValue solver) env
-      pure $ Model
-        { _mprestate = prestate
-        , _mpoststate = []
-        , _mcalldata = (ifaceName, calldata)
-        , _menvironment = environment
-        , _minitargs = []
-        }
-mkCaseQuery _ [] = error "Internal error: behaviours cannot be empty"
-
--}

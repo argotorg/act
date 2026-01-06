@@ -91,7 +91,7 @@ clearLocalEnv env =
 -- An integer constraint constrains an integer expression to fit within the bounds of a given type.
 -- A call constraint constrains the arguments of a constructor call to satisfy the constructor's preconditions.
 data Constraint t =
-    BoolCnstr Pn String Env (Exp ABoolean t) -- ^ Boolean constraint with a message, environment, and boolean expression. Generated to check integer bounds, case consistency, and array bounds. 
+    BoolCnstr Pn String Env (Exp ABoolean t) -- ^ Boolean constraint with a message, environment, and boolean expression. Generated to check integer bounds, case consistency, and array bounds.
   | CallCnstr Pn String Env [TypedExp t] Id  -- ^ Call constraint with a message, environment, argument list, and constructor id. Generated to check that preconditions of the called constructor are satisfied.
     deriving (Show, Eq)
 
@@ -168,11 +168,11 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
                -- add the constructor to the environment
                env'''' = addConstructor cid constr env'''
                -- capture the preconditions that include the added bounds
-               cnstrs = addIffs bounds $ concat cnstr1 ++ cnstr2 ++ casecnstrs    
+               cnstrs = addIffs bounds $ concat cnstr1 ++ cnstr2 ++ casecnstrs
            in
             -- return the constructor and the new environment
             (constr, clearLocalEnv env'''', cnstrs)
-        
+
 
 -- | Extend a list of constraints with additional preconditions. Useful for adding integer bounds.
 addIffs :: [Exp ABoolean Untimed] -> [Constraint Untimed] -> [Constraint Untimed]
@@ -234,7 +234,7 @@ checkConstrCases env cases = do
     noDuplicates ((U.StorageVar p _ name, _):rest) =
         (assert (p, "Duplicate storage variable " <> show name) (not (any (\(U.StorageVar _ _ n, _) -> n == name) rest))) *>
         noDuplicates rest
-    
+
     -- make the storage typing from a list of assignments
     makeStorageTyping :: [U.Assign] -> Integer ->  [(Id, (ValueType, Integer))]
     makeStorageTyping [] _ = []
@@ -244,7 +244,7 @@ checkConstrCases env cases = do
     consistentStorageTyping :: [(Id, (ValueType, Integer))] -> [U.Case U.Creates] -> Err ()
     consistentStorageTyping _ [] = pure ()
     consistentStorageTyping typing ((U.Case p _ assigns):cases') =
-        let typing' = makeStorageTyping assigns 0 in        
+        let typing' = makeStorageTyping assigns 0 in
         consistentStorageTyping typing cases' *>
         assert (p, "Inconsistent storage typing in constructor cases") (typing == typing')
 
@@ -280,7 +280,7 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
     -- check preconditions
     iffsc <- unzip <$> traverse (checkExpr env' U TBoolean) iffs
     -- check cases
-    casesc <- unzip <$> traverse (checkBehvCase env' (argToValueType <$> rettype)) cases    
+    casesc <- unzip <$> traverse (checkBehvCase env' (argToValueType <$> rettype)) cases
     -- check postconditions
     ensures <- map fst <$> traverse (checkExpr env' T TBoolean) posts
     -- return the behaviour
@@ -358,11 +358,11 @@ mkAnd (c:cs) = foldr (And nowhere) c cs
 
 -- | Check that case conditions in a case block are mutually exclusive and exhaustive
 checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
-checkCaseConsistency env cases = 
+checkCaseConsistency env cases =
     [ BoolCnstr getCasePos "Cases are not mutually exclusive" env (mkNonoverlapAssertion conds)
     , BoolCnstr getCasePos "Cases are not exhaustive" env (mkExhaustiveAssertion conds)
     ]
-    where 
+    where
         getCasePos = case cases of
             [] -> nowhere
             (Case p _ _ : _) -> p
@@ -546,7 +546,7 @@ combineTypes (TInteger w1 Unsigned) (TInteger w2 Signed) =
 combineTypes TUnboundedInt TUnboundedInt = TUnboundedInt
 combineTypes (TInteger _ _) TUnboundedInt = TUnboundedInt
 combineTypes TUnboundedInt (TInteger _ _) = TUnboundedInt
-combineTypes (TArray n1 t1') (TArray _ t2') = 
+combineTypes (TArray n1 t1') (TArray _ t2') =
     let c = combineTypes t1' t2'
     in TArray n1 c
 combineTypes t1 _ = t1
@@ -605,7 +605,7 @@ checkExpr env mode t1@TUnboundedInt e =
 -- TODO: all array cases except the last are probably not necessary, but may lead to nicer error messages,
 -- less unnecessary constraints and prettier code.
 -- The idea is that we can avoid unnecessary constraint enforcement by using `checkExpr` on each element
--- If, instead, the whole array is inferred first, we are then forced to apply 
+-- If, instead, the whole array is inferred first, we are then forced to apply
 checkExpr env mode (TArray len t) (U.EArray p es) = do
     if len == length es then pure () else typeMismatchErr p (TArray len t) (TArray (length es) t)
     r <- unzip <$> traverse (checkExpr env mode t) es
@@ -619,10 +619,10 @@ checkExpr env mode t@(TArray _ _) (U.EITE p e1 e2 e3) = do
                (te2, cnstr2) = r2
                (te3, cnstr3) = r3
            in (ITE p te1 te2 te3, cnstr1 ++ cnstr2 ++ cnstr3)
-checkExpr env mode t1@(TArray _ _) e = 
+checkExpr env mode t1@(TArray _ _) e =
     -- Question: do we allow array subtyping here?
     let pn = getPosn e in
-    inferExpr env mode e `bindValidation` \(TExp t2 te, cs) -> 
+    inferExpr env mode e `bindValidation` \(TExp t2 te, cs) ->
         flip (maybe (typeMismatchErr pn t1 t2)) (relaxedtestEquality t1 t2) $ \Refl ->
             case (fst $ flattenValueType t1, fst $ flattenValueType t2) of
                 (bt1@(TInteger _ _), bt2@(TInteger _ _)) ->
