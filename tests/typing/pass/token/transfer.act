@@ -23,7 +23,7 @@ iff
 
   CALLVALUE == 0
   value <= balanceOf[CALLER]
-  CALLER != to ==> balanceOf[to] + value < 2^256
+  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
 
 case CALLER != to:
 
@@ -44,7 +44,7 @@ transition transferFrom(address src, address dst, uint amount) : uint256
 iff
 
   amount <= balanceOf[src]
-  src    != dst ==> balanceOf[dst] + amount < 2^256
+  src    != dst ==> inRange(uint256, balanceOf[dst] + amount)
   CALLER != src ==> 0 <= allowance[src][CALLER] - amount
   CALLVALUE == 0
 

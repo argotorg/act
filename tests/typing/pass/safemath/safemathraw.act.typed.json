@@ -4,12 +4,8 @@
       "behaviours": [
         {
           "cases": [
-            [
-              {
-                "literal": "True",
-                "type": "bool"
-              },
-              [
+            {
+              "body": [
                 [],
                 {
                   "expression": {
@@ -49,8 +45,12 @@
                   "kind": "TypedExpr",
                   "type": "TInteger 256 Unsigned"
                 }
-              ]
-            ]
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
           ],
           "contract": "SafeAdd",
           "interface": {
@@ -350,13 +350,13 @@
       ],
       "constructor": {
         "cases": [
-          [
-            {
+          {
+            "body": [],
+            "caseCondition": {
               "literal": "True",
               "type": "bool"
-            },
-            []
-          ]
+            }
+          }
         ],
         "contract": "SafeAdd",
         "interface": {

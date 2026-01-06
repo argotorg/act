@@ -660,7 +660,7 @@ uintmin _ = 0
 uintmax :: Int -> Integer
 uintmax a = 2 ^ a - 1
 
-_Var :: SingI a => TValueType a -> Id -> Exp a Timed
+_Var :: SingI a => TValueType a -> Id -> Exp a t
 _Var vt x = VarRef nowhere vt (CVar nowhere (toArgType vt) x)
 
 -- _Array :: SingI a => TValueType a -> Id -> [(TypedExp Timed, Int)] -> Exp a Timed

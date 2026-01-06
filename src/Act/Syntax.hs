@@ -32,35 +32,42 @@ import qualified Act.Syntax.Untyped as Untyped
 invExp :: TypedExplicit.InvariantPred -> TypedExplicit.Exp ABoolean
 invExp (PredTimed pre post) = pre <> post
 
-locsFromBehaviour :: TypedExplicit.Behaviour -> [TypedExplicit.TypedRef]
+locsFromBehaviour :: Typed.Behaviour t -> [Typed.TypedRef t]
 locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
   concatMap locsFromExp preconds
-  <> concatMap locsFromExp postconds
+  -- TODO: commenting out postconds for now as it causes issues with timing. 
+  -- We need to get rid of the umplicit timing to add this back
+  -- <> concatMap locsFromExp postconds
   <> concatMap locsFromCase cases
 
-locsFromCase :: Bcase Timed -> [TypedExplicit.TypedRef]
+locsFromCase :: Bcase t -> [Typed.TypedRef t]
 locsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
-  locsFromExp cond <> concatMap locsFromUpdate rewrites <> maybe [] locsFromTypedExp mret
+  locsFromExp cond <> concatMap locsFromUpdateRHS rewrites <> maybe [] locsFromTypedExp mret
 
-locsFromConstructor :: TypedExplicit.Constructor -> [TypedExplicit.TypedRef]
-locsFromConstructor (TypedExplicit.Constructor _ _ _ pre cases post inv) = nub $
+locsFromConstructor :: Typed.Constructor t -> [Typed.TypedRef t]
+locsFromConstructor (Typed.Constructor _ _ _ pre cases post inv) = nub $
   concatMap locsFromExp pre
   <> concatMap locsFromExp post
   <> concatMap locsFromConstrInvariant inv
   <> concatMap locsFromConstrCase cases
 
-locsFromConstrCase :: Ccase Timed -> [TypedExplicit.TypedRef]
+locsFromConstrCase :: Ccase t -> [Typed.TypedRef t]
 locsFromConstrCase (Typed.Case _ cond creates) = nub $
-  locsFromExp cond <> concatMap locsFromUpdate creates
+  locsFromExp cond <> concatMap locsFromUpdateRHS creates
 
-locsFromInvariant :: TypedExplicit.Invariant -> [TypedExplicit.TypedRef]
+locsFromInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromInvariant (Invariant _ pre bounds (PredTimed predpre predpost)) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
   <> locsFromExp predpre <> locsFromExp predpost
+locsFromInvariant (Invariant _ pre bounds (PredUntimed pred)) =
+  concatMap locsFromExp pre <>  concatMap locsFromExp bounds
+  <> locsFromExp pred
 
-locsFromConstrInvariant :: TypedExplicit.Invariant -> [TypedExplicit.TypedRef]
+locsFromConstrInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
   concatMap locsFromExp pre <> locsFromExp predpost
+locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred)) =
+  concatMap locsFromExp pre <> locsFromExp pred
 
 ------------------------------------
 -- * Extract from any typed AST * --
@@ -281,14 +288,14 @@ ethEnvFromConstrCase :: Ccase t -> [EthEnv]
 ethEnvFromConstrCase (Typed.Case _ cond rewrites) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites
 
-ethEnvFromConstructor :: TypedExplicit.Constructor -> [EthEnv]
-ethEnvFromConstructor (TypedExplicit.Constructor _ _ _ pre cases post inv) = nub $
+ethEnvFromConstructor :: Typed.Constructor t -> [EthEnv]
+ethEnvFromConstructor (Typed.Constructor _ _ _ pre cases post inv) = nub $
   concatMap ethEnvFromExp pre
   <> concatMap ethEnvFromExp post
   <> concatMap ethEnvFromInvariant inv
   <> concatMap ethEnvFromConstrCase cases
 
-ethEnvFromInvariant :: TypedExplicit.Invariant -> [EthEnv]
+ethEnvFromInvariant :: Typed.Invariant t -> [EthEnv]
 ethEnvFromInvariant (Invariant _ pre bounds invpred) =
   concatMap ethEnvFromExp pre <>  concatMap ethEnvFromExp bounds <> ethEnvFromInvariantPred invpred
 

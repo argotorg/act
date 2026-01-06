@@ -34,7 +34,7 @@ import Act.Traversals
 import qualified EVM.Solvers as Solvers
 
 import Debug.Trace
-
+import Control.Lens (cons)
 
 checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
 checkEntailment solver smttimeout debug constraints = do
@@ -45,13 +45,12 @@ checkEntailment solver smttimeout debug constraints = do
                            res <- checkSat smtSolver getModel smtQuery
                            pure (res, line, msg))
     sequenceA_ <$> mapM checkRes r
-
   where
 
     checkRes :: (SMT.SMTResult, Pn, String) -> IO (Err ())
     checkRes (res, pn, msg) =
         case res of
-          Sat model -> pure $ throw (pn, msg <> "Counterexample:\n" <> renderString (prettyAnsi model))
+          Sat model -> pure $ throw (pn, msg <> "\n" <> renderString (prettyAnsi model))
           Unsat -> pure $ pure ()
           Unknown -> pure $ throw (pn, msg <> "\nSolver timeout.")
           SMT.Error _ err -> pure $ throw (pn, msg <> "Solver Error\n" <> err)
@@ -113,7 +112,7 @@ applySubstRef subst (RField p r c x) =
       TExp t (VarRef p' tv ref) -> TExp t (VarRef p' tv (RField p ref c x))
       TExp t (Create p' c' args _) -> error "Internal error: upsupported constructor call in arguments."
       _ -> error "Internal error: expected VarRef or constructor call in field reference substitution."
-applySubstRef _ (SVar _ _ _ _) = error "Internal error: found storage variable reference in constructor."
+applySubstRef _ s@(SVar _ _ _ _) = error $ "Internal error: found storage variable reference in constructor: " <> show s
 
 applySubst :: M.Map Id TypedExp -> Exp a -> Exp a
 applySubst subst e = mapExp substRefInExp e
