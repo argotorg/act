@@ -43,7 +43,8 @@ common common
                  prettyprinter,
                  prettyprinter-ansi-terminal,
                  base16,
-                 filepath
+                 filepath,
+                 logict
   if flag(ci)
       ghc-options: -O2 -Wall -Werror -Wno-orphans -Wno-unticked-promoted-constructors
   else
