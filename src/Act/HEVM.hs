@@ -1002,16 +1002,16 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
   let (behvs', fcmaps) = unzip actbehvs
     -- Symbolically execute bytecode
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
-  solbehvs <- lift  $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata bounds fresh
+  solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata bounds fresh
 
   --traceM $ "sol: " ++ showBehvs solbehvs
   --traceM $ "act: " ++ showBehvs behvs'
 
   -- Check equivalence
-  lift  $ showMsg "\x1b[1mChecking if constructor results are equivalent.\x1b[m"
-  res1 <- lift  $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
-  lift  $ showMsg "\x1b[1mChecking if constructor input spaces are the same.\x1b[m"
-  res2 <- lift  $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
+  lift $ showMsg "\x1b[1mChecking if constructor results are equivalent.\x1b[m"
+  res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
+  lift $ showMsg "\x1b[1mChecking if constructor input spaces are the same.\x1b[m"
+  res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
   pure $ traverse_ (checkStoreIsomorphism (head fcmaps)) (tail fcmaps) *> checks *> res1 *> res2 *> Success (head fcmaps)
   where
     removeFails branches = filter isSuccess branches
@@ -1025,15 +1025,15 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
   (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata,sig,bounds) -> do
     let (behvs', fcmaps) = unzip actbehv
 
-    solbehvs <- lift  $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata bounds fresh
+    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata bounds fresh
 
-    lift  $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
+    lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
     -- equivalence check
-    lift  $ showMsg "\x1b[1mChecking if behaviour is matched by EVM\x1b[m"
-    res1 <- lift  $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
+    lift $ showMsg "\x1b[1mChecking if behaviour is matched by EVM\x1b[m"
+    res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
     -- input space exhaustiveness check
-    lift  $ showMsg "\x1b[1mChecking if the input spaces are the same\x1b[m"
-    res2 <- lift  $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
+    lift $ showMsg "\x1b[1mChecking if the input spaces are the same\x1b[m"
+    res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
     pure $ traverse_ (checkStoreIsomorphism actstorage) fcmaps *> res1 *> res2
 
   where
