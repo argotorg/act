@@ -235,7 +235,7 @@ translateConstructor bytecode (Constructor cid iface _ preconds cases _ _) cmap 
   ends <- collapseActND $ do
     ccase <- lift . lift $ fromFoldable cases
     translateConstructorCase bytecode initmap (snd calldata) bounds preconds ccase
-  pure (mergePathConditions <$> ends, calldata, ifaceToSig cid iface, bounds)
+  pure (integratePathConditions <$> ends, calldata, ifaceToSig cid iface, bounds)
   where
     calldata = makeCtrCalldata iface
     initcontract = EVM.C { EVM.code    = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
@@ -244,7 +244,7 @@ translateConstructor bytecode (Constructor cid iface _ preconds cases _ _) cmap 
                          , EVM.balance = EVM.Lit 0
                          , EVM.nonce   = Just 1
                          }
-    mergePathConditions ((end, cm), pcs) = (addPathCondition end pcs, cm)
+    integratePathConditions ((end, cm), pcs) = (addPathCondition end pcs, cm)
 
 translateConstructorCase :: Monad m => BS.ByteString -> ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Ccase -> ActNDT m (EVM.Expr EVM.End, ContractMap)
 translateConstructorCase bytecode initmap cdataprops bounds preconds (Case _ casecond upds) = do
@@ -298,11 +298,11 @@ translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
   ends <- collapseActND $ do
     bcase <- lift . lift $ fromFoldable cases
     (translateBehvCase cmap (snd behvCalldata) bounds preconds) bcase
-  pure (behvName, mergePathConditions <$> ends, behvCalldata, behvSig, bounds)
+  pure (behvName, integratePathConditions <$> ends, behvCalldata, behvSig, bounds)
   where
     behvCalldata = makeCalldata behvName iface
     behvSig = ifaceToSig behvName iface
-    mergePathConditions ((end, cm), pcs) = (addPathCondition end pcs, cm)
+    integratePathConditions ((end, cm), pcs) = (addPathCondition end pcs, cm)
 
 translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Bcase -> ActNDT m (EVM.Expr EVM.End, ContractMap)
 translateBehvCase cmap cdataprops bounds preconds (Case _ casecond (upds, ret)) = do
@@ -870,6 +870,7 @@ accessStorage cmap slot addr = case M.lookup addr cmap of
 inRange :: TValueType AInteger -> Exp AInteger -> Exp ABoolean
 -- if the type has the type of machine word then check per operation
 inRange (TInteger 256 Unsigned) e = checkOp e
+inRange (TInteger n Unsigned) e@Mul{} | n > 128 = And nowhere (checkOp e) (bound (TInteger n Unsigned) e)
 inRange (TInteger 256 Signed) _ = error "TODO signed integers"
 -- otherwise insert range bounds
 inRange t e = bound t e
