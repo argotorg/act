@@ -20,12 +20,13 @@ creates
     C c := new C(42)
 
 
-transition c() : C
+transition c() : address<C>
 
 iff
     CALLVALUE == 0
 
-returns (pre(c))
+storage
+returns c
 
 contract B
 

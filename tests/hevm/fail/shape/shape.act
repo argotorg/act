@@ -15,8 +15,8 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
-returns
-   pre(x)
+storage
+returns x
 
 transition set_x(uint z)
 
@@ -42,16 +42,16 @@ transition y() : uint256
 iff
    CALLVALUE == 0
 
-returns
-   pre(y)
+storage
+returns y
 
 transition a() : address<A>
 
 iff
    CALLVALUE == 0
 
-returns
-   pre(a)
+storage
+returns a
 
 
 // contract C
