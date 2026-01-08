@@ -17,6 +17,6 @@ iff
   CALLVALUE == 0
   x == 1
 
-storage
+updates
 
   x := 2

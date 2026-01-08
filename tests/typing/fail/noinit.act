@@ -22,7 +22,7 @@ interface set_remote(uint z)
 iff
    CALLVALUE == 0
 
-storage
+updates
    a.x := z
 
 transition multi
@@ -31,6 +31,6 @@ interface set_remote2(uint z)
 iff
    CALLVALUE == 0
 
-storage
+updates
    y := 1
    a.x := z

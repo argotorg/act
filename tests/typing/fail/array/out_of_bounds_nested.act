@@ -14,6 +14,6 @@ transition f()
 
 
 
-storage
+updates
 
   x[1][2][4] := 4

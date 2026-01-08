@@ -8,7 +8,7 @@ creates
 
 transition increase(uint24 new_x) : uint24
 
-  storage
+  updates
     x := x
 
   returns pre(x)
@@ -28,7 +28,7 @@ creates
 
 transition increase2(uint24 new_x) : uint24
 
-storage
+updates
     x := x
 
   returns new_x

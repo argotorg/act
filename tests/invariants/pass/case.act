@@ -15,10 +15,10 @@ iff
 
 case z == 0:
 
-storage
+updates
   x := z
 
 case 0 < z:
 
-storage
+updates
   x := 0

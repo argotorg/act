@@ -11,5 +11,5 @@ iff
   x > 0
   inRange(uint128, x+1)
 
-storage
+updates
 returns (x+1)

@@ -9,5 +9,5 @@ creates
 
 transition f()
 
-storage
+updates
 	x := y

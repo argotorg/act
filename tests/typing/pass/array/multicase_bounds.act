@@ -15,20 +15,20 @@ iff
   1 <= xs[1] and xs[1] < 4
 
 case y < 3:
-storage
+updates
 returns z[y]
 
 
 case y <= 10 and 3 <= y and yn < y - 7:
-storage
+updates
 returns z[yn]
 
 
 case y > 10:
-storage
+updates
 returns z[xs[1] - 1]
 
 
 case y <= 10 and 3 <= y and yn >= y - 7:
-storage
+updates
 returns z[xs[1] / 2]

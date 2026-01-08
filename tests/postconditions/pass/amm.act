@@ -27,7 +27,7 @@ iff
 
 case from != to:
 
-  storage
+  updates
 
     balanceOf[from]  := balanceOf[from] - value
     balanceOf[to]    := balanceOf[to] + value
@@ -67,7 +67,7 @@ iff
 
 case CALLER != THIS:
 
-storage
+updates
 
     token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
     token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
@@ -102,7 +102,7 @@ iff
 
 case CALLER != THIS:
 
-storage
+updates
 
     token1.balanceOf[CALLER] := token1.balanceOf[CALLER] - amt
     token1.balanceOf[THIS]   := token1.balanceOf[THIS] + amt

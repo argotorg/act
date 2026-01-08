@@ -21,7 +21,7 @@ iff
 
 case CALLER != to:
 
-  storage
+  updates
 
     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
                           , to     => balanceOf[to] + _value]
@@ -30,7 +30,7 @@ case CALLER != to:
 
 case CALLER == to:
 
-  storage
+  updates
   returns 1
 
 
@@ -45,7 +45,7 @@ iff
 
 case src != dst and CALLER == src:
 
-  storage
+  updates
 
     balanceOf := balanceOf[ src => balanceOf[src] - amount
                           , dst => balanceOf[dst] + amount]
@@ -54,7 +54,7 @@ case src != dst and CALLER == src:
 
 case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
-  storage
+  updates
 
     balanceOf := balanceOf[ src => balanceOf[src] - amount
                           , dst => balanceOf[dst] + amount]
@@ -63,7 +63,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
 case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
     balanceOf := balanceOf[ src => balanceOf[src] - amount
@@ -73,7 +73,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
 
@@ -81,7 +81,7 @@ case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
 
-  storage
+  updates
   returns 1
 
 
@@ -94,7 +94,7 @@ iff
 
 case CALLER != spender:
 
-  storage
+  updates
 
     allowance := allowance[ CALLER => [ spender => amount ] ]
 
@@ -102,7 +102,7 @@ case CALLER != spender:
 
 case CALLER == spender:
 
-  storage
+  updates
   returns 1
 
 
@@ -114,7 +114,7 @@ iff
   inRange(uint256, totalSupply - amount)
   inRange(uint256, balanceOf[CALLER] - amount)
 
-storage
+updates
 
   totalSupply := totalSupply - amount
   balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - amount ]
@@ -132,7 +132,7 @@ iff
 
 case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
-  storage
+  updates
 
     totalSupply := totalSupply - amount
     balanceOf := balanceOf[ src =>  balanceOf[src] - amount ]
@@ -141,7 +141,7 @@ case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
 case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     totalSupply := totalSupply - amount
     allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
@@ -151,7 +151,7 @@ case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case CALLER == src:
 
-  storage
+  updates
 
     totalSupply := totalSupply - amount
     balanceOf := balanceOf[ src => balanceOf[src] - amount ]
@@ -170,7 +170,7 @@ iff
   inRange(uint256, totalSupply + amount)
   inRange(uint256, balanceOf[dst] + amount)
 
-storage
+updates
 
   totalSupply := totalSupply + amount
     balanceOf := balanceOf[ dst => balanceOf[dst] + amount ]
@@ -186,7 +186,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns totalSupply
 
 transition balanceOf(address idx) : uint256
@@ -195,7 +195,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns balanceOf[idx]
 
 transition allowance(address idx1, address idx2) : uint256
@@ -204,5 +204,5 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns allowance[idx1][idx2]

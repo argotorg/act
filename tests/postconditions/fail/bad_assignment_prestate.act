@@ -8,7 +8,7 @@ creates
 
 transition f(uint24 y)
 
-storage
+updates
 
   x := x + y
 

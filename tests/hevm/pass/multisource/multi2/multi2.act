@@ -13,7 +13,7 @@ transition setx(uint128 n)
 iff
   CALLVALUE == 0
 
-storage
+updates
   x := n
 
 contract A2
@@ -31,5 +31,5 @@ transition setA1x(uint128 n)
 iff
   CALLVALUE == 0
 
-storage
+updates
   y.x := n

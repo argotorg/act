@@ -17,7 +17,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns val
 
 transition f(uint x) : uint128
@@ -26,7 +26,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns f[x]
 
 
@@ -37,7 +37,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 
   f := f[key => value]
 

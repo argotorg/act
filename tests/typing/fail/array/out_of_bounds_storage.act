@@ -9,6 +9,6 @@ creates
 
 transition f(uint c)
 
-storage
+updates
 
     a[c] := 4

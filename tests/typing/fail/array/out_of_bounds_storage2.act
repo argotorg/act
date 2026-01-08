@@ -12,19 +12,19 @@ transition f()
 
 case -2 <= x and x < 0:
 
-  storage
+  updates
 
     a[0-x] := a[1]
 
 case 0 <= x and x <= 2:
 
-  storage
+  updates
 
     a[x+1] := 4
 
 case x < -2 or 2 < x:
 
-  storage
+  updates
 
     a[1] := 0
   

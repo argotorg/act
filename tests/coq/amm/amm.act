@@ -21,7 +21,7 @@ iff
 
 case CALLER != to:
 
-  storage
+  updates
 
      balanceOf[CALLER] := balanceOf[CALLER] - value
      balanceOf[to]     := balanceOf[to] + value
@@ -44,7 +44,7 @@ iff
 
 case src != dst and CALLER == src:
 
-  storage
+  updates
 
      balanceOf[src] := balanceOf[src] - amount
      balanceOf[dst] := balanceOf[dst] + amount
@@ -53,7 +53,7 @@ case src != dst and CALLER == src:
 
 case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
-  storage
+  updates
 
      balanceOf[src] := balanceOf[src] - amount
      balanceOf[dst] := balanceOf[dst] + amount
@@ -62,7 +62,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
 case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     allowance[src][CALLER] := allowance[src][CALLER] - amount
     balanceOf[src]         := balanceOf[src] - amount
@@ -72,7 +72,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     allowance[src][CALLER] := allowance[src][CALLER] - amount
 
@@ -92,7 +92,7 @@ iff
 
 case CALLER != spender:
 
-  storage
+  updates
 
     allowance[CALLER][spender] := amount
 
@@ -111,7 +111,7 @@ iff
   inRange(uint256, totalSupply - amount)
   inRange(uint256, balanceOf[CALLER] - amount)
 
-storage
+updates
 
   totalSupply := totalSupply - amount
   balanceOf[CALLER] := balanceOf[CALLER] - amount
@@ -129,7 +129,7 @@ iff
 
 case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
-  storage
+  updates
 
     totalSupply := totalSupply - amount
     balanceOf[src] := balanceOf[src] - amount
@@ -138,7 +138,7 @@ case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
 case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     totalSupply := totalSupply - amount
     allowance[src][CALLER] := allowance[src][CALLER] - amount
@@ -148,7 +148,7 @@ case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case CALLER == src:
 
-  storage
+  updates
 
     totalSupply := totalSupply - amount
     balanceOf[src] := balanceOf[src] - amount
@@ -171,7 +171,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 
   totalSupply := totalSupply + amount
   balanceOf[dst] := balanceOf[dst] + amount
@@ -234,7 +234,7 @@ iff
 
 case CALLER != THIS and token0.allowance[CALLER][THIS] == 2^256 - 1:
 
-storage
+updates
 
     token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
     token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
@@ -246,7 +246,7 @@ returns 1
 
 case CALLER != THIS and token0.allowance[CALLER][THIS] < 2^256 - 1:
 
-storage
+updates
 
     token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
     token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
@@ -282,7 +282,7 @@ iff
 
 case CALLER != THIS and token1.allowance[CALLER][THIS] == 2^256 - 1:
 
-storage
+updates
 
     token1.balanceOf[CALLER] := token1.balanceOf[CALLER] - amt
     token1.balanceOf[THIS]   := token1.balanceOf[THIS] + amt
@@ -294,7 +294,7 @@ returns 1
 
 case CALLER != THIS and token1.allowance[CALLER][THIS] < 2^256 - 1:
 
-storage
+updates
 
     token1.balanceOf[CALLER] := token1.balanceOf[CALLER] - amt
     token1.balanceOf[THIS]   := token1.balanceOf[THIS] + amt

@@ -28,7 +28,7 @@ transition remote(uint z)
 iff
    CALLVALUE == 0
 
-storage
+updates
    d.x := z
 
 contract C

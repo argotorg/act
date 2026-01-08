@@ -13,5 +13,5 @@ transition f()
 iff
   CALLVALUE == 0
 
-storage
+updates
   x := x

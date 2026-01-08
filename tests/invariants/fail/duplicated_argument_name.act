@@ -12,6 +12,6 @@ invariants
 
 transition f(uint _x)
 
-storage
+updates
 
     x := _x

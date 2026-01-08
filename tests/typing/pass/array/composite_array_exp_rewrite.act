@@ -8,6 +8,6 @@ creates
 
 transition f(uint[3][2] a)
 
-storage
+updates
 
   x := [a, [ [0,0,0], [0,0,0] ] ]

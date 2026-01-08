@@ -21,7 +21,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 
   x := y
   y := x
@@ -36,7 +36,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 
   flag := b
 
@@ -47,7 +47,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns
 
   flag
@@ -61,12 +61,12 @@ iff
 
 case flag:
 
-storage
+updates
   y := v
 
 returns 1
 
 case (not flag):
-storage
+updates
 returns 1
 

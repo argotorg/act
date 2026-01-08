@@ -12,7 +12,7 @@ transition f()
 iff
   x == 10
 
-storage
+updates
   x := 5
   ar[1] := 5
 

@@ -54,7 +54,7 @@ iff
     (dink <= 0) or (v == CALLER or Can[v][CALLER] == 1)
     (dart >= 0) or (w == CALLER or Can[w][CALLER] == 1)
 
-storage
+updates
 
     urns[i][u].ink := urns[i][u].ink + dink
     urns[i][u].art := urns[i][u].art + dart

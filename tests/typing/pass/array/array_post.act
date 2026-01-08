@@ -11,7 +11,7 @@ transition f()
 iff
   x == [1,2,3]
 
-storage
+updates
 
   x[0] := 3
   x[1] := 2

@@ -19,7 +19,7 @@ iff
 
 case x[5][4][3] < 0:
 
-  storage
+  updates
 
     a[-1] := x[10][0][2]
     x[2][3][5] := 4

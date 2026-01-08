@@ -36,7 +36,7 @@ tokens :-
   creates                               { mk CREATES }
   case                                  { mk CASE }
   returns                               { mk RETURNS }
-  storage                               { mk STORAGE }
+  updates                               { mk UPDATES }
   noop                                  { mk NOOP }
 
   iff $white+ in $white+ range          { mk IFFINRANGE }
@@ -136,7 +136,7 @@ data LEX =
   | CREATES
   | CASE
   | RETURNS
-  | STORAGE
+  | UPDATES
   | NOOP
   | IFFINRANGE
   | INRANGE

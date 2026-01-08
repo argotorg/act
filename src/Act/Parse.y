@@ -23,7 +23,7 @@ import Act.Error
   'creates'                   { L CREATES _ }
   'case'                      { L CASE _ }
   'returns'                   { L RETURNS _ }
-  'storage'                   { L STORAGE _ }
+  'updates'                   { L UPDATES _ }
   'noop'                      { L NOOP _ }
   'iff'                       { L IFF _ }
   'iff in range'              { L IFFINRANGE _ }
@@ -208,8 +208,8 @@ Cases : Post                                          { [Case nowhere (BoolLit n
 Case : 'case' Expr ':' Post                           { Case (posn $1) $2 $4 }
 
 
-Post  : Storage                                       { ($1, Nothing) }
-      | Storage Returns                               { ($1, Just $2) }
+Post  : Updates                                       { ($1, Nothing) }
+      | Updates Returns                               { ($1, Just $2) }
 
 Returns : 'returns' Expr                              { $2 }
 
@@ -217,7 +217,7 @@ Creates : 'creates' list(Create)                      { $2 }
 
 Create : ValueType id ':=' Expr                       { (StorageVar (posn $3) $1 (name $2), $4) }
 
-Storage : 'storage' list(Store)                       { $2 }
+Updates : 'updates' list(Store)                       { $2 }
 
 Precondition :  optblock('iff', Expr)                 { $1 }
 

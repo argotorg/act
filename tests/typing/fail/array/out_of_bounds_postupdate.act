@@ -9,7 +9,7 @@ creates
 
 transition f()
 
-storage
+updates
   x := 10
   ar[1] := 5
 

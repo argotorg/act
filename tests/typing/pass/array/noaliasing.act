@@ -16,7 +16,7 @@ iff
   x < 2
   y < 2
 
-storage
+updates
 
   arr1[x][y] := 1
   arr1[x+1][y] := 2

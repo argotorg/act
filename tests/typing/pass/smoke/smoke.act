@@ -4,6 +4,6 @@ constructor()
 creates
 
 transition f(uint x) : uint256
-storage
+updates
 
 returns 1

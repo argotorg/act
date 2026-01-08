@@ -18,6 +18,6 @@ iff
 	n > 1
     inRange(uint256, count+1)
     
-storage
+updates
 	n := n / 2
 	count := count + 1

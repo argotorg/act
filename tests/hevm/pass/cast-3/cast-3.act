@@ -14,7 +14,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns balanceOf[a]
 
 
@@ -28,7 +28,7 @@ iff
 
 case CALLER != to:
 
-  storage
+  updates
 
     balanceOf := balanceOf [ CALLER => balanceOf[CALLER] - _value
                            , to => balanceOf[to] + _value]
@@ -37,7 +37,7 @@ case CALLER != to:
 
 case CALLER == to:
 
-  storage
+  updates
   returns 1
 
 
@@ -63,7 +63,7 @@ iff
 
 case CALLER != THIS:
 
-storage
+updates
 
     token.balanceOf := token.balanceOf[ CALLER => token.balanceOf[CALLER] + 1
                                       , THIS => token.balanceOf[THIS] - 1 ]
@@ -72,5 +72,5 @@ returns 1
 
 case CALLER == THIS:
 
-storage
+updates
 returns 1

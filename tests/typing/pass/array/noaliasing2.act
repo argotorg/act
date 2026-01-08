@@ -26,7 +26,7 @@ iff
   a < 3
   b < 3
 
-storage
+updates
 
   arr1[x][y] := 1
   arr1[y][x] := 2

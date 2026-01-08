@@ -13,5 +13,5 @@ transition f() : uint128
 iff
   CALLVALUE == 0
 
-storage
+updates
 returns x

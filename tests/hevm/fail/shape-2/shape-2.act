@@ -35,5 +35,5 @@ iff
 
   CALLVALUE == 0
   
-storage
+updates
   a1 := a2

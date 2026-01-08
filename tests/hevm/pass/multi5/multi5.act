@@ -14,7 +14,7 @@ transition setz(uint z1)
 iff
     CALLVALUE == 0
 
-storage
+updates
     z := z1
 
 
@@ -35,6 +35,6 @@ transition foo()
 iff
     CALLVALUE == 0
 
-storage
+updates
     a := new A(8)
     a.z := 11

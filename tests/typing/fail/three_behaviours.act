@@ -9,7 +9,7 @@ creates
 
 transition increase(uint24 new_x) : uint24
 
-  storage
+  updates
     x
 
   returns pre(x)
@@ -20,7 +20,7 @@ ensures
 
 transition increase(uint24 new_x) : uint24
 
-storage
+updates
     x
 
   returns new_x
@@ -31,7 +31,7 @@ ensures
 
 transition increase(uint24 new_x) : uint24
 
-storage
+updates
     x
 
   returns new_x

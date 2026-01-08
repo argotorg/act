@@ -20,7 +20,7 @@ iff
   w < 3
   z < 3
 
-storage
+updates
 
   arr1[x][x] := 1
   arr1[y][y] := 2

@@ -9,13 +9,13 @@ creates
 
 transition setx(uint z)
 
-storage
+updates
 
   a.x := z
 
 transition setf(address i)
 
-storage
+updates
 
   a.f[i] := 1
 
@@ -39,13 +39,13 @@ creates
 
 transition setf(address i)
 
-storage
+updates
 
   b.a.f[i] := 2
 
 transition setxw(address i)
 
-storage
+updates
 
   b.a.x := 1
   w := 1

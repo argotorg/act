@@ -19,7 +19,7 @@ creates
 
 transition f()
 
-storage C
+updates C
 
     x := y
     y := y

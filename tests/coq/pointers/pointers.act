@@ -25,7 +25,7 @@ transition f(address<A> pa1)
 iff
   pa1 != a
 
-storage
+updates
   a := new A()
 
 
@@ -54,7 +54,7 @@ iff
   pa1 != b1.a
   pa2 != b1.a
 
-storage
+updates
   b1 := new B(pa1, pa2, new A(), new A())
   b1.y := 42
   b1.a := new A()

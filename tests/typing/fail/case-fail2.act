@@ -12,10 +12,10 @@ iff
 
 case z == 0:
 
-storage
+updates
   x := z
 
 case z >= 1:
 
-storage
+updates
   x := z + 1

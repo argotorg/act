@@ -13,5 +13,5 @@ creates
 
 transition f()
 
-storage
+updates
   a := new A(2, [ [1,arr[100][0]], [3,4], [5,6] ])

@@ -19,5 +19,5 @@ transition foo(uint m, uint n)
 iff
     m > 30
     n > 50
-storage
+updates
     a := new A(m, n)

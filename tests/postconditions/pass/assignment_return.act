@@ -8,7 +8,7 @@ creates
 
 transition f() : uint24
 
-storage
+updates
 
   x := 2
 

@@ -15,7 +15,7 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
-storage
+updates
 returns x
 
 transition add_x(uint y)
@@ -24,7 +24,7 @@ iff
    CALLVALUE == 0
    inRange(uint256, x + y)
 
-storage
+updates
 
   x := x + y
 
@@ -46,7 +46,7 @@ iff
    CALLVALUE == 0
    inRange(uint256, z + 1)
 
-storage
+updates
 
   z := z + 1
 
@@ -56,7 +56,7 @@ iff
    CALLVALUE == 0
    inRange(uint256, a.x + y)
 
-storage
+updates
 
   a.x := a.x + y
 
@@ -84,7 +84,7 @@ iff
    inRange(uint256, b.z + 1)
    inRange(uint256, b.a.x + z)
 
-storage
+updates
 
   b.z := b.z + 1
   b.a.x := b.a.x + z

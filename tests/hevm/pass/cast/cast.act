@@ -15,7 +15,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
 returns x
 
 
@@ -25,7 +25,7 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
   x := x1
 
 
@@ -48,6 +48,6 @@ iff
 
   CALLVALUE == 0
 
-storage
+updates
   a1.x := 42
   a2.x := 11

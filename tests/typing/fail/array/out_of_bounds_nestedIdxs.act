@@ -10,6 +10,6 @@ creates
 transition f()
 
 
-storage
+updates
 
   a[1] := a[a[2]]

@@ -24,7 +24,7 @@ iff
 
     e > 1
 
-storage
+updates
 
     r := r * b
     e := e - 1

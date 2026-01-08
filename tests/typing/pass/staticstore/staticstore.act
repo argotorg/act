@@ -7,6 +7,6 @@ transition f() : uint256
 
 iff inRange(uint256, x + y)
 
-storage
+updates
 
 returns x + y

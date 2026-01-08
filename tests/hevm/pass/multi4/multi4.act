@@ -15,7 +15,7 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
-storage
+updates
 returns x
 
 transition add_x(uint y)
@@ -24,7 +24,7 @@ iff
    CALLVALUE == 0
    inRange(uint256, x + y)
 
-storage
+updates
 
   x := x + y
 
@@ -45,5 +45,5 @@ transition foo()
 iff
    CALLVALUE == 0
 
-storage
+updates
   a := new A(42)

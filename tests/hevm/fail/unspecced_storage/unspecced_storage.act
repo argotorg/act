@@ -14,7 +14,7 @@ transition f() : uint256
 
 // fails to mention the state update
 
-storage
+updates
 returns
 
   1

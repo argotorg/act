@@ -15,7 +15,7 @@ iff in range uint256
 
     x + y
 
-storage
+updates
 
     // TODO: remove this hack once bug #81 is fixed...
     x := x

@@ -9,7 +9,7 @@ iff
     inRange(uint256, x+y)
     CALLVALUE == 0
 
-storage
+updates
 returns x + y
 
 transition mul(uint256 x, uint256 y) : uint256
@@ -18,7 +18,7 @@ iff
     inRange(uint256, x*y)
     CALLVALUE == 0
 
-storage
+updates
 returns x * y
 
 transition double(uint256 x) : uint256
@@ -27,5 +27,5 @@ iff
     inRange(uint256, 2*x)
     CALLVALUE == 0
 
-storage
+updates
 returns 2 * x

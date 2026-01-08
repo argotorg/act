@@ -9,6 +9,6 @@ iff
     inRange(uint256, x + y)
     CALLVALUE == 0
 
-storage
+updates
 
 returns x + y

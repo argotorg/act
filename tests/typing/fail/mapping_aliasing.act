@@ -10,7 +10,7 @@ creates
 
 transition f()
 
-storage
+updates
 
   m[x] := 0
   m[y] := 1

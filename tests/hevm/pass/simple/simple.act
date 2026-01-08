@@ -16,7 +16,7 @@ iff
 
   CALLVALUE == 0
 
-  storage
+  updates
 
     x := x[0 => 1]
 

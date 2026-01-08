@@ -19,6 +19,6 @@ creates
 
 transition update(uint z)
 iff
-    z > 0
-storage
+    z > 42
+updates
     a := new A(z)

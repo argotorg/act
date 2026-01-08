@@ -13,7 +13,7 @@ transition x () : uint
 iff
     CALLVALUE == 0
 
-storage
+updates
 returns x
 
 transition set_x(uint z)
@@ -21,7 +21,7 @@ transition set_x(uint z)
 iff
     CALLVALUE == 0
 
-storage
+updates
     x := z
 
 
@@ -40,7 +40,7 @@ transition upd()
 iff
     CALLVALUE == 0
 
-storage
+updates
     a.x := 42
 
 

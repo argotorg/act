@@ -4,6 +4,6 @@ constructor()
 creates
 
 transition f(address[2] xs) : address
-storage
+updates
 
 returns xs[1]

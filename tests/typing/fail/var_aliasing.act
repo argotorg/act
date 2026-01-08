@@ -9,7 +9,7 @@ creates
 
 transition f()
 
-storage
+updates
 
   x := 1
   x := 1

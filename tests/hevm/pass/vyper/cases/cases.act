@@ -17,18 +17,18 @@ iff
 
 case x > 2:
 
-  storage
+  updates
 
     x := m[2]
 
 case 1 <= x and x <= 2:
 
-  storage
+  updates
 
     x := m[3]
 
 case x < 1:
 
-  storage
+  updates
 
     x := m[x]

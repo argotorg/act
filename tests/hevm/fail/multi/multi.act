@@ -14,7 +14,7 @@ transition set_x(uint z)
 iff
    CALLVALUE == 0
 
-storage
+updates
    x := z
 
 

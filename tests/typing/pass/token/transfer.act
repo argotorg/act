@@ -27,14 +27,14 @@ iff
 
 case CALLER != to:
 
-  storage
+  updates
 
     balanceOf := balanceOf[CALLER => balanceOf[CALLER] - value, to => balanceOf[to] + value]
 
   returns 1
 
 case CALLER == to:
-  storage
+  updates
 
   returns 1
 
@@ -50,7 +50,7 @@ iff
 
 case src != dst and CALLER == src:
 
-  storage
+  updates
 
      balanceOf := balanceOf[ src => balanceOf[src] - amount
                            , dst => balanceOf[dst] + amount ]
@@ -59,7 +59,7 @@ case src != dst and CALLER == src:
 
 case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
-  storage
+  updates
 
      balanceOf := balanceOf[ src => balanceOf[src] - amount
                            , dst => balanceOf[dst] + amount ]
@@ -68,7 +68,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
 case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     allowance := allowance[ src => allowance[src][CALLER => allowance[src][CALLER] - amount ]]
     balanceOf := balanceOf[ src => balanceOf[src] - amount
@@ -78,6 +78,6 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case src == dst:
 
-  storage
+  updates
 
   returns 1

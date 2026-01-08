@@ -19,7 +19,7 @@ iff
 
 case CALLER != to:
 
-  storage
+  updates
 
 	balances[CALLER] := balances[CALLER] - amt
 	balances[to] := balances[to] + amt

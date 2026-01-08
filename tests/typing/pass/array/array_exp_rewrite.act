@@ -9,6 +9,6 @@ creates
 
 transition f()
 
-storage
+updates
 
   x[1] := y[0][1]

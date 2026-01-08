@@ -14,7 +14,7 @@ transition x() : uint256
 iff
    CALLVALUE == 0
 
-storage
+updates
 returns x
 
 transition set_x(uint z)
@@ -22,7 +22,7 @@ transition set_x(uint z)
 iff 
    CALLVALUE == 0
 
-storage
+updates
   x := z
 
 contract B
@@ -40,7 +40,7 @@ transition y() : uint256
 iff
    CALLVALUE == 0
 
-storage
+updates
 returns y
 
 transition a() : address<A>
@@ -48,7 +48,7 @@ transition a() : address<A>
 iff
    CALLVALUE == 0
 
-storage
+updates
 returns a
 
 
@@ -70,5 +70,5 @@ iff
 
   CALLVALUE == 0
   
-storage
+updates
   b.a.x := 17

@@ -10,6 +10,6 @@ creates
 // should fail to typecheck because y has not been declared in the storage block below...
 transition f()
 
-storage
+updates
 
 	x := y

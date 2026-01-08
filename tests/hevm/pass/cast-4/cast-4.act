@@ -37,7 +37,7 @@ transition upd()
 iff
     CALLVALUE == 0
 
-storage
+updates
 
     a1 := new A(42)
     a2 := new A(43)
