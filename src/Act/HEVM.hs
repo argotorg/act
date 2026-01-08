@@ -9,9 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
-
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Act.HEVM where
 
@@ -348,7 +346,7 @@ applyUpdate readMap writeMap callenv (Update typ@VType ref e) = writeToRef readM
 writeToRef :: Monad m => ContractMap -> ContractMap -> CallEnv -> TypedRef -> TypedExp -> ActNDT m ContractMap
 writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
   caddr' <- baseAddr writeMap callenv ref
-  (addr, offset, size, lmode) <- refOffset writeMap callenv ref
+  (addr, offset, size, _) <- refOffset writeMap callenv ref
   let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
   case typ of
     TAddress | isCreate e -> do
@@ -689,7 +687,7 @@ toExprND cmap callenv e = go e
       (IntMax _ n) -> pure $ EVM.Lit (fromIntegral $ intmax n)
       (UIntMin _ n) -> pure $ EVM.Lit (fromIntegral $ uintmin n)
       (UIntMax _ n) -> pure $ EVM.Lit (fromIntegral $ uintmax n)
-      (InRange _ t e) -> toExprND cmap callenv (inRange t e)
+      (InRange _ t e1) -> toExprND cmap callenv (inRange t e1)
       -- bytestrings
       (Cat _ _ _) -> error "TODO"
       (Slice _ _ _ _) -> error "TODO"
@@ -737,7 +735,7 @@ toExprND cmap callenv e = go e
             toExprND cmap callenv e'
 
       (Address _ _ e') -> toExprND cmap callenv e'
-      e ->  error $ "TODO: " <> show e
+      _ ->  error $ "TODO: " <> show e
 
     op2 :: Monad m => forall b c. (EVM.Expr (ExprType c) -> EVM.Expr (ExprType c) -> b) -> Exp c -> Exp c -> ActNDT m b
     op2 op e1 e2 = do
