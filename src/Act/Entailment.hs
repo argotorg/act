@@ -129,7 +129,7 @@ applySubstRef ctors subst (RField p r c x) =
 applySubstRef _ _ s@(SVar _ _ _ _) = error $ "Internal error: found storage variable reference in constructor: " <> show s
 
 evalConstrCall :: Constructors -> [TypedExp] -> Id -> Id -> TypedExp
-evalConstrCall ctors args cid cfield = applySubstTExp ctors subst (evalCases cases)
+evalConstrCall ctors args cid cfield = evalCases $ applySubstCase ctors subst <$> cases
   where
     -- Find the constructor in the environment
     constr = annotate <$> fromMaybe (error $ "Internal error: constructor " <> show cid <> " not found in environment.") $ M.lookup cid ctors
@@ -162,6 +162,15 @@ evalConstrCall ctors args cid cfield = applySubstTExp ctors subst (evalCases cas
 -- | Apply a substitution to a typed expression
 applySubstTExp :: Constructors -> M.Map Id TypedExp -> TypedExp -> TypedExp
 applySubstTExp ctors subst (TExp t e) = TExp t (applySubst ctors subst e)
+
+applySubstCase :: Constructors -> M.Map Id TypedExp -> Ccase -> Ccase
+applySubstCase ctors subst (Case pn cond upds) =
+    Case pn (applySubst ctors subst cond) (applySubstStorageUpd ctors subst <$> upds)
+
+applySubstStorageUpd :: Constructors -> M.Map Id TypedExp -> StorageUpdate -> StorageUpdate
+applySubstStorageUpd ctors subst (Update t r e) =
+    Update t r (applySubst ctors subst e)
+
 
 -- | Apply a substitution to an expression
 applySubst :: Constructors -> M.Map Id TypedExp -> Exp a -> Exp a

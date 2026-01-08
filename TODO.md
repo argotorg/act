@@ -1,6 +1,6 @@
 Implementation TODOs
 
-Target release data: 15/1/2025
+Target release date: 15/1/2025
 
 - Usability 
   - [ ] Multiple files with nice error messages
@@ -13,8 +13,9 @@ Target release data: 15/1/2025
 
 - Typing
   - [X] New typechecker
-  - [ ] Entailment check (WIP)
+  - [X] Entailment check
   - [ ] Correct handling of Eth environment vars + balance
+  - [ ] addr(0)
 
 - HEVM
   - [X] Merge environment PR
@@ -28,7 +29,6 @@ Target release data: 15/1/2025
 - Rocq
   - [ ] Consistent predicate
   - [ ] Correct handling of Eth environment vars + balance
-
 
 - Examples
   - AMM time out? 
@@ -58,6 +58,4 @@ Target release data: 15/1/2025
 
     For an array with size 42
 
-- 
-
-balance := balance - 10 
+  - 
