@@ -1,8 +1,11 @@
 # Rocq
 
-While the automated proof backend is quite capable, there are still many properties that are too
-challenging for automated tools. For this reason Act allows exporting the transition system to the
-Rocq proof assistant, where manual proofs of arbitrary complexity can be carried out.
+In order to reason about the contracts and prove their properties, the Rocq backend of Act shallowly 
+embeds the Act specification into the logic of the Rocq proof assistant.
+
+For this embedding to be sound, we ensure that the storage of the
+contract (and the contracts reachable from it) satisfies the *unique ownership invariant*, meaning that
+its storage may never contain any aliased references to other contracts (see [aliasing section](./aliasing.md)). Act checks this invariant automatically immediately after the type-checking phase.
 
 A proof assistant provides tools that help to construct proofs. Rocq, in particular, is highly
 interactive. The user typically builds proofs step by step, with the software giving feedback as the
