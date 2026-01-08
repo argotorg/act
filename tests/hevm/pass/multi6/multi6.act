@@ -1,25 +1,16 @@
 contract A
 constructor (uint z)
 
-iff
-    CALLVALUE == 0
-
 creates
     uint x := z
 
 
 transition x () : uint
 
-iff
-    CALLVALUE == 0
-
 updates
 returns x
 
 transition set_x(uint z)
-
-iff
-    CALLVALUE == 0
 
 updates
     x := z
@@ -28,8 +19,6 @@ updates
 contract B
 constructor(address<A> x)
 
-iff
-    CALLVALUE == 0
 
 creates
     A a := x
@@ -37,18 +26,12 @@ creates
 
 transition upd()
 
-iff
-    CALLVALUE == 0
-
 updates
     a.x := 42
 
 
 contract C
 constructor(address<A> x)
-
-iff
-    CALLVALUE == 0
 
 creates
     A a := new A(11)

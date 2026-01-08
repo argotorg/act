@@ -7,7 +7,8 @@
 {-# Language ApplicativeDo #-}
 {-# Language ViewPatterns #-}
 {-# Language TypeOperators #-}
-{-# LANGUAGE InstanceSigs #-}
+{-# Language InstanceSigs #-}
+{-# Language TupleSections #-}
 
 module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors) where
 
@@ -151,7 +152,9 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
     -- check preconditions
-    (unzip <$> traverse (checkExpr env' U TBoolean) iffs) `bindValidation` \(iffs', cnstr1) ->
+    (unzip <$> traverse (checkExpr env' U TBoolean) iffs) `bindValidation` \(iffs1, cnstr1) ->
+    -- add implicit CALLVALUE == 0 precondition if not payable
+    let iffs' = addCallvalueZeroPrecond payable iffs1 in
     -- check postconditions
     let env'' = addPreconds iffs' env' in
     (checkConstrCases env'' cases) `bindValidation` \(storageType, cases', cnstr2) -> do
@@ -284,8 +287,10 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
     -- check postconditions
     ensures <- map fst <$> traverse (checkExpr env' T TBoolean) posts
     -- return the behaviour
-    pure $ let (iffs', cnstrs1) = iffsc
+    pure $ let (iffs1, cnstrs1) = iffsc
                (cases', cnstrs2) = casesc
+               -- add implicit CALLVALUE == 0 precondition if not payable
+               iffs' = addCallvalueZeroPrecond payable iffs1
                casecnstrs = checkCaseConsistency env' cases'
                -- add integer type bounds as preconditions
                bounds = boundsBehaviour $ Behaviour name contract iface payable iffs' cases' ensures
@@ -355,6 +360,16 @@ mkOr (c:cs) = foldr (Or nowhere) c cs
 mkAnd :: [Exp ABoolean t] -> Exp ABoolean t
 mkAnd [] = LitBool nowhere True
 mkAnd (c:cs) = foldr (And nowhere) c cs
+
+
+-- | Check if a constructor/transition is non-payable and if so generate a precondition
+-- to ensure that it is not called with value.
+addCallvalueZeroPrecond :: IsPayable -> [Exp ABoolean Untimed] -> [Exp ABoolean Untimed]
+addCallvalueZeroPrecond Payable iffs = iffs
+addCallvalueZeroPrecond NonPayable iffs =
+    (Eq nowhere (TInteger 256 Unsigned) (IntEnv nowhere Callvalue) (LitInt nowhere 0)) : iffs
+
+
 
 -- | Check that case conditions in a case block are mutually exclusive and exhaustive
 checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
@@ -679,7 +694,7 @@ inferExpr env@Env{constructors} mode e = case e of
                       | otherwise = TUnboundedInt
 
   U.EArray p l -> (unzip <$> traverse (inferExpr env mode) l) `bindValidation` \(tes, cs) ->
-    flip (,) (concat cs) <$> gatherElements tes
+    (, concat cs) <$> gatherElements tes
     where
       gatherElements :: [TypedExp t] -> Err (TypedExp t)
       gatherElements (TExp t1 te1:tes) =  TExp (TArray (length l) t1) <$> (Array p . (:) te1 <$> traverse (checkElement t1) tes)

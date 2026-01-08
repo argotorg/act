@@ -7,9 +7,6 @@ creates
 	
 transition bar(uint z)
 
-iff
-   CALLVALUE == 0
-
 case z == 0:
 
 updates

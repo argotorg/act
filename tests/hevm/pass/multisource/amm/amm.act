@@ -4,7 +4,6 @@ constructor(address<Token> t0, address<Token> t1)
 
 iff
 
-    CALLVALUE == 0
     t0 != t1
 
 creates
@@ -15,7 +14,6 @@ creates
 transition swap0(uint256 amt) : uint256
 
 iff
-    CALLVALUE == 0
     inRange(uint256,token0.balanceOf[CALLER] - amt)
     CALLER != THIS ==> inRange(uint256,token0.balanceOf[THIS] + amt)
     CALLER != THIS ==> inRange(uint256,token0.allowance[CALLER][THIS] - amt)

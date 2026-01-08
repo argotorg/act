@@ -43,7 +43,6 @@ iff in range int256
     ilks[i].rate * dart
 
 iff
-    CALLVALUE == 0
     live == 1
     ilks[i].rate != 0
     dart <= 0 or ((ilks[i].art + dart) * ilks[i].rate <= ilks[i].line and debt + ilks[i].rate * dart <= line)

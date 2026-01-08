@@ -5,6 +5,7 @@ Target release date: 15/1/2025
 - Usability 
   - [ ] Multiple files with nice error messages
   - [ ] Ordering of contracts in multiple files in DAG order
+  - Make the makefile and tests reasonable
 
 - Parser
   - [X] New syntax

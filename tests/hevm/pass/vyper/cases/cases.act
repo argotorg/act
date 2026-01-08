@@ -2,18 +2,12 @@ contract A
 
 constructor()
 
-iff
-  CALLVALUE == 0
-
 creates
   uint128 x := 0
   mapping(uint128 => uint128) m := []
 
 
 transition f()
-
-iff
-  CALLVALUE == 0
 
 case x > 2:
 

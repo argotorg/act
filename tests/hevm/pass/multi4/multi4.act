@@ -3,7 +3,6 @@ contract A
 constructor(uint z)
 
 iff
-   CALLVALUE == 0
    inRange(uint256, z + 1)
 
 creates
@@ -12,16 +11,12 @@ creates
 
 transition x() : uint256
 
-iff
-   CALLVALUE == 0
-
 updates
 returns x
 
 transition add_x(uint y)
 
 iff
-   CALLVALUE == 0
    inRange(uint256, x + y)
 
 updates
@@ -33,7 +28,6 @@ contract B
 
 constructor(uint i)
 iff
-   CALLVALUE == 0
    inRange(uint256, i + 42)
 
 creates
@@ -41,9 +35,6 @@ creates
    A a := new A(i)
 
 transition foo()
-
-iff
-   CALLVALUE == 0
 
 updates
   a := new A(42)

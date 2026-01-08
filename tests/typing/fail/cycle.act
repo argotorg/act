@@ -16,16 +16,10 @@ creates
 
 transition remote(uint z)
 
-iff
-   CALLVALUE == 0
-
 updates
    a.x := z
 
 transition multi(uint z)
-
-iff
-   CALLVALUE == 0
 
 updates
    y := 1

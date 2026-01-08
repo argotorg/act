@@ -2,8 +2,6 @@ contract Token
 
 constructor(uint256 _totalSupply)
 
-iff CALLVALUE == 0
-
 creates
 
   uint256 totalSupply := _totalSupply
@@ -15,7 +13,6 @@ transition transfer(uint256 _value, address to) : uint256
 
 iff
 
-  CALLVALUE == 0
   inRange(uint256, balanceOf[CALLER] - _value)
   CALLER != to ==> inRange(uint256, balanceOf[to] + _value)
 
@@ -41,7 +38,6 @@ iff
   amount <= balanceOf[src]
   src    != dst ==> inRange(uint256, balanceOf[dst] + amount)
   CALLER != src ==> inRange(uint256, allowance[src][CALLER] - amount)
-  CALLVALUE == 0
 
 case src != dst and CALLER == src:
 

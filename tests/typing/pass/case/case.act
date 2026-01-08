@@ -10,7 +10,6 @@ transition bar(uint z)
 iff
    inRange(int256, z + 1)
    inRange(int256, z + 2)
-   CALLVALUE == 0
 
 case z == 0:
 

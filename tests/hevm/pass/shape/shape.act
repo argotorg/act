@@ -2,25 +2,16 @@ contract A
 
 constructor(uint z)
 
-iff
-   CALLVALUE == 0
-
 creates
    uint x := z
 
 
 transition x() : uint256
 
-iff
-   CALLVALUE == 0
-
 updates
 returns x
 
 transition set_x(uint z)
-
-iff 
-   CALLVALUE == 0
 
 updates
   x := z
@@ -28,8 +19,6 @@ updates
 contract B
 
 constructor(uint z)
-iff
-   CALLVALUE == 0
 
 creates
    uint y := z
@@ -37,16 +26,10 @@ creates
 
 transition y() : uint256
 
-iff
-   CALLVALUE == 0
-
 updates
 returns y
 
 transition a() : address<A>
-
-iff
-   CALLVALUE == 0
 
 updates
 returns a
@@ -56,9 +39,6 @@ contract C
 
 constructor(address<B> y)
 
-iff
-   CALLVALUE == 0
-
 creates
    A a := y.a
    B b := y
@@ -66,9 +46,5 @@ creates
 
 transition change()
 
-iff
-
-  CALLVALUE == 0
-  
 updates
   b.a.x := 17

@@ -13,7 +13,6 @@ transition transfer(uint256 value, address to) : uint256
 
 iff
 
-  CALLVALUE == 0
   value <= balanceOf[CALLER]
   CALLER != to ==> balanceOf[to] + value < 2^256
 
@@ -38,7 +37,6 @@ iff
   amount <= balanceOf[CALLER]
   src    != dst ==> balanceOf[dst] + amount < 2^256
   CALLER != src ==> 0 <= allowance[src][CALLER] - amount
-  CALLVALUE == 0
 
 case src != dst and CALLER == src:
 

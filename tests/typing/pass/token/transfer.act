@@ -21,7 +21,6 @@ transition transfer(uint256 value, address to) : uint256
 
 iff
 
-  CALLVALUE == 0
   value <= balanceOf[CALLER]
   CALLER != to ==> inRange(uint256, balanceOf[to] + value)
 

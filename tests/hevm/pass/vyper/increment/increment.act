@@ -2,16 +2,12 @@ contract A
 
 constructor()
 
-iff
-  CALLVALUE == 0
-
 creates
   uint128 x := 0
 
 transition f()
 
 iff
-  CALLVALUE == 0
   inRange(uint128, x+1)
 
 updates

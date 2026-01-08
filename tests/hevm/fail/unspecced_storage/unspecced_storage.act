@@ -2,10 +2,6 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   mapping (uint=>uint) x := []

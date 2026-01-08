@@ -2,18 +2,12 @@ contract A
 
 constructor(uint w1)
 
-iff
-    CALLVALUE == 0
-
 creates
     uint w := w1
 
 contract B
 
 constructor(uint z1)
-
-iff
-    CALLVALUE == 0
 
 creates
     uint z := z1
@@ -22,9 +16,6 @@ contract C
 
 constructor(address<A> a1, address<B> a2)
 
-iff
-    CALLVALUE == 0
-
 creates
     A a := a1
     B b := a2
@@ -32,9 +23,6 @@ creates
 contract D
 
 constructor(address<A> a1, address a2)
-
-iff
-    CALLVALUE == 0    
 
 creates
     C c1 := new C(a1, a2)

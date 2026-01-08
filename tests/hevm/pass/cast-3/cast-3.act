@@ -2,17 +2,10 @@ contract Token
 
 constructor(uint _supply)
 
-iff
-    CALLVALUE == 0
-
 creates
     mapping(address => uint) balanceOf :=  [CALLER => _supply]
 
 transition balanceOf(address a) : uint256
-
-iff
-
-  CALLVALUE == 0
 
 updates
 returns balanceOf[a]
@@ -22,7 +15,6 @@ transition transfer(address to, uint256 _value) : uint256
 
 iff
 
-  CALLVALUE == 0
   CALLER != to ==> inRange(uint256, balanceOf[to] + _value)
   inRange(uint256,balanceOf[CALLER] - _value)
 
@@ -47,7 +39,6 @@ constructor(address<Token> _tokenAddress)
 
 iff
 
-    CALLVALUE == 0
     address(_tokenAddress) != 0
 
 creates
@@ -57,7 +48,6 @@ creates
 transition transfer() : uint256
 
 iff
-    CALLVALUE == 0    
     THIS != CALLER ==> inRange(uint256, token.balanceOf[CALLER] + 1)
     inRange(uint256,token.balanceOf[THIS] - 1)
 

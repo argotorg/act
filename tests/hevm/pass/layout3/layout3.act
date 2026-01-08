@@ -2,10 +2,6 @@ contract Map
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
   uint128 val := 11
   mapping(uint => uint128) f := [11 => 42]
@@ -13,18 +9,10 @@ creates
 
 transition val() : uint128
 
-iff
-
-  CALLVALUE == 0
-
 updates
 returns val
 
 transition f(uint x) : uint128
-
-iff
-
-  CALLVALUE == 0
 
 updates
 returns f[x]
@@ -32,10 +20,6 @@ returns f[x]
 
 //transition set(uint256 value, uint key) : uint256
 transition set(uint128 value, uint key) : uint256
-
-iff
-
-  CALLVALUE == 0
 
 updates
 

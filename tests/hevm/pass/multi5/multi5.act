@@ -2,17 +2,11 @@ contract A
 
 constructor(uint z1)
 
-iff
-    CALLVALUE == 0
-
 creates
     uint z := z1
 
 
 transition setz(uint z1)
-
-iff
-    CALLVALUE == 0
 
 updates
     z := z1
@@ -22,18 +16,12 @@ contract B
 
 constructor(uint x1)
 
-iff
-    CALLVALUE == 0
-
 creates
     uint x := x1
     A a := new A(42)
 
 
 transition foo()
-
-iff
-    CALLVALUE == 0
 
 updates
     a := new A(8)

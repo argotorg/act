@@ -2,10 +2,6 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   uint128 x := 11
@@ -17,10 +13,6 @@ creates
 
 transition foo() : uint256
 
-iff
-
-  CALLVALUE == 0
-
 updates
 
   x := y
@@ -31,10 +23,6 @@ updates
 returns 1
 
 transition set_flag(bool b)
-
-iff
-
-  CALLVALUE == 0
 
 updates
 

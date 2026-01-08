@@ -2,16 +2,10 @@ contract A1
 
 constructor()
 
-iff
-  CALLVALUE == 0
-
 creates
   uint128 x := 0
 
 transition setx(uint128 n)
-
-iff
-  CALLVALUE == 0
 
 updates
   x := n
@@ -20,16 +14,10 @@ contract A2
 
 constructor(address<A1> c)
 
-iff
-  CALLVALUE == 0
-
 creates
   A1 y := c
 
 transition setA1x(uint128 n)
-
-iff
-  CALLVALUE == 0
 
 updates
   y.x := n

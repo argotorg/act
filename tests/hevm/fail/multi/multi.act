@@ -3,16 +3,12 @@ contract A
 constructor(uint z)
 
 iff
-   CALLVALUE == 0
    inRange(uint256, z + 42)
 
 creates
    uint x := z + 42
 
 transition set_x(uint z)
-
-iff
-   CALLVALUE == 0
 
 updates
    x := z
@@ -23,7 +19,6 @@ contract B
 constructor(uint v)
 
 iff
-   CALLVALUE == 0
    // This condition must be present for equivalence check to pass
    // inRange(uint256, v + 42)
 
