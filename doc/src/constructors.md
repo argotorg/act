@@ -77,7 +77,7 @@ creates
     bool myFlag := false
 ```
 
-Act interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. This balance is not part of the user-facing contract storage, and therefore cannot be initialized or modified by the user.
+Act interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. This balance is not part of the user-facing contract storage, and therefore cannot be initialized or modified by the user. <span style="color:red"> I need some help here to make this a correct statement. </span>
 
 Nonetheless, the user can write conditions on the callvalue sent during construction using the special variable `CALLVALUE`. See e.g. the payable constructor example above.
 There are 4 such special variables (called environment variables) related to the call environment that the user can access as explained in [Variable References](./store_type.md#variable-references).
@@ -103,7 +103,45 @@ It is a non-payable constructor that takes two parameters, `t0` and `t1`, which 
 The `iff` clause specifies the **necessary and sufficient condition** under which the constructor succeeds. If this condition does not hold, the constructor reverts.
 In this example, the precondition `t0 != t1` ensures that the two token addresses are distinct. If a user attempts to deploy the AMM contract with identical token addresses, the constructor will revert, preventing the creation of an invalid AMM instance.
 
+The precondition block extends the `require`/`assert` statements commonly used in Solidity/Vyper constructors by explicitly listing requirements that are implicit in the code. In the above case the `iff` block is the same as the `require`/`assert` statement in Solidity/Vyper: 
+
+*(constructor from amm.sol)*
+
+```solidity
+ constructor(address t0, address t1) {
+        require (t0 != t1);
+        token0 = Token(t0);
+        token1 = Token(t1);
+    }
+```
+
+*(constructor from amm.vy)*
+
+```vyper
+@deploy
+def __init__(t0: address, t1: address):
+  assert (t0 != t1)
+  self.token0 = Token(t0)
+  self.token1 = Token(t1)
+```
+
+
 As mentioned before, the `iff` block cannot be skipped even if the condition is trivial, in which case the user should write `iff true` as shown in the ERC20 example.
+
+### `inRange` in Preconditions
+Whenever arithmetic operations are involved in the storage initialization, it is necessary to ensure that these operations do not overflow or underflow. This is done using the `inRange` expression ([Base Expressions](./store_type.md#base-expressions)), which checks whether a value fits within a specified type. In solidity these range checks are implicit, but in Act they must be made explicit in the precondition block.
+
+For example, consider a constructor that initializes a balance by subtracting a value from an initial amount. To ensure that this subtraction does not underflow, the precondition would include an `inRange` check:
+
+```act
+constructor(uint256 initialAmount, uint256 deduction)
+iff
+    inRange(uint256, initialAmount - deduction)
+creates
+    uint256 balance := initialAmount - deduction
+```
+
+The same principle applies to transitions and storage updates. How the arithmetic safety is enforced in Act is explained in more detail in [Arithmetic Safety](./arith_safety.md).
 
 ## Initializing Storage
 
@@ -130,7 +168,7 @@ This should be read as:
 
 
  <span  style="color:red">  
-should we mention sth about simultaneous vs sequential creates/updates here or only in behaviors?
+should we mention sth about simultaneous vs sequential creates/updates here or only in transitions?
   </span>
 
 ## Constructors Cannot Modify Existing Contracts

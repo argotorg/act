@@ -113,7 +113,7 @@ creates
 
   uint result := 0
 
-behaviour add of Add
+transition add of Add
 interface add(uint x, uint y)
 
 iff in range uint

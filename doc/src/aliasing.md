@@ -11,7 +11,7 @@ contract A
             Token t0 := a0
             Token t1 := a1
     transition transfer (uint256 value, address to)
-        storage 
+        updates 
             t0.balanceOf := t0.balanceOf[CALLER => t0.balanceOf[CALLER] - value]
             t1.balanceOf := t1.balanceOf[to => t1.balanceOf[to] + value]
 

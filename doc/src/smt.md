@@ -33,7 +33,7 @@ important safety property, if it is violated, an attacker will be able to execut
 trades that can drain all funds from the exchange.
 
 ```act
-behaviour init of Amm
+transition init of Amm
 interface constructor()
 
 creates
@@ -51,28 +51,28 @@ amount (`amt`) of input reserves, and the `Amm` will adjust the size of the othe
 to the `x * y == k` constant product formula.
 
 ```act
-behaviour swap0 of Amm
+transition swap0 of Amm
 interface swap0(uint256 amt)
 
 iff in range uint256
 
     reserve0 + amt
 
-storage
+updates
 
     reserve0 => reserve0 + amt
     reserve1 => (reserve0 * reserve1) / (reserve0 + amt)
 ```
 
 ```act
-behaviour swap1 of Amm
+transition swap1 of Amm
 interface swap1(uint256 amt)
 
 iff in range uint256
 
     reserve1 + amt
 
-storage
+updates
 
     reserve0 => (reserve0 * reserve1) / (reserve1 + amt)
     reserve1 => reserve1 + amt
@@ -93,28 +93,28 @@ possible executions of the contract.
 
 
 ```act
-behaviour swap0 of Amm
+transition swap0 of Amm
 interface swap0(uint256 amt)
 
 iff in range uint256
 
     reserve0 + amt
 
-storage
+updates
 
     reserve0 => reserve0 + amt
     reserve1 => (reserve0 * reserve1) / (reserve0 + amt) + 1
 ```
 
 ```act
-behaviour swap1 of Amm
+transition swap1 of Amm
 interface swap1(uint256 amt)
 
 iff in range uint256
 
     reserve1 + amt
 
-storage
+updates
 
     reserve0 => (reserve0 * reserve1) / (reserve1 + amt) + 1
     reserve1 => reserve1 + amt
@@ -126,7 +126,7 @@ Due to the inductive nature of the proof, there are some true invariants that th
 unable to prove. For example, consider the following state machine:
 
 ```act
-behaviour init of C
+transition init of C
 interface constructor()
 
 creates
@@ -135,28 +135,28 @@ creates
 invariants
     x < 9
 
-behaviour f of C
+transition f of C
 interface f()
 
 case x == 0:
 
-    storage
+    updates
         x => 1
 
-behaviour g of C
+transition g of C
 interface g()
 
 case x == 1:
 
-    storage
+    updates
         x => 2
 
-behaviour j of C
+transition j of C
 interface j()
 
 case x == 7:
 
-    storage
+    updates
         x => 100
 ```
 
@@ -182,23 +182,23 @@ Although SMT solvers are powerful tools there are some important limitations to 
 - The invariants proven can only be inductive in nature, and can only be expressed in terms of state
   variables and constructor arguments.
 - SMT solvers do not support the exponentiation operation.
-- The solver may be unable to prove properties about behaviours making extensive use of non linear
+- The solver may be unable to prove properties about transitions making extensive use of non linear
   arithmetic (i.e. multiplication or division by a symbolic value). This is an inherent limitation
   of all SMT solvers.
 
 ## Implementation Strategy
 
-For each invariant claim, Act builds an individual SMT query for each behaviour in the transtion
+For each invariant claim, Act builds an individual SMT query for each transition in the transtion
 system. If there are no invariant claims defined, then `act` will insert an implicit invariant of
 `True`, meaning that the postconditions are still checked.
 
-If the behaviour is a constructor, the query asks the solver to find instances where:
+If the transition is a constructor, the query asks the solver to find instances where:
 
 - the preconditions hold
 - the storage values in the poststate match those specified by the `creates` block of the constructor
 - the invariant does not hold over the post state or the postconditions do not hold over the poststate
 
-If the behaviour is a method, the query asks the solver to find instances where:
+If the transition is a method, the query asks the solver to find instances where:
 
 - the invariant holds over the pre state
 - the preconditions hold
@@ -210,4 +210,4 @@ If all of the queries for an invariant claim return `unsat`, then two properties
 about the transition system:
 
 1. The invariant holds over the post state
-2. The postconditions hold for every method level behaviour
+2. The postconditions hold for every method level transition

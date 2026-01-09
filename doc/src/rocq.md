@@ -133,7 +133,7 @@ creates
 ```
 
 ```act
-behaviour exp of Exponent
+transition exp of Exponent
 interface exp()
 
 iff
@@ -145,7 +145,7 @@ iff in range uint
     r * b
     e - 1
 
-storage
+updates
 
     r => r * b
     e => e - 1
@@ -199,7 +199,7 @@ Let’s break this down a bit. We have a definition of contract storage State, w
 variables `b`, `e` and `r`, all of type `Z`. `Z` is an integer type using a binary encoding from the
 ZArith library bundled with Rocq.
 
-Next we have `exp0`, which defines how the state is updated by the exp behaviour, and `Exponent0` which
+Next we have `exp0`, which defines how the state is updated by the exp transition, and `Exponent0` which
 defines how the state variables are initialized by the constructor arguments.
 
 Finally we have an Inductive Proposition reachable that defines the conditions under which a certain

@@ -77,13 +77,13 @@ act hevm --spec <PATH_TO_SPEC> --sol <PATH_TO_SOLIDITY_CODE>
 
 ## Description
 
-Two claims are generated for each behaviour, Pass and Fail. The Pass claim states that if all
+Two claims are generated for each transition, Pass and Fail. The Pass claim states that if all
 preconditions in the iff block are true, then all executions will succeed, storage will be updated
 according to the storage block, and the specified return value will, in fact, be returned. The Fail
 claim states that should any of the preconditions be false, all executions will revert.
 
 In both cases we begin the proof by constraining calldata to be of the form specified in the
-behaviours’ interface blocks, as well as making the relevant assumptions depending on whether the
+transitions’ interface blocks, as well as making the relevant assumptions depending on whether the
 claim is Pass or Fail, and then symbolically executing the bytecode object with storage held to be
 completely abstract.
 
@@ -93,7 +93,7 @@ call.
 
 In the case of a Fail claim, we can then check that each leaf represents a state in which execution
 has reverted, while for a Pass claim we can check that storage has been updated as expected, and
-that the contents of the return buffer matches what was specified in the behaviour’s returns block.
+that the contents of the return buffer matches what was specified in the transition’s returns block.
 
 ## Example
 
@@ -120,14 +120,14 @@ interface constructor()
 creates
 
   uint val := 0
-behaviour set of Simple
+transition set of Simple
 interface set(uint x)
 
 iff
 
   x > 100
 
-storage
+updates
 
   val => x
 
@@ -145,7 +145,7 @@ checking postcondition...
 Q.E.D.
 Successfully proved set(Fail), 2 cases.
 ==== SUCCESS ====
-All behaviours implemented as specified ∎.
+All transitions implemented as specified ∎.
 ```
 
 If we try to prove equivalence of the spec and a faulty implementation like the one below:

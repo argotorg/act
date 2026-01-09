@@ -11,11 +11,11 @@ The general shape of a transition that returns a value in Act is:
 ```mermaid
 graph TD
     A["transition <name> ?payable (<parameters>) : <return_type> "] --> B["iff <condition>"]
-    B -->|no branching| C["storage <updates>"]
+    B -->|no branching| C["updates <storage>"]
     C --> G["returns <value>"]
-    B -->|branching| D["case <condition> : storage <updates>"]
+    B -->|branching| D["case <condition> : updates <storage>"]
     D --> H["returns <value>"]
-    H -->|...| E["case <condition> : storage <updates>"]
+    H -->|...| E["case <condition> : updates <storage>"]
     E --> F["returns <value>"]
 ```
 
@@ -23,9 +23,9 @@ The general shape of a transition that does **not return** a value in Act is:
 ```mermaid
 graph TD
     A["transition <name> ?payable (<parameters>) "] --> I["iff <condition>"]
-    I -->|no branching| J["storage <updates>"]
-    I -->|branching| K["case <condition> : storage <updates>"]  
-    K --> |...| L["case <condition> : storage <updates>"]
+    I -->|no branching| J["updates <storage>"]
+    I -->|branching| K["case <condition> : updates <storage>"]  
+    K --> |...| L["case <condition> : updates <storage>"]
 ```
 
 
@@ -34,7 +34,7 @@ graph TD
 1. **Transition Head**: `transition <name> ?payable (<parameters>)  ?(: <return_type>)`
    - Function name `<name>` and parameter list `<parameters>` with types and names.
    - Optional `payable` keyword to mark transitions that accept Ether.
-   - Optional return type specification (e.g., `: uint256`). If a return type is specified, the transition must include a `returns <value>` statement after each `storage` block.
+   - Optional return type specification (e.g., `: uint256`). If a return type is specified, the transition must include a `returns <value>` statement after each `updates` block.
 
 2. **Precondition Block**: `iff <condition>`
    - Specifies the necessary and sufficient condition for successful execution.
@@ -42,12 +42,12 @@ graph TD
    - If the precondition fails, the transition reverts and makes no state changes.
 
 3. **Cases Block** (optional):
-   - If present two or more `case <condition>: storage <updates>` branches.
+   - If present two or more `case <condition>: updates <storage>` branches.
    - Conditions must be mutually exclusive and exhaustive.
    - Each case describes storage updates (state transitions) for a particular execution path.
    - The absence of a cases block is equivalent to a single implicit `case true:` block.
 
-4. **Storage Block**: `storage <updates>`
+4. **Updates Block**: `updates <storage>`
    - Updates storage variables based on the current execution path (i.e. the case).
    - Storage fields that are not mentioned remain unchanged.
    - The updates are separated by newlines and have the shape: `<variable> := <expression>`
@@ -55,7 +55,7 @@ graph TD
    - Updates are **simultaneous**: all right-hand sides are evaluated in the initial state. <span style="color:red"> double-check</span>
 
 5. **Returns Block**: `returns <value>`
-   - present after each `storage` block if and only if the transition has a return type.
+   - present after each `updates` block if and only if the transition has a return type.
    - Specifies the return value of the function.
 
 
@@ -68,26 +68,25 @@ For example the `transfer` transition of the ERC20 contract is non-payable and s
 *(signature from erc20.act)*
 
 ```act
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 value, address to) : bool
      ...
 ```
 
-This declares the function parameters and the return type `uint256`.
-
+This declares the function parameters and the return type `bool`.
 *(signatures from erc20.act)*
 
 The other transitions of the ERC20 contract are:
 
 ```act
-transition transferFrom(address src, address dst, uint amount) : uint256
+transition transferFrom(address src, address dst, uint amount) : bool
        ...
-transition approve(address spender, uint256 amount) : uint256
+transition approve(address spender, uint256 amount) : bool
    ...
-transition burn(uint256 amount) : uint256
+transition burn(uint256 amount) : bool
    ...
-transition burnFrom(address src, uint256 amount) : uint256
+transition burnFrom(address src, uint256 amount) : bool
    ...
-transition mint(address dst, uint256 amount) : uint256
+transition mint(address dst, uint256 amount) : bool
    ...
 transition totalSupply() : uint256
    ...
@@ -133,23 +132,24 @@ In the ERC20 `transfer` transition, we distinguish two cases based on whether th
 *(transfer transition from erc20.act)*
 
 ```act
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 value, address to) : bool
 
 iff
    ...
 
 case CALLER != to:
 
-  storage
+  updates
 
-     balanceOf[CALLER] := balanceOf[CALLER] - value
-     balanceOf[to]     := balanceOf[to] + value
+   balanceOf := balanceOf[
+                CALLER => balanceOf[CALLER] - value,
+                to     => balanceOf[to]     + value ]
 
-  returns 1
+  returns true
 
 case CALLER == to:
 
-  returns 1
+  returns true
 ```
 If the sender is transferring to another address (`CALLER != to`), the balances of both the sender and the recipient are updated accordingly. If the sender is transferring to themselves (`CALLER == to`), no storage updates are happening, and the transition simply returns `1`.
 This separation is necessary because Act updates are **non-sequential**: all updates refer to the pre-state. Writing the cases explicitly avoids ambiguity. Details on updates are explained next.
@@ -157,22 +157,125 @@ This separation is necessary because Act updates are **non-sequential**: all upd
 
 ## Storage Updates Are Simultaneous
 
-<span style="color:red"> continue here </span>
+Storage updates are not a sequence of assignments, but rather a set of equations that must hold on the final state. Therefore, updates are simultaneous: all right-hand sides refer to the initial state and all left-hand sides are storage slots that are modified by the transition.
 
-*KIM: specificity relation in updates*
-
-Consider the main transfer case:
+Consider the "standard" case of the ERC20 `transferFrom` transition:
 
 ```act
-storage
-  balanceOf := balanceOf[
-    CALLER => balanceOf[CALLER] - value,
-    to     => balanceOf[to]     + value
-  ]
+case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+
+   updates
+   balanceOf := balanceOf[
+                  from => balanceOf[from] - value,
+                  to   => balanceOf[to]   + value ]
+
+   allowance := allowance[
+                  from => allowance[from][
+                           CALLER => allowance[from][CALLER] - value ]]
 ```
 
-This does not mean “subtract, then add”.
+This does not mean adapt `balanceOf` first and `allowance` second.
 Instead, it means:
-“In the final state, `balanceOf(CALLER)` equals the old balance minus `value`, and `balanceOf(to)` equals the old balance plus `value`.”
+“In the final state, the mapping `balanceOf` equals the old one except the fields `from` and `to` where updated, and `allowance` equals the old mapping except `from` now maps to a different mapping (the one from before except `CALLER` maps to `allowance[from][CALLER] - value`).”
 All right-hand sides are evaluated in the **initial state**.
-This design avoids accidental order-dependence and makes behaviours suitable for formal reasoning.
+This design avoids accidental order-dependence and makes transitions suitable for formal reasoning.
+
+## Storage Updates Are Partially Ordered
+
+In general, the updates block can be arranged in any order, as all updates are simultaneous.
+There is, however, one subtlety to be aware of: if a storage slot is updated and also a specific field of that slot is updated, 
+the more general references have to be listed before the specific ones.
+
+Let's illustrate this with an example. Consider the following example that has an ERC20 token in its storage:
+ 
+<span style="color:red"> CONTINUE HERE. </span>
+
+```act
+contract Admins
+
+constructor(address _admin1)
+iff true
+
+creates
+   address admin1 := _admin1
+   address admin2 := ORIGIN
+
+transition admin2(address new_admin2)
+iff true
+updates
+   admin2 := new_admin2
+```
+ 
+ `Admins` is a simple contract that tracks two admin addresses. The first admin is set during construction, while the second admin is initialized to the transaction origin (`ORIGIN`). We assume that only admin2 can be externally updated via the `admin2` transition.
+
+
+```act
+contract Asset
+
+constructor(uint256 _value)
+iff true
+creates
+    uint256 value := _value
+    Admins admins := Admins(CALLER)
+    mapping(address => uint256) balanceOf := [THIS => _value]
+
+
+
+transition assetTransfer(uint256 amt, address to) 
+
+iff inRange(uint256, balanceOf[THIS] - amt)
+   inRange(uint256, balanceOf[to] + amt)
+
+case CALLER == admins.admin1 or CALLER == admins.admin2
+
+updates
+   balanceOf := balanceOf[
+                  THIS => balanceOf[THIS] - amt,
+                  to   => balanceOf[to]   + amt ]
+
+case !(CALLER == admins.admin1 or CALLER == admins.admin2)
+
+
+
+transition setAdmins(address new_admin1, address new_admin2)
+
+iff true
+
+case CALLER == admins.admin1 or CALLER == admins.admin2
+
+updates
+   admins := Admins(new_admin1)
+   admins.admin2 := new_admin2
+
+case !(CALLER == admins.admin1 or CALLER == admins.admin2)
+
+...
+```
+ The contract `Asset` is a variation of a drastically simplified token contract (similar to ERC20). The relevant difference is that only two admin addresses can transfer tokens from the contract's own balance to other addresses. The `Admins` contract (introduced above) is used to track the two admin addresses.
+ There is an extra transition `setAdmins` that allows either admin to update both admin addresses.
+ 
+ **Ordered Updates**
+  In the `setAdmins` transition, the `updates` block of the first case we are in the situation described earlier: there is a general update of a storage slot and afterwards a specific field of that slot is updated:
+   - `admins := Admins(new_admin1)` (general update)
+   - `admins.admin2 := new_admin2` (specific field update)
+  
+This ordering is necessary because the right-hand side of the second update `admins.admin2 := new_admin2` refers to the updated value of `admins` from the first update. If we had written the specific field update first, it would have referred to the old value of `admins`, which is not what we want.
+
+<span style="color:red"> This is kinda weird since it's contradicting the "view it as a set of equations" claim. </span>
+
+
+<!-- transition foo(uint256 newSupply, address to, uint256 value)
+
+iff 
+  inRange(uint256, newSupply - value)
+
+case CALLER != to :
+
+updates
+
+   token := Token(newSupply) 
+   token.balanceOf := token.balanceOf[
+                        CALLER => newSupply - value,
+                        to     => value ]
+
+``` -->

@@ -1,4 +1,4 @@
-# Storage and Typing
+# Storage, Typing and Expressions
 
 **Goal of this section**
 Explain how an EVM state is represented in Act, using ERC20 storage as the concrete example.
@@ -7,7 +7,7 @@ Explain how an EVM state is represented in Act, using ERC20 storage as the concr
 ## Declaring Storage
 In Act, each contract explicitly declares its storage in the constructor and initializes it as defined in the source code. If the source code does not initialize a storage field, act uses defaults. For ERC20, the storage consists of two mappings and an integer:
 
-*(snippet from erc20.sol, storage block)*
+*(snippet from erc20.sol, updates block)*
 
 ```solidity
     uint256 public totalSupply;
@@ -42,6 +42,7 @@ Storage in Act can have the following types:
     - unsigned integers of various sizes: `uint8`, `uint16`, `uint32`, `uint64`, `uint128`, `uint256`, 
     where `uint` is a shorthand for `uint256`.
     - signed integers of various sizes: `int8`, `int16`, `int32`, `int64`, `int128`, `int256`, 
+    also `int` is a shorthand for `int256`.
     - booleans: `bool` 
     - addresses:`address`
 - **mapping types** 
@@ -93,7 +94,7 @@ The following types are used for function parameters and return values, mirrorin
     ```act
     transition foo(address<Token> token_addr)
     iff true
-    storage
+    updates
         erc_token := token_addr as Token
     ```
     The parameter `token_addr` has type `address<Token>`, which indicates that the address points to a deployed contract of type `Token` (e.g. in our example an ERC20 token).
@@ -116,7 +117,7 @@ Expressions appear throughout constructor and transition declarations: in precon
 
 ### Overview of Expression Types
 
-1. **Storage Expressions (Slot Expressions)**: Expressions that manipulate storage data. Used in the `creates` and `storage` block to initialize or update storage variables. Examples in the ERC20 constructor: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `Token(100)`.
+1. **Storage Expressions (Slot Expressions)**: Expressions that manipulate storage data. Used in the `creates` and `updates` block to initialize or update storage variables. Examples in the ERC20 constructor: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `Token(100)`.
 
 2. **References**: Variable references that denote storage locations or calldata. Used in preconditions, case conditions, and to reference existing values (as it is done in storage updates). Examples in the ERC20: `totalSupply`, `balanceOf[CALLER]`, `CALLVALUE`, `allowance`.
 
@@ -124,7 +125,7 @@ Expressions appear throughout constructor and transition declarations: in precon
 
 ### Storage Expressions
 
-Storage expressions describe the initial values assigned to storage variables in the `creates` block and the values they are updated to in the `storage` block. The syntax for initializing in the `creates` block is `<type> <name> := <storage_expression>`. For updating in the `storage` block, it is `<name> := <storage_expression>`.
+Storage expressions describe the initial values assigned to storage variables in the `creates` block and the values they are updated to in the `updates` block. The syntax for initializing in the `creates` block is `<type> <name> := <storage_expression>`. For updating in the `updates` block, it is `<name> := <storage_expression>`.
 Storage expressions can be:
 
 - **Base Expressions**: literals, composed expressions  or certain Variable References: `100`, `x + y`, `if condition then a else b`. See Base Expressions below for details.
@@ -132,7 +133,7 @@ Storage expressions can be:
     - `[<key1> => <value1>, <key2> => <value2>, ...]` (a mapping with multiple entries)
     - `[]` (an empty mapping where all keys map to the default value)
 Every key not explicitly mentioned maps to the default value of the mapping's value type.
-Further, exists the syntax for **adapting mappings** (used in `storage` blocks of transitions):
+Further, exists the syntax for **adapting mappings** (used in `updates` blocks of transitions):
     - `my_map[my_key => my_value]` (defines a mapping, where  `my_key` maps to `my_value` and every other key has value `my_map[key]`)
     - similarly, multple entries can be changed at once: `my_map[key1 => value1, key2 => value2,...]`
 - **Contract creation**: An instance of another contract (an ERC20 `Token` for example) can be part of a contract's storage. The corresponding storage expression is `Token(100)`. It creates a new ERC20 contract instance with total supply 100.
@@ -162,7 +163,7 @@ Here we see:
 
 In a transfer transition of the ERC20 contract the storage is updated as:
 ```act
-  storage
+  updates
 
      balanceOf[CALLER] := balanceOf[CALLER] - value
      balanceOf[to]     := balanceOf[to] + value
@@ -237,7 +238,7 @@ Base expressions are composite expressions built using operators, literals and v
 
 **Other operators**:
 - Conditionals: `if condition then expr1 else expr2`
-- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Arithmetic Safety](./arith_safety.md) for details.
+- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Preconditions](./constructors.md) and [Arithmetic Safety](./arith_safety.md) for details.
 
 **Literals and Other Expressions**:
 - Literals: `5`, `true`, `false`

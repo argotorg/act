@@ -1,23 +1,28 @@
 # Summary
 
-- [What is Act?](./part1.md)
-    - [Introduction: Act in One Page](./introduction.md)
-    - [A First Look: ERC20 as Running Example](./running_ex.md)
-- [Specification Language Act](./part2.md)
-    - [Storage, Typing and Expressions](./store_type.md)
-    - [Contructors and Initial State](./constructors.md)
-    - [Transitions and Storage Updates](./transitions.md)
-    - [Arithmetic Safety](./arith_safety.md)
-    - [Mappings and Updates](./mappings_updates.md)
-- [From Specification to Guarantees](./part3.md)
-    - [Correctness of a Specification](./equiv.md)
-    - [Proving Properties of Specs](./rocq.md) 
-- [Advanced Topics](./part4.md)
-    - [Aliasing and Unique Ownership](./aliasing.md)
-- [Practical Usage](./part5.md)
-    - [Installation](./installation.md) 
-    - [Layout and Tooling](./layout_tooling.md)
-    - [How to Write Your Own Spec](./how_to.md)
+# What is Act?
+
+- [Getting Started and Installation](./installation.md) 
+- [Introduction](./introduction.md)
+- [A First Look: ERC20 as Running Example](./running_ex.md)
+
+# Specification Language Act
+
+- [Storage, Typing and Expressions](./store_type.md)
+- [Contructors and Initial State](./constructors.md)
+- [Transitions and Storage Updates](./transitions.md)
+- [How to Write Your Own Spec](./how_to.md)
+
+# Typechecking and No-Aliasing
+
+- [Type Checking](./arith_safety.md)
+- [Aliasing and Unique Ownership](./aliasing.md)
+
+# From Specification to Guarantees
+
+- [Correctness of a Specification](./equiv.md)
+- [Proving Properties of Specs](./rocq.md) 
+- [Layout and Tooling](./layout_tooling.md)
     
 
 

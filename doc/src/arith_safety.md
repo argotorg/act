@@ -17,7 +17,7 @@ These conditions ensure that the subtraction and addition are valid `uint256` op
 
 
 ## Why This Is Necessary
-Act specifications are checked against EVM bytecode. The EVM does not enforce arithmetic safety by itself — this behavior is a property of the compiled code.
+Act specifications are checked against EVM bytecode. The EVM does not enforce arithmetic safety by itself — this behaviour is a property of the compiled code.
 
 By writing `inRange` explicitly, the specification:
 - matches the compiled behavior precisely
@@ -26,7 +26,5 @@ By writing `inRange` explicitly, the specification:
 
 
 ## Failure Is Explicit and Local
-If an `inRange` condition fails, the behaviour reverts and no storage updates occur.
+If an `inRange` condition fails, the transition reverts and no storage updates occur.
 This aligns with Solidity’s execution model and allows Act to precisely characterize the contract’s input space.
-
-*KIM to also briefly list supported logic and arithmetic*

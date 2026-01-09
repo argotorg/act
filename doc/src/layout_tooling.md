@@ -118,18 +118,18 @@ Q.E.D.
 Successfully proved approve(Fail), 1 cases.
 
 ==== SUCCESS ====
-All behaviours implemented as specified ∎.
+All transitions implemented as specified ∎.
 ```
 
 **What this output means:**
 
-- Each behavior (function) in your specification is checked separately
-- For each behavior, two claims are verified:
+- Each transition (function) in your specification is checked separately
+- For each transition, two claims are verified:
   - **Pass claim**: When preconditions are met, the implementation correctly updates storage and returns the expected value
   - **Fail claim**: When preconditions are not met, the implementation reverts
 - **"Q.E.D."** indicates the SMT solver successfully proved the property
 - **"X cases"** shows how many execution paths were verified
-- **"SUCCESS"** confirms all behaviors match the specification
+- **"SUCCESS"** confirms all transitions match the specification
 
 #### When Verification Fails
 
@@ -188,7 +188,7 @@ act rocq --file tests/coq/ERC20/erc20.act
 
 This command generates a `.v` file containing the formalization of the ERC20 specification in Rocq's Gallina language. The generated file includes:
 - Type definitions for the contract state
-- Transition functions for each behavior
+- Transition functions for each transition
 - Predicates encoding preconditions and postconditions
 
 **Compile and verify Rocq proofs:**
@@ -335,7 +335,7 @@ act rocq --file <PATH_TO_SPEC>
 
 This creates a `.v` file containing:
 - Gallina type definitions for contract state
-- Transition functions for each behavior
+- Transition functions for each transition
 - Precondition and postcondition predicates
 - Storage update functions
 
