@@ -4,8 +4,8 @@ In order to reason about the contracts and prove their properties, the Rocq back
 embeds the Act specification into the logic of the Rocq proof assistant.
 
 For this embedding to be sound, we ensure that the storage of the
-contract (and the contracts reachable from it) satisfies the *unique ownership invariant*, meaning that
-its storage may never contain any aliased references to other contracts (see [aliasing section](./aliasing.md)). Act checks this invariant automatically immediately after the type-checking phase.
+contract (and the contracts reachable from it) satisfies the *unique ownership invariant* (see [aliasing section](./aliasing.md)), meaning that its storage may never contain any aliased references to other contracts.
+Act checks this invariant automatically immediately after the type-checking phase.
 
 A proof assistant provides tools that help to construct proofs. Rocq, in particular, is highly
 interactive. The user typically builds proofs step by step, with the software giving feedback as the
@@ -22,13 +22,134 @@ generally quite strong evidence of correctness.
 
 ## Usage
 
+**Generate Rocq formalization:**
 To generate the Rocq code run
 ```sh
 act rocq --file <PATH_TO_SPEC>
 ```
 against your spec.
 
-To fully use this feature you should also set up a `Makefile` and `_RocqProject`, see the example in `tests/rocq/ERC20/`.
+#### Rocq Command-Line Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--file` | Path | - | Path to the Act specification file (.act) |
+| `--solver` | `cvc5\|z3` | `cvc5` | SMT solver used during type-checking and unique ownership verification |
+| `--smttimeout` | Integer (ms) | `20000` | Timeout for SMT queries |
+| `--debug` | Boolean | `false` | Print verbose output during generation |
+
+
+#### Setting Up a Rocq Project
+
+To fully use this feature you should also set up a `Makefile` and `_RocqProject`. Following the example in `tests/rocq/ERC20/`, 
+the project structure should look something like this:
+```
+my-contract/
+├── mycontract.act       # Your Act specification
+├── MyContract.v         # Generated (by act rocq)
+├── _RocqProject         # Rocq project configuration
+├── Makefile             # Build automation
+└── Theory.v             # Your custom proofs
+```
+
+Act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts. It should be included in your Rocq project.
+
+**1. Create a `_RocqProject` file:**
+
+The `_RocqProject` file tells Rocq where to find dependencies and which files to compile:
+
+```coq-project
+-Q . MyContractName
+-Q /path/to/act/lib ActLib
+
+/path/to/act/lib/ActLib.v
+MyContract.v
+Theory.v
+```
+
+**Explanation:**
+- `-Q . MyContractName` - Maps current directory to the logical name `MyContractName`
+- `-Q /path/to/act/lib ActLib` - Makes ActLib available (adjust path to your Act installation)
+- List all `.v` files that should be compiled
+
+**For the ERC20 example in the Act repository:**
+```coq-project
+-Q . ERC20
+-Q ../../../lib ActLib
+
+../../../lib/ActLib.v
+ERC20.v
+Theory.v
+```
+
+**2. Create a `Makefile`:**
+
+This Makefile automates the entire workflow from Act spec to verified proofs:
+
+```makefile
+.PHONY: verify
+verify: RocqMakefile MyContract.v
+	make -f RocqMakefile
+
+MyContract.v: mycontract.act
+	act coq --file mycontract.act > MyContract.v
+
+RocqMakefile: _CoqProject
+	rocq makefile -f _CoqProject -o RocqMakefile
+
+.PHONY: clean
+clean:
+	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
+	rm -f MyContract.v RocqMakefile RocqMakefile.conf
+	rm -f *.glob *.vo *.vok *.vos .*.aux
+
+.PHONY: regenerate
+regenerate: clean MyContract.v verify
+```
+
+**Makefile Targets Explained:**
+
+- **`make verify`** (or just `make`) - Full build pipeline:
+  1. Generates `MyContract.v` from your `.act` file if needed
+  2. Creates `RocqMakefile` from `_CoqProject`
+  3. Compiles all Rocq files and checks proofs
+
+- **`make clean`** - Removes all generated and compiled files:
+  - Generated `.v` file
+  - Compiled Rocq artifacts (`.vo`, `.vok`, `.vos`, `.glob`)
+  - Makefile artifacts
+
+- **`make regenerate`** - Clean rebuild from scratch
+
+
+**3. Write custom proofs in `Theory.v`:**
+
+Start with the basic structure:
+
+```coq
+Require Import MyContract.
+Require Import ActLib.
+
+(* Import generated definitions *)
+Import MyContract.
+
+(* Prove invariants and properties about the contract *)
+```
+
+**4. Build and verify:**
+
+```sh
+# Initial build (generates .v file and compiles everything)
+make verify
+
+# After modifying Theory.v, just rebuild
+make -f RocqMakefile
+
+# After modifying the .act spec, regenerate
+make regenerate
+```
+
+#### Interactive Proof Development
 
 If you are using Rocq in your editor in an interactive mode, make sure your editor links to the Rocq executables (rocqtop) from the nix shell.
 Alternatively you can use a local Rocq executable, if present, and `make` outside of the nix shell, once the `act rocq` command has terminated.
@@ -107,8 +228,139 @@ true.
 
 ## Act Export
 
-Let’s take a look at using Rocq to prove properties about a specification that is too difficult for
-the SMT backend. The following defines a contract that implements exponentiation via repeated
+Calling `act rocq ...` will generate a Rocq file that encodes the contract as a state transition system,
+following the formal value semantics, given in the
+<span style="color:red">tech report (to be available shortly).</span>
+
+The generated Rocq output will contain:
+- Gallina type definitions for contract **state**.
+- For every case of the constructor and every transition: 
+  * **State transition function** (used for the step function).
+  * **Precondition** and **postcondition** predicates (additionally to the given preconditions, also requirements on integer bounds)
+  for every storage variable, where applicable. For transitions, postconditions need only hold for the reachable states (see below).
+  * **Return value** proposition (only for transitions).
+- **Transition system with a step function** (and then generalised to multistep)
+- Definition of a **reachable state** *from a given state*.
+- Definition of a **reachable state** *from the initial state*.
+- Definition schema for the **invariants**: 
+  * Parametrized by the invariant property `IP : Env -> Z -> State -> Prop`.
+  * Invariant predicate definition for the Initial State.
+  * Invariant predicate definition for the Step.
+  * Proof of the invariant holding in all reachable states if `IP` holds in the initial state and for every step.
+
+Let us explore the generated Rocq output for the ERC20 Token contract from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act).
+
+The output will begin with importing the necessary libraries:
+```Rocq
+(* --- GENERATED BY ACT --- *)
+
+Require Import Stdlib.ZArith.ZArith.
+Require Import ActLib.ActLib.
+Require Stdlib.Strings.String.
+
+Module Str := Stdlib.Strings.String.
+Open Scope Z_scope.
+```
+
+Then it will start a module for the token contract:
+
+```Rocq
+Module Token.
+
+Record State : Set := state
+{ addr : address
+; allowance : address -> address -> Z
+; balanceOf : address -> Z
+; totalSupply : Z
+}.
+```
+The contract will be represented as a record with the fields corresponding to the storage variables.
+Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; 
+and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
+
+Next, the output contains some additional type definitions, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">some of these may be outdated.</span>).
+```Rocq
+Inductive contractAddressIn : Z -> State -> Prop :=
+| addressOf_This : forall (STATE : State),
+     contractAddressIn (addr STATE) STATE
+.
+
+Inductive addressIn : Z -> State -> Prop :=
+| address_addr : forall (STATE : State),
+     addressIn (addr STATE) STATE
+
+| address_subcontract : forall (p : address) (STATE : State),
+     contractAddressIn p STATE -> addressIn p STATE
+.
+
+Inductive noAliasing (STATE : State) : Prop :=
+| noAliasingC : noAliasing STATE
+.
+
+Inductive integerBounds (STATE : State) : Prop :=
+| integerBoundsC :
+     (forall i0 i1, 0 <= allowance STATE i0 i1 <= UINT_MAX 256)
+  -> (forall i0, 0 <= balanceOf STATE i0 <= UINT_MAX 256)
+  -> 0 <= totalSupply STATE <= UINT_MAX 256
+  -> integerBounds STATE
+.
+
+Inductive integerBoundsRec (STATE : State) : Prop :=
+| integerBoundsRecC :
+     (forall i0 i1, 0 <= allowance STATE i0 i1 <= UINT_MAX 256)
+  -> (forall i0, 0 <= balanceOf STATE i0 <= UINT_MAX 256)
+  -> 0 <= totalSupply STATE <= UINT_MAX 256
+  -> integerBoundsRec STATE
+.
+
+Definition nextAddrConstraint (ENV : Env) (STATE : State) :=
+  forall (p : address), addressIn p STATE -> NextAddr ENV > p
+.
+```
+
+Next, the `Token` constructor state transition of type `Env -> Z -> Env * State` is defined as follows: 
+
+```Rocq
+Definition Token (ENV : Env) (_totalSupply : Z) :=
+  let ENV1 := NextEnv ENV in
+  (ENV1, state (NextAddr ENV) 
+               (fun _binding_0 _binding_1 => ((fun _ _ => 0) _binding_0 _binding_1)) 
+               (fun _binding_0 => if ((_binding_0=?(Caller ENV)))%bool 
+                                  then _totalSupply 
+                                  else ((fun _ => 0) _binding_0)) 
+                _totalSupply).
+```
+The constructor will take the environment and its input arguments, and produce a new environment and a new state for the token contract. The contract will be stored in the next address `NextAddr ENV`. The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
+
+Similarly, a state transition is generated for every case of every transition in the contract specification.
+
+Next the preconditions for the constructor are generated as follows:
+```
+Inductive initPreconds (ENV : Env) (_totalSupply : Z) : Prop :=
+| ctorPreconds :
+     ((Callvalue ENV) = 0)
+  -> ((0 <= _totalSupply) /\ (_totalSupply <= (UINT_MAX 256)))
+  -> ((0 <= (Callvalue ENV)) /\ ((Callvalue ENV) <= (UINT_MAX 256)))
+  -> ((0 <= (Caller ENV)) /\ ((Caller ENV) <= (UINT_MAX 160)))
+  -> Caller ENV < NextAddr ENV
+  -> Origin ENV < NextAddr ENV
+  -> This ENV <> Caller ENV
+  -> This ENV <> Origin ENV
+  -> This ENV = NextAddr ENV
+  -> initPreconds ENV _totalSupply.
+```
+The proposition holds, when the preconditions are satisfied: the integer bounds are respected, the
+addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
+
+Similarly preconditions are generated for every case of every transition in the contract specification.
+
+
+
+Note: reachability will also include steps for the contracts that are in the storage of your contract, see AMM for example.
+
+
+<!-- The exponentiation contract -->
+<!-- The following defines a contract that implements exponentiation via repeated
 multiplication. The contract is initialized with a base (`b`) and an exponent (`e`). `exp()` can then be
 repeatedly called until `e` is 1, and the result can then be read from the storage variable `r`. While
 obviously artificial, this example does highlight a key shortcoming of the SMT based analysis:
@@ -289,4 +541,4 @@ Qed. Check exp_correct.
 While this may seem like quite a lot of work to prove what looks like a pretty simple and obvious fact it is worth noting two things:
 
 - A proof of this property is beyond the reach of any automated tool available today.
-- Our mind is full of hidden assumptions, and facts that may seem obvious are not always so. This is not the case for the Rocq proof kernel, and once we have convinced it that something is true, we can be very sure that it really is.
+- Our mind is full of hidden assumptions, and facts that may seem obvious are not always so. This is not the case for the Rocq proof kernel, and once we have convinced it that something is true, we can be very sure that it really is. -->
