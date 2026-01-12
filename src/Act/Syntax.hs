@@ -33,7 +33,7 @@ invExp :: TypedExplicit.InvariantPred -> TypedExplicit.Exp ABoolean
 invExp (PredTimed pre post) = pre <> post
 
 locsFromBehaviour :: Typed.Behaviour t -> [Typed.TypedRef t]
-locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
+locsFromBehaviour (Behaviour _ _ _ _ preconds cases _postconds) = nub $
   concatMap locsFromExp preconds
   -- TODO: commenting out postconds for now as it causes issues with timing. 
   -- We need to get rid of the umplicit timing to add this back
@@ -59,15 +59,15 @@ locsFromInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromInvariant (Invariant _ pre bounds (PredTimed predpre predpost)) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
   <> locsFromExp predpre <> locsFromExp predpost
-locsFromInvariant (Invariant _ pre bounds (PredUntimed pred)) =
+locsFromInvariant (Invariant _ pre bounds (PredUntimed pred')) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
-  <> locsFromExp pred
+  <> locsFromExp pred'
 
 locsFromConstrInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
   concatMap locsFromExp pre <> locsFromExp predpost
-locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred)) =
-  concatMap locsFromExp pre <> locsFromExp pred
+locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred')) =
+  concatMap locsFromExp pre <> locsFromExp pred'
 
 ------------------------------------
 -- * Extract from any typed AST * --
@@ -137,17 +137,17 @@ locsFromExp = nub . go
       Or _ a b    -> go a <> go b
       Impl _ a b  -> go a <> go b
       Eq _ _ a b    -> go a <> go b
-      LT _ a b    -> go a <> go b
-      LEQ _ a b   -> go a <> go b
-      GT _ a b    -> go a <> go b
-      GEQ _ a b   -> go a <> go b
+      LT _ a _ b _  -> go a <> go b
+      LEQ _ a _ b _  -> go a <> go b
+      GT _ a _ b _   -> go a <> go b
+      GEQ _ a _ b _  -> go a <> go b
       NEq _ _ a b   -> go a <> go b
       Neg _ a     -> go a
       Add _ a b   -> go a <> go b
       Sub _ a b   -> go a <> go b
       Mul _ a b   -> go a <> go b
-      Div _ a b   -> go a <> go b
-      Mod _ a b   -> go a <> go b
+      Div _ a _ b _  -> go a <> go b
+      Mod _ a _ b _  -> go a <> go b
       Exp _ a b   -> go a <> go b
       Array _ l -> concatMap go l
       Cat _ a b   -> go a <> go b
@@ -180,17 +180,17 @@ createsFromExp = nub . go
       Or _ a b    -> go a <> go b
       Impl _ a b  -> go a <> go b
       Eq _ _ a b    -> go a <> go b
-      LT _ a b    -> go a <> go b
-      LEQ _ a b   -> go a <> go b
-      GT _ a b    -> go a <> go b
-      GEQ _ a b   -> go a <> go b
+      LT _ a _ b _  -> go a <> go b
+      LEQ _ a _ b _  -> go a <> go b
+      GT _ a _ b _   -> go a <> go b
+      GEQ _ a _ b _  -> go a <> go b
       NEq _ _ a b   -> go a <> go b
       Neg _ a     -> go a
       Add _ a b   -> go a <> go b
       Sub _ a b   -> go a <> go b
       Mul _ a b   -> go a <> go b
-      Div _ a b   -> go a <> go b
-      Mod _ a b   -> go a <> go b
+      Div _ a _ b _  -> go a <> go b
+      Mod _ a _ b _  -> go a <> go b
       Exp _ a b   -> go a <> go b
       Cat _ a b   -> go a <> go b
       Slice _ a b c -> go a <> go b <> go c
@@ -322,17 +322,17 @@ ethEnvFromExp = nub . go
       Or    _ a b   -> go a <> go b
       Impl  _ a b   -> go a <> go b
       Eq    _ _ a b   -> go a <> go b
-      LT    _ a b   -> go a <> go b
-      LEQ   _ a b   -> go a <> go b
-      GT    _ a b   -> go a <> go b
-      GEQ   _ a b   -> go a <> go b
+      LT    _ a _ b _  -> go a <> go b
+      LEQ   _ a _ b _   -> go a <> go b
+      GT    _ a _ b _   -> go a <> go b
+      GEQ   _ a _ b _   -> go a <> go b
       NEq   _ _ a b   -> go a <> go b
       Neg   _ a     -> go a
       Add   _ a b   -> go a <> go b
       Sub   _ a b   -> go a <> go b
       Mul   _ a b   -> go a <> go b
-      Div   _ a b   -> go a <> go b
-      Mod   _ a b   -> go a <> go b
+      Div   _ a _ b _  -> go a <> go b
+      Mod   _ a _ b _  -> go a <> go b
       Exp   _ a b   -> go a <> go b
       Array _ l -> concatMap go l
       Cat   _ a b   -> go a <> go b
@@ -424,17 +424,17 @@ posnFromExp e = case e of
   Or p _ _ -> p
   Impl p _ _ -> p
   Neg p _ -> p
-  LT p _ _ -> p
-  LEQ p _ _ -> p
-  GEQ p _ _ -> p
-  GT p _ _ -> p
+  LT p _ _ _ _ -> p
+  LEQ p _ _ _ _ -> p
+  GEQ p _ _ _ _ -> p
+  GT p _ _ _ _ -> p
   LitBool p _ -> p
   -- integers
   Add p _ _ -> p
   Sub p _ _ -> p
   Mul p _ _ -> p
-  Div p _ _ -> p
-  Mod p _ _ -> p
+  Div p _ _ _ _ -> p
+  Mod p _ _ _ _ -> p
   Exp p _ _ -> p
   LitInt p _ -> p
   IntEnv p _ -> p
@@ -629,7 +629,7 @@ isWild (Untyped.Case _ (WildExp _) _) = True
 isWild _                      = False
 
 bound :: TValueType AInteger -> Exp AInteger t -> Exp ABoolean t
-bound typ e = And nowhere (LEQ nowhere (lowerBound typ) e) $ LEQ nowhere e (upperBound typ)
+bound typ e = And nowhere (LEQ nowhere (lowerBound typ) typ e typ) $ LEQ nowhere e typ (upperBound typ) typ
 
 lowerBound :: forall t. TValueType AInteger -> Exp AInteger t
 lowerBound (TInteger a Signed) = IntMin nowhere a

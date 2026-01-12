@@ -29,6 +29,9 @@ import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
 import Act.Bounds
+import EVM.ABI (Sig(Sig))
+import EVM.Sign (sign)
+import Act.HEVM (comb)
 
 
 type Err = Error String
@@ -655,6 +658,37 @@ checkExpr env mode t1 e =
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) ->
     maybe (typeMismatchErr pn t1 t2) (\Refl -> pure (te, cs)) $ testEquality t1 t2
 
+
+-- inferSign :: Exp AInteger t -> IntSign
+-- inferSign (LitInt _ v) = if v >= 0 then Unsigned else Signed
+-- inferSign (IntEnv _ _) = Unsigned
+-- inferSign (Add _ e1 e2) = combineSigns (inferSign e1) (inferSign e2)
+-- inferSign (Sub _ e1 e2) = combineSigns (inferSign e1) (inferSign e2)
+-- inferSign (Mul _ e1 e2) = combineSigns (inferSign e1) (inferSign e2) 
+-- inferSign (Div _ e1 e2) = combineSigns (inferSign e1) (inferSign e2)
+-- inferSign (Mod _ e1 _) = inferSign e1
+-- inferSign (Exp _ _ _) = Unsigned
+-- inferSign (IntMin _ _) = Signed
+-- inferSign (IntMax _ _) = Signed
+-- inferSign (UIntMin _ _) = Unsigned
+-- inferSign (UIntMax _ _) = Unsigned
+-- inferSign (VarRef _ tv _) = signOfType tv
+-- inferSign (ITE _ _ e1 e2) = 
+--     let s1 = inferSign e1
+--         s2 = inferSign e2
+--     in if s1 == s2 then s1 else error "Internal error: cannot infer sign of ITE expression with differing branch signs"
+-- inferSign (Address _ _ _) = Unsigned
+
+-- signOfType :: TValueType AInteger -> IntSign
+-- signOfType (TInteger _ s) = s
+-- signOfType TUnboundedInt = error "Internal error: refs cannot have unbounded int type"
+-- signOfType TAddress = Unsigned
+
+-- combineSigns :: IntSign -> IntSign -> IntSign
+-- combineSigns Signed _ = Signed
+-- combineSigns _ Signed = Signed
+-- combineSigns Unsigned Unsigned = Unsigned
+
 -- | Attempt to infer a type of an expression. If successful, it returns an
 -- existential package of the infered typed together with the typed expression.
 inferExpr :: forall t. Env -> Mode t -> U.Expr -> Err (TypedExp t, [Constraint t])
@@ -684,14 +718,15 @@ inferExpr env@Env{constructors} mode e = case e of
   U.EDiv   p v1 v2 -> arithOp2 (Div p) v1 v2
   U.EMod   p v1 v2 -> arithOp2 (Mod p) v1 v2
   U.EExp   p v1 v2 -> arithOp2 (Exp p) v1 v2
-  U.IntLit p v1    ->
-    pure (TExp (litBoundedType v1) (LitInt p v1), [])
+  U.IntLit p v1    -> do
+    ty <- litBoundedType v1
+    pure (TExp ty (LitInt p v1), [])
    where
     -- Determine the narrowest integer type that can hold the given literal value
-    litBoundedType :: Integer -> TValueType AInteger
-    litBoundedType v | v >= 0 && v <= maxUnsigned 256 = TInteger (findBoundUnsigned v) Unsigned
-                      | otherwise && v >= minSigned 256 && v <= maxSigned 256 = TInteger (findBoundSigned v) Signed
-                      | otherwise = TUnboundedInt
+    litBoundedType :: Integer -> Err (TValueType AInteger)
+    litBoundedType v | v >= 0 && v <= maxUnsigned 256 = pure $ TInteger (findBoundUnsigned v) Unsigned
+                      | otherwise && v >= minSigned 256 && v <= maxSigned 256 = pure $ TInteger (findBoundSigned v) Signed
+                      | otherwise = throw (p, "Integer literal " <> show v <> " is out of bounds for 256-bit signed and unsigned integers")
 
   U.EArray p l -> (unzip <$> traverse (inferExpr env mode) l) `bindValidation` \(tes, cs) ->
     (, concat cs) <$> gatherElements tes

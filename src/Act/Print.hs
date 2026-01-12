@@ -97,10 +97,10 @@ prettyExp e = case e of
   -- booleans
   Or _ a b -> print2 "or" a b
   Eq _ _ a b -> print2 "==" a b
-  LT _ a b -> print2 "<" a b
-  GT _ a b -> print2 ">" a b
-  LEQ _ a b -> print2 "<=" a b
-  GEQ _ a b -> print2 ">=" a b
+  LT _ a _ b _ -> print2 "<" a b
+  GT _ a _ b _ -> print2 ">" a b
+  LEQ _ a _ b _ -> print2 "<=" a b
+  GEQ _ a _ b _ -> print2 ">=" a b
   And _ a b -> print2 "and" a b
   NEq _ _ a b -> print2 "=/=" a b
   Neg _ a -> "(not " <> prettyExp a <> ")"
@@ -111,8 +111,8 @@ prettyExp e = case e of
   Add _ a b -> print2 "+" a b
   Sub _ a b -> print2 "-" a b
   Mul _ a b -> print2 "*" a b
-  Div _ a b -> print2 "/" a b
-  Mod _ a b -> print2 "%" a b
+  Div _ a _ b _ -> print2 "/" a b
+  Mod _ a _ b _ -> print2 "%" a b
   Exp _ a b -> print2 "^" a b
   UIntMax _ a -> show $ uintmax a
   UIntMin _ a -> show $ uintmin a
@@ -199,17 +199,17 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       Or p a b    -> Or p (untime a) (untime b)
       Impl p a b  -> Impl p (untime a) (untime b)
       Eq p t a b  -> Eq p t (untime a) (untime b)
-      LT p a b    -> LT p (untime a) (untime b)
-      LEQ p a b   -> LEQ p (untime a) (untime b)
-      GT p a b    -> GT p (untime a) (untime b)
-      GEQ p a b   -> GEQ p (untime a) (untime b)
+      LT p a ta b tb -> LT p (untime a) ta (untime b) tb
+      LEQ p a ta b tb -> LEQ p (untime a) ta (untime b) tb
+      GT p a ta b tb -> GT p (untime a) ta (untime b) tb
+      GEQ p a ta b tb -> GEQ p (untime a) ta (untime b) tb
       NEq p t a b -> NEq p t (untime a) (untime b)
       Neg p a     -> Neg p (untime a)
       Add p a b   -> Add p (untime a) (untime b)
       Sub p a b   -> Sub p (untime a) (untime b)
       Mul p a b   -> Mul p (untime a) (untime b)
-      Div p a b   -> Div p (untime a) (untime b)
-      Mod p a b   -> Mod p (untime a) (untime b)
+      Div p a ta b tb   -> Div p (untime a) ta (untime b) tb
+      Mod p a ta b tb   -> Mod p (untime a) ta (untime b) tb
       Exp p a b   -> Exp p (untime a) (untime b)
       Cat p a b   -> Cat p (untime a) (untime b)
       ByStr p a   -> ByStr p a

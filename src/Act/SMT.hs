@@ -718,18 +718,18 @@ expToSMT2 typ expr = case expr of
   Or _ a b -> binop "or" SBoolean SBoolean a b
   Impl _ a b -> binop "=>" SBoolean SBoolean a b
   Neg _ a -> unop "not" SBoolean a
-  LT _ a b -> binop "<" SInteger SInteger a b
-  LEQ _ a b -> binop "<=" SInteger SInteger a b
-  GEQ _ a b -> binop ">=" SInteger SInteger a b
-  GT _ a b -> binop ">" SInteger SInteger a b
+  LT _ a _ b _ -> binop "<" SInteger SInteger a b
+  LEQ _ a _ b _ -> binop "<=" SInteger SInteger a b
+  GEQ _ a _ b _ -> binop ">=" SInteger SInteger a b
+  GT _ a _ b _ -> binop ">" SInteger SInteger a b
   LitBool _ a -> pure $ if a then "true" else "false"
 
   -- integers
   Add _ a b -> binop "+" SInteger SInteger a b
   Sub _ a b -> binop "-" SInteger SInteger a b
   Mul _ a b -> binop "*" SInteger SInteger a b
-  Div _ a b -> binop "div" SInteger SInteger a b
-  Mod _ a b -> binop "mod" SInteger SInteger a b
+  Div _ a _ b _ -> binop "div" SInteger SInteger a b
+  Mod _ a _ b _ -> binop "mod" SInteger SInteger a b
   Exp _ a b -> expToSMT2 typ $ simplifyExponentiation a b
   LitInt _ a -> pure $ if a >= 0
                       then show a
