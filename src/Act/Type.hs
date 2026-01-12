@@ -799,3 +799,32 @@ findBoundUnsigned v = go 8
     go bits | 0 <= v && v <= maxUnsigned bits = bits
             | bits >= 256 = 256
             | otherwise   = go (bits + 8)
+
+-- | Check if an integer expression can be represented as a 256-bit signed or unsigned integer
+-- This is usefull for deciding whether to use signed or unsigned operations in hevm symbolic execution
+-- Assumes that no overflows or underflows can occur in the expression
+hasSign ::  IntSign -> Exp AInteger t -> Bool
+hasSign s (LitInt _ n) = hasSignLit s n
+hasSign s (Add _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Sub _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Mul _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Div _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Mod _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Exp _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign _ (IntEnv _ _) = True
+hasSign _ (Address _ _ _) = True
+hasSign s (ITE _ _ e2 e3) = hasSign s e2 && hasSign s e3 -- ITE always results in signed integers
+hasSign Signed (IntMin _ _) = True
+hasSign Unsigned (IntMin _ _) = False
+hasSign Signed (IntMax _ _) = True
+hasSign Unsigned (IntMax _ _) = False
+hasSign _ (UIntMin _ _) = True
+hasSign _ (UIntMax _ _) = True
+hasSign s (VarRef _ (TInteger _ s') _) = s == s'
+hasSign _ (VarRef _ TUnboundedInt _) = False
+hasSign _ (VarRef _ TAddress _) = True
+
+-- | Check if a literal integer value can be represented as a 256-bit signed or unsigned integer
+hasSignLit :: IntSign -> Integer -> Bool
+hasSignLit Signed v = minSigned 256 <= v && v <= maxSigned 256
+hasSignLit Unsigned v = 0 <= v && v <= maxUnsigned 256
