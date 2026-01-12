@@ -29,10 +29,6 @@ import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
 import Act.Bounds
-import EVM.ABI (Sig(Sig))
-import EVM.Sign (sign)
-import Act.HEVM (comb)
-
 
 type Err = Error String
 
