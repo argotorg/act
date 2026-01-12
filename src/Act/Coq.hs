@@ -863,18 +863,18 @@ coqexp (Impl _ e1 e2) = parens $ "implb"   <+> coqexp e1 <+> coqexp e2
 coqexp (Eq _ _ e1 e2)   = parens $ coqexp e1  <+> "=?" <+> coqexp e2
 coqexp (NEq _ _ e1 e2)  = parens $ "negb" <+> parens (coqexp e1  <+> "=?" <+> coqexp e2)
 coqexp (Neg _ e)      = parens $ "negb" <+> coqexp e
-coqexp (LT _ e1 e2)   = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
-coqexp (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
-coqexp (GT _ e1 e2)   = parens $ coqexp e2 <+> "<?"  <+> coqexp e1
-coqexp (GEQ _ e1 e2)  = parens $ coqexp e2 <+> "<=?" <+> coqexp e1
+coqexp (LT _ e1 _ e2 _)  = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
+coqexp (LEQ _ e1 _ e2 _) = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
+coqexp (GT _ e1 _ e2 _)  = parens $ coqexp e2 <+> "<?"  <+> coqexp e1
+coqexp (GEQ _ e1 _ e2 _) = parens $ coqexp e2 <+> "<=?" <+> coqexp e1
 
 -- integers
 coqexp (LitInt _ i) = T.pack $ show i
 coqexp (Add _ e1 e2) = parens $ coqexp e1 <+> "+" <+> coqexp e2
 coqexp (Sub _ e1 e2) = parens $ coqexp e1 <+> "-" <+> coqexp e2
 coqexp (Mul _ e1 e2) = parens $ coqexp e1 <+> "*" <+> coqexp e2
-coqexp (Div _ e1 e2) = parens $ coqexp e1 <+> "/" <+> coqexp e2
-coqexp (Mod _ e1 e2) = parens $ "Z.modulo" <+> coqexp e1 <+> coqexp e2
+coqexp (Div _ e1 _ e2 _) = parens $ coqexp e1 <+> "/" <+> coqexp e2
+coqexp (Mod _ e1 _ e2 _) = parens $ "Z.modulo" <+> coqexp e1 <+> coqexp e2
 coqexp (Exp _ e1 e2) = parens $ coqexp e1 <+> "^" <+> coqexp e2
 coqexp (IntMin _ n)  = parens $ "INT_MIN"  <+> T.pack (show n)
 coqexp (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
@@ -950,10 +950,10 @@ coqprop (Impl _ e1 e2) = parens $ coqprop e1 <+> "->"  <+> coqprop e2
 coqprop (Neg _ e)      = parens $ "not" <+> coqprop e
 coqprop (Eq _ _ e1 e2)   = parens $ coqexp e1 <+> "="  <+> coqexp e2
 coqprop (NEq _ _ e1 e2)  = parens $ coqexp e1 <+> "<>" <+> coqexp e2
-coqprop (LT _ e1 e2)   = parens $ coqexp e1 <+> "<"  <+> coqexp e2
-coqprop (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=" <+> coqexp e2
-coqprop (GT _ e1 e2)   = parens $ coqexp e1 <+> ">"  <+> coqexp e2
-coqprop (GEQ _ e1 e2)  = parens $ coqexp e1 <+> ">=" <+> coqexp e2
+coqprop (LT _ e1 _ e2 _)  = parens $ coqexp e1 <+> "<"  <+> coqexp e2
+coqprop (LEQ _ e1 _ e2 _) = parens $ coqexp e1 <+> "<=" <+> coqexp e2
+coqprop (GT _ e1 _ e2 _)  = parens $ coqexp e1 <+> ">"  <+> coqexp e2
+coqprop (GEQ _ e1 _ e2 _) = parens $ coqexp e1 <+> ">=" <+> coqexp e2
 coqprop (InRange _ t e) = coqprop (bound t e)
 coqprop (ITE _ b e1 e2) =
   parens $ "if" <+> coqbool b <+> "then" <+> coqexp e1 <+> "else" <+> coqexp e2
@@ -969,10 +969,10 @@ coqbool (Impl _ e1 e2) = parens $ "implb" <+> coqbool e1 <+> coqbool e2
 coqbool (Neg _ e)      = parens $ "neqb" <+> coqbool e
 coqbool (Eq _ t e1 e2)   = boolScope $ coqexp e1 <+> eqsym t <+> coqexp e2
 coqbool (NEq _ t e1 e2)  = boolScope $ "negb" <+> parens (coqexp e1 <+> eqsym t <+> coqexp e2)
-coqbool (LT _ e1 e2)   = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
-coqbool (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
-coqbool (GT _ e1 e2)   = parens $ coqexp e1 <+> ">?"  <+> coqexp e2
-coqbool (GEQ _ e1 e2)  = parens $ coqexp e1 <+> ">=?" <+> coqexp e2
+coqbool (LT _ e1 _ e2 _)  = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
+coqbool (LEQ _ e1 _ e2 _) = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
+coqbool (GT _ e1 _ e2 _)  = parens $ coqexp e1 <+> ">?"  <+> coqexp e2
+coqbool (GEQ _ e1 _ e2 _) = parens $ coqexp e1 <+> ">=?" <+> coqexp e2
 coqbool (InRange _ t e) = coqbool (bound t e)
 
 coqbool e = error "ill formed proposition:" <+> T.pack (show e)

@@ -187,11 +187,14 @@ getCaller = do
     Just c -> pure c
     Nothing -> pure $ EVM.SymAddr "caller" -- Zoe: not sure what to put here
 
+-- | Non-deterministic Act monad transformer for symbolic interpretation of different case paths
 type ActNDT m a = ActT (WriterT [EVM.Prop] (Logic.LogicT m)) a
 
 fromFoldable :: (Monad m, Foldable f) => f a -> Logic.LogicT m a
 fromFoldable f = Logic.LogicT $ \cons nil -> foldr cons nil f
 
+-- | Collapse the non-deterministic Act monad transformer into a deterministic Act monad transformer 
+-- by collecting all possible results along with their path conditions
 collapseActND :: Monad m => ActNDT m a -> ActT m [(a, [EVM.Prop])]
 collapseActND ndComp = do
   detState <- get
@@ -592,10 +595,10 @@ toProp cmap callenv = \case
   (Neg _ e1) -> do
     e1' <- toProp cmap callenv e1
     pure $ EVM.PNeg e1'
-  (Act.LT _ e1 e2) -> op2 EVM.PLT e1 e2
-  (LEQ _ e1 e2) -> op2 EVM.PLEq e1 e2
-  (GEQ _ e1 e2) -> op2 EVM.PGEq e1 e2
-  (Act.GT _ e1 e2) -> op2 EVM.PGT e1 e2
+  (Act.LT _ e1 _ e2 _) -> op2 EVM.PLT e1 e2
+  (LEQ _ e1 _ e2 _) -> op2 EVM.PLEq e1 e2
+  (GEQ _ e1 _ e2 _) -> op2 EVM.PGEq e1 e2
+  (Act.GT _ e1 _ e2 _) -> op2 EVM.PGT e1 e2
   (LitBool _ b) -> pure $ EVM.PBool b
   (Eq _ (TInteger _ _) e1 e2) -> op2 EVM.PEq e1 e2
   (Eq _ (TContract _) e1 e2) -> op2 EVM.PEq e1 e2
@@ -672,17 +675,17 @@ toExprND cmap callenv e = go e
       (Neg _ e1) -> do
         e1' <- toExprND cmap callenv e1
         pure $ EVM.IsZero e1' -- XXX why EVM.Not fails here?
-      (Act.LT _ e1 e2) -> op2 EVM.LT e1 e2
-      (LEQ _ e1 e2) -> op2 EVM.LEq e1 e2
-      (GEQ _ e1 e2) -> op2 EVM.GEq e1 e2
-      (Act.GT _ e1 e2) -> op2 EVM.GT e1 e2
+      (Act.LT _ e1 _ e2 _) -> op2 EVM.LT e1 e2
+      (LEQ _ e1 _ e2 _) -> op2 EVM.LEq e1 e2
+      (GEQ _ e1 _ e2 _) -> op2 EVM.GEq e1 e2
+      (Act.GT _ e1 _ e2 _) -> op2 EVM.GT e1 e2
       (LitBool _ b) -> pure $ EVM.Lit (fromIntegral $ fromEnum b)
       -- integers
       (Add _ e1 e2) -> op2 EVM.Add e1 e2
       (Sub _ e1 e2) -> op2 EVM.Sub e1 e2
       (Mul _ e1 e2) -> op2 EVM.Mul e1 e2
-      (Div _ e1 e2) -> op2 EVM.Div e1 e2
-      (Mod _ e1 e2) -> op2 EVM.Mod e1 e2 -- which mod?
+      (Div _ e1 _ e2 _) -> op2 EVM.Div e1 e2
+      (Mod _ e1 _ e2 _) -> op2 EVM.Mod e1 e2 -- which mod?
       (Exp _ e1 e2) -> op2 EVM.Exp e1 e2
       (LitInt _ n) -> pure $ EVM.Lit (fromIntegral n)
       (IntEnv _ env) -> ethEnvToWord env
@@ -761,17 +764,17 @@ toExpr cmap callenv =  fmap stripMods . go
       (Neg _ e1) -> do
         e1' <- toExpr cmap callenv e1
         pure $ EVM.IsZero e1' -- XXX why EVM.Not fails here?
-      (Act.LT _ e1 e2) -> op2 EVM.LT e1 e2
-      (LEQ _ e1 e2) -> op2 EVM.LEq e1 e2
-      (GEQ _ e1 e2) -> op2 EVM.GEq e1 e2
-      (Act.GT _ e1 e2) -> op2 EVM.GT e1 e2
+      (Act.LT _ e1 _ e2 _) -> op2 EVM.LT e1 e2
+      (LEQ _ e1 _ e2 _) -> op2 EVM.LEq e1 e2
+      (GEQ _ e1 _ e2 _) -> op2 EVM.GEq e1 e2
+      (Act.GT _ e1 _ e2 _) -> op2 EVM.GT e1 e2
       (LitBool _ b) -> pure $ EVM.Lit (fromIntegral $ fromEnum b)
       -- integers
       (Add _ e1 e2) -> op2 EVM.Add e1 e2
       (Sub _ e1 e2) -> op2 EVM.Sub e1 e2
       (Mul _ e1 e2) -> op2 EVM.Mul e1 e2
-      (Div _ e1 e2) -> op2 EVM.Div e1 e2
-      (Mod _ e1 e2) -> op2 EVM.Mod e1 e2 -- which mod?
+      (Div _ e1 _ e2 _) -> op2 EVM.Div e1 e2
+      (Mod _ e1 _ e2 _) -> op2 EVM.Mod e1 e2 -- which mod?
       (Exp _ e1 e2) -> op2 EVM.Exp e1 e2
       (LitInt _ n) -> pure $ EVM.Lit (fromIntegral n)
       (IntEnv _ env) -> ethEnvToWord env
@@ -878,16 +881,20 @@ inRange (TInteger 256 Signed) _ = error "TODO signed integers"
 inRange t e = bound t e
 
 
+-- just to get things compiling
+dummyType :: TValueType AInteger
+dummyType = TInteger 256 Unsigned
+
 checkOp :: Exp AInteger -> Exp ABoolean
 checkOp (LitInt _ i) = LitBool nowhere $ i <= (fromIntegral (maxBound :: Word256))
 checkOp (VarRef _ _ _)  = LitBool nowhere True
-checkOp e@(Add _ e1 _) = LEQ nowhere e1 e -- check for addition overflow
-checkOp e@(Sub _ e1 _) = LEQ nowhere e e1
+checkOp e@(Add _ e1 _) = LEQ nowhere e1 dummyType e dummyType-- check for addition overflow
+checkOp e@(Sub _ e1 _) = LEQ nowhere e dummyType e1 dummyType
 checkOp (Mul _ e1 e2) = Or nowhere (Eq nowhere (TInteger 256 Unsigned) e1 (LitInt nowhere 0))
                           (Impl nowhere (NEq nowhere (TInteger 256 Unsigned) e1 (LitInt nowhere 0))
-                            (Eq nowhere (TInteger 256 Unsigned) e2 (Div nowhere (Mul nowhere e1 e2) e1)))
-checkOp (Div _ _ _) = LitBool nowhere True
-checkOp (Mod _ _ _) = LitBool nowhere True
+                            (Eq nowhere (TInteger 256 Unsigned) e2 (Div nowhere (Mul nowhere e1 e2) dummyType e1 dummyType)))
+checkOp (Div _ _ _ _ _) = LitBool nowhere True
+checkOp (Mod _ _ _ _ _) = LitBool nowhere True
 checkOp (Address _ _ _) = LitBool nowhere True
 checkOp (Exp _ _ _) = error "TODO check for exponentiation overflow"
 checkOp (IntMin _ _)  = error "Internal error: invalid in range expression"

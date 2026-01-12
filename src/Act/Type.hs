@@ -30,7 +30,6 @@ import Act.Error
 import Act.Print
 import Act.Bounds
 
-
 type Err = Error String
 
 -- | A map containing the interfaces of all available constructors, a payable flag, and the constructor preconditions.
@@ -108,7 +107,7 @@ makeIntegerBoundConstraint p str env t e = BoolCnstr p str env (InRange nowhere 
 
 -- | Create an array bound constraint
 makeArrayBoundConstraint :: Pn -> String -> Env -> Int -> Exp AInteger t -> Constraint t
-makeArrayBoundConstraint p str env len e = BoolCnstr p str env (LT p e (LitInt p (fromIntegral len)))
+makeArrayBoundConstraint p str env len e = BoolCnstr p str env (LT p e (TInteger 256 Unsigned) (LitInt p (fromIntegral len)) (TInteger 256 Unsigned))
 
 -- | Top-level typechecking function
 typecheck :: U.Act -> Err (Act, [Constraint Timed])
@@ -508,8 +507,8 @@ genInRange t e@(VarRef _ _ _)  = [InRange nowhere t e]
 genInRange t e@(Add _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(Sub _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(Mul _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
-genInRange t e@(Div _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
-genInRange t e@(Mod _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
+genInRange t e@(Div _ e1 _ e2 _) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
+genInRange t e@(Mod _ e1 _ e2 _) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(Exp _ e1 e2) = [InRange nowhere t e] <> genInRange t e1 <> genInRange t e2
 genInRange t e@(IntEnv _ _) = [InRange nowhere t e]
 genInRange t e@(Address _ _ _) = [InRange nowhere t e]
@@ -655,6 +654,7 @@ checkExpr env mode t1 e =
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) ->
     maybe (typeMismatchErr pn t1 t2) (\Refl -> pure (te, cs)) $ testEquality t1 t2
 
+
 -- | Attempt to infer a type of an expression. If successful, it returns an
 -- existential package of the infered typed together with the typed expression.
 inferExpr :: forall t. Env -> Mode t -> U.Expr -> Err (TypedExp t, [Constraint t])
@@ -664,10 +664,10 @@ inferExpr env@Env{constructors} mode e = case e of
   U.EAnd    p v1 v2 -> boolOp2 (And  p) TBoolean v1 v2
   U.EOr     p v1 v2 -> boolOp2 (Or   p) TBoolean v1 v2
   U.EImpl   p v1 v2 -> boolOp2 (Impl p) TBoolean v1 v2
-  U.ELT     p v1 v2 -> boolOp2 (LT   p) TUnboundedInt v1 v2
-  U.ELEQ    p v1 v2 -> boolOp2 (LEQ  p) TUnboundedInt v1 v2
-  U.EGEQ    p v1 v2 -> boolOp2 (GEQ  p) TUnboundedInt v1 v2
-  U.EGT     p v1 v2 -> boolOp2 (GT   p) TUnboundedInt v1 v2
+  U.ELT     p v1 v2 -> compOp2 p (LT  p) v1 v2
+  U.ELEQ    p v1 v2 -> compOp2 p (LEQ p) v1 v2
+  U.EGEQ    p v1 v2 -> compOp2 p (GEQ p) v1 v2
+  U.EGT     p v1 v2 -> compOp2 p (GT  p) v1 v2
   U.EEq     p v1 v2 -> first (TExp TBoolean) <$> polycheck p Eq v1 v2
   U.ENeq    p v1 v2 -> first (TExp TBoolean) <$> polycheck p NEq v1 v2
   U.BoolLit p v1    -> pure (TExp TBoolean (LitBool p v1), [])
@@ -678,20 +678,21 @@ inferExpr env@Env{constructors} mode e = case e of
       TUnboundedInt -> pure (TExp TBoolean . andExps $ genInRange tr te, cnstr)
       _ -> throw (getPosn e, "inRange can only be applied to integer expressions")
   U.EInRange _ _ _ -> throw (getPosn e, "inRange can be used only with integer types")
-  U.EAdd   p v1 v2 -> arithOp2 (Add p) v1 v2
-  U.ESub   p v1 v2 -> arithOp2 (Sub p) v1 v2
-  U.EMul   p v1 v2 -> arithOp2 (Mul p) v1 v2
-  U.EDiv   p v1 v2 -> arithOp2 (Div p) v1 v2
-  U.EMod   p v1 v2 -> arithOp2 (Mod p) v1 v2
-  U.EExp   p v1 v2 -> arithOp2 (Exp p) v1 v2
-  U.IntLit p v1    ->
-    pure (TExp (litBoundedType v1) (LitInt p v1), [])
+  U.EAdd   p v1 v2 -> arithOp2 p (Add p) v1 v2
+  U.ESub   p v1 v2 -> arithOp2 p (Sub p) v1 v2
+  U.EMul   p v1 v2 -> arithOp2 p (Mul p) v1 v2
+  U.EDiv   p v1 v2 -> arithTyOp2 p (Div p) v1 v2
+  U.EMod   p v1 v2 -> arithTyOp2 p (Mod p) v1 v2
+  U.EExp   p v1 v2 -> arithOp2 p (Exp p) v1 v2
+  U.IntLit p v1    -> do
+    ty <- litBoundedType v1
+    pure (TExp ty (LitInt p v1), [])
    where
     -- Determine the narrowest integer type that can hold the given literal value
-    litBoundedType :: Integer -> TValueType AInteger
-    litBoundedType v | v >= 0 && v <= maxUnsigned 256 = TInteger (findBoundUnsigned v) Unsigned
-                      | otherwise && v >= minSigned 256 && v <= maxSigned 256 = TInteger (findBoundSigned v) Signed
-                      | otherwise = TUnboundedInt
+    litBoundedType :: Integer -> Err (TValueType AInteger)
+    litBoundedType v | v >= 0 && v <= maxUnsigned 256 = pure $ TInteger (findBoundUnsigned v) Unsigned
+                      | otherwise && v >= minSigned 256 && v <= maxSigned 256 = pure $ TInteger (findBoundSigned v) Signed
+                      | otherwise = throw (p, "Integer literal " <> show v <> " is out of bounds for 256-bit signed and unsigned integers")
 
   U.EArray p l -> (unzip <$> traverse (inferExpr env mode) l) `bindValidation` \(tes, cs) ->
     (, concat cs) <$> gatherElements tes
@@ -699,10 +700,6 @@ inferExpr env@Env{constructors} mode e = case e of
       gatherElements :: [TypedExp t] -> Err (TypedExp t)
       gatherElements (TExp t1 te1:tes) =  TExp (TArray (length l) t1) <$> (Array p . (:) te1 <$> traverse (checkElement t1) tes)
       gatherElements [] = throw (p, "Internal error: Cannot infer type of empty array expression")
-
-      -- TODO: this relies on combineTypes, look that over as it is not complete
-      -- combinedType :: [TValueType a] -> Err (TValueType a)
-      -- combinedType ts@(th : tl) = foldl' (\ta tb -> ta `bindValidation` combineTypes tb) (pure th) ts
 
       checkElement :: TValueType a -> TypedExp t -> Err (Exp a t)
       checkElement t (TExp t' te) = maybe (typeMismatchErr (posnFromExp te) t t') (\Refl -> pure te) $ relaxedtestEquality t t'
@@ -753,10 +750,38 @@ inferExpr env@Env{constructors} mode e = case e of
     boolOp2 :: forall a. (Exp a t -> Exp a t -> Exp ABoolean t) -> TValueType a -> U.Expr -> U.Expr -> Err (TypedExp t, [Constraint t])
     boolOp2 f t e1 e2 = do
       (\(e1', c1) (e2', c2) -> (TExp TBoolean (f e1' e2'), c1 ++ c2)) <$> checkExpr env mode t e1 <*> checkExpr env mode t e2
-    arithOp2 :: (Exp AInteger t -> Exp AInteger t -> Exp AInteger t) -> U.Expr -> U.Expr -> Err (TypedExp t, [Constraint t])
-    arithOp2 f e1 e2 = do
-      -- Could generate more precise int type here
-      (\(e1', c1) (e2', c2) -> (TExp TUnboundedInt (f e1' e2'), c1 ++ c2)) <$> checkExpr env mode TUnboundedInt e1 <*> checkExpr env mode TUnboundedInt e2
+
+    compOp2 :: Pn -> (Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp ABoolean t) 
+            -> U.Expr -> U.Expr -> Err (TypedExp t, [Constraint t])
+    compOp2 p f e1 e2 =
+       inferExpr env mode e1 `bindValidation` \(TExp t1 te1, c1) ->
+       inferExpr env mode e2 `bindValidation` \(TExp t2 te2, c2) -> do
+       (\(_, te) -> (TExp TBoolean te, c1 ++ c2)) <$> combineArithExrps p t1 te1 t2 te2 f
+
+    arithTyOp2 :: Pn -> (Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t) -> U.Expr -> U.Expr -> Err (TypedExp t, [Constraint t])
+    arithTyOp2 p f e1 e2 =
+       inferExpr env mode e1 `bindValidation` \(TExp t1 te1, c1) ->
+       inferExpr env mode e2 `bindValidation` \(TExp t2 te2, c2) ->
+       -- all intermediate results must fit in an EVM word
+       let cnstr t te = makeIntegerBoundConstraint p ("Result of arithmetic operation is not guaranteed to fit in type " <> prettyTValueType t1) env t te in
+       (\(t, te) -> (TExp t te, (cnstr t te):c1 ++ c2)) <$> combineArithExrps p t1 te1 t2 te2 f
+
+    combineArithExrps :: forall a b c. Pn -> TValueType a -> Exp a t -> TValueType b -> Exp b t 
+                      -> (Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp c t) 
+                      -> Err (TValueType AInteger, Exp c t)
+    combineArithExrps p t1 e1 t2 e2 f =
+        case (t1, t2) of
+            (TInteger _ s1, TInteger _ s2) | s1 == s2 ->
+                pure (TInteger 256 s1, f e1 t1 e2 t2)
+            (TInteger _ _, TInteger _ _) ->
+                throw (p, "Cannot perform arithmetic operation between signed and unsigned integer types")                
+            (TUnboundedInt, _) -> error "Internal error: unbounded integers not supported"
+            (_, TUnboundedInt) -> error "Internal error: unbounded integers not supported"
+            _ -> throw (p, "Arguments are expected to have integer types but instead have types " <> prettyTValueType t1 <> " and " <> prettyTValueType t2)
+
+    arithOp2 :: Pn -> (Exp AInteger t -> Exp AInteger t -> Exp AInteger t) -> U.Expr -> U.Expr -> Err (TypedExp t, [Constraint t])
+    arithOp2 p f = arithTyOp2 p (\e1 _ e2 _ -> f e1 e2)
+
     polycheck :: forall z. Pn -> (forall y. Pn -> TValueType y -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err (z, [Constraint t])
     polycheck pn cons e1 e2 = do
        ((,) <$> (inferExpr env mode e1) <*> (inferExpr env mode e2)) `bindValidation` \( (TExp t1 te1, c1), (TExp t2 te2, c2) ) ->

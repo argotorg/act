@@ -16,7 +16,6 @@ import Prelude hiding (GT, LT)
 
 import Prettyprinter hiding (group)
 import System.Exit (exitFailure)
-import System.IO (hPutStrLn, stderr)
 import Data.Maybe
 import Data.Type.Equality ((:~:)(..), TestEquality (testEquality))
 import Data.Singletons (sing, SingI)
@@ -212,17 +211,17 @@ modelEval e = case e of
   Or   _ a b    -> [ a' || b' | a' <- modelEval a, b' <- modelEval b]
   Impl _ a b    -> [ a' <= b' | a' <- modelEval a, b' <- modelEval b]
   Neg  _ a      -> not <$> modelEval a
-  LT   _ a b    -> [ a' <  b' | a' <- modelEval a, b' <- modelEval b]
-  LEQ  _ a b    -> [ a' <= b' | a' <- modelEval a, b' <- modelEval b]
-  GT   _ a b    -> [ a' >  b' | a' <- modelEval a, b' <- modelEval b]
-  GEQ  _ a b    -> [ a' >= b' | a' <- modelEval a, b' <- modelEval b]
+  LT   _ a _ b _ -> [ a' <  b' | a' <- modelEval a, b' <- modelEval b]
+  LEQ  _ a _ b _ -> [ a' <= b' | a' <- modelEval a, b' <- modelEval b]
+  GT   _ a _ b _ -> [ a' >  b' | a' <- modelEval a, b' <- modelEval b]
+  GEQ  _ a _ b _ -> [ a' >= b' | a' <- modelEval a, b' <- modelEval b]
   LitBool _ a   -> pure a
 
   Add _ a b     -> [ a' + b'     | a' <- modelEval a, b' <- modelEval b]
   Sub _ a b     -> [ a' - b'     | a' <- modelEval a, b' <- modelEval b]
   Mul _ a b     -> [ a' * b'     | a' <- modelEval a, b' <- modelEval b]
-  Div _ a b     -> [ a' `div` b' | a' <- modelEval a, b' <- modelEval b]
-  Mod _ a b     -> [ a' `mod` b' | a' <- modelEval a, b' <- modelEval b]
+  Div _ a _ b _ -> [ a' `div` b' | a' <- modelEval a, b' <- modelEval b]
+  Mod _ a _ b _ -> [ a' `mod` b' | a' <- modelEval a, b' <- modelEval b]
   Exp _ a b     -> [ a' ^ b'     | a' <- modelEval a, b' <- modelEval b]
   LitInt  _ a   -> pure a
   IntMin  _ a   -> pure $ intmin  a

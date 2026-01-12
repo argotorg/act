@@ -41,22 +41,22 @@ mapExpM f = \case
   Neg p a -> do
     a' <- mapExpM f a
     f (Neg p a')
-  LT p a b -> do
+  LT p a ta b tb -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (LT p a' b')
-  LEQ p a b -> do
+    f (LT p a' ta b' tb)
+  LEQ p a ta b tb -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (LEQ p a' b')
-  GEQ p a b -> do
+    f (LEQ p a' ta b' tb)
+  GEQ p a ta b tb -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (GEQ p a' b')
-  GT p a b -> do
+    f (GEQ p a' ta b' tb)
+  GT p a ta b tb -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (GT p a' b')
+    f (GT p a' ta b' tb)
   LitBool p a -> f (LitBool p a)
 
   --integers
@@ -73,14 +73,14 @@ mapExpM f = \case
     a' <- mapExpM f a
     b' <- mapExpM f b
     f (Mul p a' b')
-  Div p a b -> do
+  Div p a ta b tb -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (Div p a' b')
-  Mod p a b -> do
+    f (Div p a' ta b' tb)
+  Mod p a ta b tb -> do
     a' <- mapExpM f a
     b' <- mapExpM f b
-    f (Mod p a' b')
+    f (Mod p a' ta b' tb)
   Exp p a b -> do
     a' <- mapExpM f a
     b' <- mapExpM f b

@@ -221,23 +221,25 @@ instance Eq (TypedExp t) where
 -- will refer to either the prestate or the poststate.
 -- In `t ~ Untimed`, the only possible such value is `Neither :: Time Untimed`, so all storage entries
 -- will not explicitly refer any particular state.
+-- Note: for comparison operations and division/modulo, we also pass the TValueType of the literals involved
+-- as we need them to be able to translate to hevm's Expr correctly.
 data Exp (a :: ActType) (t :: Timing) where
   -- booleans
   And  :: Pn -> Exp ABoolean t -> Exp ABoolean t -> Exp ABoolean t
   Or   :: Pn -> Exp ABoolean t -> Exp ABoolean t -> Exp ABoolean t
   Impl :: Pn -> Exp ABoolean t -> Exp ABoolean t -> Exp ABoolean t
   Neg :: Pn -> Exp ABoolean t -> Exp ABoolean t
-  LT :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp ABoolean t
-  LEQ :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp ABoolean t
-  GEQ :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp ABoolean t
-  GT :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp ABoolean t
+  LT :: Pn -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp ABoolean t
+  LEQ :: Pn -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp ABoolean t
+  GEQ :: Pn -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp ABoolean t
+  GT :: Pn -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger ->Exp ABoolean t
   LitBool :: Pn -> Bool -> Exp ABoolean t
   -- integers
   Add :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp AInteger t
   Sub :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp AInteger t
   Mul :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp AInteger t
-  Div :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp AInteger t
-  Mod :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp AInteger t
+  Div :: Pn -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t
+  Mod :: Pn -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t -> TValueType AInteger -> Exp AInteger t
   Exp :: Pn -> Exp AInteger t -> Exp AInteger t -> Exp AInteger t
   LitInt :: Pn -> Integer -> Exp AInteger t
   IntEnv :: Pn -> EthEnv -> Exp AInteger t
@@ -278,17 +280,17 @@ instance Eq (Exp a t) where
   Or _ a b == Or _ c d = a == c && b == d
   Impl _ a b == Impl _ c d = a == c && b == d
   Neg _ a == Neg _ b = a == b
-  LT _ a b == LT _ c d = a == c && b == d
-  LEQ _ a b == LEQ _ c d = a == c && b == d
-  GEQ _ a b == GEQ _ c d = a == c && b == d
-  GT _ a b == GT _ c d = a == c && b == d
+  LT _ a ta b tb == LT _ c tc d td = a == c && b == d && eqS'' ta tc && eqS'' tb td
+  LEQ _ a ta b tb == LEQ _ c tc d td = a == c && b == d && eqS'' ta tc && eqS'' tb td
+  GEQ _ a ta b tb == GEQ _ c tc d td = a == c && b == d && eqS'' ta tc && eqS'' tb td
+  GT _ a ta b tb == GT _ c tc d td = a == c && b == d && eqS'' ta tc && eqS'' tb td
   LitBool _ a == LitBool _ b = a == b
 
   Add _ a b == Add _ c d = a == c && b == d
   Sub _ a b == Sub _ c d = a == c && b == d
   Mul _ a b == Mul _ c d = a == c && b == d
-  Div _ a b == Div _ c d = a == c && b == d
-  Mod _ a b == Mod _ c d = a == c && b == d
+  Div _ a ta b tb == Div _ c tc d td = a == c && b == d && eqS'' ta tc && eqS'' tb td
+  Mod _ a ta b tb == Mod _ c tc d td = a == c && b == d && eqS'' ta tc && eqS'' tb td
   Exp _ a b == Exp _ c d = a == c && b == d
   LitInt _ a == LitInt _ b = a == b
   IntEnv _ a == IntEnv _ b = a == b
@@ -343,17 +345,17 @@ instance Timable (Exp a) where
     Or   p x y -> Or p (go x) (go y)
     Impl p x y -> Impl p (go x) (go y)
     Neg p x -> Neg p (go x)
-    LT p x y -> LT p (go x) (go y)
-    LEQ p x y -> LEQ p (go x) (go y)
-    GEQ p x y -> GEQ p (go x) (go y)
-    GT p x y -> GT p (go x) (go y)
+    LT p x tx y ty -> LT p (go x) tx (go y) ty
+    LEQ p x tx y ty -> LEQ p (go x) tx (go y) ty
+    GEQ p x tx y ty -> GEQ p (go x) tx (go y) ty
+    GT p x tx y ty -> GT p (go x) tx (go y) ty
     LitBool p x -> LitBool p x
     -- integers
     Add p x y -> Add p (go x) (go y)
     Sub p x y -> Sub p (go x) (go y)
     Mul p x y -> Mul p (go x) (go y)
-    Div p x y -> Div p (go x) (go y)
-    Mod p x y -> Mod p (go x) (go y)
+    Div p x tx y ty -> Div p (go x) tx (go y) ty
+    Mod p x tx y ty -> Mod p (go x) tx (go y) ty
     Exp p x y -> Exp p (go x) (go y)
     LitInt p x -> LitInt p x
     IntEnv p x -> IntEnv p x
@@ -520,7 +522,8 @@ instance ToJSON (Exp a t) where
   toJSON (Sub _ a b) = symbol "-" a b
   toJSON (Exp _ a b) = symbol "^" a b
   toJSON (Mul _ a b) = symbol "*" a b
-  toJSON (Div _ a b) = symbol "/" a b
+  toJSON (Div _ a _ b _) = symbol "/" a b
+  toJSON (Mod _ a _ b _) = symbol "%" a b
   toJSON (LitInt _ a) = object [ "literal" .= pack (show a)
                                , "type" .= pack "int" ]
   toJSON (IntMin _ a) = object [ "literal" .= pack (show $ intmin a)
@@ -541,13 +544,13 @@ instance ToJSON (Exp a t) where
                                 , "args"     .= Data.Aeson.Array (fromList [toJSON a, toJSON b, toJSON c]) ]
   toJSON (And _ a b)  = symbol "and" a b
   toJSON (Or _ a b)   = symbol "or" a b
-  toJSON (LT _ a b)   = symbol "<" a b
-  toJSON (GT _ a b)   = symbol ">" a b
+  toJSON (LT _ a _ b _)   = symbol "<" a b
+  toJSON (GT _ a _ b _)   = symbol ">" a b
   toJSON (Impl _ a b) = symbol "=>" a b
   toJSON (NEq _ _ a b)  = symbol "=/=" a b
   toJSON (Eq _ _ a b)   = symbol "==" a b
-  toJSON (LEQ _ a b)  = symbol "<=" a b
-  toJSON (GEQ _ a b)  = symbol ">=" a b
+  toJSON (LEQ _ a _ b _)  = symbol "<=" a b
+  toJSON (GEQ _ a _ b _)  = symbol ">=" a b
   toJSON (LitBool _ a) = object [ "literal" .= pack (show a)
                                 , "type" .= pack "bool" ]
   toJSON (Neg _ a) = object [ "symbol"   .= pack "not"
@@ -603,17 +606,17 @@ eval e = case e of
   Or   _ a b    -> [a' || b' | a' <- eval a, b' <- eval b]
   Impl _ a b    -> [a' <= b' | a' <- eval a, b' <- eval b]
   Neg  _ a      -> not <$> eval a
-  LT   _ a b    -> [a' <  b' | a' <- eval a, b' <- eval b]
-  LEQ  _ a b    -> [a' <= b' | a' <- eval a, b' <- eval b]
-  GT   _ a b    -> [a' >  b' | a' <- eval a, b' <- eval b]
-  GEQ  _ a b    -> [a' >= b' | a' <- eval a, b' <- eval b]
+  LT   _ a _ b _   -> [a' <  b' | a' <- eval a, b' <- eval b]
+  LEQ  _ a _ b _   -> [a' <= b' | a' <- eval a, b' <- eval b]
+  GT   _ a _ b _   -> [a' >  b' | a' <- eval a, b' <- eval b]
+  GEQ  _ a _ b _   -> [a' >= b' | a' <- eval a, b' <- eval b]
   LitBool _ a   -> pure a
 
   Add _ a b     -> [a' + b'     | a' <- eval a, b' <- eval b]
   Sub _ a b     -> [a' - b'     | a' <- eval a, b' <- eval b]
   Mul _ a b     -> [a' * b'     | a' <- eval a, b' <- eval b]
-  Div _ a b     -> [a' `div` b' | a' <- eval a, b' <- eval b]
-  Mod _ a b     -> [a' `mod` b' | a' <- eval a, b' <- eval b]
+  Div _ a _ b _     -> [a' `div` b' | a' <- eval a, b' <- eval b]
+  Mod _ a _ b _     -> [a' `mod` b' | a' <- eval a, b' <- eval b]
   Exp _ a b     -> [a' ^ b'     | a' <- eval a, b' <- eval b]
   LitInt  _ a   -> pure a
   IntMin  _ a   -> pure $ intmin  a
