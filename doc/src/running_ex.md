@@ -50,7 +50,7 @@ contract Token {
 
 An **Act specification** describes the **externally observable behavior** of this contract. At a high level, an Act specification consists of one or more contracts, where each contract has:
 - a **constructor**, describing what storage is created and how it is initialized
-- a set of **behaviors**, one for each callable function
+- a set of **transitions**, one for each callable function
 - explicit **preconditions** under which function calls succeed
 - explicit **storage updates** describing the resulting state
 
@@ -64,7 +64,7 @@ The translation of the code above into an act specification has the following to
 contract Token:
 
 constructor(uint256 _totalSupply)
-iff CALLVALUE == 0
+iff true
     ...
 creates
   uint256 totalSupply := _totalSupply
@@ -72,17 +72,17 @@ creates
   mapping(address => mapping(address => uint)) allowance := []
 
 transition transfer(uint256 value, address to)
-iff CALLVALUE == 0
+iff true
     ...
 case CALLER != to:
-  storage
+  updates
     ...
 case CALLER == to:
-  storage
+  updates
     ...
 
 transition transferFrom(address from, address to, uint256 value)
-iff CALLVALUE == 0
+iff true
 ...
 ```
 
@@ -102,6 +102,6 @@ In the next sections, we will build up the meaning of these pieces by incrementa
 Jump to [Running the ERC20 Example](./layout_tooling.md#running-the-erc20-example) if you want to try out running the ERC20 example with verification backends.
 
 <!-- - Act specifications are declarative: they describe what must hold, not how to execute.
-- Each behaviour explicitly states when it is defined (iff ...).
+- Each transition explicitly states when it is defined (iff ...).
 - Storage updates are separated from control flow. -->
 

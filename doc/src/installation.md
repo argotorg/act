@@ -1,9 +1,54 @@
-# Installation
+# What is Act?
+Act is a formal specification language and verification framework for proving the correctness of Ethereum Virtual Machine (EVM) smart contracts. Act specifications precisely describe all possible behaviors of a smart contract in a high-level language and are automatically verified against the contract’s EVM bytecode using symbolic execution. 
 
-## Install Nix
+## Getting Started
+
 Act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
 
-## Quick Start
+### Quick Start
+
+To quickly try Act without installing it, you can enter a Nix shell:
+
+```sh
+nix-shell https://github.com/argotorg/act/tarball/master
+```
+
+### Basic Usage
+
+Test your installation by running the following command:
+<span style="color:red">Change to a hello world example</span>
+
+```sh
+cabal run act -- --help
+```
+
+Once are in the Nix shell or you have [installed Act](./installation.md#building-from-source), you can use Act backends for `rocq` and `hevm`:
+
+```sh
+cabal run act -- <OPTIONS>
+```
+
+To see all available options and configuration flags:
+
+```sh
+cabal run act -- --help
+```
+
+Alternatively, if you've run `make` first, you can run the executable directly:
+
+```sh
+act <OPTIONS>
+```
+
+
+
+
+## Installation
+
+### Install Nix
+Act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
+
+### Quick Start
 
 To quickly try Act without installing it, you can enter a Nix shell:
 
@@ -18,7 +63,7 @@ Test your installation by running the following command:
 cabal run act -- --help
 ```
 
-## Building from Source
+### Building from Source
 
 1. Clone the repository:
 ```sh
@@ -50,5 +95,5 @@ You can then use Cabal as normal from the root directory:
 cabal build # build
 cabal repl  # enter a repl instance
 ```
-## Usage 
+### Usage 
 Consult the [Getting Started](./part1.md#getting-started) section for more information on using Act.

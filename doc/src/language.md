@@ -1,13 +1,13 @@
 # Syntax of the Act language
 
 A specification of a contract written in `act` consists of a
-`constructor` and a set of `behaviours`.
+`constructor` and a set of `transitions`.
 
 The `constructor` specification defines the structure of the contract
 state, the initial value for the state, and a list of invariants that
 the contract should satisfy.
 
-Each `behaviour` specification determines how a contract method updates
+Each `transition` specification determines how a contract method updates
 the state, and its return value, and the conditions that must be
 satisfied in order for it to be applied.
 
@@ -38,7 +38,7 @@ function signatures in a concise way.
 As an example consider the specification of overflow safe addition:
 
 ```act
-behaviour add of SafeMath
+transition add of SafeMath
 interface add(uint x, uint y)
 
 iff in range uint
@@ -128,12 +128,12 @@ invariants
   _k = x * y
 ```
 
-## Behaviour
+## transition
 
-A `behaviour` specification is indicated by the
-`behaviour of <contractName>` header, as in:
+A `transition` specification is indicated by the
+`transition of <contractName>` header, as in:
 ```act
-behaviour of A
+transition of A
 ```
 
 and consists of the following fields:
@@ -141,7 +141,7 @@ and consists of the following fields:
 
 ### interface
 
-Specifying which method the behaviour refers to.
+Specifying which method the transition refers to.
 Example:
 ```act
 interface transfer(address to, uint value)
@@ -163,7 +163,7 @@ iff
 
 ### state updates and returns
 
-Each behaviour must specify the state changes that happens a result of
+Each transition must specify the state changes that happens a result of
 a valid call to the method, and its return argument, if any.
 All references to storage variables in `returns` arguments need to
 specify whether they talk about the variable's
@@ -172,7 +172,7 @@ value in the pre- or the poststate, by using `pre(x)` or `post(x)`.
 Example:
 ```act
 
-storage
+updates
 
   balanceOf[CALLER] => balanceOf[CALLER] - value
   balanceOf[to] => balanceOf[to] + value
@@ -191,14 +191,14 @@ case to == CALLER:
 
 case to =/= CALLER:
 
-   storage
+   updates
      balanceOf[CALLER] => balanceOf[CALLER] - value
      balanceOf[to] => balanceOf[to] + value
 
    returns post(balanceOf[CALLER])
 ```
 
-Note that currently, either a `storage` or `returns` section, or both is required in every spec.
+Note that currently, either an `updates` or `returns` section, or both is required in every spec.
 
 ### Ensures (optional)
 
@@ -233,13 +233,13 @@ interface constructor()
 creates
    A a := A()
 
-behaviour remote of B
+transition remote of B
 interface set_a(uint z)
 
 iff
    CALLVALUE == 0
 
-storage
+updates
    a.x => z
 ```
 
@@ -248,7 +248,7 @@ storage
 Often, to accurately specify a contract, we need to assume that
 arithmetic operations do not overflow. This is done with built-in
 *in-range* predicates. For example, in the iff conditions of a
-constructor of behaviour we can write
+constructor of transition we can write
 
 
 ```
