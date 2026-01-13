@@ -127,6 +127,20 @@
             {
               "args": [
                 {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "args": [
+                {
                   "args": [
                     {
                       "literal": "0",
@@ -1287,6 +1301,1250 @@
                           }
                         }
                       }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "ethEnv": "Callvalue",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "ethEnv": "Callvalue",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "3",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "3",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "3",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "3",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "1",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "0",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "3",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "literal": "3",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "2",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "abitype": {
+                              "abitype": {
+                                "arrayType": {
+                                  "arrayType": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "size": "3",
+                                  "type": "Array"
+                                },
+                                "size": "2",
+                                "type": "Array"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "a"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "ethEnv": "Callvalue",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "ethEnv": "Callvalue",
+                      "type": "int"
                     },
                     {
                       "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
@@ -1421,7 +2679,90 @@
         "invariants": [],
         "kind": "Constructor",
         "postConditions": [],
-        "preConditions": []
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          }
+        ]
       },
       "kind": "Contract"
     }
