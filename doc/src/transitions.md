@@ -51,8 +51,8 @@ graph TD
    - Updates storage variables based on the current execution path (i.e. the case).
    - Storage fields that are not mentioned remain unchanged.
    - The updates are separated by newlines and have the shape: `<variable> := <expression>`
-   - All updates refer to the pre-state (before the transition call). <span style="color:red"> double-check</span>
-   - Updates are **simultaneous**: all right-hand sides are evaluated in the initial state. <span style="color:red"> double-check</span>
+   - Updates are **simultaneous**: all right-hand sides are evaluated in the initial state. 
+   - Can be skipped if no storage updates are performed.
 
 5. **Returns Block**: `returns <value>`
    - present after each `updates` block if and only if the transition has a return type.
@@ -186,9 +186,12 @@ In general, the updates block can be arranged in any order, as all updates are s
 There is, however, one subtlety to be aware of: if a storage slot is updated and also a specific field of that slot is updated, 
 the more general references have to be listed before the specific ones.
 
-Let's illustrate this with an example. Consider the following example that has an ERC20 token in its storage:
- 
-<span style="color:red"> CONTINUE HERE. </span>
+The **most common scenario** where this arises is when a contract has another contract `other_contract_instance` in its storage, and both the entire contract and a specific field `some_field` of it are updated in the same `updates` block:
+- `other_contract_instance := <constr_other_contract>(<constr_parameters>)` (general update) has to happen before
+- `other_contract_instance.some_field := <expression>` (specific field update).
+
+Let's illustrate this with a motivated example. We first define a simple contract `Admins` that tracks two admin addresses. This contract will be used in another contract `Asset` below to show the ordering requirement.
+
 
 ```act
 contract Admins
@@ -200,13 +203,13 @@ creates
    address admin1 := _admin1
    address admin2 := ORIGIN
 
-transition admin2(address new_admin2)
+transition set_admin2(address new_admin2)
 iff true
 updates
    admin2 := new_admin2
 ```
  
- `Admins` is a simple contract that tracks two admin addresses. The first admin is set during construction, while the second admin is initialized to the transaction origin (`ORIGIN`). We assume that only admin2 can be externally updated via the `admin2` transition.
+ `Admins` is a simple contract that tracks two admin addresses. The first admin is set during construction, while the second admin is initialized to the transaction origin (`ORIGIN`). We assume that only admin2 can be externally updated via the `admin2` transition. (That means in the solidity equivalent, `admin1` would be immutable and `admin2` would have a setter function.)
 
 
 ```act
@@ -223,17 +226,18 @@ creates
 
 transition assetTransfer(uint256 amt, address to) 
 
-iff inRange(uint256, balanceOf[THIS] - amt)
-   inRange(uint256, balanceOf[to] + amt)
+iff CALLER == admins.admin1 or CALLER == admins.admin2
+    inRange(uint256, balanceOf[THIS] - amt)
+    THIS != to ==> inRange(uint256, balanceOf[to] + amt)
 
-case CALLER == admins.admin1 or CALLER == admins.admin2
+case THIS != to
 
 updates
    balanceOf := balanceOf[
                   THIS => balanceOf[THIS] - amt,
                   to   => balanceOf[to]   + amt ]
 
-case !(CALLER == admins.admin1 or CALLER == admins.admin2)
+case THIS == to
 
 
 
@@ -251,17 +255,35 @@ case !(CALLER == admins.admin1 or CALLER == admins.admin2)
 
 ...
 ```
- The contract `Asset` is a variation of a drastically simplified token contract (similar to ERC20). The relevant difference is that only two admin addresses can transfer tokens from the contract's own balance to other addresses. The `Admins` contract (introduced above) is used to track the two admin addresses.
- There is an extra transition `setAdmins` that allows either admin to update both admin addresses.
+Let's consider now the `Asset` contract above. 
+ - The contract `Asset` is a variation of a drastically simplified token contract (similar to ERC20). 
+ - The relevant difference is that only the two admin addresses can transfer tokens from the contract's own balance to other addresses. (See the `assetTransfer` transition.) 
+ - The `Admins` contract (introduced above) is used to track the two admin addresses. (See the constructor of `Asset`.)
+ - There is an extra transition `setAdmins` that allows either admin to update both admin addresses.
  
  **Ordered Updates**
-  In the `setAdmins` transition, the `updates` block of the first case we are in the situation described earlier: there is a general update of a storage slot and afterwards a specific field of that slot is updated:
+
+  Consider the `setAdmins` transition, where in the first case `case CALLER == admins.admin1 or CALLER == admins.admin2` both admin addresses are updated. We are in the situation described earlier: there is a **general update of a storage slot** and afterwards a **specific field of that slot** is updated:
    - `admins := Admins(new_admin1)` (general update)
    - `admins.admin2 := new_admin2` (specific field update)
   
-This ordering is necessary because the right-hand side of the second update `admins.admin2 := new_admin2` refers to the updated value of `admins` from the first update. If we had written the specific field update first, it would have referred to the old value of `admins`, which is not what we want.
+This ordering is necessary to ensure that the right-hand side of the second update `admins.admin2 := new_admin2` refers to the updated value of `admins` from the first update. This is needed to maintain  updates as equations that hold afterward the transition. 
+The ordering is a design choice required for sound and unambiguous semantics.
 
-<span style="color:red"> This is kinda weird since it's contradicting the "view it as a set of equations" claim. </span>
+ <!-- If we had written the specific field update first, it would have referred to the old value of `admins`, which is not what we want.
+
+This is a design choice in Act to ensure updated storage references are well-defined.
+Imagine if we had written the updates in the opposite order:
+
+```act
+updates
+   admins.admin2 := new_admin2
+   admins := Admins(new_admin1)
+``` -->
+
+
+
+<span style="color:red"> please improve my explanation here. </span>
 
 
 <!-- transition foo(uint256 newSupply, address to, uint256 value)
