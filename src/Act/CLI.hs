@@ -54,6 +54,8 @@ import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
 import Act.Entailment
+import Act.Overflow
+
 --import Act.Decompile
 
 import qualified EVM.Solvers as Solvers
@@ -413,4 +415,4 @@ proceed :: Validate err => String -> err (NonEmpty (Pn, String)) a -> (a -> IO (
 proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
 
 compile :: String -> Error String (Act, [Constraint Timed])
-compile = pure . (first annotate) <==< typecheck <==< parse . lexer
+compile = pure . (first annotate) <==< pure . (\(act, cnstr) -> (act, checkIntegerBoundsAct act ++ cnstr)) <==< typecheck <==< parse . lexer

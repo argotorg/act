@@ -2,6 +2,7 @@ contract A
 
 constructor(uint x, uint y)
 iff
+    inRange(uint, x + y)
     x + y > 42
 creates
     uint a := x
@@ -13,6 +14,7 @@ constructor(uint p, uint q)
 iff
     p > 30
     q > 20
+    inRange(uint, p + q)   
 creates
     A a := new A(p, q)
 
@@ -20,6 +22,7 @@ transition foo(uint m, uint n)
 iff
     m > 30
     n > 50
+    inRange(uint, m + n)   
 updates
     a := new A(m, n)
 
@@ -29,5 +32,6 @@ constructor(uint alpha, uint beta)
 iff
     alpha > 100
     beta >= 21
+    inRange(uint, alpha + beta)
 creates
     B b := new B(alpha, beta)

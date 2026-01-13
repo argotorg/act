@@ -10,7 +10,7 @@
 {-# Language InstanceSigs #-}
 {-# Language TupleSections #-}
 
-module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors) where
+module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors, addCalldata, addPreconds, emptyEnv, addIffs) where
 
 import Prelude hiding (GT, LT)
 import Data.Map.Strict    (Map)

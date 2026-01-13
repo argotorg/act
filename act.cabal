@@ -79,6 +79,7 @@ library
     Act.HEVM_utils
     Act.Consistency
     Act.Entailment
+    Act.Overflow
 
 executable act
   import:             common

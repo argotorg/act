@@ -3,6 +3,7 @@ contract A
 constructor(uint x, uint y)
 iff
     x + y > 42
+    inRange(uint, x + y)
 creates
     uint w := x
     uint v := y
@@ -23,5 +24,6 @@ contract C
 constructor(uint alpha)
 iff
     alpha > 11
+    inRange(uint, alpha + 42)
 creates
     B b := new B(new A(alpha, 42), alpha)

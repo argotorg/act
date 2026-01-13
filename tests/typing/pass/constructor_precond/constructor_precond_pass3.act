@@ -3,6 +3,7 @@ contract A
 constructor(uint x, uint y)
 iff
     x + y > 42
+    inRange(uint, x + y)
 creates
     uint a := x
     uint b := y
