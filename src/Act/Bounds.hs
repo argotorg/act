@@ -34,13 +34,12 @@ addBoundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre cases _ invs)
   ctor { _cpreconditions = pre'
        , _invariants = addBoundsInvariant ctor <$> invs }
     where
-      pre' = boundsConstructor ctor
+      pre' = pre <> boundsConstructor ctor
 
 boundsConstructor :: Constructor t -> [Exp ABoolean t]
 boundsConstructor ctor@(Constructor _ (Interface _ decls) _ pre cases _ invs) = pre'
     where
-      pre' = nub $ pre
-             <> mkCallDataBounds decls
+      pre' = nub $ mkCallDataBounds decls
              <> mkEthEnvBounds (ethEnvFromConstructor ctor)
               -- The following is sound as values of locations outside local storage
               -- already exist as the constructor starts executing,
@@ -56,13 +55,12 @@ addBoundsBehaviour :: Behaviour t -> Behaviour t
 addBoundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases _) =
   behv { _preconditions = pre' }
     where
-      pre' = boundsBehaviour behv
+      pre' = pre <> boundsBehaviour behv
 
 boundsBehaviour :: Behaviour t -> [Exp ABoolean t]
 boundsBehaviour behv@(Behaviour _ _ (Interface _ decls) _ pre cases _) = pre'
     where
-      pre' = nub $ pre
-             <> mkCallDataBounds decls
+      pre' = nub $ mkCallDataBounds decls
              <> mkRefsBounds locs
              <> mkEthEnvBounds (ethEnvFromBehaviour behv)
 
