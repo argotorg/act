@@ -71,6 +71,7 @@ type Layout = M.Map Id (LayoutMode, M.Map Id (Int,Int,Int))
 
 data LayoutMode = SolidityLayout | VyperLayout
 
+-- | Maps each a sybmolic contract address to its Expr representation and contract id
 type ContractMap = M.Map (EVM.Expr EVM.EAddr) (EVM.Expr EVM.EContract, Id)
 
 -- | For each contract in the Act spec, put in a codemap its Act
@@ -80,9 +81,11 @@ type CodeMap = M.Map Id (Contract, BS.ByteString, BS.ByteString)
 
 type EquivResult = EVM.ProofResult (String, EVM.SMTCex) String
 
+-- | Initial symbolic address for contract deployment
 initAddr :: EVM.Expr EVM.EAddr
 initAddr = EVM.SymAddr "entrypoint"
 
+-- | Generate storage layout from storage typing and layout mode map
 slotMap :: StorageTyping -> M.Map Id LayoutMode -> Layout
 slotMap store lmap =
   M.mapWithKey (\cid cstore ->
@@ -130,11 +133,11 @@ sizeOfAbiType AbiFunctionType = 0 --
 -- * Act state monad
 
 data ActEnv = ActEnv
-  { codemap :: CodeMap
-  , fresh   :: Int
-  , layout  :: Layout
-  , caddr   :: EVM.Expr EVM.EAddr
-  , caller  :: Maybe (EVM.Expr EVM.EAddr)
+  { codemap :: CodeMap                      -- ^ Map from contract Ids to their Act spec and bytecode
+  , fresh   :: Int                          -- ^ Fresh variable counter
+  , layout  :: Layout                       -- ^ Storage layout
+  , caddr   :: EVM.Expr EVM.EAddr           -- ^ Current contract address
+  , caller  :: Maybe (EVM.Expr EVM.EAddr)   -- ^ Caller address, empty if at top-level
   }
 
 type ActT m a = StateT ActEnv m a
@@ -184,11 +187,14 @@ getCaller = do
     Just c -> pure c
     Nothing -> pure $ EVM.SymAddr "caller" -- Zoe: not sure what to put here
 
+-- | Non-deterministic Act monad transformer for symbolic interpretation of different case paths
 type ActNDT m a = ActT (WriterT [EVM.Prop] (Logic.LogicT m)) a
 
 fromFoldable :: (Monad m, Foldable f) => f a -> Logic.LogicT m a
 fromFoldable f = Logic.LogicT $ \cons nil -> foldr cons nil f
 
+-- | Collapse the non-deterministic Act monad transformer into a deterministic Act monad transformer 
+-- by collecting all possible results along with their path conditions
 collapseActND :: Monad m => ActNDT m a -> ActT m [(a, [EVM.Prop])]
 collapseActND ndComp = do
   detState <- get
@@ -203,6 +209,7 @@ collapseActND ndComp = do
 
 -- * Act translation
 
+-- | TODO comment
 storageBounds :: forall m . Monad m => ContractMap -> [TypedRef] -> ActT m [EVM.Prop]
 storageBounds contractMap locs = do
   -- TODO what env should we use here?
@@ -218,6 +225,7 @@ storageBounds contractMap locs = do
     refInCalldata (RMapIdx _ _ _) = False
     refInCalldata (RField _ _ _ _) = False
 
+-- | Extend an EVM end expression with additional path conditions
 addPathCondition :: EVM.Expr EVM.End -> [EVM.Prop] -> EVM.Expr EVM.End
 addPathCondition (EVM.Success pcs tc b m) pcs' = EVM.Success (pcs' ++ pcs) tc b m
 addPathCondition end _ = end
@@ -385,7 +393,7 @@ writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
         foldM (\wm (tr,te) -> writeToRef readMap wm callenv tr te) writeMap expansion
     TArray _ _ -> error "arrays TODO"
     TStruct _ -> error "structs TODO"
-    TUnboundedInt -> error "Internal error: Unbounded Integer after typechecking"
+    TUnboundedInt -> error "Internal error: Unbounded Integer after typechecking" -- Zoe: the typechecker will introduce unbounded integers, let's handle them the same way as integers
 -- TODO test with out of bounds assignments
   where
     storedValue :: EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> Int -> EVM.Expr EVM.EWord
@@ -446,7 +454,6 @@ createContract readMap writeMap callenv freshAddr (Create _ cid args _) = do
                            }
     Nothing -> error "Internal error: constructor not found"
 createContract _ _ _ _ _ = error "Internal error: constructor call expected"
--- TODO typing needs to semantically checks for preconditions
 
 type CallEnv = (M.Map Id (EVM.Expr EVM.EWord))
 
@@ -873,6 +880,10 @@ inRange (TInteger 256 Signed) _ = error "TODO signed integers"
 -- otherwise insert range bounds
 inRange t e = bound t e
 
+
+-- just to get things compiling
+dummyType :: TValueType AInteger
+dummyType = TInteger 256 Unsigned
 
 checkOp :: Exp AInteger -> Exp ABoolean
 checkOp (LitInt _ i) = LitBool nowhere $ i <= (fromIntegral (maxBound :: Word256))
