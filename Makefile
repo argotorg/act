@@ -83,9 +83,9 @@ test-cabal: src/*.hs
 
 # Just checks parsing
 tests/%.parse.pass:
-	./bin/act parse --file tests/$* > tests/$*.parsed.hs.out
-	#diff tests/$*.parsed.hs.out tests/$*.parsed.hs
-	#rm tests/$*.parsed.hs
+	./bin/act parse --file tests/$* > tests/$*.parsed.hs
+	diff tests/$*.parsed.hs.out tests/$*.parsed.hs
+	rm tests/$*.parsed.hs
 
 tests/%.parse.fail:
 	./bin/act parse --file tests/$* && exit 1 || echo 0

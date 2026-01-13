@@ -1,0 +1,621 @@
+{
+  "contracts": [
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "val",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "A",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "abitype": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"x\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 210 6 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "x"
+                }
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "x"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "x"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [
+        {
+          "cases": [
+            {
+              "body": [
+                [
+                  {
+                    "location": {
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "a",
+                      "time": "Pre"
+                    },
+                    "value": {
+                      "args": [
+                        {
+                          "fun": "A"
+                        },
+                        [
+                          {
+                            "expression": {
+                              "timing": "TInteger 256 Unsigned",
+                              "var": {
+                                "abitype": {
+                                  "abitype": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "kind": "AbiArgument"
+                                },
+                                "kind": "Var",
+                                "var": "z"
+                              }
+                            },
+                            "kind": "TypedExpr",
+                            "type": "TInteger 256 Unsigned"
+                          }
+                        ]
+                      ],
+                      "arity": 1,
+                      "symbol": "create",
+                      "value": null
+                    }
+                  }
+                ],
+                null
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "B",
+          "interface": {
+            "args": [
+              {
+                "abitype": {
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
+                },
+                "id": "\"z\"",
+                "kind": "Declaration"
+              }
+            ],
+            "id": "AlexPn 352 20 18",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "update",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "args": [
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "z"
+                  }
+                },
+                {
+                  "literal": "42",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": ">"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "abitype": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "z"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "abitype": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "z"
+                      }
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    {
+                      "ethEnv": "Callvalue",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "ethEnv": "Callvalue",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "<="
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "fun": "A"
+                    },
+                    [
+                      {
+                        "expression": {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
+                            "abitype": {
+                              "abitype": {
+                                "size": "256",
+                                "type": "UInt"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "y"
+                          }
+                        },
+                        "kind": "TypedExpr",
+                        "type": "TInteger 256 Unsigned"
+                      }
+                    ]
+                  ],
+                  "arity": 1,
+                  "symbol": "create",
+                  "value": null
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "B",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "abitype": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"y\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 283 14 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "y"
+                }
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "y"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "y"
+                    }
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "literal": "0",
+                    "type": "int"
+                  },
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              },
+              {
+                "args": [
+                  {
+                    "ethEnv": "Callvalue",
+                    "type": "int"
+                  },
+                  {
+                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                    "type": "int"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "<="
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "val": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          0
+        ]
+      },
+      "B": {
+        "a": [
+          {
+            "name": "A",
+            "type": "Contract"
+          },
+          0
+        ]
+      }
+    }
+  }
+}
