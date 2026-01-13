@@ -199,3 +199,17 @@ getModel locs calldataVars ethVars solver = do
         , _menvironment = environment
         , _minitargs = []
         }
+
+
+
+-- For debugging purposes
+
+showCnstr :: Constraint Timed -> String
+showCnstr (BoolCnstr _ msg env e) = "Boolean constraint:\n" <> 
+  msg <> "\n"
+    <> "Preconditions: \n" <> intercalate "\n" (map (\pre -> "  " <>  prettyExp pre) (setPre <$> preconds env)) <> "\n"
+    <> "Expression: " <> prettyExp e <> "\n"
+showCnstr (CallCnstr _ msg _ _ _) = "Call constraint: " <> msg
+    
+showCnstrs :: [Constraint Timed] -> String
+showCnstrs cs = intercalate "\n\n" (map showCnstr cs)
