@@ -275,28 +275,28 @@ checkBehaviours env (b:bhs) = do
 
 -- | Type check a single transition
 checkBehaviour :: Env -> U.Transition -> Err (Behaviour, [Constraint Untimed])
-checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params) payable rettype iffs cases posts) = do
-    -- check that parameter types are valid
-    traverse_ (checkParams env) params
+checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params) payable rettype iffs cases posts) =
     -- add parameters to environment
-    let env' = addCalldata params env
+    let env' = addCalldata params env in
+    -- check that parameter types are valid
+    traverse_ (checkParams env) params *>
     -- check preconditions
-    iffsc <- unzip <$> traverse (checkExpr env' U TBoolean) iffs
+    (unzip <$> traverse (checkExpr env' U TBoolean) iffs) `bindValidation` \(iffs', cnstr1) -> do
+    let env'' = addPreconds iffs' env'
     -- check cases
-    casesc <- unzip <$> traverse (checkBehvCase env' (argToValueType <$> rettype)) cases
+    casesc <- unzip <$> traverse (checkBehvCase env'' (argToValueType <$> rettype)) cases
     -- check postconditions
-    ensures <- map fst <$> traverse (checkExpr env' T TBoolean) posts
+    ensures <- map fst <$> traverse (checkExpr env'' T TBoolean) posts
     -- return the behaviour
-    pure $ let (iffs1, cnstrs1) = iffsc
-               (cases', cnstrs2) = casesc
+    pure $ let (cases', cnstrs2) = casesc
                -- add implicit CALLVALUE == 0 precondition if not payable
-               iffs' = addCallvalueZeroPrecond payable iffs1
+               iffs'' = addCallvalueZeroPrecond payable iffs'
                casecnstrs = checkCaseConsistency env' cases'
                -- add integer type bounds as preconditions
-               bounds = boundsBehaviour $ Behaviour name contract iface payable iffs' cases' ensures
-               behaviour = Behaviour name contract iface payable (iffs' <> bounds) cases' ensures
+               bounds = boundsBehaviour $ Behaviour name contract iface payable iffs'' cases' ensures
+               behaviour = Behaviour name contract iface payable (iffs'' <> bounds) cases' ensures
                -- add bound preconditions to constraints
-               cnstrs = addIffs bounds $ concat cnstrs1 ++ concat cnstrs2 ++ casecnstrs
+               cnstrs = addIffs bounds $ concat cnstr1 ++ concat cnstrs2 ++ casecnstrs
            in  (behaviour, cnstrs)
 
 -- | Type check a single case of a behaviour
@@ -655,6 +655,7 @@ checkExpr env mode t1 e =
     inferExpr env mode e `bindValidation` \(TExp t2 te, cs) ->
     maybe (typeMismatchErr pn t1 t2) (\Refl -> pure (te, cs)) $ testEquality t1 t2
 
+
 -- | Attempt to infer a type of an expression. If successful, it returns an
 -- existential package of the infered typed together with the typed expression.
 inferExpr :: forall t. Env -> Mode t -> U.Expr -> Err (TypedExp t, [Constraint t])
@@ -764,6 +765,7 @@ inferExpr env@Env{constructors} mode e = case e of
           Nothing   -> typeMismatchErr pn t1 t2
           Just Refl -> pure (cons pn t1 te1 te2, c1 ++ c2)
 
+
 -- | Type check a list of argument expressions against a list of expected types
 checkArgs :: forall t. Env -> Mode t -> Pn -> [ValueType] -> [U.Expr] -> Err ([TypedExp t], [Constraint t])
 checkArgs _ _ _ [] [] = pure ([], [])
@@ -799,3 +801,32 @@ findBoundUnsigned v = go 8
     go bits | 0 <= v && v <= maxUnsigned bits = bits
             | bits >= 256 = 256
             | otherwise   = go (bits + 8)
+
+-- | Check if an integer expression can be represented as a 256-bit signed or unsigned integer
+-- This is usefull for deciding whether to use signed or unsigned operations in hevm symbolic execution
+-- Assumes that no overflows or underflows can occur in the expression
+hasSign ::  IntSign -> Exp AInteger t -> Bool
+hasSign s (LitInt _ n) = hasSignLit s n
+hasSign s (Add _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Sub _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Mul _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Div _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Mod _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign s (Exp _ e1 e2) = hasSign s e1 && hasSign s e2
+hasSign _ (IntEnv _ _) = True
+hasSign _ (Address _ _ _) = True
+hasSign s (ITE _ _ e2 e3) = hasSign s e2 && hasSign s e3 -- ITE always results in signed integers
+hasSign Signed (IntMin _ _) = True
+hasSign Unsigned (IntMin _ _) = False
+hasSign Signed (IntMax _ _) = True
+hasSign Unsigned (IntMax _ _) = False
+hasSign _ (UIntMin _ _) = True
+hasSign _ (UIntMax _ _) = True
+hasSign s (VarRef _ (TInteger _ s') _) = s == s'
+hasSign _ (VarRef _ TUnboundedInt _) = False
+hasSign _ (VarRef _ TAddress _) = True
+
+-- | Check if a literal integer value can be represented as a 256-bit signed or unsigned integer
+hasSignLit :: IntSign -> Integer -> Bool
+hasSignLit Signed v = minSigned 256 <= v && v <= maxSigned 256
+hasSignLit Unsigned v = 0 <= v && v <= maxUnsigned 256
