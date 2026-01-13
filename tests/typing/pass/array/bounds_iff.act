@@ -12,8 +12,8 @@ transition f() : uint256
 
 iff
 
-  a[x] > 0
   x < 3
+  a[x] > 0
 
 updates
 

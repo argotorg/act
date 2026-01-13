@@ -151,12 +151,9 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
         env' = addCalldata params env in
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
-    -- check preconditions
-    (unzip <$> traverse (checkExpr env' U TBoolean) iffs) `bindValidation` \(iffs1, cnstr1) ->
-    -- add implicit CALLVALUE == 0 precondition if not payable
-    let iffs' = addCallvalueZeroPrecond payable iffs1 in
+    -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
+    checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    -- 
     -- check postconditions
-    let env'' = addPreconds iffs' env' in
     (checkConstrCases env'' cases) `bindValidation` \(storageType, cases', cnstr2) -> do
     -- construct the new environment
     let env''' = addConstrStorage cid storageType env''
@@ -171,7 +168,7 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
                -- add the constructor to the environment
                env'''' = addConstructor cid constr env'''
                -- capture the preconditions that include the added bounds
-               cnstrs = addIffs bounds $ concat cnstr1 ++ cnstr2 ++ casecnstrs
+               cnstrs = addIffs bounds $ cnstr1 ++ cnstr2 ++ casecnstrs
            in
             -- return the constructor and the new environment
             (constr, clearLocalEnv env'''', cnstrs)
@@ -281,8 +278,7 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
     -- check preconditions
-    (unzip <$> traverse (checkExpr env' U TBoolean) iffs) `bindValidation` \(iffs', cnstr1) -> do
-    let env'' = addPreconds iffs' env'
+    checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') -> do
     -- check cases
     casesc <- unzip <$> traverse (checkBehvCase env'' (argToValueType <$> rettype)) cases
     -- check postconditions
@@ -290,13 +286,12 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
     -- return the behaviour
     pure $ let (cases', cnstrs2) = casesc
                -- add implicit CALLVALUE == 0 precondition if not payable
-               iffs'' = addCallvalueZeroPrecond payable iffs'
                casecnstrs = checkCaseConsistency env' cases'
                -- add integer type bounds as preconditions
-               bounds = boundsBehaviour $ Behaviour name contract iface payable iffs'' cases' ensures
-               behaviour = Behaviour name contract iface payable (iffs'' <> bounds) cases' ensures
+               bounds = boundsBehaviour $ Behaviour name contract iface payable iffs' cases' ensures
+               behaviour = Behaviour name contract iface payable (iffs' <> bounds) cases' ensures
                -- add bound preconditions to constraints
-               cnstrs = addIffs bounds $ concat cnstr1 ++ concat cnstrs2 ++ casecnstrs
+               cnstrs = addIffs bounds $ cnstr1 ++ concat cnstrs2 ++ casecnstrs
            in  (behaviour, cnstrs)
 
 -- | Type check a single case of a behaviour
@@ -342,6 +337,18 @@ checkBehvCase env rettype (U.Case p cond (updates, mret)) =
         ltRef (RArrIdx _ r1 _ _ ) r2 = r1 == r2 || ltRef r1 r2
         ltRef (SVar _ _ _ _) _ = False
 
+-- | Check a list of preconditions one by one and add each one of them to the environment before checking the next
+checkPreconditions :: Env -> [U.Expr] -> Err ([Exp ABoolean Untimed], [Constraint Untimed], Env)
+checkPreconditions env [] = pure ([], [], env)
+checkPreconditions env (pre:pres) =
+    -- check the precondition
+    checkExpr env U TBoolean pre `bindValidation` \(pre', cnstr1) ->
+    -- add precondition to environment
+    let env' = addPreconds [pre'] env in
+    -- check remaining preconditions
+    (checkPreconditions env' pres) `bindValidation` \(pres', cnstr2, env'') ->
+    pure (pre':pres', cnstr1 ++ cnstr2, env'')
+
 -- | Create all combinations of pairs from a list
 combine :: [a] -> [(a,a)]
 combine lst = combine' lst []
@@ -364,10 +371,10 @@ mkAnd (c:cs) = foldr (And nowhere) c cs
 
 -- | Check if a constructor/transition is non-payable and if so generate a precondition
 -- to ensure that it is not called with value.
-addCallvalueZeroPrecond :: IsPayable -> [Exp ABoolean Untimed] -> [Exp ABoolean Untimed]
+addCallvalueZeroPrecond :: IsPayable -> [U.Expr] -> [U.Expr]
 addCallvalueZeroPrecond Payable iffs = iffs
 addCallvalueZeroPrecond NonPayable iffs =
-    (Eq nowhere (TInteger 256 Unsigned) (IntEnv nowhere Callvalue) (LitInt nowhere 0)) : iffs
+    (U.EEq nowhere (U.EnvExp nowhere Callvalue) (U.IntLit nowhere 0)) : iffs
 
 
 
