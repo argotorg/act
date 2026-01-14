@@ -2,11 +2,11 @@
 
 **Goal of this section**
 
-Show how Act specifies contract creation and the initial state.
+Show how act specifies contract creation and the initial state.
 
 ## Constructor Structure
 
-The general shape of a constructor in Act is:
+The general shape of a constructor in act is:
 
 ```mermaid
 graph TD
@@ -42,9 +42,11 @@ graph TD
 ## Payable and Non-Payable Constructors
 In EVM smart contracts, constructors can be declared `payable` or non-payable (the default).
 A `payable` constructor allows sending Ether along with contract creation, while a non-payable constructor rejects any Ether sent.
-In Act, the situation is similar: there is a keyword `payable` in the constructor declaration to mark payable constructors. For every constructor that is not marked `payable`, Act automatically internally adds a precondition that no Ether is sent during construction.
+In act, the situation is similar: there is a keyword `payable` in the constructor declaration to mark payable constructors. For every constructor that is not marked `payable`, act automatically internally adds a precondition that no Ether is sent during construction.
 
-In the ERC20 example, the constructor is non-payable. Thus, it does not include the `payable` keyword:
+Similarly, if a constructor is marked `payable`, the user has to declare and initialize the contract's balance in Ether using the special variable `uint256 BALANCE`. For non-payable constructors, `BALANCE` is set to `0` implicitly and the user does not have to declare or initialize it.
+
+In the ERC20 example, the constructor is non-payable. Thus, it does not include the `payable` keyword nor the `BALANCE` variable:
 
 
 *(constructor from erc20.act)*
@@ -71,16 +73,18 @@ iff true
 case CALLVALUE > 0 :
 creates
     bool myFlag := true
+    uint256 BALANCE := CALLVALUE
 
 case CALLVALUE == 0 :
 creates
     bool myFlag := false
+    uint256 BALANCE := 0
 ```
 
-Act interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. This balance is not part of the user-facing contract storage, and therefore cannot be initialized or modified by the user. <span style="color:red"> I need some help here to make this a correct statement. </span>
+act interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. Although this `BALANCE` variable is not part of the contract storage per se, it can be affected by the behavior of the constructor or the transitions and is therefore initialized and updated the same way as storage slots. 
 
-Nonetheless, the user can write conditions on the callvalue sent during construction using the special variable `CALLVALUE`. See e.g. the payable constructor example above.
-There are 4 such special variables (called environment variables) related to the call environment that the user can access as explained in [Variable References](./store_type.md#variable-references).
+Further, the user can write conditions on the callvalue sent during construction using the special variable `CALLVALUE`. See e.g. the payable constructor example above.
+Additionally to `BALANCE`, there are 4 such special variables (called environment variables) related to the call environment that the user can access as explained in [Variable References](./store_type.md#variable-references).
 
 ## Constructor Preconditions
 Consider the following constructor from an automated market maker (AMM) contract:
@@ -98,7 +102,7 @@ creates
     Token token0 := t0
     Token token1 := t1
 ```
-It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>` indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [Storage and Typing](./store_type.md).
+It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).
 
 The `iff` clause specifies the **necessary and sufficient condition** under which the constructor succeeds. If this condition does not hold, the constructor reverts.
 In this example, the precondition `t0 != t1` ensures that the two token addresses are distinct. If a user attempts to deploy the AMM contract with identical token addresses, the constructor will revert, preventing the creation of an invalid AMM instance.
@@ -129,7 +133,7 @@ def __init__(t0: address, t1: address):
 As mentioned before, the `iff` block cannot be skipped even if the condition is trivial, in which case the user should write `iff true` as shown in the ERC20 example.
 
 ### `inRange` in Preconditions
-Whenever arithmetic operations are involved in the storage initialization, it is necessary to ensure that these operations do not overflow or underflow. This is done using the `inRange` expression ([Base Expressions](./store_type.md#base-expressions)), which checks whether a value fits within a specified type. In solidity these range checks are implicit, but in Act they must be made explicit in the precondition block.
+Whenever arithmetic operations are involved in the storage initialization, it is necessary to ensure that these operations do not overflow or underflow. This is done using the `inRange` expression ([Base Expressions](./store_type.md#base-expressions)), which checks whether a value fits within a specified type. In solidity these range checks are implicit, but in act they must be made explicit in the precondition block.
 
 For example, consider a constructor that initializes a balance by subtracting a value from an initial amount. To ensure that this subtraction does not underflow, the precondition would include an `inRange` check:
 
@@ -141,7 +145,7 @@ creates
     uint256 balance := initialAmount - deduction
 ```
 
-The same principle applies to transitions and storage updates. How the arithmetic safety is enforced in Act is explained in more detail in [Arithmetic Safety](./arith_safety.md).
+The same principle applies to transitions and storage updates. How the arithmetic safety is enforced in act is explained in more detail in [Arithmetic Safety](./type_checking.md#arithmetic-safety).
 
 ## Initializing Storage
 
@@ -156,7 +160,7 @@ creates
   mapping(address => mapping(address => uint)) allowance := []
 ```
 
-**All** storage variables declared in the contract must be initialized in **every** `creates` block of the constructor. Here, the constructor initializes three storage variables and specifies their types:
+**All** storage variables declared in the contract must be initialized in **every** `creates` block of the constructor. If the constructor is payable, the special variable `BALANCE` must also be declared and initialized. Here, the constructor initializes three storage variables and specifies their types:
 - `totalSupply` of type `uint256`, initialized to the constructor parameter `_totalSupply`.
 - `balanceOf`, which maps addresses to integers and therefore has type `mapping(address => uint)`. It is initialized such that the deployer (`CALLER`) receives the entire supply. Every other address is not mentioned and thus defaults to `0`.
 - `allowance` maps pairs of addresses to integers and therefore has (the curried) type `mapping(address => mapping(address => uint))`. It initialized to an empty mapping (all values default to `0`).
@@ -165,14 +169,10 @@ creates
 This should be read as:
 “In the initial state, the total supply of tokens is `totalSupply`, `balanceOf(CALLER) = totalSupply`, and all other addresses have `0`. Further `allowance(addr0, addr1) = 0` for all pairs of addresses.”
 
-
-
- <span  style="color:red">  
-should we mention sth about simultaneous vs sequential creates/updates here or only in transitions?
-  </span>
+Note that the act spec describes only the end-result of the constructor execution, not the intermediate steps. 
 
 ## Constructors Cannot Modify Existing Contracts
-An important design choice in Act is that constructors:
+An important design choice in act is that constructors:
 - **may create new contracts**. E.g. `Token new_token := Token(100)` could be used to create a new ERC20 contract with an initial supply of `100` and assign it to the storage variable `new_token`.
 - **must initialize their own storage** (e.g.`uint256 totalSupply := _totalSupply` in the ERC20 example).
 - **may not mutate existing contract storage**. I.e. only assigning existing contracts to storage variablesis allowed. E.g. `Token token0 := t0` as in the AMM constructor.

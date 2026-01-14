@@ -1,1 +1,0 @@
-# From Specification to Guarantees

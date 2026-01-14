@@ -1,13 +1,13 @@
 # Checking equivalence with EVM bytecode
 
-EVM bytecode can be formally verified to implement an Act spec. This
+EVM bytecode can be formally verified to implement an act spec. This
 means that each successful behavior of the bytecode should be covered
-by the Act spect. To check equivalence the Act spec is translated to
+by the act spect. To check equivalence the act spec is translated to
 Expr, the intermediate representation of HEVM, and the EVM bytecode is
 symbolically executed to obtain its Expr representation. Then
 equivalence can be checked with the equivalence checker of HEVM.
 
-The Expr representation of an Act program is a list of *Success*
+The Expr representation of an act program is a list of *Success*
 nodes, that contain the possible successful results of the
 computation. The Expr representation of the EVM bytecode can also be
 flattened to a list of result nodes from which we only keep the
@@ -38,7 +38,7 @@ present in the list. We therefore need to check that the input space of the two
 lists are the same. That is, there must not be inputs that satisfy
 some path condition in the first list but not the second and vice verse. 
 
-Say that the Act program has the Expr representation 
+Say that the act program has the Expr representation 
 `[Success c1 r1 s1, ..., Success cn rn sn`
 and the the EVM bytecode has the Expr representation 
 `[Success c1' r1' s1', ..., Success cn' rn' sn'`
@@ -53,7 +53,7 @@ TODO
 
 # Old Hevm Section
 
-Act leverages the symbolic execution engine in hevm to provide a backend that can prove equivalence
+act leverages the symbolic execution engine in hevm to provide a backend that can prove equivalence
 between a contract specification and an implementation of that specification in EVM.
 
 ## Usage
@@ -111,7 +111,7 @@ contract Simple {
 }
 ```
 
-We can represent this in Act as:
+We can represent this in act as:
 
 ```
 constructor of Simple
@@ -134,7 +134,7 @@ updates
 returns x
 ```
 
-Act needs to have access to the storage layout metadata output by solc to compute the index in storage for each variable mentioned in the spec, so we need to pass a solc output json when trying to prove equivalence.
+act needs to have access to the storage layout metadata output by solc to compute the index in storage for each variable mentioned in the spec, so we need to pass a solc output json when trying to prove equivalence.
 
 ```
 > act hevm --spec src/simple.act --soljson out/dapp.sol.json
@@ -166,7 +166,7 @@ contract Simple {
 }
 ```
 
-Then Act will give us a counterexample showing a case where the implementation differs from the specification:
+Then act will give us a counterexample showing a case where the implementation differs from the specification:
 
 ```
 > act hevm --spec src/simple.act --soljson out/dapp.sol.json
