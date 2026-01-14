@@ -521,8 +521,7 @@ if we know that invariant property holds at the initial state
 Definition invariantInit (IP : Env -> Z -> State -> Prop) :=
   forall (ENV : Env) (_totalSupply : Z),
      initPreconds ENV _totalSupply
-  -> IP ENV _totalSupply (snd (Token ENV _totalSupply))
-.
+  -> IP ENV _totalSupply (snd (Token ENV _totalSupply)).
 ```
 and the step 
 ```rocq
