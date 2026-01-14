@@ -1,0 +1,73 @@
+contract Admins
+
+constructor(address _admin1)
+iff true
+
+creates
+   address admin1 := _admin1
+   address admin2 := ORIGIN
+
+transition set_admin2(address new_admin2)
+iff true
+updates
+   admin2 := new_admin2
+
+transition admin1() : address
+iff true
+returns admin1
+
+transition admin2() : address
+iff true
+returns admin2
+
+
+
+
+
+contract Asset
+
+constructor(uint256 _value)
+iff true
+creates
+    uint256 value := _value
+    Admins admins := Admins(CALLER)
+    mapping(address => uint256) balanceOf := [THIS => _value]
+
+
+transition assetTransfer(uint256 amt, address to) 
+
+iff CALLER == admins.admin1 or CALLER == admins.admin2
+    inRange(uint256, balanceOf[THIS] - amt)
+    THIS != to ==> inRange(uint256, balanceOf[to] + amt)
+
+case THIS != to
+
+updates
+   balanceOf := balanceOf[
+                  THIS => balanceOf[THIS] - amt,
+                  to   => balanceOf[to]   + amt ]
+
+case THIS == to
+
+
+
+transition setAdmins(address new_admin1, address new_admin2)
+
+iff true
+
+case CALLER == admins.admin1 or CALLER == admins.admin2
+
+updates
+   admins := Admins(new_admin1)
+   admins.admin2 := new_admin2
+
+case !(CALLER == admins.admin1 or CALLER == admins.admin2)
+
+
+transition value() : uint256
+iff true
+returns value
+
+transition balanceOf(address idx) : uint256
+iff true
+returns balanceOf[idx]
