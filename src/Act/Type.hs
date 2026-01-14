@@ -667,6 +667,11 @@ checkExpr env mode t1 e =
 -- existential package of the infered typed together with the typed expression.
 inferExpr :: forall t. Env -> Mode t -> U.Expr -> Err (TypedExp t, [Constraint t])
 inferExpr env@Env{constructors} mode e = case e of
+  -- Some known constants. TODO: add a more principled constant propagation pass before typing.
+  U.ESub _ (U.EExp p (U.IntLit _ 2) (U.IntLit _ 256)) (U.IntLit _ 1) ->
+    pure (TExp (TInteger 256 Unsigned) (UIntMax p 256), [])
+  U.ESub _ (U.EExp p (U.IntLit _ 2) (U.IntLit _ 255)) (U.IntLit _ 1) ->
+    pure (TExp (TInteger 256 Signed) (IntMax p 256), [])
   -- Boolean expressions
   U.ENot    p v1    -> first (wrapOp (Neg  p) TBoolean) <$> checkExpr env mode TBoolean v1
   U.EAnd    p v1 v2 -> boolOp2 (And  p) TBoolean v1 v2
