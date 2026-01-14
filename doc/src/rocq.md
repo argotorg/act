@@ -1,4 +1,4 @@
-# Rocq
+# Rocq Backend: Proving Properties of Specifications
 
 In order to reason about the contracts and prove their properties, the Rocq backend of Act shallowly 
 embeds the Act specification into the logic of the Rocq proof assistant.
@@ -277,6 +277,27 @@ Record State : Set := state
 The contract will be represented as a record with the fields corresponding to the storage variables.
 Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; 
 and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
+The `Actlib` also defines an **environment** type, which is a record that 
+represents the context in which the contract is executed. It also contains Ethereum environment variables, 
+such as the call value, the caller address, and the current block information, as well as the next available address.
+The structure of the environment in Rocq is as follows:
+```rocq
+Record Env : Set :=
+  { Callvalue : Z;
+    Caller : address;
+    This : address;
+    Blockhash : Z;
+    Blocknumber : Z;
+    Difficulty : Z;
+    Timestamp : Z;
+    Gaslimit : Z;
+    Coinbase : address;
+    Chainid : Z;
+    Origin : address;
+    Nonce : Z;
+    Calldepth : Z;
+    NextAddr : address }.
+```
 
 Next, the output contains some additional type definitions, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">some of these may be outdated.</span>).
 ```Rocq
@@ -352,13 +373,207 @@ Inductive initPreconds (ENV : Env) (_totalSupply : Z) : Prop :=
 The proposition holds, when the preconditions are satisfied: the integer bounds are respected, the
 addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
 
-Similarly preconditions are generated for every case of every transition in the contract specification.
+Similarly preconditions are generated for every case of every transition in the contract specification. For instance for the `transfer` transition, the case where the `to` address is not the caller, the preconditions are the following
+
+```rocq
+Inductive transfer0_conds (ENV : Env) (value : Z) (to : address) (STATE : State) : Prop :=
+| transfer0_condsC :
+     ((Callvalue ENV) = 0)
+  -> (((0 <= ((Token.balanceOf STATE) (Caller ENV))) 
+      /\ (((Token.balanceOf STATE) (Caller ENV)) <= (UINT_MAX 256))) 
+      /\ (((0 <= value) 
+      /\ (value <= (UINT_MAX 256))) 
+      /\ ((0 <= (((Token.balanceOf STATE) (Caller ENV)) - value)) 
+      /\ ((((Token.balanceOf STATE) (Caller ENV)) - value) <= (UINT_MAX 256)))))
+  -> (((Caller ENV) <> to) 
+  -> (((0 <= ((Token.balanceOf STATE) to)) 
+      /\ (((Token.balanceOf STATE) to) <= (UINT_MAX 256))) 
+      /\ (((0 <= value) /\ (value <= (UINT_MAX 256))) 
+      /\ ((0 <= (((Token.balanceOf STATE) to) + value)) 
+      /\ ((((Token.balanceOf STATE) to) + value) <= (UINT_MAX 256))))))
+  -> ((0 <= value) /\ (value <= (UINT_MAX 256)))
+  -> ((0 <= to) /\ (to <= (UINT_MAX 160)))
+  -> ((0 <= ((Token.balanceOf STATE) (Caller ENV))) 
+      /\ (((Token.balanceOf STATE) (Caller ENV)) <= (UINT_MAX 256)))
+  -> ((0 <= ((Token.balanceOf STATE) to)) 
+      /\ (((Token.balanceOf STATE) to) <= (UINT_MAX 256)))
+  -> ((0 <= (Callvalue ENV)) 
+      /\ ((Callvalue ENV) <= (UINT_MAX 256)))
+  -> ((0 <= (Caller ENV)) 
+      /\ ((Caller ENV) <= (UINT_MAX 160)))
+  -> ((Caller ENV) <> to)
+  -> nextAddrConstraint ENV STATE
+  -> to < NextAddr ENV
+  -> This ENV < NextAddr ENV
+  -> Caller ENV < NextAddr ENV
+  -> Origin ENV < NextAddr ENV
+  -> This ENV <> Caller ENV
+  -> This ENV <> Origin ENV
+  -> This ENV = addr STATE
+  -> transfer0_conds ENV value to STATE.
+```
+The first precondition requires that the call value is zero, as the transition is not payable. 
+The second precondition ensures that the caller has a sufficient balance to cover the transfer amount, and the value being transferred is within the allowed range. Then the precondition ensures the case we are in. Next, the `to` address needs to not overflow and has to be a valid address. The environment before and after the transition must also be well-formed (for instance the next address is greater than all current addresses).
+
+Next, the postconditions after the constructor are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
+```rocq
+Definition Token_post0 :=
+  forall (ENV : Env) (_totalSupply : Z) (STATE' : State),
+     initPreconds ENV _totalSupply
+  -> STATE' = snd (Token ENV _totalSupply)
+  -> ((0 <= (Token.totalSupply STATE')) 
+     /\ ((Token.totalSupply STATE') <= (UINT_MAX 256))).
+```
+
+For every case and every transition, a return value predicate is generated as follows: 
+```rocq
+Inductive transfer0_ret (ENV : Env) (STATE : State) (value : Z) (to : address) : Z -> Prop :=
+| transfer0_ret_intro :
+     transfer0_conds ENV value to STATE
+  -> ((Caller ENV) <> to)
+  -> transfer0_ret ENV STATE value to 1.
+```
+The predicate holds if the preconditions hold, the case condition is satisfied, and the return value 
+is as expected (in this case 1).
+
+Finally the state transition system is defined by the `step` relation and the `reachable` proposition.
+The `Contract_step` is a relation on pairs of environments and states, and it 
+includes one constructor for every transition case in the system. For the ERC20 Token example, the 
+`Token_step` relation has the following form:
+```rocq
+Inductive Token_step : Env -> State -> Env -> State -> Prop :=
+| transfer0_step : forall (ENV : Env) (value : Z) (to : address) (STATE : State),
+     transfer0_conds ENV value to STATE
+  -> This ENV = addr STATE
+  -> Token_step ENV STATE (fst (transfer0 ENV STATE value to)) (snd (transfer0 ENV STATE value to))
+
+| transfer1_step : 
+...
+
+| allowance0_step : forall (ENV : Env) (idx1 : address) (idx2 : address) (STATE : State),
+     allowance0_conds ENV idx1 idx2 STATE
+  -> This ENV = addr STATE
+  -> Token_step ENV STATE (fst (allowance0 ENV STATE idx1 idx2)) (snd (allowance0 ENV STATE idx1 idx2)).
+```
+
+To define the reachability relation, we introduce the "exists step" relation on 
+pairs of states and environments, called `extStep`. For the ERC20 Token contract example, 
+the `extStep` relation has the following form:
+
+```rocq
+Inductive extStep : Env -> State -> Env -> State -> Prop :=
+| extStep_Token : forall (ENV : Env) (ENV' : Env) (STATE : State) (STATE' : State),
+     Token_step ENV STATE ENV' STATE'
+  -> extStep ENV STATE ENV' STATE'.
+```
+Since the Token contract does not refer to other contracts in its storage, the `extStep` relation is essentially the same as the `Token_step` relation. However, if a contract interacts with other contracts, the `extStep` relation would need to account for those interactions as well. For instance, the Automated Market Maker contract [amm.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.act) stores two ERC20 Tokens in its storage, `token0` and `token1`. The state transitions can 
+thus arise from calling the `Amm` contract's own transitions, or from calling transitions on either of the two stored Token contracts. The `extStep` for `Amm` thus includes cases for the `Amm_step`, `Token_step` for `token0`, and `Token_step` for `token1` and has the following shape
+```rocq
+Inductive extStep : Env -> State -> Env -> State -> Prop :=
+| extStep_Amm : forall (ENV : Env) (ENV' : Env) (STATE : State) (STATE' : State),
+     Amm_step ENV STATE ENV' STATE'
+  -> extStep ENV STATE ENV' STATE'
+
+| extStep_token0 : forall (ENV : Env) (STATE : State) ENV' (STATE' : State),
+     nextAddrConstraint ENV STATE
+  -> Token.extStep ENV (token0 STATE) ENV' (token0 STATE')
+  -> addr STATE = addr STATE'
+  -> ...
+  -> extStep ENV STATE ENV' STATE'
+
+| extStep_token1 : forall (ENV : Env) (STATE : State) ENV' (STATE' : State),
+     nextAddrConstraint ENV STATE
+  -> Token.extStep ENV (token1 STATE) ENV' (token1 STATE')
+  -> ...
+  -> extStep ENV STATE ENV' STATE'.
+```
+With the `extStep` relation defined, we can now define the `step` relation on states, where 
+the environments are also bound by an `exists` quantifier
+```rocq
+Definition step (STATE : State) (STATE' : State) :=
+exists (ENV : Env) (ENV' : Env), extStep ENV STATE ENV' STATE'.
+```
+and the `reachable` proposition, which states that a state is reachable from another state through a series of steps.
+```rocq
+Definition reachable (STATE : State) :=
+exists STATE', init STATE' /\ multistep STATE' STATE.
+```
+
+For every case of every transition the postconditions are defined on reachable states.
+For instance the ERC20 token transfer has the following postcondition:
+```rocq
+Definition transfer0_post0 :=
+  forall (ENV : Env) (STATE : State) (STATE' : State) (value : Z) (to : address),
+     transfer0_conds ENV value to STATE
+  -> reachable STATE
+  -> STATE' = snd (transfer0 ENV STATE value to)
+  -> ((0 <= ((Token.balanceOf STATE') (Caller ENV))) 
+     /\ (((Token.balanceOf STATE') (Caller ENV)) <= (UINT_MAX 256))).
+```
+It states that if the preconditions for the transfer are met and the state is reachable,
+then the balance of the caller after the transfer is valid and within the expected range.
+A similar postcondition is generated for the balance of the recipient.
+
+Finally, a schema for proving invariant properties on reachable states is defined. Parametric to 
+the invariant property `IP : Env -> Z -> State -> Prop`, 
+if we know that invariant property holds at the initial state
+```rocq
+Definition invariantInit (IP : Env -> Z -> State -> Prop) :=
+  forall (ENV : Env) (_totalSupply : Z),
+     initPreconds ENV _totalSupply
+  -> IP ENV _totalSupply (snd (Token ENV _totalSupply)).
+```
+and the step 
+```rocq
+Definition invariantStep (IP : Env -> Z -> State -> Prop) :=
+  forall (ENV : Env) (_totalSupply : Z) (STATE : State) (STATE' : State),
+     initPreconds ENV _totalSupply
+  -> step STATE STATE'
+  -> IP ENV _totalSupply STATE
+  -> IP ENV _totalSupply STATE'.
+```
+the generated output will contain a proof, that the invariant property holds at all reachable states:
+```rocq 
+Lemma invariantReachable :
+  forall (ENV : Env) 
+          (_totalSupply : Z) 
+          (STATE : State) 
+          (IP : Env -> Z -> State -> Prop) 
+          (HIPinvInit : invariantInit IP) 
+          (HIPinvStep : invariantStep IP),
+     reachableFromInit ENV _totalSupply (STATE : State)
+  -> IP ENV _totalSupply STATE.
+```
+You are then welcome to use this lemma in the proof of your properties.
+
+## Proving properties using the Act Rocq export
+
+Now that the state transition system is exported automatically, 
+one can use it to prove properties about the contract. In the [Theory.v](https://github.com/argotorg/act/blob/rewrite/tests/coq/ERC20/Theory.v) you can find a proof of the *sum of balances invariant*, stating that at any possible reachable state the sum of balances is the same, and equal to the total supply: 
+```
+Theorem Token_sumOfBalances_eq_totalSupply : forall STATE,
+    reachable STATE ->
+    balanceOf_sum STATE = totalSupply STATE.
+```
+The `balanceOf_sum` function above calculates the sum of the `balanceOf STATE`
+function, for all 256 bit addresses by having maintained a `MaxAddress` field. 
+```rocq
+Definition MAX_ADDRESS := UINT_MAX 160.
+
+Fixpoint balanceOf_sum' (balanceOf : address -> Z) (n : nat) (acc : Z) : Z :=
+    match n with
+    | O => balanceOf 0 + acc
+    | S n => balanceOf_sum' balanceOf n (acc + balanceOf (Z.of_nat (S n)))
+    end.
+
+Definition balanceOf_sum (STATE : State) :=
+  balanceOf_sum' (balanceOf STATE) (Z.to_nat MAX_ADDRESS) 0.
+```
+
+The (manual) proof of the theorem then completes the pipeline.
 
 
-
-Note: reachability will also include steps for the contracts that are in the storage of your contract, see AMM for example.
-
-
+<!-- Old Exponent contract -->
 <!-- The exponentiation contract -->
 <!-- The following defines a contract that implements exponentiation via repeated
 multiplication. The contract is initialized with a base (`b`) and an exponent (`e`). `exp()` can then be
