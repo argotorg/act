@@ -12,14 +12,13 @@ This section provides a step-by-step guide on writing your own Act specification
 
 ## Overview: From Solidity to Act
 
-The general process of writing an Act specification involves: EDIT AFTERWARDS
+The general process of writing an Act specification involves: 
 
-1. **Identify the storage**: What state variables does your contract have?
-2. **Write the constructor**: Define the constructor to initialize all storage variables.
-3. **Declare storage in the constructor**: Initialize all storage variables with their initial values.
-4. **Specify each external function as a transition**: For each function (including getters), write a transition that documents its preconditions and effects.
-5. **Write preconditions** including : Convert Solidity's `require` statements to Act's `iff` preconditions. **Add safety checks**: Use `inRange` checks to prevent arithmetic overflow/underflow where needed.
-6. **Describe storage updates**: Use `case` blocks to handle different execution paths and specify simultaneous storage updates.
+1. **Understand the Contract Structure**: Identify contract name, constructor parameters, public state variables (storage), and all external/public functions (transitions including getters).
+2. **Establish Preconditions**: Convert Solidity's `require` statements to Act's `iff` preconditions and add `inRange` checks for arithmetic safety to prevent overflow/underflow.
+3. **Define the `case` Blocks**: Use `case` blocks to handle different execution paths (from if-then-else, mapping updates with overlapping keys, or inlined function calls).
+4. **Initialize Storage in the Constructor**: Initialize all storage variables with their initial values in the `creates` block.
+5. **Specify Storage Updates and Return Values**: List all storage updates in the `updates` block (remembering they are simultaneous) and specify return values for functions with return types.
 
 We will use a running example, that was introduced in [Storage Updates](./transitions.md#storage-updates), to illustrate the steps. Imagine we have the follwing solidity code declaring two contracts, which we want to specify in Act:
 
@@ -35,7 +34,7 @@ contract Admins {
         admin2 = tx.origin;
     }
 
-    function set_admin2(address new_admin2){
+    function set_admin2(address new_admin2) public {
         admin2 = new_admin2;
     }
 
@@ -53,7 +52,7 @@ contract Asset {
     }
 
     function assetTransfer(uint256 amt, address to) public returns (bool) {
-        require (msg.sender == admins.admin1 || msg.sender == admins.admin2);
+        require (msg.sender == admins.admin1() || msg.sender == admins.admin2());
 
         balanceOf[address(this)] = balanceOf[address(this)] - amt;
         balanceOf[to] = balanceOf[to] + amt;
@@ -62,9 +61,9 @@ contract Asset {
     }
 
     function setAdmins(address new_admin1, address new_admin2) public {
-        if (msg.sender == admins.admin1 || msg.sender == admins.admin2) {
+        if (msg.sender == admins.admin1() || msg.sender == admins.admin2()) {
             admins = Admins(new_admin1);
-            admins.admin2 = new_admin2;
+            admins.set_admin2(new_admin2);
         }
     }
 }
@@ -444,17 +443,123 @@ Note that in `setAdmins`, we are in this special case where a contract instance 
 
 ## Inline Function Calls
 
- <span style="color:red">CONTINUE HERE </span>
-If your contract creates new contracts or calls other contracts, you can represent this in Act.
+When a function of a smart contract calls another function and uses its return value to update storage, Act requires you to **inline** the called function's behavior (in the transition) rather than representing it as a function call. This design choice is crucial for formal reasoning: it makes the complete state transition explicit and avoids the need to reason about nested function calls.
 
-**Example: Creating a New Token**
+### Why Inlining is Required
+
+In Act, storage updates must be explicit expressions that can be evaluated in the pre-state. Function calls are not allowed on the right-hand side of storage updates because:
+
+1. **Formal reasoning**: Act specifications describe state transitions as mathematical equations. Inlining makes these equations self-contained and verifiable.
+2. **Clarity**: The complete behavior of each transition is visible in one place, without needing to trace through multiple function definitions.
+3. **Composability**: Each transition can be analyzed independently without worrying about side effects from nested calls.
+
+### How to Inline Function Calls
+
+When you encounter a Solidity function that calls another function, follow these steps:
+
+1. **Identify the called function**: Note what function is being called and what it does.
+2. **Expand the call**: Replace the function call with the logic of the called function.
+3. **Add cases if needed**: If the called function has multiple execution paths (cases), these must be reflected in the "calling" transition's cases.
+4. **Combine preconditions**: The preconditions of the called function have to be considered in the calling transition. Possibly, by adding them as implications (`<case condition where call occurs> ==> <called transition's precondition>`) to the preconditions.
+
+### Example: Simple Function Call
+
+Consider this Solidity code where `updateBalance` calls `computeNewBalance`:
+
+```solidity
+contract Example {
+    uint256 public balance;
+    
+    function computeNewBalance(uint256 amount) internal view returns (uint256) {
+        return balance + amount;
+    }
+    
+    function updateBalance(uint256 amount) public {
+        balance = computeNewBalance(amount);
+    }
+}
+```
+
+**Incorrect Act specification** (function call in update):
+```act
+// This is NOT valid Act syntax
+transition updateBalance(uint256 amount)
+iff true
+updates
+   balance := computeNewBalance(amount)  // ❌ Function calls not allowed here
+```
+
+**Correct Act specification** (inlined):
+```act
+transition updateBalance(uint256 amount)
+iff inRange(uint256, balance + amount) // ✓ Added the (implicit) precondition of computeNewBalance
+updates
+   balance := balance + amount  // ✓ Inlined the logic of computeNewBalance
+```
+
+### Example: Function Call with Branching
+
+Extending the previous example, consider what happens when the called function has multiple paths:
+
+```solidity
+contract BranchingExample {
+    uint256 public balance;
+    
+    function computeNewBalance(uint256 amount, bool addBonus) internal view returns (uint256) {
+        if (addBonus) {
+            return balance + amount + 1;
+        } else {
+            return balance + amount;
+        }
+    }
+    
+    function updateBalance(uint256 amount, bool addBonus) public {
+        balance = computeNewBalance(amount, addBonus);
+    }
+}
+```
+
+**Incorrect Act specification**:
+```act
+// This is NOT valid Act syntax
+transition updateBalance(uint256 amount, bool addBonus)
+iff true
+updates
+   balance := computeNewBalance(amount, addBonus)  // ❌ Function call
+```
+
+**Correct Act specification** (inlined with cases and preconditions):
+```act
+transition updateBalance(uint256 amount, bool addBonus)
+iff addBonus ==> inRange(uint256, balance + amount + 1)
+    !addBonus ==> inRange(uint256, balance + amount)
+
+case addBonus
+updates
+   balance := balance + amount + 1  // ✓ Inlined the bonus case
+
+case !addBonus
+updates
+   balance := balance + amount  // ✓ Inlined the no-bonus case
+```
+
+Note how:
+- The branching logic from `computeNewBalance` becomes case conditions
+- The arithmetic safety check (`inRange`) is added to the preconditions using implications
+- Each case explicitly states what value `balance` takes after the transition
+
+
+
+### Special Note: Constructor Calls
+
+Unlike transition calls, **constructor calls do not need to be inlined**. You can write:
 
 ```act
 creates
-  Token token := new Token(100)
+   Admins admins := Admins(new_admin1)  // ✓ Constructor call is allowed
 ```
 
-**Guidelines:**
-- Use `new ContractName(arguments)` to create a new contract
-- The result is assigned to a storage variable
-- This is primarily used in constructors and complex transitions
+This is because constructors create new contract instances rather than modifying existing state, making them fundamentally different from transition calls in terms of formal reasoning.
+
+
+

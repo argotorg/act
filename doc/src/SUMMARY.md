@@ -18,7 +18,7 @@
 - [Type Checking](./arith_safety.md)
 - [Aliasing and Unique Ownership](./aliasing.md)
 
-# From Specification to Guarantees
+# Verification with Act 
 
 - [Correctness of a Specification](./equiv.md)
 - [Proving Properties of Specs](./rocq.md) 
