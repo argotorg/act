@@ -20,8 +20,8 @@
 
 # From Specification to Guarantees
 
-- [Correctness of a Specification](./equiv.md)
-- [Proving Properties of Specs](./rocq.md) 
+- [hevm backend: Equivalence to EVM bytecode](./equiv.md)
+- [Rocq backend](./rocq.md) 
 - [Layout and Tooling](./layout_tooling.md)
     
 
