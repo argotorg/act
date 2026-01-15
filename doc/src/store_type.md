@@ -94,8 +94,7 @@ The following types are used for function parameters and return values, mirrorin
     ```
     The parameter `token_addr` has type `address<Token>`, which indicates that the address points to a deployed contract of type `Token` (e.g. in our example an ERC20 token).
     
-     This special type exists to allow act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in the <span style="color:red">
- correctness section (paragraph on Input space equivalence).</span>)
+     This special type exists to allow act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in [Input Space Equivalence](./equiv.md#input-space-equivalence).
 
     
 *Note:* Not all types in act are allowed everywhere. There is a distinction between **ABI types** and **Storage types**:
