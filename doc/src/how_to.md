@@ -270,7 +270,7 @@ What is left to do is
 - copy the behavior of Solidity's constructors while considering the following guidelines 
 - and for **payable** constructors: the contracts balance in Ether has to be initialized. This is done using the special variable `BALANCE` with type `uint256`:
 
-    Most of the time this is just `uint256 BALANCE := CALLVALUE`, but if there are more complex behaviors in the Solidity constructor, such as forwarding some of the `CALLVALUE` to another contract's constructor, this has to be reflected here (e.g. `uint256BALANCE := CALLVALUE - <forwardedAmount>`). <span style="color:red">Does balance have type uint256?</span>
+    Most of the time this is just `uint256 BALANCE := CALLVALUE`, but if there are more complex behaviors in the Solidity constructor, such as forwarding some of the `CALLVALUE` to another contract's constructor, this has to be reflected here (e.g. `uint256BALANCE := CALLVALUE - <forwardedAmount>`).
 
 **Guidelines:**
 - Use `:=` to assign the initial value
@@ -336,7 +336,7 @@ There is one  **special case** about updates. If a contract uses an instance of 
 **Guidelines:**
 - The syntax for updating a mapping is : `mapping_name := mapping_name[key1 => new_value1, key2 => new_value2]`
 - All right-hand sides use **pre-state values** (e.g., `balanceOf[CALLER] - value` subtracts from the old balance)
-- Right-hand-sides of updates **cannot** be transition calls. Transition calls have to be inlined as described in step 3 and section [Inline Function Calls](./how_to.md#inline-funcion-calls)
+- Right-hand-sides of updates **cannot** be transition calls. Transition calls have to be inlined as described in step 3 and section [Inline Function Calls](#inline-function-calls)
 - If the contract's balance in Ether changes, update it using the special variable `BALANCE`
 - Every storage slot can be mentioned at most once per `case` block, except for the explained special case
 -  Consider the special case: state more general updates before more specific ones
