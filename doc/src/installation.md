@@ -1,13 +1,13 @@
-# What is Act?
-Act is a formal specification language and verification framework for proving the correctness of Ethereum Virtual Machine (EVM) smart contracts. Act specifications precisely describe all possible behaviors of a smart contract in a high-level language and are automatically verified against the contract’s EVM bytecode using symbolic execution. 
+# What is act?
+act is a formal specification language and verification framework for proving the correctness of Ethereum Virtual Machine (EVM) smart contracts. act specifications precisely describe all possible behaviors of a smart contract in a high-level language and are automatically verified against the contract’s EVM bytecode using symbolic execution. 
 
 ## Getting Started
 
-Act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
+act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
 
 ### Quick Start
 
-To quickly try Act without installing it, you can enter a Nix shell:
+To quickly try act without installing it, you can enter a Nix shell:
 
 ```sh
 nix-shell https://github.com/argotorg/act/tarball/master
@@ -22,7 +22,7 @@ Test your installation by running the following command:
 cabal run act -- --help
 ```
 
-Once are in the Nix shell or you have [installed Act](./installation.md#building-from-source), you can use Act backends for `rocq` and `hevm`:
+Once are in the Nix shell or you have [installed act](./installation.md#building-from-source), you can use act backends for `rocq` and `hevm`:
 
 ```sh
 cabal run act -- <OPTIONS>
@@ -46,11 +46,11 @@ act <OPTIONS>
 ## Installation
 
 ### Install Nix
-Act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
+act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
 
 ### Quick Start
 
-To quickly try Act without installing it, you can enter a Nix shell:
+To quickly try act without installing it, you can enter a Nix shell:
 
 ```sh
 nix-shell https://github.com/argotorg/act/tarball/master
@@ -96,4 +96,4 @@ cabal build # build
 cabal repl  # enter a repl instance
 ```
 ### Usage 
-Consult the [Getting Started](./part1.md#getting-started) section for more information on using Act.
+Consult the [Getting Started](./part1.md#getting-started) section for more information on using act.

@@ -1,12 +1,12 @@
 # Layout and Tooling
 
-## Act Verification Pipeline
+## act Verification Pipeline
 
-Act provides two main verification backends that work with the same specification:
+act provides two main verification backends that work with the same specification:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Act Specification                        │
+│                        act Specification                        │
 │                   (High-level .act file)                        │
 └────────────────┬───────────────────────────────┬────────────────┘
                  │                               │
@@ -44,19 +44,19 @@ Act provides two main verification backends that work with the same specificatio
     to specification              proven about the spec
 ```
 
-**HEVM Backend**: Automatically proves that EVM bytecode (compiled from Solidity or Vyper) correctly implements the Act specification. It uses symbolic execution to explore all possible execution paths and SMT solvers (CVC5, Z3, or Bitwuzla) to verify equivalence.
+**HEVM Backend**: Automatically proves that EVM bytecode (compiled from Solidity or Vyper) correctly implements the act specification. It uses symbolic execution to explore all possible execution paths and SMT solvers (CVC5, Z3, or Bitwuzla) to verify equivalence.
 
 **Rocq Backend**: Exports the specification as a formal transition system to the Rocq proof assistant (formerly Coq), enabling manual proofs of arbitrarily complex properties about the contract's behavior.
 
 ## Running the ERC20 Example
 
-The Act repository includes a complete ERC20 example that you can run with both verification backends. The example files are located in:
+The act repository includes a complete ERC20 example that you can run with both verification backends. The example files are located in:
 - `tests/hevm/pass/multisource/erc20/` - for HEVM backend examples
 - `tests/coq/ERC20/` - for Rocq backend examples
 
 ### Verifying with HEVM Backend
 
-The HEVM backend proves that the EVM bytecode implementation conforms to the Act specification. You can verify the ERC20 specification against both Solidity and Vyper implementations.
+The HEVM backend proves that the EVM bytecode implementation conforms to the act specification. You can verify the ERC20 specification against both Solidity and Vyper implementations.
 
 **Verify against Solidity implementation:**
 
@@ -72,7 +72,7 @@ act hevm --spec tests/hevm/pass/multisource/erc20/erc20.act \
          --vy tests/hevm/pass/multisource/erc20/erc20.vy
 ```
 
-The `--spec` flag specifies the Act specification file, while `--sol` or `--vy` point to the corresponding implementation. The HEVM backend will:
+The `--spec` flag specifies the act specification file, while `--sol` or `--vy` point to the corresponding implementation. The HEVM backend will:
 1. Compile the source code to EVM bytecode
 2. Symbolically execute the bytecode
 3. Check equivalence between the specification and implementation
@@ -133,7 +133,7 @@ All transitions implemented as specified ∎.
 
 #### When Verification Fails
 
-If the implementation doesn't match the specification, Act provides a counterexample:
+If the implementation doesn't match the specification, act provides a counterexample:
 
 ```
 Checking IFF transfer
@@ -178,7 +178,7 @@ You can also use additional flags:
 
 ### Generating Rocq Proofs
 
-The Rocq backend exports the Act specification to the Rocq proof assistant, enabling manual proofs of higher-level properties.
+The Rocq backend exports the act specification to the Rocq proof assistant, enabling manual proofs of higher-level properties.
 
 **Generate Rocq code:**
 
@@ -201,7 +201,7 @@ make
 ```
 
 The `ERC20/` directory includes:
-- `erc20.act` - the Act specification
+- `erc20.act` - the act specification
 - `ERC20.v` - generated Rocq formalization
 - `Theory.v` - custom theorems and proofs about the ERC20 contract
 - `Makefile` and `_CoqProject` - build configuration
@@ -210,11 +210,11 @@ You can open the `.v` files in your Rocq IDE (such as CoqIDE or Proof General) t
 
 ## Backend Reference Guide
 
-This section provides comprehensive documentation for all command-line options and usage patterns for Act's verification backends.
+This section provides comprehensive documentation for all command-line options and usage patterns for act's verification backends.
 
 ### HEVM Backend - Complete Reference
 
-The HEVM backend performs automated equivalence checking between Act specifications and EVM bytecode implementations.
+The HEVM backend performs automated equivalence checking between act specifications and EVM bytecode implementations.
 
 #### Basic Usage Patterns
 
@@ -242,7 +242,7 @@ act hevm --sources <PATH_TO_CONFIG_JSON>
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--spec` | Path | - | Path to the Act specification file (.act) |
+| `--spec` | Path | - | Path to the act specification file (.act) |
 | `--sol` | Path | - | Path to Solidity source file (.sol) |
 | `--vy` | Path | - | Path to Vyper source file (.vy) |
 | `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification |
@@ -324,7 +324,7 @@ This outputs:
 
 ### Rocq Backend - Complete Reference
 
-The Rocq backend exports Act specifications to the Rocq proof assistant for manual theorem proving.
+The Rocq backend exports act specifications to the Rocq proof assistant for manual theorem proving.
 
 #### Basic Usage
 
@@ -343,21 +343,21 @@ This creates a `.v` file containing:
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--file` | Path | - | Path to the Act specification file (.act) |
+| `--file` | Path | - | Path to the act specification file (.act) |
 | `--solver` | `cvc5\|z3` | `cvc5` | SMT solver used during spec analysis |
 | `--smttimeout` | Integer (ms) | `20000` | Timeout for SMT queries during analysis |
 | `--debug` | Boolean | `false` | Print verbose output during generation |
 
 #### Setting Up a Rocq Project
 
-After generating the `.v` file, you need to set up a proper Rocq project structure. Act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts.
+After generating the `.v` file, you need to set up a proper Rocq project structure. act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts.
 
 **Project Structure:**
 ```
 my-contract/
 ├── _CoqProject          # Rocq project configuration
 ├── Makefile             # Build automation
-├── mycontract.act       # Your Act specification
+├── mycontract.act       # Your act specification
 ├── MyContract.v         # Generated (by act rocq)
 └── Theory.v             # Your custom proofs
 ```
@@ -377,10 +377,10 @@ Theory.v
 
 **Explanation:**
 - `-Q . MyContractName` - Maps current directory to the logical name `MyContractName`
-- `-Q /path/to/act/lib ActLib` - Makes ActLib available (adjust path to your Act installation)
+- `-Q /path/to/act/lib ActLib` - Makes ActLib available (adjust path to your act installation)
 - List all `.v` files that should be compiled
 
-**For the ERC20 example in the Act repository:**
+**For the ERC20 example in the act repository:**
 ```coq-project
 -Q . ERC20
 -Q ../../../lib ActLib
@@ -392,7 +392,7 @@ Theory.v
 
 **2. Create a `Makefile`:**
 
-This Makefile automates the entire workflow from Act spec to verified proofs:
+This Makefile automates the entire workflow from act spec to verified proofs:
 
 ```makefile
 .PHONY: verify

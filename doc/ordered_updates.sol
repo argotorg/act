@@ -9,7 +9,7 @@ contract Admins {
         admin2 = tx.origin;
     }
 
-    function set_admin2(address new_admin2){
+    function set_admin2(address new_admin2) public {
         admin2 = new_admin2;
     }
 
@@ -27,7 +27,7 @@ contract Asset {
     }
 
     function assetTransfer(uint256 amt, address to) public returns (bool) {
-        require (msg.sender == admins.admin1 || msg.sender == admins.admin2);
+        require (msg.sender == admins.admin1() || msg.sender == admins.admin2());
 
         balanceOf[address(this)] = balanceOf[address(this)] - amt;
         balanceOf[to] = balanceOf[to] + amt;
@@ -36,9 +36,9 @@ contract Asset {
     }
 
     function setAdmins(address new_admin1, address new_admin2) public {
-        if (msg.sender == admins.admin1 || msg.sender == admins.admin2) {
+        if (msg.sender == admins.admin1() || msg.sender == admins.admin2()) {
             admins = Admins(new_admin1);
-            admins.admin2 = new_admin2;
+            admins.set_admin2(new_admin2);
         }
     }
 }

@@ -2,7 +2,7 @@
 authors = ["Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, dxo"]
 language = "en"
 src = "src"
-title = "The Act Book"
+title = "The act Book"
 
 [preprocessor]
 

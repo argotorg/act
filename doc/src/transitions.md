@@ -6,7 +6,7 @@ Explaining transitions and how they update storage, focusing on `transfer`.
 
 ## Transition Structure
 
-The general shape of a transition that returns a value in Act is:
+The general shape of a transition that returns a value in act is:
 
 ```mermaid
 graph TD
@@ -19,7 +19,7 @@ graph TD
     E --> F["returns <value>"]
 ```
 
-The general shape of a transition that does **not return** a value in Act is:
+The general shape of a transition that does **not return** a value in act is:
 ```mermaid
 graph TD
     A["transition <name> ?payable (<parameters>) "] --> I["iff <condition>"]
@@ -126,7 +126,7 @@ The transitions `totalSupply`, `balanceOf` and `allowance` correspond to the pub
 Similar to constructors, see [Constructor Preconditions](./constructors.md#constructor-preconditions) for details.
 
 ## Case Splits and Control Flow
-Act uses `case` blocks to describe control flow explicitly.
+act uses `case` blocks to describe control flow explicitly.
 In the ERC20 `transfer` transition, we distinguish two cases based on whether the sender (`CALLER`) is transferring tokens to themselves or to another address:
 
 *(transfer transition from erc20.act)*
@@ -152,7 +152,7 @@ case CALLER == to:
   returns true
 ```
 If the sender is transferring to another address (`CALLER != to`), the balances of both the sender and the recipient are updated accordingly. If the sender is transferring to themselves (`CALLER == to`), no storage updates are happening, and the transition simply returns `1`.
-This separation is necessary because Act updates are **non-sequential**: all updates refer to the pre-state. Writing the cases explicitly avoids ambiguity. Details on updates are explained next.
+This separation is necessary because act updates are **non-sequential**: all updates refer to the pre-state. Writing the cases explicitly avoids ambiguity. Details on updates are explained next.
 
 
 ## Storage Updates Are Simultaneous
@@ -179,6 +179,8 @@ Instead, it means:
 “In the final state, the mapping `balanceOf` equals the old one except the fields `from` and `to` where updated, and `allowance` equals the old mapping except `from` now maps to a different mapping (the one from before except `CALLER` maps to `allowance[from][CALLER] - value`).”
 All right-hand sides are evaluated in the **initial state**.
 This design avoids accidental order-dependence and makes transitions suitable for formal reasoning.
+
+Note that if the **balance in Ether** of a contract changes during a transition (e.g., in a payable transition), this has to be reflected in the `updates` block by updating the special variable `BALANCE` accordingly.
 
 ## Storage Updates Are Partially Ordered
 
@@ -251,7 +253,7 @@ updates
    admins := Admins(new_admin1)
    admins.admin2 := new_admin2
 
-case !(CALLER == admins.admin1 or CALLER == admins.admin2)
+case not (CALLER == admins.admin1 or CALLER == admins.admin2)
 
 ...
 ```
@@ -272,7 +274,7 @@ The ordering is a design choice required for sound and unambiguous semantics.
 
  <!-- If we had written the specific field update first, it would have referred to the old value of `admins`, which is not what we want.
 
-This is a design choice in Act to ensure updated storage references are well-defined.
+This is a design choice in act to ensure updated storage references are well-defined.
 Imagine if we had written the updates in the opposite order:
 
 ```act

@@ -1,12 +1,12 @@
 # Summary
 
-# What is Act?
+# What is act?
 
 - [Getting Started and Installation](./installation.md) 
 - [Introduction](./introduction.md)
 - [A First Look: ERC20 as Running Example](./running_ex.md)
 
-# Specification Language Act
+# Specification Language act
 
 - [Storage, Typing and Expressions](./store_type.md)
 - [Contructors and Initial State](./constructors.md)
@@ -15,10 +15,10 @@
 
 # Typechecking and No-Aliasing
 
-- [Type Checking](./arith_safety.md)
+- [Type Checking](./type_checking.md)
 - [Aliasing and Unique Ownership](./aliasing.md)
 
-# From Specification to Guarantees
+# Verification with act 
 
 - [hevm backend: Equivalence to EVM bytecode](./equiv.md)
 - [Rocq backend](./rocq.md) 

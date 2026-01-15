@@ -1,11 +1,11 @@
 # Storage, Typing and Expressions
 
 **Goal of this section**
-Explain how an EVM state is represented in Act, using ERC20 storage as the concrete example.
+Explain how an EVM state is represented in act, using ERC20 storage as the concrete example.
 
 
 ## Declaring Storage
-In Act, each contract explicitly declares its storage in the constructor and initializes it as defined in the source code. If the source code does not initialize a storage field, act uses defaults. For ERC20, the storage consists of two mappings and an integer:
+In act, each contract explicitly declares its storage in the constructor and initializes it as defined in the source code. If the source code does not initialize a storage field, act uses defaults. For ERC20, the storage consists of two mappings and an integer:
 
 *(snippet from erc20.sol, updates block)*
 
@@ -15,7 +15,7 @@ In Act, each contract explicitly declares its storage in the constructor and ini
     mapping (address => mapping (address => uint256)) public allowance;
 ```
 
-The respective Act declaration including initialization is:
+The respective act declaration including initialization is:
 
 *(corresponding snippet from erc20.act, constructor block)*
 
@@ -26,17 +26,17 @@ creates
   mapping(address => mapping(address => uint256)) allowance := []
 ```
 
-For each storage variable its initialization has the shape `<type> <name> := <storage_expression>`. The Act storage corresponds directly to the EVM state variables, but with two important differences:
+For each storage variable its initialization has the shape `<type> <name> := <storage_expression>`. The act storage corresponds directly to the EVM state variables, but with two important differences:
 1. All storage is immutable by default.
     Storage can only change through explicit updates inside transitions.
 2. Types are explicit and checked. Which types storage can have is detailed next.
 
 
-## Types in Act
-Act has a rich type system to describe both storage and function parameters/return values.
+## Types in act
+act has a rich type system to describe both storage and function parameters/return values.
 
 ### Storage Types
-Storage in Act can have the following types:
+Storage in act can have the following types:
 
 - **base types** e.g. line 2 in the snippet above: `uint256 totalSupply`
     - unsigned integers of various sizes: `uint8`, `uint16`, `uint32`, `uint64`, `uint128`, `uint256`, 
@@ -57,7 +57,7 @@ Storage in Act can have the following types:
 
 
 ### Mapping Types and Defaults
-A **mapping** in Act behaves like a total function with a default value.
+A **mapping** in act behaves like a total function with a default value.
 For example, the type:
 
 ```act
@@ -80,7 +80,7 @@ The **defaults** for the different mapping types are:
 - `address`: `0x00000000000000000000000000000000` which is the zero address.
 - `mapping(<base type> => <mapping_type>)`: a mapping where all keys map to the default value of `<mapping_type>`. *Note: mapping types here include base types but **not** contract types.*
 
-This matches Solidity’s behavior but is **made explicit** in Act, which is essential for reasoning about invariants.
+This matches Solidity’s behavior but is **made explicit** in act, which is essential for reasoning about invariants.
 
 ### ABI Types 
 
@@ -99,11 +99,11 @@ The following types are used for function parameters and return values, mirrorin
     ```
     The parameter `token_addr` has type `address<Token>`, which indicates that the address points to a deployed contract of type `Token` (e.g. in our example an ERC20 token).
     
-     This special type exists to allow Act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in the <span style="color:red">
+     This special type exists to allow act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in the <span style="color:red">
  correctness section (paragraph on Input space equivalence).</span>)
 
     
-*Note:* Not all types in Act are allowed everywhere. There is a distinction between **ABI types** and **Storage types**:
+*Note:* Not all types in act are allowed everywhere. There is a distinction between **ABI types** and **Storage types**:
 1. **ABI types** include **base types** and **annotated address types**. They are used for function parameters and return values.
 2. **Storage types** include **base types**, **mapping types**, and **contract types**. They are
  used for storage.
@@ -113,7 +113,7 @@ That means in function parameters and return values, mapping types and contract 
 
 ## Expressions
 
-Expressions appear throughout constructor and transition declarations: in preconditions (`iff` blocks), case conditions, storage initialization and updates (in `creates` and `storage` blocks) as well as in `return` statements of transitions. Act distinguishes between three kinds of expressions, each serving different purposes:
+Expressions appear throughout constructor and transition declarations: in preconditions (`iff` blocks), case conditions, storage initialization and updates (in `creates` and `storage` blocks) as well as in `return` statements of transitions. act distinguishes between three kinds of expressions, each serving different purposes:
 
 ### Overview of Expression Types
 
@@ -185,13 +185,15 @@ References denote storage locations or parameters and are used as building block
 Basic references include:
 - **Storage Variable names**: `totalSupply`, `balanceOf`, `allowance`
 - **Parameter names**: `_totalSupply`, `to`, `value`
-- **Environment variables**: `CALLER`, `CALLVALUE`, `ORIGIN`, `THIS`
+- **Environment variables**: `CALLER`, `CALLVALUE`, `ORIGIN`, `THIS`, `BALANCE`
     Environment variables represent special values provided by the EVM:
-    - `CALLER`: the address of the entity (externally owned account or contract)
+    - `address CALLER`: the address of the entity (externally owned account or contract)
         that invoked the current function.
-    - `CALLVALUE`: the amount of Ether (in wei) sent with the current call.
-    - `ORIGIN`: the address of the original external account that started the transaction.
-    - `THIS`: the address of the current contract.
+    - `uint256 CALLVALUE`: the amount of Ether (in wei) sent with the current call.
+    - `addresss ORIGIN`: the address of the original external account that started the transaction.
+    - `address THIS`: the address of the current contract.
+    - `uint256 BALANCE`: the balance of the current contract in Ether. 
+<span style="color:red"> correct type for BALANCE?. </span>
 - **Mapping references**: `balanceOf[CALLER]`
 - **Field references**:  `t0.balanceOf` (if `t0` is a contract reference)
 
@@ -238,7 +240,7 @@ Base expressions are composite expressions built using operators, literals and v
 
 **Other operators**:
 - Conditionals: `if condition then expr1 else expr2`
-- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Preconditions](./constructors.md) and [Arithmetic Safety](./arith_safety.md) for details.
+- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Preconditions](./constructors.md#constructor-preconditions) and [Arithmetic Safety](./type_checking.md#arithmetic-safety) for details.
 
 **Literals and Other Expressions**:
 - Literals: `5`, `true`, `false`

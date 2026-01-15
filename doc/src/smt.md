@@ -1,6 +1,6 @@
 # SMT Backend
 
-The SMT backend for Act is currently able to automatically prove that:
+The SMT backend for act is currently able to automatically prove that:
 
 - post conditions are implied by pre conditions
 - contract level invariants hold
@@ -188,7 +188,7 @@ Although SMT solvers are powerful tools there are some important limitations to 
 
 ## Implementation Strategy
 
-For each invariant claim, Act builds an individual SMT query for each transition in the transtion
+For each invariant claim, act builds an individual SMT query for each transition in the transtion
 system. If there are no invariant claims defined, then `act` will insert an implicit invariant of
 `True`, meaning that the postconditions are still checked.
 

@@ -1,11 +1,11 @@
 # Arithmetic Safety
 
 **Goal of this section**
-Explain why Act requires explicit arithmetic bounds and how this relates to Solidity semantics.
+Explain why act requires explicit arithmetic bounds and how this relates to Solidity semantics.
 
-## Checked Arithmetic Is Explicit in Act
+## Checked Arithmetic Is Explicit in act
 Solidity performs checked arithmetic by default: overflows and underflows cause a revert.
-In Act, these checks must be stated explicitly using `inRange`.
+In act, these checks must be stated explicitly using `inRange`.
 For ERC20 transfer, we require:
 
 ```act
@@ -17,7 +17,7 @@ These conditions ensure that the subtraction and addition are valid `uint256` op
 
 
 ## Why This Is Necessary
-Act specifications are checked against EVM bytecode. The EVM does not enforce arithmetic safety by itself — this behaviour is a property of the compiled code.
+act specifications are checked against EVM bytecode. The EVM does not enforce arithmetic safety by itself — this behaviour is a property of the compiled code.
 
 By writing `inRange` explicitly, the specification:
 - matches the compiled behavior precisely
@@ -27,4 +27,4 @@ By writing `inRange` explicitly, the specification:
 
 ## Failure Is Explicit and Local
 If an `inRange` condition fails, the transition reverts and no storage updates occur.
-This aligns with Solidity’s execution model and allows Act to precisely characterize the contract’s input space.
+This aligns with Solidity’s execution model and allows act to precisely characterize the contract’s input space.
