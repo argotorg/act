@@ -8,10 +8,12 @@
 
 # Specification Language act
 
+- [Syntax Overview](./syntax.md)
 - [Storage, Typing and Expressions](./store_type.md)
-- [Contructors and Initial State](./constructors.md)
+- [Constructors and Initial State](./constructors.md)
 - [Transitions and Storage Updates](./transitions.md)
 - [How to Write Your Own Spec](./how_to.md)
+
 
 # Type-Checking and No-Aliasing
 

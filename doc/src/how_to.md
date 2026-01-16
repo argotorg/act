@@ -22,6 +22,8 @@ The general process of writing an act specification involves:
 
 We will use a running example, that was introduced in [Storage Updates are Partially Ordered](./transitions.md#storage-updates-are-partially-ordered), to illustrate the steps. Imagine we have the follwing solidity code declaring two contracts, which we want to specify in act:
 
+*(code from [ordered_updates.sol](https://github.com/argotorg/act/blob/main/tests/hevm/pass/ordered_updates/ordered_updates.sol) <span style=color:red> double check link </span>)*
+
 ```solidity
 pragma solidity >=0.8.0;
 
@@ -351,6 +353,8 @@ For each transition where the signature specifies a return type,  `returns <expr
 
 
 The final act specification of the Solidity code at the beginning of this page is the following:
+
+*(also available as [ordered_updates.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/ordered_updates/ordered_updates.act) <span style= color:red> double check link </span>)*
 
 ```act
 contract Admins

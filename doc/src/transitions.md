@@ -1,8 +1,6 @@
 # Transitions and Storage Updates
 
-**Goal of this section**
-
-Explaining transitions and how they update storage, focusing on `transfer`.
+Transitions in act specify the behavior of contract functions and the conditions under which storage is updated or values are returned.
 
 ## Transition Structure
 
@@ -65,7 +63,7 @@ Each externally callable function of the EVM smart contract source is specified 
 
 For example the `transfer` transition of the ERC20 contract is non-payable and specified as:
 
-*(signature from erc20.act)*
+*(signature from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act))*
 
 ```act
 transition transfer(uint256 value, address to) : bool
@@ -73,9 +71,10 @@ transition transfer(uint256 value, address to) : bool
 ```
 
 This declares the function parameters and the return type `bool`.
-*(signatures from erc20.act)*
 
 The other transitions of the ERC20 contract are:
+
+*(signatures from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act))*
 
 ```act
 transition transferFrom(address src, address dst, uint amount) : bool
@@ -98,7 +97,7 @@ transition allowance(address owner, address spender) : uint256
 
 The transitions correspond to the externally callable functions of the ERC20 contract:
 
-*(signatures from erc20.sol)*
+*(signatures from [erc20.sol](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.sol))*
 ```solidity
 function transfer(uint256 value, address to) public returns (bool) {
    ...
@@ -129,7 +128,7 @@ Similar to constructors, see [Constructor Preconditions](./constructors.md#const
 act uses `case` blocks to describe control flow explicitly.
 In the ERC20 `transfer` transition, we distinguish two cases based on whether the sender (`CALLER`) is transferring tokens to themselves or to another address:
 
-*(transfer transition from erc20.act)*
+*(transfer transition from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act))*
 
 ```act
 transition transfer(uint256 value, address to) : bool
@@ -160,6 +159,8 @@ This separation is necessary because act updates are **non-sequential**: all upd
 Storage updates are not a sequence of assignments, but rather a set of equations that must hold on the final state. Therefore, updates are simultaneous: all right-hand sides refer to the initial state and all left-hand sides are storage slots that are modified by the transition.
 
 Consider the "standard" case of the ERC20 `transferFrom` transition:
+
+*(snippet from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act), transferFrom transition)*
 
 ```act
 case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
@@ -257,6 +258,8 @@ case not (CALLER == admins.admin1 or CALLER == admins.admin2)
 
 ...
 ```
+*(This example has been added to the benchmarks as [ordered_updates.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/ordered_updates/ordered_updates.act) and can be proven equivalent to the corresponding [ordered_updates.sol](https://github.com/argotorg/act/blob/main/tests/hevm/pass/ordered_updates/ordered_updates.sol) implementation. <span style=color:red> double check link </span>)*
+
 Let's consider now the `Asset` contract above. 
  - The contract `Asset` is a variation of a drastically simplified token contract (similar to ERC20). 
  - The relevant difference is that only the two admin addresses can transfer tokens from the contract's own balance to other addresses. (See the `assetTransfer` transition.) 

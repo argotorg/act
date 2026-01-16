@@ -1,8 +1,6 @@
 # Contructors and Initial State
 
-**Goal of this section**
-
-Show how act specifies contract creation and the initial state.
+Constructors in act specify the initial state of contract storage and the conditions under which a contract can be successfully deployed.
 
 ## Constructor Structure
 
@@ -49,7 +47,7 @@ Similarly, if a constructor is marked `payable`, the user has to declare and ini
 In the ERC20 example, the constructor is non-payable. Thus, it does not include the `payable` keyword nor the `BALANCE` variable:
 
 
-*(constructor from erc20.act)*
+*(constructor from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act))*
 
 ```act
 constructor(uint256 _totalSupply)
@@ -89,7 +87,7 @@ Additionally to `BALANCE`, there are 4 such special variables (called environmen
 ## Constructor Preconditions
 Consider the following constructor from an automated market maker (AMM) contract:
 
-*(constructor from amm.act)*
+*(constructor from [amm.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.act))*
 
 ```act
 constructor(address<Token> t0, address<Token> t1)
@@ -109,7 +107,7 @@ In this example, the precondition `t0 != t1` ensures that the two token addresse
 
 The precondition block extends the `require`/`assert` statements commonly used in Solidity/Vyper constructors by explicitly listing requirements that are implicit in the code. In the above case the `iff` block is the same as the `require`/`assert` statement in Solidity/Vyper: 
 
-*(constructor from amm.sol)*
+*(constructor from [amm.sol](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.sol))*
 
 ```solidity
  constructor(address t0, address t1) {
@@ -119,7 +117,7 @@ The precondition block extends the `require`/`assert` statements commonly used i
     }
 ```
 
-*(constructor from amm.vy)*
+*(constructor from [amm.vy](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.vy))*
 
 ```vyper
 @deploy
@@ -137,6 +135,8 @@ Whenever arithmetic operations are involved in the storage initialization, it is
 
 For example, consider a constructor that initializes a balance by subtracting a value from an initial amount. To ensure that this subtraction does not underflow, the precondition would include an `inRange` check:
 
+
+
 ```act
 constructor(uint256 initialAmount, uint256 deduction)
 iff
@@ -152,6 +152,8 @@ The same principle applies to transitions and storage updates. How the arithmeti
 The storage is created in the `creates` block, where each storage variable is initialized as `<type> <name> := <expression>`. The allowed types and expressions are explained in [Storage, Typing and Expressions](./store_type.md). 
 
 We revisit the storage initialization of the ERC20 constructor:
+
+*(snippet from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act) constructor)*
 
 ```act
 creates 
