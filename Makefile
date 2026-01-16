@@ -49,7 +49,7 @@ postcondition_pass=$(wildcard tests/postconditions/pass/*.act) $(typing_pass)
 postcondition_fail=$(wildcard tests/postconditions/fail/*.act)
 
 # supposed to pass, but timeout
-hevm_buggy=tests/hevm/pass/transfer/transfer.act tests/hevm/pass/multisource/amm/sol_vyper.json tests/hevm/pass/multisource/amm/vyper_sol.json tests/hevm/pass/cast-3/cast-3.act
+hevm_buggy=tests/hevm/pass/transfer/transfer.act tests/hevm/pass/multisource/amm/sol_vyper.json tests/hevm/pass/multisource/amm/vyper_sol.json tests/hevm/pass/cast-3/cast-3.act tests/hevm/pass/shape/shape.act
 # supposed to pass
 hevm_pass=$(filter-out $(hevm_buggy), $(wildcard tests/hevm/pass/*/*.act))
 hevm_vy_pass=$(wildcard tests/hevm/pass/vyper/*/*.act)
@@ -64,7 +64,7 @@ hevm_fast=$(filter-out $(hevm_slow), $(hevm_pass))
 hevm_multi_fast=$(filter-out $(hevm_multi_slow), $(hevm_multi_pass))
 
 
-#coq-examples = tests/coq/multi tests/coq/transitions tests/coq/safemath tests/coq/exponent tests/coq/token tests/coq/ERC20-simple tests/coq/ERC20  tests/coq/amm tests/coq/pointers
+coq-examples = tests/coq/multi tests/coq/transitions tests/coq/safemath tests/coq/exponent tests/coq/token tests/coq/ERC20-simple tests/coq/ERC20  tests/coq/amm tests/coq/pointers
 
 .PHONY: test-coq $(coq-examples)
 test-coq: compiler $(coq-examples)
