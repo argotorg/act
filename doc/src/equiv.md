@@ -18,7 +18,7 @@
 
 EVM bytecode can be formally verified to implement an act spec. This
 means that each successful behavior of the bytecode should be covered
-by the act spec. 
+by the act spec and vice-versa. 
 
 To check equivalence, act leverages the symbolic execution engine in hevm.
 The act spec is translated to
@@ -29,7 +29,7 @@ equivalence can be checked with the equivalence checker of hevm.
 ## Usage 
 
 The hevm backend performs automated equivalence checking between act specifications and EVM bytecode implementations.
-It is language agnostic, supporting verification of contracts written in both Solidity and Vyper.
+It is language agnostic, currently (version 0.1.0) supporting verification of contracts written in both Solidity and Vyper.
 
 ### Basic Usage Patterns
 
@@ -313,10 +313,10 @@ To check equivalence between the two Expr representations the
 following checks are performed. 
 
 #### Result equivalence
-The two list of `Success` nodes are checked for equivalence using
+The two lists of `Success` nodes are checked for equivalence using
 the hevm equivalence checker. For each pair of nodes in the two lists,
 we check that for all inputs that satisfy the combined path conditions the
-result and final storage the same. 
+result and final storage are the same. 
 
 #### Input space equivalence
 
@@ -326,20 +326,28 @@ Since the input space of the two lists is not necessarily exhaustive,
 some inputs may lead to failed execution paths that are not
 present in the list. We therefore need to check that the input space of the two
 lists are the same. That is, there must not be inputs that satisfy
-some path condition in the first list but not the second and vice verse.
+some path condition in the first list but none the second and vice versa.
 
 Say that the act program has the Expr representation 
-`[Success c1 r1 s1, ..., Success cn rn sn`
-and the the EVM bytecode has the Expr representation 
-`[Success c1' r1' s1', ..., Success cn' rn' sn'`
 
-then we need to check that `c1 \/ .. \/ cn <-> c1' \/ .. \/ cn'` that
-is, we require that `c1 \/ .. \/ cn /\ ~ (c1' \/ .. \/ cn')` and `c1'
-\/ .. \/ cn' /\ ~ (c1 \/ .. \/ cn)` are both unsatisfiable.
+`Success c1 r1 s1, ..., Success cn rn sn`
+
+and the the EVM bytecode has the Expr representation 
+
+`Success c1' r1' s1', ..., Success cn' rn' sn'`
+
+then we need to check that
+ `c1 ∨ .. ∨ cn ⟺ c1' ∨ .. ∨ cn'` that
+is, we require that 
+
+`c1 ∨ .. ∨ cn ∧ ¬(c1' ∨ .. ∨ cn')` and
+ `c1' ∨ .. ∨ cn' ∧ ¬(c1 ∨ .. ∨ cn)`
+
+ are both unsatisfiable.
 
 #### Exhaustiveness checks for bytecode
 
-The hevm backend performs public interface matching between the EVM bytecode implementation and act specification. 
+The hevm backend performs public interface matching between the EVM bytecode implementation and the act specification. 
 It verifies that each contract defines the same constructor and the same set of transitions, with matching function signatures.
 
 <!-- Old descritpion -->

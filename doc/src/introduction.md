@@ -89,7 +89,7 @@ Further key capabilities of act:
 <!-- mention formally defined semantics + type safety + soundness -->
 - **The semantics of act is fully formally defined.** Type safety and soundness are proven in detail. <span style="color:green">A full tech report will be available shortly.</span>
 <!-- talk about language agnostics -->
-- **act is language agnostic**: Conceptually, act could support conformity of spec and implementation written in all programming languages that compile to EVM bytecode. Currently (in v1.0), Solidity and Vyper are supported.
+- **act is language agnostic**: Conceptually, act could support conformity of spec and implementation written in all programming languages that compile to EVM bytecode. Currently (in v0.1.0), Solidity and Vyper are supported.
 <!-- loops  -->
 - **act exhaustively describes a contract's behavior.** To do so, symbolic execution is used. For symbolic execution to be sound unbounded loops cannot be supported.
 <!-- and aliasing -->

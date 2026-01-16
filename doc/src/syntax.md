@@ -1,6 +1,6 @@
 # Syntax of the Act language
 
-A specification of a contract written in `act` consists of a
+A specification of one or more contracts written in `act` consists of a `contract` block for each contract, which in turn contains a single
 `constructor` and a set of `transitions`.
 
 The `constructor` specification defines the structure of the contract

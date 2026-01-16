@@ -30,9 +30,12 @@ For each storage variable its initialization has the shape `<type> <name> := <st
 
 
 ## Types
-act has a rich type system to describe both storage and function parameters/return values.
+act has a rich type system to describe both storage and function parameters/return values. There are three main categories of types in act: 
+- **Storage types**,
+- **Mapping types**, and 
+- **ABI types**.
 
-### Storage Types
+### Storage Types (a.k.a. Slot Types)
 Storage in act can have the following types:
 
 - **base types** e.g. line 2 in the snippet above: `uint256 totalSupply`
@@ -109,7 +112,7 @@ That means in function parameters and return values, mapping types and contract 
 
 Expressions appear throughout constructor and transition declarations: in preconditions (`iff` blocks), case conditions, storage initialization and updates (in `creates` and `storage` blocks) as well as in `return` statements of transitions. act distinguishes between three kinds of expressions, each serving different purposes:
 
-### Overview of Expression Types
+### Overview of Expressions
 
 1. **Storage Expressions (Slot Expressions)**: Expressions that manipulate storage data. Used in the `creates` and `updates` block to initialize or update storage variables. Examples in the ERC20 constructor: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `Token(100)`.
 
