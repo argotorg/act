@@ -22,6 +22,8 @@ specification, which can either be used
 
 A more detailed explanation of act's formal verification backends together with examples can be found in **Verification with act** sections.
 
+To **get started** with act, you can follow the installation instructions in the [Getting Started and Installation](./installation.md) section.
+
 ## act Verification Pipeline
 
 act provides two main verification backends that work with the same specification:

@@ -1,0 +1,16 @@
+contract HelloWorld
+constructor()
+    iff true
+    creates
+        mapping(address => uint256) hello :=  [CALLER => 42]
+
+
+transition setHello(uint256 value, address to) : uint256
+    iff true
+    updates 
+        hello :=  hello[to => value]
+    returns 1
+
+transition hello(address account)
+    iff true
+    returns hello[account]

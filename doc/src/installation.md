@@ -1,5 +1,4 @@
-# What is act?
-act is a formal specification language and verification framework for proving the correctness of Ethereum Virtual Machine (EVM) smart contracts. act specifications precisely describe all possible behaviors of a smart contract in a high-level language and are automatically verified against the contract’s EVM bytecode using symbolic execution. 
+# Getting Started and Installation
 
 ## Getting Started
 
@@ -15,24 +14,21 @@ nix-shell https://github.com/argotorg/act/tarball/master
 
 ### Basic Usage
 
-Test your installation by running the following command:
-<span style="color:red">Change to a hello world example</span>
+Once you are in the Nix shell or you have [installed act](./installation.md#building-from-source),
+test your installation by running the `HelloWorld` contract specification:
 
+The hevm backend:
 ```sh
-cabal run act -- --help
+cabal run act -- hevm --spec tests/helloworld/helloworld.act --sol tests/helloworld/helloworld.sol
 ```
+(the output should conclude with `No discrepancies found.`)
 
-Once are in the Nix shell or you have [installed act](./installation.md#building-from-source), you can use act backends for `rocq` and `hevm`:
-
+The Rocq backend:
 ```sh
-cabal run act -- <OPTIONS>
+cabal run act -- rocq --file tests/helloworld/helloworld.act
 ```
+(the output should conclude with `Qed. End HelloWorld.`)
 
-To see all available options and configuration flags:
-
-```sh
-cabal run act -- --help
-```
 
 Alternatively, if you've run `make` first, you can run the executable directly:
 
@@ -40,28 +36,15 @@ Alternatively, if you've run `make` first, you can run the executable directly:
 act <OPTIONS>
 ```
 
-
-
-
-## Installation
-
-### Install Nix
-act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
-
-### Quick Start
-
-To quickly try act without installing it, you can enter a Nix shell:
-
-```sh
-nix-shell https://github.com/argotorg/act/tarball/master
-```
-
-Test your installation by running the following command:
-<span style="color:red">Change to a hello world example</span>
-
+For advanced options, consult the
+[hevm backend documentation](./equiv.md) and
+[Rocq backend documentation](./rocq.md), 
+or list the options by calling 
 ```sh
 cabal run act -- --help
 ```
+
+## Installation
 
 ### Building from Source
 
@@ -82,18 +65,6 @@ Once you have built, for development, enter a Nix development shell to get all d
 nix develop
 ```
 
-Test your installation by running the following command:
-<span style="color:red">Change to a hello world example</span>
+Test your installation by running the commands in [basic usage section](#basic-usage).
 
-```sh
-cabal run act -- --help
-```
-
-You can then use Cabal as normal from the root directory:
-
-```sh
-cabal build # build
-cabal repl  # enter a repl instance
-```
-### Usage 
-Consult the [Getting Started](./part1.md#getting-started) section for more information on using act.
+Note: You can also use Cabal as normal from the root directory.

@@ -2,8 +2,8 @@
 
 # What is act?
 
-- [Getting Started and Installation](./installation.md) 
 - [Introduction](./introduction.md)
+- [Getting Started and Installation](./installation.md) 
 - [A First Look: ERC20 as Running Example](./running_ex.md)
 
 # Specification Language act
