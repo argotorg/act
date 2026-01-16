@@ -1,3 +1,7 @@
+<div style="text-align: center;">
+  <img src="./images/logo/logo_bg[trns]_fg[ylw]_v01.png" alt="act logo" width="200"/>
+</div>
+
 # Introduction
 
 <!-- act is a high level specification language for evm programs. The core aim is to allow for easy
