@@ -1,10 +1,7 @@
 # Storage, Typing and Expressions
+In act, each contract explicitly declares its storage in the constructor and initializes it. The types of storage variables are explicit and checked. This section explains the storage model of act, the types allowed in storage, and the different kinds of expressions used throughout act specifications.
 
-**Goal of this section**
-Explain how an EVM state is represented in act, using ERC20 storage as the concrete example.
-
-
-## Declaring Storage
+## Storage
 In act, each contract explicitly declares its storage in the constructor and initializes it as defined in the source code. If the source code does not initialize a storage field, act uses defaults. For ERC20, the storage consists of two mappings and an integer:
 
 *(snippet from erc20.sol, updates block)*
@@ -32,7 +29,7 @@ For each storage variable its initialization has the shape `<type> <name> := <st
 2. Types are explicit and checked. Which types storage can have is detailed next.
 
 
-## Types in act
+## Types
 act has a rich type system to describe both storage and function parameters/return values.
 
 ### Storage Types
@@ -48,11 +45,9 @@ Storage in act can have the following types:
 - **mapping types** 
     - mappings from one base type to another, e.g. from `address` to `uint256` in line 3 `mapping(address => uint256) balanceOf`
     - nested mappings: from a base type to another mapping, e.g. from `address` to `mapping(address => uint256)` in line 4 `mapping(address => mapping(address => uint256)) allowance`
-- **contract types**  referencing the storage of other contracts  (details later in
-    <span  style="color:red">
-    "Advanced Topics: Aliasing and Unique Ownership" (?)
-    </span>).   
-
+- **contract types**  referencing the storage of other contracts  (details in [Alasing and Unique Ownership](./aliasing.md))
+    - A contract type `ContractType` can be used as a storage type to denote a reference to the storage of another contract of type `ContractType`.
+    - This allows act specifications to model interactions between multiple contracts.
     - Artificial example: Another contract `OtherContract` uses in its storage a reference to an ERC20 `Token` contract: In `OtherContract`'s storage we would have a field of type `Token`, which can be initialized with (an address of) a specific deployed ERC20 contract instance. An example of this is shown in [Constructor Preconditions](./constructors.md#constructor-preconditions).
 
 
@@ -99,8 +94,7 @@ The following types are used for function parameters and return values, mirrorin
     ```
     The parameter `token_addr` has type `address<Token>`, which indicates that the address points to a deployed contract of type `Token` (e.g. in our example an ERC20 token).
     
-     This special type exists to allow act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in the <span style="color:red">
- correctness section (paragraph on Input space equivalence).</span>)
+     This special type exists to allow act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in [Input Space Equivalence](./equiv.md#input-space-equivalence).
 
     
 *Note:* Not all types in act are allowed everywhere. There is a distinction between **ABI types** and **Storage types**:
@@ -193,7 +187,6 @@ Basic references include:
     - `addresss ORIGIN`: the address of the original external account that started the transaction.
     - `address THIS`: the address of the current contract.
     - `uint256 BALANCE`: the balance of the current contract in Ether. 
-<span style="color:red"> correct type for BALANCE?. </span>
 - **Mapping references**: `balanceOf[CALLER]`
 - **Field references**:  `t0.balanceOf` (if `t0` is a contract reference)
 
@@ -240,7 +233,7 @@ Base expressions are composite expressions built using operators, literals and v
 
 **Other operators**:
 - Conditionals: `if condition then expr1 else expr2`
-- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Preconditions](./constructors.md#constructor-preconditions) and [Arithmetic Safety](./type_checking.md#arithmetic-safety) for details.
+- Range checks: `inRange(uint256, x)` (checks if `x` fits in the given type) See [Preconditions](./constructors.md#constructor-preconditions) and [Arithmetic Safety](./type_checking.md#1-arithmetic-safety) for details.
 
 **Literals and Other Expressions**:
 - Literals: `5`, `true`, `false`

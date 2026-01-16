@@ -145,7 +145,7 @@ creates
     uint256 balance := initialAmount - deduction
 ```
 
-The same principle applies to transitions and storage updates. How the arithmetic safety is enforced in act is explained in more detail in [Arithmetic Safety](./type_checking.md#arithmetic-safety).
+The same principle applies to transitions and storage updates. How the arithmetic safety is enforced in act is explained in more detail in [Arithmetic Safety](./type_checking.md#1-arithmetic-safety).
 
 ## Initializing Storage
 

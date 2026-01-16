@@ -17,9 +17,9 @@
 - [Transitions and Storage Updates](./transitions.md)
 - [How to Write Your Own Spec](./how_to.md)
 
-# Typechecking and No-Aliasing
+# Type-Checking and No-Aliasing
 
-- [Type Checking](./type_checking.md)
+- [Type-Checking](./type_checking.md)
 - [Aliasing and Unique Ownership](./aliasing.md)
 
 # Verification with act 
