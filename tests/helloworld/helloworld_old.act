@@ -1,0 +1,27 @@
+constructor of HelloWorld
+interface constructor()
+
+iff CALLVALUE == 0
+
+creates
+
+  mapping(address => uint256) hello :=  [CALLER := 42]
+
+
+behaviour setHello of HelloWorld
+interface setHello(uint256 value, address to)
+
+iff
+
+  CALLVALUE == 0
+
+  storage
+     hello[to] =>  value
+
+  returns 1
+
+behaviour hello of HelloWorld
+interface hello(address account)
+iff
+CALLVALUE == 0
+returns pre(hello[account])

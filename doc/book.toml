@@ -15,6 +15,7 @@ after = ["links"]
 [output]
 
 [output.html]
+additional-css = ["theme/custom.css"]
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
 [output.html.playground]

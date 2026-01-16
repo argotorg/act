@@ -44,8 +44,8 @@ act hevm --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYTE
 | `--spec` | Path | - | Path to the act specification file (.act) |
 | `--sol` | Path | - | Path to Solidity source file (.sol) |
 | `--vy` | Path | - | Path to Vyper source file (.vy) |
-| `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification |
-| `--initcode` | ByteString | - | Constructor bytecode (hexadecimal) |
+<!-- | `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification | -->
+<!-- | `--initcode` | ByteString | - | Constructor bytecode (hexadecimal) | -->
 | `--sources` | Path | - | Path to JSON configuration file for multi-contract projects |
 | `--solver` | `cvc5\|z3\|bitwuzla` | `cvc5` | SMT solver to use for verification |
 | `--smttimeout` | Integer (ms) | `20000` | Timeout for each SMT query in milliseconds |

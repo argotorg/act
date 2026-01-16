@@ -1,3 +1,7 @@
+<div style="text-align: center;">
+  <img src="./images/logo/logo_bg[trns]_fg[ylw]_v01.png" alt="act logo" width="200"/>
+</div>
+
 # Introduction
 
 <!-- act is a high level specification language for evm programs. The core aim is to allow for easy
@@ -21,6 +25,8 @@ specification, which can either be used
 2. to prove its higher-level properties.
 
 A more detailed explanation of act's formal verification backends together with examples can be found in **Verification with act** sections.
+
+To **get started** with act, you can follow the installation instructions in the [Getting Started and Installation](./installation.md) section.
 
 ## act Verification Pipeline
 

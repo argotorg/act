@@ -1,9 +1,13 @@
 # Summary
 
+<div style="text-align: center;">
+  <img src="./images/logo/logo_bg[blk]_fg[ylw]_bd[ylw]_v01.png" alt="act logo"/>
+</div>
+
 # What is act?
 
-- [Getting Started and Installation](./installation.md) 
 - [Introduction](./introduction.md)
+- [Getting Started and Installation](./installation.md) 
 - [A First Look: ERC20 as Running Example](./running_ex.md)
 
 # Specification Language act
@@ -24,7 +28,6 @@
 
 - [hevm backend: Equivalence to EVM bytecode](./equiv.md)
 - [Rocq backend](./rocq.md) 
-- [Layout and Tooling](./layout_tooling.md)
     
 
 
