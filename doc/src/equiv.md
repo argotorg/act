@@ -1,5 +1,21 @@
 # hevm Backend: Checking Equivalence with EVM Bytecode
 
+**Table of Contents**
+
+- [Usage](#usage)
+  - [Basic Usage Patterns](#basic-usage-patterns)
+  - [Command-Line Flags](#command-line-flags)
+  - [Running the ERC20 Example](#running-the-erc20-example)
+  - [Expected Output for Successful Verification](#expected-output-for-successful-verification)
+  - [When Verification Fails: Example with Broken ERC20](#when-verification-fails-example-with-broken-erc20)
+  - [Verifying Multiple Contracts with --sources](#verifying-multiple-contracts-with---sources)
+  - [Additional Options](#additional-options)
+- [How it works](#how-it-works)
+  - [Success nodes](#success-nodes)
+  - [Equivalence check](#equivalence-check)
+
+---
+
 EVM bytecode can be formally verified to implement an act spec. This
 means that each successful behavior of the bytecode should be covered
 by the act spec. 
@@ -27,7 +43,7 @@ act hevm --spec <PATH_TO_SPEC> --sol <PATH_TO_SOL>
 act hevm --spec <PATH_TO_SPEC> --vy <PATH_TO_VY>
 ```
 
-**3. Multi-contract projects:**
+**3. Multi-contract projects:** (more info in [Multi-Contract Projects](#verifying-multiple-contracts-with---sources))
 ```sh
 act hevm --sources <PATH_TO_CONFIG_JSON>
 ```
@@ -44,12 +60,13 @@ act hevm --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYTE
 | `--spec` | Path | - | Path to the act specification file (.act) |
 | `--sol` | Path | - | Path to Solidity source file (.sol) |
 | `--vy` | Path | - | Path to Vyper source file (.vy) |
-<!-- | `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification | -->
-<!-- | `--initcode` | ByteString | - | Constructor bytecode (hexadecimal) | -->
 | `--sources` | Path | - | Path to JSON configuration file for multi-contract projects |
 | `--solver` | `cvc5\|z3\|bitwuzla` | `cvc5` | SMT solver to use for verification |
 | `--smttimeout` | Integer (ms) | `20000` | Timeout for each SMT query in milliseconds |
 | `--debug` | Boolean | `false` | Print verbose output including raw SMT queries |
+
+<!-- | `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification | -->
+<!-- | `--initcode` | ByteString | - | Constructor bytecode (hexadecimal) | -->
 
 ### Running the ERC20 Example
 
@@ -220,8 +237,6 @@ act hevm --sources project.json --solver bitwuzla --smttimeout 60000
 ```
 
 **Example: Automatic Market Maker (AMM) with Solidity and Vyper:**
-
-### Example: Multi-Language Verification
 
 The act repository includes an example with mixed languages in `tests/hevm/pass/multisource/amm/`:
 

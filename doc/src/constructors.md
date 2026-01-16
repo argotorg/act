@@ -6,12 +6,36 @@ Constructors in act specify the initial state of contract storage and the condit
 
 The general shape of a constructor in act is:
 
-```mermaid
-graph TD
-    A["constructor ?payable (<parameters>)"] --> B["iff <condition>"]
-    B -->|no branching| C["creates <storage_init>"]
-    B -->|branching| D["case <condition> : creates <storage_init>"]
-    D --> |...| E["case <condition> : creates <storage_init>"]
+```
+┌──────────────────────────────────────────────────────────────┐
+│         constructor ?payable (<parameters>)                  │
+└─────────────────────────┬────────────────────────────────────┘
+                          │
+                          ▼
+                  ┌───────────────--┐
+                  │ iff <condition> │
+                  └────────┬────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+      No branching                Branching (cases)
+              │                         │
+              ▼                         ▼
+    ┌──────────────────────┐  ┌──────────────────────────┐
+    │ creates              │  │ case <condition>:        │
+    │   <storage_init>     │  │   creates <storage_init> │
+    └──────────────────────┘  └──────────┬───────────────┘
+                                         │
+                                         ▼
+                                        ...
+                                        
+                                         │
+                                         ▼
+                              ┌──────────────────────────┐
+                              │ case <condition>:        │
+                              │   creates <storage_init> │
+                              └──────────────────────────┘
 ```
 
 **Components:**

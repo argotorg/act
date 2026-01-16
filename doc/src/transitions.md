@@ -6,24 +6,81 @@ Transitions in act specify the behavior of contract functions and the conditions
 
 The general shape of a transition that returns a value in act is:
 
-```mermaid
-graph TD
-    A["transition <name> ?payable (<parameters>) : <return_type> "] --> B["iff <condition>"]
-    B -->|no branching| C["updates <storage>"]
-    C --> G["returns <value>"]
-    B -->|branching| D["case <condition> : updates <storage>"]
-    D --> H["returns <value>"]
-    H -->|...| E["case <condition> : updates <storage>"]
-    E --> F["returns <value>"]
+```
+┌──────────────────────────────────────────────────────────────┐
+│  transition <name> ?payable (<parameters>) : <return_type>   │
+└─────────────────────────┬────────────────────────────────────┘
+                          │
+                          ▼
+                  ┌───────────────--┐
+                  │ iff <condition> │
+                  └────────┬────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              |                         |
+      No branching                Branching (cases)
+              │                         │
+              ▼                         ▼
+    ┌──────────────────┐      ┌──────────────────────┐
+    │ updates <storage>│      │ case <condition>:    │
+    └────────┬─────────┘      │   updates <storage>  │
+             │                └──────────┬───────────┘
+             ▼                           │
+    ┌──────────────────┐                ▼
+    │ returns <value>  │      ┌──────────────────────┐
+    └──────────────────┘      │ returns <value>      │
+                              └──────────┬───────────┘
+                                         │
+                                         ▼
+                                        ...
+
+                                         │
+                                         ▼
+                              ┌──────────────────────┐
+                              │ case <condition>:    │
+                              │   updates <storage>  │
+                              └──────────┬───────────┘
+                                         │
+                                         ▼
+                              ┌──────────────────────┐
+                              │ returns <value>      │
+                              └──────────────────────┘
 ```
 
 The general shape of a transition that does **not return** a value in act is:
-```mermaid
-graph TD
-    A["transition <name> ?payable (<parameters>) "] --> I["iff <condition>"]
-    I -->|no branching| J["updates <storage>"]
-    I -->|branching| K["case <condition> : updates <storage>"]  
-    K --> |...| L["case <condition> : updates <storage>"]
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│     transition <name> ?payable (<parameters>)                │
+└─────────────────────────┬────────────────────────────────────┘
+                          │
+                          ▼
+                  ┌───────────────--┐
+                  │ iff <condition> │
+                  └────────┬────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              |                         |
+      No branching                Branching (cases)
+              │                         │
+              ▼                         ▼
+    ┌──────────────────┐      ┌──────────────────────┐
+    │ updates <storage>│      │ case <condition>:    │
+    └──────────────────┘      │   updates <storage>  │
+                              └──────────┬───────────┘
+                                         │
+                                         ▼
+                                        ...
+                                        
+                                         │
+                                         ▼
+                              ┌──────────────────────┐
+                              │ case <condition>:    │
+                              │   updates <storage>  │
+                              └──────────────────────┘
+                                       
 ```
 
 
@@ -58,7 +115,7 @@ graph TD
 
 
 ## Transition Signatures
-Each externally callable function of the EVM smart contract source is specified as a transition. Similarly to constructors, transitions can be marked `payable` or non-payable (the default).
+Each externally callable function of the EVM smart contract source is specified as a transition. Similarly to constructors, transitions can be marked `payable` or non-payable (the default). Similarly to the constructors, for transitions that are not marked payable, act automatically internally adds a precondition that `CALLVALUE == 0`.
 
 
 For example the `transfer` transition of the ERC20 contract is non-payable and specified as:

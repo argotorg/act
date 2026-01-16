@@ -1,8 +1,8 @@
 # Type-Checking
 
-act's type-checking process ensures that specifications are both syntactically correct and semantically sound. It combines traditional static type-checking with semantic verification using SMT solvers. Type safety and soundness are proven in detail. <span style="color:green">  A full tech report will be available shortly. </span>
+act's type-checking process ensures that specifications are both syntactically correct and semantically sound. It combines traditional static type-checking with semantic verification using SMT solvers. Type safety is proven in detail. <span style="color:green">  A full tech report will be available shortly. </span>
 
-The type-checker implements the formal typing judgments defined in act's type system. It verifies that all expressions are well-typed according to typing rules which take storage declarations, interface parameters, and local bindings into account. 
+The type-checker implements the formal typing judgments defined in act's type system. It verifies that all expressions are well-typed according to typing rules, which take storage declarations, interface parameters, and local bindings into account. 
  The type-checker proceeds systematically: it first type-checks each contract's constructor, memorizing the constructor's storage declarations, then type-checks each transition against the updated environment. This ensures type consistency across the entire specification and catches errors like type mismatches, undefined variables, and invalid operations before proceeding to the verification backends.
 
  Additionally, the type-checker performs **semantic checks using SMT solvers** to verify properties that go beyond static typing. These checks ensure logical soundness and completeness of specifications and include verifying that:
@@ -60,7 +60,7 @@ When a constructor is called to create a new contract instance (e.g., `Token(100
 
 **Why this matters:**
 
-Contract creation is a crucial operation. If a constructor's preconditions aren't met, creation fails and the entire transaction reverts, which would therefore not actually initialize/update storage as specified. Therefore act has to ensure **every constructor call in the specification is valid**, for the entire act spec to be well-typed. <span style="color:red"> @Anja: please double-check my wording here (well-types, valid etc) </span>
+Contract creation is a crucial operation. If a constructor's preconditions aren't met, creation fails and the entire transaction reverts, which would therefore not actually initialize/update storage as specified. Therefore act has to ensure **every constructor call in the specification is valid**, for the entire act spec to be well-typed. 
 
 **How it works:**
 
@@ -99,7 +99,11 @@ For the constructor call `Amm(t0, t1)`, the SMT solver verifies that given the c
 - case conditions: none 
 - information about the values `t0`, `t1`: they are of type `address<Token>`
 
-the constructor precondition `t0 != t1` holds. In this example, this is clearly not the case, since `t0` and `t1` could be equal addresses. Therefore, this semantic check and would fail and therefore the  act specification does not type-check.  <span style="color:red"> What do we actually report if one of these checks fail? </span>
+the constructor precondition `t0 != t1` holds. In this example, this is clearly not the case, since `t0` and `t1` could be equal addresses. Therefore, this semantic check would fail and therefore the  act specification does not type-check, reporting an error 
+```sh
+Preconditions of constructor call to "Amm" are not guaranteed to hold
+``` 
+and listing a counterexample calldata.
 
 To fix the example, add the precondition `t0 != t1` to the `Wrapper` constructor.   
 
@@ -132,7 +136,7 @@ We revisit the transfer transition of the ERC20 contract:
 *(snippet from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act), transfer transition)*
 
 ```act
-transition example(address to, uint256 value) : bool
+transition transfer(address to, uint256 value) : bool
 iff
     inRange(uint256, balanceOf[CALLER] - value)
     CALLER != to ==> inRange(uint256, balanceOf[to] + value)

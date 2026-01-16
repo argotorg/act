@@ -1,5 +1,14 @@
 # Rocq Backend: Proving Properties of Specifications
 
+**Table of Contents**
+
+- [Usage](#usage)
+- [A Brief Introduction to Proof in Rocq](#a-brief-introduction-to-proof-in-rocq)
+- [act Export](#act-export)
+- [Proving properties using the act Rocq export](#proving-properties-using-the-act-rocq-export)
+
+---
+
 In order to reason about the contracts and prove their properties, the Rocq backend of act shallowly 
 embeds the act specification into the logic of the Rocq proof assistant.
 
@@ -229,8 +238,8 @@ true.
 ## act Export
 
 Calling `act rocq ...` will generate a Rocq file that encodes the contract as a state transition system,
-following the formal value semantics, given in the
-<span style="color:red">tech report (to be available shortly).</span>
+following the formal value semantics, given and **proven sound** in the
+<span style="color:green">tech report (to be available shortly).</span>
 
 The generated Rocq output will contain:
 - Gallina type definitions for contract **state**.
