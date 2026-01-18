@@ -105,13 +105,6 @@ isBoundedIntegerType :: TValueType a -> Maybe (a :~: AInteger)
 isBoundedIntegerType TUnboundedInt = Nothing
 isBoundedIntegerType t = testEquality (toSType t) SInteger
 
-refToRHS :: Ref k t -> Ref RHS t
-refToRHS (SVar p t i ci) = SVar p t i ci
-refToRHS (CVar p t i) = CVar p t i
-refToRHS (RMapIdx p r i) = RMapIdx p r i
-refToRHS (RArrIdx p r i n) = RArrIdx p (refToRHS r) i n
-refToRHS (RField p r i n) = RField p (refToRHS r) i n
-
 mkRefsBounds :: [TypedRef t] -> [Exp ABoolean t]
 mkRefsBounds refs = concatMap mkTRefBound refs
   where

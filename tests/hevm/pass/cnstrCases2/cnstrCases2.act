@@ -1,0 +1,54 @@
+contract A
+constructor(uint x, uint y, uint z)
+
+iff CALLVALUE == 0
+    x > 4  ==> y < z
+    x <= 4 ==> y > z
+
+case x > 4:
+  creates
+    uint s := y
+
+case x <= 4:
+  creates
+    uint s := z
+
+contract B
+constructor(uint w, uint u, uint v)
+
+iff CALLVALUE == 0
+    w > 67  ==> (
+      (u > 4  ==> v < w) and
+      (u <= 4 ==> v > w)
+      )
+    w <= 67 ==> (
+      (v > 4  ==> u < w) and
+      (v <= 4 ==> u > w)
+      )
+
+case w > 67:
+  creates
+    A a := new A(u, v, w)
+
+case w <= 67:
+  creates
+    A a := new A(v, u, w)
+
+
+transition foo(uint y)
+
+iff CALLVALUE == 0
+    inRange(uint, y+5)
+
+updates
+  a := new A(y+5, y, y+1)
+
+
+contract C
+constructor(uint z)
+
+iff CALLVALUE == 0
+    z <= 4 
+
+creates
+  B b := new B(z,z+1,z)

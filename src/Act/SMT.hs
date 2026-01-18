@@ -663,12 +663,6 @@ mkConstantAssertion name updates tref@(TRef _ _ ref) = constancy
 encodeConstant :: Id -> [TypedRef] -> [TypedRef] -> [SMT2]
 encodeConstant name updated locs = fmap (mkConstantAssertion name updated) locs
 
-refToRHS :: Ref k -> Ref RHS
-refToRHS (SVar p t i ci) = SVar p t i ci
-refToRHS (CVar p t i) = CVar p t i
-refToRHS (RMapIdx p r i) = RMapIdx p r i
-refToRHS (RArrIdx p r i n) = RArrIdx p (refToRHS r) i n
-refToRHS (RField p r i n) = RField p (refToRHS r) i n
 
 -- | encodes a storage update rewrite as an smt assertion
 encodeUpdate :: Id -> StorageUpdate -> SMT2
@@ -741,7 +735,7 @@ expToSMT2 typ expr = case expr of
   IntMax _ a -> pure . show $ intmax a
   UIntMin _ a -> pure . show $ uintmin a
   UIntMax _ a -> pure . show $ uintmax a
-  InRange _ t e -> expToSMT2 typ (bound t e)
+  InRange _ t e -> expToSMT2 typ (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
   -- bytestrings
   Cat _ a b -> binop "str.++" SByteStr SByteStr a b

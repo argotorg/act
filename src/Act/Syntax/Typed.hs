@@ -199,8 +199,15 @@ data TypedRef (t :: Timing) where
   TRef :: TValueType a -> SRefKind k -> Ref k t -> TypedRef t
 deriving instance Show (TypedRef t)
 
+refToRHS :: Ref k t -> Ref RHS t
+refToRHS (SVar p t i ci) = SVar p t i ci
+refToRHS (CVar p t i) = CVar p t i
+refToRHS (RMapIdx p r i) = RMapIdx p r i
+refToRHS (RArrIdx p r i n) = RArrIdx p (refToRHS r) i n
+refToRHS (RField p r i n) = RField p (refToRHS r) i n
+
 instance Eq (TypedRef t) where
-  TRef vt1@VType SRefKind r1 == TRef vt2@VType SRefKind r2 = eqS'' vt1 vt2 && eqKind' r1 r2
+  TRef vt1@VType SRefKind r1 == TRef vt2@VType SRefKind r2 = eqS'' vt1 vt2 && refToRHS r1 == refToRHS r2
 
 
 -- | Expressions for which the return type is known.

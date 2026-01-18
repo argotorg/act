@@ -274,7 +274,7 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   cores <- liftM fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processSources
   specsContents <- intercalate "\n" <$> traverse readFile actspecs
-  proceed specsContents (first addBounds <$> compile specsContents) $ \(Act store contracts, constraints) -> do
+  proceed specsContents (compile specsContents) $ \(Act store contracts, constraints) -> do
     checkTypeConstraints specsContents solver' timeout debug' constraints
     cmap <- createContractMap contracts inputsMap
     res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
