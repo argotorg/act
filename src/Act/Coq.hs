@@ -7,7 +7,13 @@
  - + external storage
  - + casting from addresses to contract
  -
- -}
+ - TODO: flip to create Sets for i.e. in addressIm
+ - TODO: integer bounds on calldata, and address constrains as well
+ - TODO: Replace THIS with NextAddr in constrs
+ - TODO: Maybe _creates and _updates are inductive as well?
+ - TODO: initBefore will maybe need to return new NextAddr
+ - TODO: Consistent predicate
+ - -}
 
 {-# Language OverloadedStrings #-}
 {-# Language RecordWildCards #-}
@@ -881,7 +887,7 @@ coqexp (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
 coqexp (UIntMin _ n) = parens $ "UINT_MIN" <+> T.pack (show n)
 coqexp (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
 
-coqexp (InRange _ vt e) = coqexp (bound vt e)
+coqexp (InRange _ t e) = coqexp (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
 -- polymorphic
 coqexp (VarRef _ _ r) = ref r
@@ -954,7 +960,7 @@ coqprop (LT _ e1 e2)   = parens $ coqexp e1 <+> "<"  <+> coqexp e2
 coqprop (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=" <+> coqexp e2
 coqprop (GT _ e1 e2)   = parens $ coqexp e1 <+> ">"  <+> coqexp e2
 coqprop (GEQ _ e1 e2)  = parens $ coqexp e1 <+> ">=" <+> coqexp e2
-coqprop (InRange _ t e) = coqprop (bound t e)
+coqprop (InRange _ t e) = coqprop (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 coqprop (ITE _ b e1 e2) =
   parens $ "if" <+> coqbool b <+> "then" <+> coqexp e1 <+> "else" <+> coqexp e2
 
@@ -973,7 +979,7 @@ coqbool (LT _ e1 e2)   = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
 coqbool (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
 coqbool (GT _ e1 e2)   = parens $ coqexp e1 <+> ">?"  <+> coqexp e2
 coqbool (GEQ _ e1 e2)  = parens $ coqexp e1 <+> ">=?" <+> coqexp e2
-coqbool (InRange _ t e) = coqbool (bound t e)
+coqbool (InRange _ t e) = coqbool (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
 coqbool e = error "ill formed proposition:" <+> T.pack (show e)
 

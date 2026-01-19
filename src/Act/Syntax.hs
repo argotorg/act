@@ -629,7 +629,7 @@ isWild (Untyped.Case _ (WildExp _) _) = True
 isWild _                      = False
 
 bound :: TValueType AInteger -> Exp AInteger t -> Exp ABoolean t
-bound typ e = And nowhere (LEQ nowhere (lowerBound typ) e) $ LEQ nowhere e (upperBound typ)
+bound typ e = InRange nowhere typ e
 
 lowerBound :: forall t. TValueType AInteger -> Exp AInteger t
 lowerBound (TInteger a Signed) = IntMin nowhere a

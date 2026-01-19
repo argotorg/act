@@ -10,7 +10,7 @@
 {-# Language InstanceSigs #-}
 {-# Language TupleSections #-}
 
-module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors, addCalldata, addPreconds, emptyEnv, addIffs) where
+module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors, addCalldata, addPreconds, emptyEnv, addIffs, hasSign) where
 
 import Prelude hiding (GT, LT)
 import Data.Map.Strict    (Map)
@@ -432,7 +432,7 @@ checkAssign env (U.StorageVar p (ValueType typ) var, expr) = do
 -- | Check that a type is a valid slot type
 validSlotType :: Env -> Pn -> TValueType a -> Err ()
 validSlotType _ p (TInteger size _) =
-    unless (size `elem` [8,16,32,64,128,256]) $
+    unless (size `elem` [i*8 | i <- [1..32]]) $
     throw (p, "Invalid integer size: " <> show size)
 validSlotType env p (TContract c) =
     case Map.lookup c (storage env) of
