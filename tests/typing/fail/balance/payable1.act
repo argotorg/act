@@ -1,0 +1,26 @@
+contract PayableVault
+
+constructor()
+
+creates
+  mapping(address => uint256) credit := [CALLER => 0]
+  uint256 totalCredit := 0
+  // should fail because BALANCE is declared with the wrong type
+  uint128 BALANCE := 0
+
+transition deposit() payable : uint256
+
+iff
+  CALLVALUE > 0
+
+  // Prevent overflow in accounting
+  inRange(uint256, credit[CALLER] + CALLVALUE)
+  inRange(uint256, totalCredit + CALLVALUE)
+  inRange(uint256, BALANCE + CALLVALUE)
+
+updates
+  credit := credit [ CALLER => credit[CALLER] + CALLVALUE ]
+  totalCredit := totalCredit + CALLVALUE
+  BALANCE := BALANCE + CALLVALUE
+
+returns credit[CALLER]
