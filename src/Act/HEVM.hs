@@ -59,6 +59,8 @@ import EVM.Format as Format
 import EVM.Traversals
 import qualified Data.Bifunctor as Bifunctor
 
+import Debug.Trace
+
 type family ExprType a where
   ExprType 'AInteger  = EVM.EWord
   ExprType 'ABoolean  = EVM.EWord
@@ -94,7 +96,10 @@ slotMap store lmap =
       let vars = sortOn (snd . snd) $ M.toList cstore
           layoutMode = fromJust $ M.lookup cid lmap
       in
-      (layoutMode, M.fromList $ makeLayout layoutMode vars 0 0)
+        case vars of
+          ("BALANCE", (_, -1)):vars' -> -- remove BALANCE from layout
+            (layoutMode, M.fromList $ makeLayout layoutMode vars' 0 0)
+          _ -> (layoutMode, M.fromList $ makeLayout layoutMode vars 0 0) -- shouldn't not be reachable
   ) store
 
 makeLayout :: LayoutMode -> [(String, (ValueType, Integer))] -> Int -> Int -> [(Id, (Int,Int,Int,Bool))]
@@ -311,7 +316,7 @@ symAddrCnstr :: ContractMap -> [EVM.Prop]
 symAddrCnstr cmap =
     (\(a1, a2) -> EVM.PNeg (EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2))) <$> comb (M.keys cmap)
 
-translateBehvs :: Monad m => ContractMap -> [Behaviour] -> ActT m [(Id, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])]
+translateBehvs :: Monad m => ContractMap -> [Behaviour] -> ActT m [(Id, IsPayable, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])]
 translateBehvs cmap behvs = mapM (translateBehv cmap) behvs
 
 ifaceToSig :: Id -> Interface -> Sig
@@ -319,8 +324,8 @@ ifaceToSig name (Interface _ args) = Sig (T.pack name) (fmap fromdecl args)
   where
     fromdecl (Arg argtype _) = argToAbiType argtype
 
-translateBehv :: Monad m => ContractMap -> Behaviour -> ActT m (Id, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])
-translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
+translateBehv :: Monad m => ContractMap -> Behaviour -> ActT m (Id, IsPayable, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])
+translateBehv cmap (Behaviour behvName _ iface payable preconds cases _)  = do
   let argConstraints = signExtendArgConstraints iface
   -- We collect all integer bounds from all cases of a given behaviour.
   -- These bounds are set as preconditions for all cases of a behaviour,
@@ -333,7 +338,7 @@ translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
     -- Branch into a path for each transition case
     bcase <- lift . lift $ fromFoldable cases
     (translateBehvCase cmap (snd behvCalldata) bounds preconds) bcase
-  pure (behvName,  first (addPathCondition argConstraints) <$> (integratePathConds <$> ends), behvCalldata, behvSig, bounds)
+  pure (behvName, payable, first (addPathCondition argConstraints) <$> (integratePathConds <$> ends), behvCalldata, behvSig, bounds)
   where
     behvCalldata = makeCalldata behvName iface
     behvSig = ifaceToSig behvName iface
@@ -356,6 +361,19 @@ applyUpdate :: Monad m => ContractMap -> ContractMap -> CallEnv -> StorageUpdate
 applyUpdate readMap writeMap callenv (Update typ@VType ref e) = writeToRef readMap writeMap callenv (TRef typ SLHS ref) (TExp typ e)
 
 writeToRef :: Monad m => ContractMap -> ContractMap -> CallEnv -> TypedRef -> TypedExp -> ActBTT m ContractMap
+writeToRef readMap writeMap callenv (TRef _ _ ref) (TExp typ e) | isBalanceRef ref = do
+    case typ of
+        TInteger _ _ -> do
+          caddr' <- baseAddr writeMap callenv ref
+          e' <- toExpr readMap callenv e
+          let (contract, cid) = fromMaybe (error $ "Internal error: contract not found\n" <> show e) $ M.lookup caddr' writeMap
+          pure $ M.insert caddr' (updateBalance e' contract, cid) writeMap
+        _ -> error $ "Internal error: BALANCE can only be assigned an integer value, found " ++ show typ
+  where
+    updateBalance :: EVM.Expr EVM.EWord -> EVM.Expr EVM.EContract -> EVM.Expr EVM.EContract
+    updateBalance bal (EVM.C code storage tstorage _ nonce) = EVM.C code storage tstorage bal nonce
+    updateBalance _ (EVM.GVar _) = error "Internal error: contract cannot be a global variable"
+
 writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
   caddr' <- baseAddr writeMap callenv ref
   (addr, offset, size, signextend, _) <- refOffset writeMap callenv ref
@@ -451,6 +469,12 @@ writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
     expandMappingUpdate _ e'@(ITE _ _ _ _) = error $ "Internal error: expecting flat expression. got: " <> show e'
     expandMappingUpdate _ (VarRef _ _ _) = error "Internal error: variable assignment of mappings not expected"
 
+isBalanceRef :: Ref k -> Bool
+isBalanceRef (SVar _ _ _ name) = name == "BALANCE"
+isBalanceRef CVar{} = False
+isBalanceRef RArrIdx{} = False
+isBalanceRef RMapIdx{} = False
+isBalanceRef (RField _ _ _ x) = x == "BALANCE"
 
 createCastedContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActBTT m ContractMap
 createCastedContract readMap writeMap callenv freshAddr (Address _ _ (Create pn cid args b)) =
@@ -817,6 +841,13 @@ extractValue slot offset size signext lm =
     lsbsToWord (size*8) signext lm (EVM.SHR bits slot)
 
 refToExp :: forall m k. Monad m => ContractMap -> CallEnv -> Ref k -> ActBTT m (EVM.Expr EVM.EWord)
+--  reference to balance
+refToExp cmap callenv ref | isBalanceRef ref = do
+    caddr <- baseAddr cmap callenv ref
+    case M.lookup caddr cmap of
+      Just (EVM.C _ _ _ bal _, _) -> pure bal
+      Just (EVM.GVar _, _) -> error "Internal error: contract cannot be a global variable"
+      Nothing -> error $ "Internal error: contract not found " <> show caddr <> "\nmap:" <> show cmap
 -- calldata variable
 refToExp _ callenv (CVar _ typ x) = do
     lm <- getLayoutMode
@@ -1021,17 +1052,17 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface _ preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface payable preconds _ _ _)  _) = do
   -- Construct the initial contract state
   (actinitmap, checks) <- getInitContractState solvers cname iface preconds M.empty
-  let hevminitmap = translateCmap actinitmap
+  let (hevminitmap, checks') = translateCmap actinitmap payable
   -- Translate Act constructor to Expr
   fresh <- getFresh
   (actbehvs, calldata, sig, bounds) <- translateConstructor runtimecode ctor actinitmap
   let (behvs', fcmaps) = unzip actbehvs
     -- Symbolically execute bytecode
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
-  solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata bounds fresh
+  solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata (checks' ++ bounds) fresh
 
 
   -- Check equivalence
@@ -1046,15 +1077,20 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
 
 checkBehaviours :: forall m. App m => SolverGroup -> Contract -> ContractMap -> ActT m (Error String ())
 checkBehaviours solvers (Contract _ behvs) actstorage = do
-  let hevmstorage = translateCmap actstorage
   fresh <- getFresh
   actbehvs <- translateBehvs actstorage behvs
-  (fmap $ concatError def) $ forM actbehvs $ \(name,actbehv,calldata,sig,bounds) -> do
+  (fmap $ concatError def) $ forM actbehvs $ \(name,payable,actbehv,calldata,sig,bounds) -> do
     let (behvs', fcmaps) = unzip actbehv
-
-    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata bounds fresh
-
-
+    let (hevmstorage, checks) = translateCmap actstorage payable
+    
+    solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata (checks ++ bounds) fresh
+    
+    -- when (name == "deposit") $ do
+    --     traceM "Act"
+    --     traceM (showBehvs behvs') 
+    --     traceM "Solidity"
+    --     traceM (showBehvs solbehvs) 
+    
     lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
     -- equivalence check
     lift $ showMsg "\x1b[1mChecking if behaviour is matched by EVM\x1b[m"
@@ -1069,23 +1105,29 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
     def = Success ()
 
 
-translateCmap :: ContractMap -> [(EVM.Expr EVM.EAddr, EVM.Contract)]
-translateCmap cmap = (\(addr, (c, _)) -> (addr, toContract c)) <$> M.toList cmap
+translateCmap :: ContractMap -> IsPayable -> ([(EVM.Expr EVM.EAddr, EVM.Contract)], [EVM.Prop])
+translateCmap cmap payable = foldl go ([], []) (M.toList cmap)
   where
-    toContract :: EVM.Expr EVM.EContract -> EVM.Contract
-    toContract (EVM.C code storage tstorage balance nonce) = EVM.Contract
-      { EVM.code        = code
-      , EVM.storage     = storage
-      , EVM.tStorage    = tstorage
-      , EVM.origStorage = storage
-      , EVM.balance     = balance
-      , EVM.nonce       = nonce
-      , EVM.codehash    = EVM.hashcode code
-      , EVM.opIxMap     = EVM.mkOpIxMap code
-      , EVM.codeOps     = EVM.mkCodeOps code
-      , EVM.external    = False
-      }
-    toContract (EVM.GVar _) = error "Internal error: contract cannot be gvar"
+    go (storage, props) (addr, (c, _)) = 
+        let (contract, newprops) = toContract addr c in
+        ((addr, contract):storage, newprops ++ props)
+    
+    toContract :: EVM.Expr EVM.EAddr -> EVM.Expr EVM.EContract -> (EVM.Contract, [EVM.Prop])
+    toContract addr (EVM.C code storage tstorage balance nonce) = 
+      (EVM.Contract
+        { EVM.code        = code
+        , EVM.storage     = storage
+        , EVM.tStorage    = tstorage
+        , EVM.origStorage = storage
+        , EVM.balance     = if payable == Payable && addr == initAddr then EVM.Add EVM.TxValue balance else balance
+        , EVM.nonce       = nonce
+        , EVM.codehash    = EVM.hashcode code
+        , EVM.opIxMap     = EVM.mkOpIxMap code
+        , EVM.codeOps     = EVM.mkCodeOps code
+        , EVM.external    = False
+        }
+      , [EVM.PLEq balance (EVM.Add EVM.TxValue balance) | payable == Payable && addr == initAddr])
+    toContract _ (EVM.GVar _) = error "Internal error: contract cannot be gvar"
 
 
 -- TODO: Lefteris: Shouldn't this only check for typed addresses?
@@ -1110,7 +1152,6 @@ abstractCmap this cmap =
       (EVM.C code (simplify (traverseStorage addr (simplify storage))) tstorage (EVM.Balance addr) (Just 0), cid)
     makeContract _ (EVM.GVar _, _) = error "Internal error: contract cannot be gvar"
 
--- | Extracts the address from a slot's value, if it exists
 -- Since only one address fits in each slot, we weed to find the topmost one stored in each slot
 slotAddress :: EVM.Expr EVM.EWord -> Maybe (EVM.Expr EVM.EWord)
 slotAddress = fmap fst . go
@@ -1258,7 +1299,7 @@ checkInputSpaces solvers l1 l2 = do
 checkAbi :: App m => SolverGroup -> Contract -> ContractMap -> m (Error String ())
 checkAbi solver contract cmap = do
   showMsg "\x1b[1mChecking if the ABI of the contract matches the specification\x1b[m"
-  let hevmstorage = translateCmap cmap
+  let (hevmstorage, _) = translateCmap cmap NonPayable
   let txdata = EVM.AbstractBuf "txdata"
   let selectorProps = assertSelector txdata <$> nubOrd (actSigs contract)
   evmBehvs <- getRuntimeBranches solver hevmstorage (txdata, []) [] 0 -- TODO what freshAddr goes here?
@@ -1346,7 +1387,7 @@ checkResult calldata sig res =
           pure $ Success ()
     True -> do
       let cexs = mapMaybe getCex res
-      showMsg $ T.unpack . T.unlines $ [ "\x1b[41mNot equivalent.\x1b[m", "" , "-----", ""] <> (intersperse (T.unlines [ "", "-----" ]) $ fmap (\(msg, cex) -> T.pack msg <> "\n" <> formatCex (fst calldata) sig cex) cexs)
+      showMsg $ T.unpack . T.unlines $ [ "\x1b[41mNot equivalent.\x1b[m", "" , "-----", ""] <> (intersperse (T.unlines [ "", "-----" ]) $ fmap (\(msg, cex) -> T.pack msg <> "\n" <> T.pack (show cex)) cexs)
       pure $ Failure $ NE.singleton (nowhere, "Failure: Cannot prove equivalence.")
 
 -- | Pretty prints a list of hevm behaviours for debugging purposes
