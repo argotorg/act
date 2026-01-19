@@ -154,7 +154,7 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
     -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
     checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    -- 
     -- check postconditions
-    (checkConstrCases env'' cases) `bindValidation` \(storageType, cases', cnstr2) -> do
+    (checkConstrCases env'' (initBalance payable cases)) `bindValidation` \(storageType, cases', cnstr2) -> do
     -- construct the new environment
     let env''' = addConstrStorage cid storageType env''
     -- check case consistency
@@ -377,6 +377,26 @@ addCallvalueZeroPrecond NonPayable iffs =
     (U.EEq nowhere (U.EnvExp nowhere Callvalue) (U.IntLit nowhere 0)) : iffs
 
 
+-- | Implicitly add uint256 BALANCE if the constructor is not payable
+initBalance :: IsPayable -> [U.Case U.Creates] -> [U.Case U.Creates]
+initBalance Payable cases = cases
+initBalance NonPayable cases =
+    map addBalanceToCase cases
+  where
+    -- Add balance to list of assignments
+    addBalanceToCase :: U.Case U.Creates -> U.Case U.Creates
+    addBalanceToCase (U.Case p cond updates) =
+        if hasBalanceField updates then
+            U.Case p cond updates
+        else
+          let balanceUpdate = (U.StorageVar p (ValueType (TInteger 256 Unsigned)) "BALANCE", U.IntLit nowhere 0) in
+          U.Case p cond (balanceUpdate : updates)
+    
+    -- Check if BALANCE is already there
+    hasBalanceField :: [U.Assign] -> Bool
+    hasBalanceField [] = False
+    hasBalanceField ((U.StorageVar _ _ name, _):rest) =
+        (name == "BALANCE") || hasBalanceField rest
 
 -- | Check that case conditions in a case block are mutually exclusive and exhaustive
 checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
