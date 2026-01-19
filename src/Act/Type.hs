@@ -225,6 +225,7 @@ checkConstrCases env cases = do
     checkStorageTyping ((U.Case _ _ assigns):_) = do
         let typing = makeStorageTyping assigns 0
         consistentStorageTyping typing cases
+        balanceConsistent assigns
         noDuplicates assigns
         pure $ Map.fromList typing
 
@@ -235,10 +236,23 @@ checkConstrCases env cases = do
         (assert (p, "Duplicate storage variable " <> show name) (not (any (\(U.StorageVar _ _ n, _) -> n == name) rest))) *>
         noDuplicates rest
 
+    -- check that BALANCE is always declared with the right type
+    balanceConsistent :: [U.Assign] -> Err ()
+    balanceConsistent [] = pure ()
+    balanceConsistent ((U.StorageVar p (ValueType typ) name, _):rest) =
+        if name == "BALANCE" then
+            (assert (p, "BALANCE must be of type uint256") (eqS'' typ (TInteger 256 Unsigned))) *>
+            balanceConsistent rest
+        else
+            balanceConsistent rest
+
     -- make the storage typing from a list of assignments
     makeStorageTyping :: [U.Assign] -> Integer ->  [(Id, (ValueType, Integer))]
     makeStorageTyping [] _ = []
-    makeStorageTyping ((U.StorageVar _ typ name, _):rest) slot = (name, (typ, slot)):makeStorageTyping rest (slot + 1)
+    makeStorageTyping ((U.StorageVar _ typ name, _):rest) slot = 
+        -- The BALANCE field is a special case as it is not a storage variable so we map it to slot -1
+        if name == "BALANCE" then (name, (typ, -1)):makeStorageTyping rest slot
+        else (name, (typ, slot)):makeStorageTyping rest (slot + 1)
 
     -- check that the storage typing is the same across all cases
     consistentStorageTyping :: [(Id, (ValueType, Integer))] -> [U.Case U.Creates] -> Err ()
