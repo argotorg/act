@@ -27,7 +27,7 @@ The general shape of a transition that returns a value in act is:
     └────────┬─────────┘      │   updates <storage>  │
              │                └──────────┬───────────┘
              ▼                           │
-    ┌──────────────────┐                ▼
+    ┌──────────────────┐                 ▼
     │ returns <value>  │      ┌──────────────────────┐
     └──────────────────┘      │ returns <value>      │
                               └──────────┬───────────┘
@@ -73,7 +73,7 @@ The general shape of a transition that does **not return** a value in act is:
                                          │
                                          ▼
                                         ...
-                                        
+
                                          │
                                          ▼
                               ┌──────────────────────┐
@@ -329,8 +329,14 @@ Let's consider now the `Asset` contract above.
    - `admins := Admins(new_admin1)` (general update)
    - `admins.admin2 := new_admin2` (specific field update)
   
-This ordering is necessary to ensure that the right-hand side of the second update `admins.admin2 := new_admin2` refers to the updated value of `admins` from the first update. This is needed to maintain  updates as equations that hold afterward the transition. 
-The ordering is a design choice required for sound and unambiguous semantics.
+This ordering is necessary to ensure that the updates have unambiguous semantics. 
+Otherwise the general update would "rewrite" the specific field update, making
+the specification of that field obsolete and potentially confusing. 
+The references on the left-hand side of the equations are evaluated sequentially, such that
+potentially newly created contract addresses can also be reached when updating 
+a specific field of such contract: that means the right-hand side of the second update `admins.admin2 := new_admin2` refers to the updated value of `admins` from the first update.
+
+This ordering is part of act's type system: a specification violating this property would raise an error during type checking.
 
  <!-- If we had written the specific field update first, it would have referred to the old value of `admins`, which is not what we want.
 
@@ -342,10 +348,6 @@ updates
    admins.admin2 := new_admin2
    admins := Admins(new_admin1)
 ``` -->
-
-
-
-<span style="color:red"> please improve my explanation here. </span>
 
 
 <!-- transition foo(uint256 newSupply, address to, uint256 value)

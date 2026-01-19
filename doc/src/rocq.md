@@ -38,6 +38,10 @@ act rocq --file <PATH_TO_SPEC>
 ```
 against your spec.
 
+Note: there is currently no support for generating the Rocq output when the contracts
+are specified in multiple files, so you may need to combine them into a single file for
+Rocq to process them. Support for multiple sources is underway.
+
 #### Rocq Command-Line Flags
 
 | Flag | Type | Default | Description |
@@ -278,17 +282,15 @@ Module Token.
 
 Record State : Set := state
 { addr : address
+; balance : Z
 ; allowance : address -> address -> Z
 ; balanceOf : address -> Z
 ; totalSupply : Z
 }.
 ```
-The contract will be represented as a record with the fields corresponding to the storage variables.
-Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; 
-and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
-The `Actlib` also defines an **environment** type, which is a record that 
-represents the context in which the contract is executed. It also contains Ethereum environment variables, 
-such as the call value, the caller address, and the current block information, as well as the next available address.
+The contract will be represented as a record with the fields corresponding to the storage variables, and two additional
+fields: the address of the contract `addr` and the balance of the contract (the number of wei sent to it) `balance`.
+Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`. The `Actlib` also defines an **environment** type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value, the caller address, and the current block information, as well as the next available address.
 The structure of the environment in Rocq is as follows:
 ```rocq
 Record Env : Set :=
@@ -307,6 +309,9 @@ Record Env : Set :=
     Calldepth : Z;
     NextAddr : address }.
 ```
+
+<span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
+how the balance is handled.</span>
 
 Next, the output contains some additional type definitions, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">some of these may be outdated.</span>).
 ```Rocq
@@ -354,13 +359,14 @@ Next, the `Token` constructor state transition of type `Env -> Z -> Env * State`
 Definition Token (ENV : Env) (_totalSupply : Z) :=
   let ENV1 := NextEnv ENV in
   (ENV1, state (NextAddr ENV) 
+               0
                (fun _binding_0 _binding_1 => ((fun _ _ => 0) _binding_0 _binding_1)) 
                (fun _binding_0 => if ((_binding_0=?(Caller ENV)))%bool 
                                   then _totalSupply 
                                   else ((fun _ => 0) _binding_0)) 
                 _totalSupply).
 ```
-The constructor will take the environment and its input arguments, and produce a new environment and a new state for the token contract. The contract will be stored in the next address `NextAddr ENV`. The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
+The constructor will take the environment and its input arguments, and produce a new environment and a new state for the token contract. The contract will be stored in the next address `NextAddr ENV` and initialize the `balance` field to 0 (as the constructor is not payable). The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
 
 Similarly, a state transition is generated for every case of every transition in the contract specification.
 
@@ -580,6 +586,37 @@ Definition balanceOf_sum (STATE : State) :=
 ```
 
 The (manual) proof of the theorem then completes the pipeline.
+
+An example of how to use the `invariantReachable` lemma can be found in the 
+proof of the solvency invariant for the Automated Marker Maker (AMM) contract 
+[amm.act](https://github.com/argotorg/act/tree/main/tests/coq/amm).
+
+For instance, one of the properties required is that
+the AMM reserves are non-negative:
+
+```rocq
+Definition Amm_reserve_nneg_Prop 
+  (ENV : Env) (T0 T1 : Token.State) 
+  (L : Z) (STATE : State) 
+  : Prop :=
+  0 <= reserve0 STATE /\ 0 <= reserve1 STATE.
+```
+And proving this as a lemma directly applies the `invariantReachable`.
+```
+Lemma Amm_reserve_nneg_reach : 
+  forall (ENV : Env) (t0 : Token.State) 
+  (t1 : Token.State) (liquidity : Z) (STATE : State),
+  reachableFromInit ENV t0 t1 liquidity (STATE : State)
+  -> Amm_reserve_nneg_Prop ENV t0 t1 liquidity STATE
+.
+Proof.
+  intros.
+  apply invariantReachable.
+  exact Amm_reserve_nneg_init.
+  exact Amm_reserve_nneg_step.
+  assumption.
+Qed.
+```
 
 
 <!-- Old Exponent contract -->

@@ -24,6 +24,7 @@ Record State := {t0: Token.State; t1: Token.State}
 In this example, if `a0` and `a1` point to the same ERC20 `Token` contract, then the `transfer` transition update of `t0.balanceOf` will also affect `t1.balanceOf`, breaking the functional abstraction we want to achieve (namely modifying only the `t0` field in the record).
 <!-- Maybe we can run act and show the error it reports? -->
 <!-- We can also specify how this record will look like in the rocq output. -->
-However, if we can prove that `t0` and `t1` can never alias then we can safely reason about their state changes independently. Note that including an `iff a0 != a1` condition in the constructor's preconditions is required, but not sufficient, as the `Token` contract itself also needs to preclude aliasing. 
+However, if we can prove that `t0` and `t1` can never alias then we can safely reason about their state changes independently. Note that including an `iff a0 != a1` condition in the constructor's preconditions is required, but not sufficient, as the `Token` contract itself also needs to avoid aliasing. But since we also have the `Token` contract specification ready, act will verify the unique ownership property also for that.
 
 This unique ownership property is verified automatically for act specifications using symbolic execution and SMT solving.
+Note that the unique ownership property is not an implicit check in act, but rather an implicit **assumption**, that we then check whether or not it is preserved in the post-state, to make sure it is upheld as an invariant.
