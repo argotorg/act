@@ -99,173 +99,32 @@
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "contract": "B",
-                        "kind": "SVar",
-                        "svar": "x",
-                        "time": "Pre"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "contract": "B",
-                        "kind": "SVar",
-                        "svar": "x",
-                        "time": "Pre"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "B",
+                    "kind": "SVar",
+                    "svar": "x",
+                    "time": "Pre"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "-57896044618658097711785492504343953926634992332820282019728792003956564819968",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Signed",
-                      "var": {
-                        "indexes": {
-                          "timing": "TInteger 256 Unsigned",
-                          "var": {
-                            "contract": "B",
-                            "kind": "SVar",
-                            "svar": "x",
-                            "time": "Pre"
-                          }
-                        },
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a",
-                          "time": "Pre"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "Int"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Signed",
-                      "var": {
-                        "indexes": {
-                          "timing": "TInteger 256 Unsigned",
-                          "var": {
-                            "contract": "B",
-                            "kind": "SVar",
-                            "svar": "x",
-                            "time": "Pre"
-                          }
-                        },
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a",
-                          "time": "Pre"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "57896044618658097711785492504343953926634992332820282019728792003956564819967",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "contract": "B",
-                        "kind": "SVar",
-                        "svar": "x",
-                        "time": "Pre"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
+                  "timing": "TInteger 256 Signed",
+                  "var": {
+                    "indexes": {
                       "timing": "TInteger 256 Unsigned",
                       "var": {
                         "contract": "B",
@@ -274,119 +133,96 @@
                         "time": "Pre"
                       }
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
+                    "kind": "Array",
+                    "reference": {
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "a",
+                      "time": "Pre"
                     }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "-57896044618658097711785492504343953926634992332820282019728792003956564819968",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Signed",
-                      "var": {
-                        "indexes": {
-                          "timing": "TInteger 256 Unsigned",
-                          "var": {
-                            "contract": "B",
-                            "kind": "SVar",
-                            "svar": "x",
-                            "time": "Pre"
-                          }
-                        },
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a",
-                          "time": "Pre"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Signed",
-                      "var": {
-                        "indexes": {
-                          "timing": "TInteger 256 Unsigned",
-                          "var": {
-                            "contract": "B",
-                            "kind": "SVar",
-                            "svar": "x",
-                            "time": "Pre"
-                          }
-                        },
-                        "kind": "Array",
-                        "reference": {
-                          "contract": "B",
-                          "kind": "SVar",
-                          "svar": "a",
-                          "time": "Pre"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "57896044618658097711785492504343953926634992332820282019728792003956564819967",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Callvalue",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "B",
+                    "kind": "SVar",
+                    "svar": "x",
+                    "time": "Pre"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "Int"
+                },
+                {
+                  "timing": "TInteger 256 Signed",
+                  "var": {
+                    "indexes": {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "x",
+                        "time": "Pre"
+                      }
+                    },
+                    "kind": "Array",
+                    "reference": {
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "a",
+                      "time": "Pre"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
             }
           ]
         }
@@ -395,6 +231,18 @@
         "cases": [
           {
             "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
               {
                 "location": {
                   "contract": "B",
@@ -467,70 +315,30 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           }
         ]
       },
@@ -542,6 +350,13 @@
     "kind": "Storages",
     "storages": {
       "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "a": [
           {
             "arrayType": {

@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Act.Bounds (addBounds, addBoundsConstructor, boundsConstructor, addBoundsBehaviour, boundsBehaviour, mkRefsBounds, mkEthEnvBounds) where
-    
+
 import Data.Maybe
 import Data.List (nub)
 import Data.Type.Equality
@@ -131,4 +131,6 @@ mkCallDataBounds = concatMap $ \(Arg argtyp name) -> case argtyp of
          ValueType t@(TInteger _ _) -> [bound t (_Var t name)]
          ValueType TAddress -> [bound TAddress (_Var TAddress name)]
          _ -> []
-  (ContractArg _ cid) -> [bound TAddress (Address nowhere cid (_Var (TContract cid) name))]
+  (ContractArg _ _) -> []
+  -- there is no need to bound addresses range of contracts since it may never go out of bounds by construction
+  -- [bound TAddress (Address nowhere cid (_Var (TContract cid) name))]

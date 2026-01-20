@@ -33,7 +33,7 @@ import Act.Bounds
 
 type Err = Error String
 
--- | A map containing the interfaces of all available constructors, a payable flag, and the constructor preconditions.
+-- | A map containing the definitions off all constructors
 type Constructors = Map Id Constructor
 
 -- | The type checking environment.

@@ -32,6 +32,7 @@ import System.IO (hPutStrLn, stderr)
 
 import qualified EVM.Solvers as Solvers
 
+import Debug.Trace
 
 -- | Check whether a set of constraints generated during typing is always valid
 checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
@@ -45,6 +46,7 @@ checkEntailment solver smttimeout debug constraints = do
     smtSolver <- spawnSolver config
     let qs = mkEntailmentSMT <$> constraints
     r <- forM qs (\(smtQuery, line, msg, model) -> do
+                           -- traceM $ "Entailment SMT Query:\n" <> renderString (prettyAnsi smtQuery) <> "\n" <> msg <> "\n"          
                            res <- checkSat smtSolver model smtQuery
                            pure (res, line, msg))
     sequenceA_ <$> mapM checkRes r
@@ -78,6 +80,12 @@ mkEntailmentSMT (BoolCnstr p str env e) =
     -- the SMT query
     query = mkDefaultSMT locs ethVars "" calldataVars iff [] (Neg p e)
 mkEntailmentSMT (CallCnstr p msg env args cid) =
+--    trace ("Generating entailment SMT for constructor call to " <> show cid) $
+--    trace ("With args: " <> showTypedExps args) $
+--    trace ("With preconditions: " <> showExps (setPre <$> preconds env)) $
+--    trace ("Query condition: " <> showExps [cond]) $
+--    trace ("Query condition raw: " <> show cond) $
+--    trace ("Message: " <> msg) $
   (query, p, msg, getModel locs calldataVars ethVars)
 
   where
@@ -216,3 +224,6 @@ showCnstrs cs = intercalate "\n\n" (map showCnstr cs)
 
 showExps :: [Exp a] -> String
 showExps exps = intercalate "\n" (map prettyExp exps)
+
+showTypedExps :: [TypedExp] -> String
+showTypedExps exps = intercalate "\n" (map (\(TExp _ e) -> prettyExp e) exps)

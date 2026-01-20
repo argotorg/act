@@ -243,70 +243,30 @@
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Callvalue",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Callvalue",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             }
           ]
         }
@@ -315,6 +275,18 @@
         "cases": [
           {
             "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
               {
                 "location": {
                   "contract": "A",
@@ -515,70 +487,30 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           }
         ]
       },
@@ -590,6 +522,13 @@
     "kind": "Storages",
     "storages": {
       "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "x": [
           {
             "arrayType": {
