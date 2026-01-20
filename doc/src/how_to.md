@@ -151,8 +151,9 @@ transition balanceOf(address account) : uint256
 
 The preconditions of a transition are specified in the `iff` block. They define the conditions that must hold for the transition to execute successfully. It combines explicit and implicit requirements:
 - **Explicit requirements**: These are conditions that are explicitly checked in the Solidity code using `require` statements. Each `require` statement translates to a line in the `iff` block.
+Some preconditions arise from the unique ownership requirement, i.e. storage of the contract does not contain any aliased reference to another contract, see [aliasing](./aliasing.md) section. This would usually mean that if many contract addresses are taken as parameters to constructors or transitions, the ones stored in the storage have to be distinct. Note that these 
+need to already be present in the Solidity implementation of the contract, not merely in the act specification.
 - **Implicit requirements**: These are conditions that are not explicitly listed in the code but are necessary for the correct execution of the transition. For example, checks to prevent arithmetic overflow/underflow. <span style="color:red">Can this be anything else other than requires and inranges? </span> Arithmetic safety is addressed using the `inRange` expression. To ensure every arithmetic operation is safe, an `inRange` check has to be added for every occurring operation. 
-Another implicit precondition arises from the unique ownership requirement, i.e. storage of the contract does not contain any aliased reference to another contract, see [aliasing](./aliasing.md) section. For the precondition generation, it would usually mean that if many contract addresses are taken as parameters to constructors or transitions, the ones stored in the storage have to be distinct. 
 
 **Guidelines:**
 - Convert each `require(condition)` to a line in the `iff` block
@@ -296,7 +297,7 @@ What is left to do is
 - and for **payable** constructors: the contracts balance in Ether has to be initialized. This is done using the special variable `BALANCE` with type `uint256`:
 
     Most of the time this is just `uint256 BALANCE := CALLVALUE`, but if there are more complex behaviors in the Solidity constructor, such as forwarding some of the `CALLVALUE` to another contract's constructor, this has to be reflected here (e.g. `uint256BALANCE := CALLVALUE - <forwardedAmount>`).
-- ensure that no two storage instances refer to the same contract (unique ownership invariant, see [Aliasing](./aliasing.md) section).
+- ensure that no two storage instances refer to the same contract (unique ownership invariant, see [Aliasing](./aliasing.md) section). This already has to hold in the Solidity implementation.
 
 **Guidelines:**
 - Use `:=` to assign the initial value
@@ -474,8 +475,7 @@ Note that in `setAdmins`, we are in this special case where a contract instance 
 9. **Use meaningful variable names**: Match your Solidity code for clarity
 10. **Inline transition calls**: A storage update cannot be a transition call, it's logic and affects have to be embedded as case blocks.
 11. **Be aware of ordered updates**: When storage updates a contract instance and a field of that contract instance, the contract instance itslef has to be listed first in the `updates` block
-12. **Be aware of aliasing**: Make sure to include preconditions that imply the unique ownership invariant, and avoid situations where multiple owners could modify the same storage slot.
-13. **Reference the documentation**: Consult the [Storage, Typing and Expressions](./store_type.md), [Constructors](./constructors.md), and [Transitions](./transitions.md) sections for detailed explanations
+12. **Reference the documentation**: Consult the [Storage, Typing and Expressions](./store_type.md), [Constructors](./constructors.md), and [Transitions](./transitions.md) sections for detailed explanations
 
 
 

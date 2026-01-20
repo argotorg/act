@@ -1,5 +1,5 @@
 <div style="text-align: center;">
-  <img src="./images/logo/logo_bg[trns]_fg[ylw]_v01.png" alt="act logo" width="200"/>
+  <img src="./images/logo/logo_bg[trns]_fg[mustard]_v01.png" alt="act logo" width="200"/>
 </div>
 
 # Introduction
