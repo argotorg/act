@@ -30,6 +30,24 @@ Definition transfer_to map (from : address) (amt : Z) :=
   fun b => if b =? from then map from + amt else map b.
 
 Definition transfer map from to amt := transfer_to (transfer_from map from amt) to amt.
+Definition transfer' map from to amt := transfer_from (transfer_to map to amt) from amt.
+
+Inductive transferRelation from to amt map : (address -> Z) -> Prop:= 
+  | transferC: 
+   transferRelation from to amt map (transfer' map from to amt).
+
+Inductive transferStateRelation from to amt s s' : Prop:= 
+  | transferStateC: 
+    transferRelation from to amt (balanceOf s) (balanceOf s')
+    -> transferStateRelation from to amt s s'.
+
+(*
+Inductive transferRelation' from to amt map : (address -> Z) -> Prop:= 
+  | transferC: forall (map' : address -> Z),
+      (forall p, from <> to -> (p <> from -> p <> to -> map p = map' p) /\ ()
+      -> (forall p, from = to -> p <> to -> map p = map' p)
+      -> transferRelation' from to amt map map'.
+ *)
 
 Lemma balanceOf_sum_f_eq f f' addr acc :
   (forall x, x <= Z.of_nat addr -> f x = f' x) ->
@@ -162,18 +180,41 @@ Ltac rewrite_eqs :=
     [ H : _ =? _ = _ |- _ ] => rewrite H
   end.
 
-Lemma balances_after_transfer ENV STATE src dst amount :
+Theorem transfer_thm' map from to amt addr acc: forall map',
+  to <> from ->
+  0 <= from <= Z.of_nat addr ->
+  0 <= to <= Z.of_nat addr ->
+  transferRelation from to amt map map' ->
+  balanceOf_sum' map' addr acc  = balanceOf_sum' map addr acc.
+Proof.
+  intros map' Hneq Hleq1 Hleq2 Htransfer.
+  destruct Htransfer.
+  unfold transfer'.
+
+  rewrite balanceOf_sum_transfer_from; [ | lia ].
+  rewrite leb_correct; [ | lia ].
+
+  rewrite balanceOf_sum_transfer_to; [ | lia ].
+  rewrite leb_correct; [ | lia ].
+
+  lia.
+Qed.
+
+Lemma balances_after_transfer STATE src dst amount STATE' :
   0 <= src <= MAX_ADDRESS ->
   0 <= dst <= MAX_ADDRESS ->
   src <> dst ->
-  balanceOf_sum STATE =
-  balanceOf_sum (snd (transferFrom0 ENV STATE src dst amount)).
+  transferStateRelation src dst amount STATE STATE' ->
+  balanceOf_sum STATE = balanceOf_sum STATE' .
 Proof.
   intros. unfold balanceOf_sum; simpl.
-  erewrite <- transfer_thm.
+  erewrite <- transfer_thm' with (from := src) (to := dst) (amt := amount).
+  5: constructor.
 
-  + unfold transfer, transfer_to, transfer_from.
-    convert_neq. rewrite_eqs. reflexivity.
+  + destruct H2. destruct H2. unfold transfer', transfer_to, transfer_from.
+    convert_neq. rewrite_eqs.
+    rewrite Z.eqb_sym in H1. rewrite_eqs. simpl.
+    reflexivity.
 
   + eauto.
 
@@ -192,18 +233,53 @@ Proof.
   eapply step_multi_step with (P := fun s1 s2 => balanceOf_sum s1 = balanceOf_sum s2).
   - intros ? ? Hstep.
     induction Hstep as [? Hestep];
-    destruct Hestep as [ENV ? ? Hlocalstep].
+    destruct Hestep as [? [ENV10 [? ? ? ? ? Hlocalstep]]].
+    remember STATE'.
     destruct Hlocalstep;
     destruct H.
-    + apply (balances_after_transfer ENV); eauto.
+    destruct H.
+    + eapply (balances_after_transfer) with (src := Caller ENV) (dst := to); try auto.
+      { econstructor.
+        assert (balanceOf STATE' = transfer' (balanceOf STATE) (Caller ENV) to value).
+        { unfold transfer', transfer_from, transfer_to in *.
+          convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+        }
+        rewrite Heqs0. rewrite H18. constructor.
+      }
     + reflexivity.
-    + eapply (balances_after_transfer ENV); eauto. lia.
-    + eapply (balances_after_transfer ENV); eauto. lia.
-    + assert (Hthm := balances_after_transfer ENV STATE).
-      unfold balanceOf_sum, transferFrom0, transferFrom2 in *.
-      apply Hthm; eauto. lia.
-    + reflexivity.
-
+    + destruct H.
+      destruct H0 as [H00 H01].
+      eapply (balances_after_transfer) with (src := src) (dst := dst); try auto.
+      { econstructor.
+        assert (balanceOf STATE' = transfer' (balanceOf STATE) (src) dst amount).
+        { unfold transfer', transfer_from, transfer_to in *.
+          convert_neq. convert_neq. rewrite Z.eqb_sym in H00. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+        }
+        rewrite Heqs0. rewrite H0. constructor.
+      }
+    + destruct H.
+      destructAnds.
+      eapply (balances_after_transfer) with (src := src) (dst := dst); try auto.
+      { econstructor.
+        assert (balanceOf STATE' = transfer' (balanceOf STATE) (src) dst amount) as Hassert.
+        { unfold transfer', transfer_from, transfer_to in *.
+          convert_neq. convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+        }
+        rewrite Heqs0. rewrite Hassert. constructor.
+      }
+    + destruct H.
+      destructAnds.
+      eapply (balances_after_transfer) with (src := src) (dst := dst); try auto.
+      { econstructor.
+        assert (balanceOf STATE' = transfer' (balanceOf STATE) (src) dst amount) as Hassert.
+        { unfold transfer', transfer_from, transfer_to in *.
+          convert_neq. convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+        }
+        rewrite Heqs0. rewrite Hassert. constructor.
+      }
+    + destruct H.
+      destructAnds.
+      reflexivity.
   - unfold Relation_Definitions.reflexive. reflexivity.
   - unfold Relation_Definitions.transitive. lia.
 Qed.

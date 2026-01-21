@@ -24,12 +24,13 @@ Definition invariantProp (ENV : Env) (b0 : Z) (e0 : Z) (STATE : State) :=
 Lemma invInitProof : invariantInit invariantProp.
 Proof.
   unfold invariantProp.
-  intros env _b _e Hinit .
+  intros na env _b _e s na' Hinit .
   simpl.
+  destruct Hinit; simpl.
   rewrite Z.sub_1_r.
   rewrite pow_pred.
   - reflexivity.
-  - destruct Hinit.
+  - destruct H.
     apply Z.gt_lt.
     assumption.
 Qed.
@@ -37,34 +38,36 @@ Qed.
 Lemma invStepProof : invariantStep invariantProp.
 Proof.
   unfold invariantProp.
-  intros env _b _e s s' Hinit Hstep HinvPre.
+  intros na env s s' _b _e Hinit Hstep HinvPre.
   destruct Hstep as [e Hestep].
-  destruct Hestep as [ENV STATE Hstep].
+  destruct Hestep as [NA [NA' Hestep]].
+  destruct Hestep.
   induction H.
+  destruct H.
+  destruct H.
   simpl.
   rewrite Z.sub_1_r.
   rewrite <- Z.mul_assoc.
-  rewrite pow_pred with (a := b STATE) (e := e STATE - 1).
+  rewrite pow_pred with (a := b STATE) (e := Exponent.e STATE - 1).
   - assumption.
-  - destruct H.
-    lia.
+  - lia.
 Qed.
 
-Lemma invariant : forall env b0 e0 s,
-  reachableFromInit env b0 e0 s -> (r s) * (b s) ^ ((e s) - 1) = b0 ^ e0.
+Lemma invariant : forall na env b0 e0 s,
+  reachableFromInit na env b0 e0 s -> (r s) * (b s) ^ ((e s) - 1) = b0 ^ e0.
 Proof.
-  intros env b0 e0 s Hreach.
-  apply invariantReachable with (IP := invariantProp) (ENV := env).
+  intros na env b0 e0 s Hreach.
+  eapply invariantReachable with (IP := invariantProp) (ENV := env).
   - exact invInitProof.
   - exact invStepProof.
-  - assumption.
+  - eassumption.
 Qed.
 
-Theorem exp_correct : forall env b0 e0 s,
-  reachableFromInit env b0 e0 s -> e s = 1 -> r s = b0 ^ e0.
+Theorem exp_correct : forall na env b0 e0 s,
+  reachableFromInit na env b0 e0 s -> e s = 1 -> r s = b0 ^ e0.
 Proof.
-  intros env b0 e0 s H He.
-  apply invariant in H.
+  intros na env b0 e0 s H He.
+  eapply invariant in H.
   rewrite He in H. simpl in H.
   rewrite (Z.mul_1_r (r s)) in H.
   assumption.

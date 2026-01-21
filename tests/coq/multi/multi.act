@@ -1,3 +1,12 @@
+// Contract A
+contract A
+
+constructor()
+
+creates
+   uint x := 0
+   mapping(address => uint) f := []
+
 //Contract B
 contract B
 
@@ -17,16 +26,7 @@ transition setf(address i)
 
 updates
 
-  a.f[i] := 1
-
-// Contract A
-contract A
-
-constructor()
-
-creates
-   uint x := 0
-   mapping(address => uint) f := []
+  a.f := a.f[i => 1]
 
 //Contract C
 contract C
@@ -41,7 +41,7 @@ transition setf(address i)
 
 updates
 
-  b.a.f[i] := 2
+  b.a.f := b.a.f[i => 2]
 
 transition setxw(address i)
 

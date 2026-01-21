@@ -37,10 +37,10 @@ iff
   pa1 != pa2
 
 creates
-  B b1 := new B(pa1, pa2, new A(), new A())
+  B b1 := new B(pa1, address(pa2), pa2, address(new A()))
   A a1 := new A()
-  address cu1 := new A()
-  address cu2 := new A()
+  address cu1 := address(new A())
+  address cu2 := address(new A())
 
 
 transition f(address<A> pa1, address<A> pa2)
@@ -49,13 +49,13 @@ iff
   pa1 != pa2
   pa1 != a1
   pa2 != a1
-  pa1 != b1
-  pa2 != b1
+  address(pa1) != address(b1)
+  address(pa2) != address(b1)
   pa1 != b1.a
   pa2 != b1.a
 
 updates
-  b1 := new B(pa1, pa2, new A(), new A())
+  b1 := new B(pa1, address(pa2), pa2, address(new A()))
   b1.y := 42
   b1.a := new A()
   b1.a.x := 17

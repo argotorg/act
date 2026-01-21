@@ -12,6 +12,7 @@ Ltac destructAnds :=
     [ H : _ /\ _ |- _ ] => destruct H
   end.
 
+(*
 Lemma unique_after_step : forall STATE STATE',
      step STATE STATE'
   -> noAliasing STATE
@@ -20,10 +21,11 @@ Proof.
   intros s s' Hstep Hnoalias.
   destruct Hnoalias as [Hna_a1_addr Hna_b1_addr Hna_a1_b1 Hna_a1 Hna_b1].
   destruct Hstep as [ENV Hestep].
-  destruct Hestep as [ ENV s s' Hstep
-                     | ENV s s' HenvConstr Hstep
-                     | ENV s s' HenvConstr Hstep Haddr_const Ha1_const].
-  - destruct Hstep as [ENV pa1 pa2 s Hconds]. 
+  destruct Hestep as [ na [ e Hestep ]].
+  destruct Hestep as [ ENV na s s' na' Hstep
+                     | ENV na s s' HenvConstr Hstep
+                     | ENV na s s' HenvConstr Hstep Haddr_const Ha1_const].
+  - destruct Hstep as [ENV na pa1 pa2 s s'' na' Hconds]. 
     constructor.
     + simpl.
       intros p HaddrIn.
@@ -187,3 +189,4 @@ Proof.
     - unfold Relation_Definitions.transitive; auto.
 Qed.
 
+*)

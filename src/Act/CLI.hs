@@ -241,7 +241,7 @@ prove file' solver' smttimeout' debug' = do
 coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 coq' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+  proceed contents (compile contents) $ \(spec, cnstrs) -> do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
     TIO.putStr $ coq spec

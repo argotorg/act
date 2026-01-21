@@ -35,6 +35,12 @@ Definition transfer_to map (from : address) (amt : Z) :=
 
 Definition transfer map from to amt := transfer_to (transfer_from map from amt) to amt.
 
+Definition transfer' map from to amt := transfer_from (transfer_to map to amt) from amt.
+
+Inductive transferRelation from to amt map : (address -> Z) -> Prop:= 
+  | transferC: 
+   transferRelation from to amt map (transfer' map from to amt).
+
 Lemma balances_sum_f_eq f f' addr acc :
   (forall x, x <= Z.of_nat addr -> f x = f' x) ->
   balances_sum' f addr acc = balances_sum' f' addr acc.
@@ -151,6 +157,26 @@ Proof.
   lia.
 Qed.
 
+Theorem transfer_thm' map from to amt addr acc: forall map',
+  to <> from ->
+  0 <= from <= Z.of_nat addr ->
+  0 <= to <= Z.of_nat addr ->
+  transferRelation from to amt map map' ->
+  balances_sum' map' addr acc  = balances_sum' map addr acc.
+Proof.
+  intros map' Hneq Hleq1 Hleq2 Htransfer.
+  destruct Htransfer.
+  unfold transfer'.
+
+  rewrite balances_sum_transfer_from; [ | lia ].
+  rewrite leb_correct; [ | lia ].
+
+  rewrite balances_sum_transfer_to; [ | lia ].
+  rewrite leb_correct; [ | lia ].
+
+  lia.
+Qed.
+
 
 Theorem constant_balances : forall BASE STATE,
     multistep BASE STATE ->
@@ -160,31 +186,27 @@ Proof.
   eapply step_multi_step with (P := fun s1 s2 => balances_sum s1 = balances_sum s2).
   - intros s s' Hstep.
     induction Hstep as [e Hestep].
-    destruct Hestep as [e s s' Hstep].
+    destruct Hestep as [na [e' Hestep]].
+    destruct Hestep as [na na' e s s' Hstep].
     destruct Hstep.
     destruct H. (* X as [Hpc1 Hpc2 Hpc3 Hpc4 Hpc5 Hpc6 Hpc7 Hpc8 Hpc9 Hpc10 Hpc11 Hpc12].*)
     destructAnds.
-    + unfold transfer0.
-      unfold balances_sum. simpl.
-
-      erewrite <- transfer_thm.
-
-      * unfold transfer, transfer_to, transfer_from. simpl.
-        assert (to =? Caller ENV = false) as HifCond. lia.
-        rewrite HifCond.
-        reflexivity.
-
-      * eauto.
-      * rewrite Z2Nat.id.
-        -- split; assumption.
-        -- unfold MAX_ADDRESS. lia.
-
-      * rewrite Z2Nat.id.
-        -- split; assumption.
-        -- unfold MAX_ADDRESS. lia.
-
-    + unfold transfer1.
+    destruct H.
+    unfold UINT_MAX in *.
+    + unfold balances_sum. simpl.
+      erewrite <- transfer_thm' with (to := to) (from := Caller ENV);
+      unfold MAX_ADDRESS in *;
+      unfold UINT_MAX in *.
+      5: econstructor. 
+      unfold transfer', transfer_to, transfer_from.
+      simpl.
+      assert (Caller ENV =? to = false) as HifCond. lia.
+      rewrite HifCond.
       reflexivity.
+      auto.
+      lia.
+      lia.
+    + unfold balances_sum. reflexivity.
 
   - unfold Relation_Definitions.reflexive. reflexivity.
   - unfold Relation_Definitions.transitive. lia.
