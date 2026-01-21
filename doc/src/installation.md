@@ -1,20 +1,36 @@
-# Getting Started and Installation
-
-## Getting Started
+# Getting Started
 
 act uses Nix for dependency management and building. If you don't have Nix installed yet, you can use the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
 
-### Quick Start
+## Installation
 
-To quickly try act without installing it, you can enter a Nix shell:
+To build from source
 
+1. Clone the repository:
 ```sh
-nix-shell https://github.com/argotorg/act/tarball/master
+git clone https://github.com/argotorg/act.git
+cd act
 ```
 
-### Basic Usage
+2. Build the project:
+```sh
+nix build
+```
 
-Once you are in the Nix shell or you have [installed act](./installation.md#building-from-source),
+Once you have built, for development, enter a Nix development shell to get all dependencies:
+
+```sh
+nix develop
+```
+
+Test your installation by running the commands in [basic usage section](#basic-usage).
+
+Note: You can also use Cabal as normal from the root directory.
+
+
+## Basic Usage
+
+Once you are in the Nix shell,
 test your installation by running the `HelloWorld` contract specification:
 
 The hevm backend:
@@ -44,27 +60,3 @@ or list the options by calling
 cabal run act -- --help
 ```
 
-## Installation
-
-### Building from Source
-
-1. Clone the repository:
-```sh
-git clone https://github.com/argotorg/act.git
-cd act
-```
-
-2. Build the project:
-```sh
-nix build
-```
-
-Once you have built, for development, enter a Nix development shell to get all dependencies:
-
-```sh
-nix develop
-```
-
-Test your installation by running the commands in [basic usage section](#basic-usage).
-
-Note: You can also use Cabal as normal from the root directory.
