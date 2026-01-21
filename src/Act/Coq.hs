@@ -259,8 +259,7 @@ behaviourCode store (Behaviour name cname iface _ precs cases _) = T.unlines $
   -- <> evalSeq (behvUpdates store name cname iface) cases
   -- <> [ behvCall name iface cases ]
   <> [ behvPred store name cname iface cases ]
--- TODO: unify retVal for into 1 relation for each behaviour
-  <> evalSeq (retVal name iface) cases
+  <> [ retVal name iface cases ]
 
 -- | definition of behaviour-case conditions
 behvConds :: Id -> Interface -> [Exp ABoolean] -> T.Text
@@ -675,25 +674,65 @@ transition store name cname i rewrites =
   definition (T.pack name) (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i)
     (foldr (\(_,b) s' -> "let" <+> b <+> "in\n" <> s') (tuple (iNextAddr finalI) s) bindings)
 
+{-
+behvPred :: StorageTyping -> Id -> Id -> Interface -> [Bcase] -> T.Text
+behvPred store name cname i cases = inductive
+  (T.pack name <> "_transition") (argList $ [nextAddrDecl, envDecl] <> interface' i <> [stateDecl])  (indicesList $ [stateType, addressType, "Prop"]) caseCtors
+  where
+    caseCtors = (evalSeq caseCtor cases)
+
+    caseCtor :: Bcase -> Fresh (T.Text, Maybe T.Text, T.Text)
+    caseCtor (Case _ caseCond (updates, _)) = do
+      name' <- fresh name
+      pure (name' <> stepSuffix, T.unwords <$> bindingsNames, caseBody caseCond name')
+      where 
+        (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) updates
+        bindingsHyp = snd <$> bindings
+        bindingsNames = case concatMap fst bindings of
+          [] -> Nothing
+          l -> Just l
+
+        caseBody c n = (indent 2) . implication . concat $
+          [ [(T.pack name) <> "_conds" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i]
+          , [ coqprop c ]
+          , bindingsHyp
+          , [ (T.pack name <> "_transition") <+> nextAddrVar
+            <+> envVar
+            <+> arguments i
+            <+> stateVar
+            <+> parens s
+            <+> parens (iNextAddr finalI)
+            ]
+          ]
+          -}
+
 -- | inductive definition of a return claim
 -- ignores claims that do not specify a return value
-retVal :: Id -> Interface -> Bcase -> Fresh T.Text
-retVal name i (Case _ caseCond (_, Just ret)) = do
-  name' <- fresh name
-  --fresh name >>= continuation where
-  return $ inductive
-    (name' <> returnSuffix)
+retVal :: Id -> Interface -> [Bcase] -> T.Text
+retVal _ _ [] = ""
+retVal _ _ ((Case _ _ (_,Nothing)):_) = ""
+retVal name i cases@((Case _ _ (_, Just ret0)):_) = do
+  inductive
+    (T.pack name <> returnSuffix)
     (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i)
-    (returnType ret <> " -> Prop")
-    [(retname name' <> introSuffix, Nothing, body name')]
+    (returnType ret0 <> " -> Prop")
+    caseCtors
   where
     retname n = n <> returnSuffix
-    body n = indent 2 . implication . concat $
-      [ [T.pack name <> "_conds" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i]
-      , [coqprop caseCond]
-      , [retname n <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i <+> typedexp ret]
-      ]
-retVal _ _ _ = return ""
+
+    caseCtors = (evalSeq caseCtor cases)
+
+    caseCtor :: Bcase -> Fresh (T.Text, Maybe T.Text, T.Text)
+    caseCtor (Case _ _ (_, Nothing)) = error "Internal error: Case does not return"
+    caseCtor (Case _ caseCond (_, Just ret)) = do
+      name' <- fresh name
+      pure (name' <> returnSuffix, Nothing, caseBody)
+      where 
+        caseBody = (indent 2) . implication . concat $
+          [ [(T.pack name) <> "_conds" <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i]
+          , [ coqprop caseCond ]
+          , [retname (T.pack name) <+> nextAddrVar <+> envVar <+> stateVar <+> arguments i <+> typedexp ret]
+          ]
 
 -- | Definition of postcondition claim for constructor
 postCondConstr :: Constructor -> [T.Text]
