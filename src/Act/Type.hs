@@ -28,8 +28,6 @@ import Act.Syntax.Untyped qualified as U
 import Act.Syntax.TypedImplicit
 import Act.Error
 import Act.Print
-import Act.Bounds
-
 
 type Err = Error String
 
@@ -162,16 +160,10 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
     -- check postconditions
     ensures <- map fst <$> traverse (checkExpr env''' U TBoolean) posts
     -- Note: ivariants are ignored for the time being and not checked
-    pure $ -- add integer bounds for calldata and (used) storage variables
-           let bounds = boundsConstructor (Constructor cid (Interface p params) payable iffs' cases' ensures [])
-               constr = Constructor cid (Interface p params) payable (iffs' <> bounds) cases' ensures []
+    pure $ let constr = Constructor cid (Interface p params) payable iffs' cases' ensures []
                -- add the constructor to the environment
                env'''' = addConstructor cid constr env'''
-               -- capture the preconditions that include the added bounds
-               cnstrs = addIffs bounds $ cnstr1 ++ cnstr2 ++ casecnstrs
-           in
-            -- return the constructor and the new environment
-            (constr, clearLocalEnv env'''', cnstrs)
+           in(constr, clearLocalEnv env'''', cnstr1 ++ cnstr2 ++ casecnstrs)
 
 
 -- | Extend a list of constraints with additional preconditions. Useful for adding integer bounds.
@@ -299,14 +291,9 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
     ensures <- map fst <$> traverse (checkExpr env'' T TBoolean) posts
     -- return the behaviour
     pure $ let (cases', cnstrs2) = casesc
-               -- add implicit CALLVALUE == 0 precondition if not payable
+               -- check case consistency
                casecnstrs = checkCaseConsistency env' cases'
-               -- add integer type bounds as preconditions
-               bounds = boundsBehaviour $ Behaviour name contract iface payable iffs' cases' ensures
-               behaviour = Behaviour name contract iface payable (iffs' <> bounds) cases' ensures
-               -- add bound preconditions to constraints
-               cnstrs = addIffs bounds $ cnstr1 ++ concat cnstrs2 ++ casecnstrs
-           in  (behaviour, cnstrs)
+           in  (Behaviour name contract iface payable iffs' cases' ensures, cnstr1 ++ concat cnstrs2 ++ casecnstrs)
 
 -- | Type check a single case of a behaviour
 checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)

@@ -28,6 +28,8 @@ import Act.Syntax.Timing
 import Act.Error
 import Act.Syntax
 import Act.Traversals
+import Act.Bounds
+
 import System.IO (hPutStrLn, stderr)
 
 import qualified EVM.Solvers as Solvers
@@ -71,6 +73,8 @@ mkEntailmentSMT (BoolCnstr p str env e) =
   where
     -- current preconditions
     iff = setPre <$> preconds env
+    -- bound conditions
+    bounds = mkRefsBounds locs <> mkCallDataBounds calldataVars <> mkEthEnvBounds ethVars
     -- all locations referenced in the expressions
     locs = nub $ concatMap locsFromExp (e:iff)
     -- all ethereum environment variables referenced in the expressions
@@ -78,7 +82,7 @@ mkEntailmentSMT (BoolCnstr p str env e) =
     -- calldata variables
     calldataVars = calldataToList (calldata env)
     -- the SMT query
-    query = mkDefaultSMT locs ethVars "" calldataVars iff [] (Neg p e)
+    query = mkDefaultSMT locs ethVars "" calldataVars (bounds <> iff) [] (Neg p e)
 mkEntailmentSMT (CallCnstr p msg env args cv cid) =
 --    trace ("Generating entailment SMT for constructor call to " <> show cid) $
 --    trace ("With args: " <> showTypedExps args) $
@@ -91,6 +95,8 @@ mkEntailmentSMT (CallCnstr p msg env args cv cid) =
   where
     -- current preconditions
     iffs = setPre <$> preconds env
+    -- bound conditions
+    bounds = mkRefsBounds locs <> mkCallDataBounds calldataVars <> mkEthEnvBounds ethVars
     -- all locations referenced in the expressions
     locs = nub $ concatMap locsFromExp (cond:iffs)
     -- all ethereum environment variables referenced in the expressions
@@ -108,7 +114,7 @@ mkEntailmentSMT (CallCnstr p msg env args cv cid) =
     -- substituted preconditions of the called constructor
     cond = andExps (applySubst (constructors env) subst <$> calledPreconds)
     -- the SMT query
-    query = mkDefaultSMT locs ethVars "" calldataVars iffs [] (Neg p cond)
+    query = mkDefaultSMT locs ethVars "" calldataVars (bounds <> iffs) [] (Neg p cond)
 
 makeSubst :: [TypedExp] -> [Id] -> Maybe (Exp AInteger) -> M.Map Id TypedExp
 makeSubst args cargs (Just cv) =
