@@ -20,15 +20,7 @@ constructor(address<A> x, address<A> y)
 
 iff
     x != y
-    // address(x) != address(x.c)
-    // address(x) != address(y.c)
-    // address(y) != address(y.c)
-    // address(y) != address(x.c)
-    // address(x.c) != address(y.c)
-    // address(x) != THIS
-    // address(x.c) != THIS
-    // address(y) != THIS
-    // address(y.c) != THIS
+    // address(x.c) != address(y.c) -- Do we not need this?
 
 creates
     A a1 := x

@@ -8,25 +8,21 @@ creates
 
 transition transfer(address to, uint256 amt) : uint256
 
-
-iff in range uint256
-  
-  balances[to] + amt
-
 iff
-
+  inRange(uint256, balances[to] + amt)
   amt <= balances[CALLER]
 
 case CALLER != to:
 
   updates
 
-	balances[CALLER] := balances[CALLER] - amt
-	balances[to] := balances[to] + amt
+        balances := balances[ CALLER => balances[CALLER] - amt
+                            , to => balances[to] + amt ]
 
   returns 1
 
 
 case CALLER == to:
 
+  updates
   returns 1

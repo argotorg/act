@@ -20,13 +20,14 @@ case CALLER != to:
 
   updates
 
-     balanceOf[CALLER] := balanceOf[CALLER] - value
-     balanceOf[to]     := balanceOf[to] + value
+     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - value
+                           , to     => balanceOf[to] + value ]
 
   returns 1
 
 case CALLER == to:
 
+  updates
   returns 1
 
 
@@ -42,8 +43,8 @@ case src != dst and CALLER == src:
 
   updates
 
-     balanceOf[src] := balanceOf[src] - amount
-     balanceOf[dst] := balanceOf[dst] + amount
+     balanceOf := balanceOf[ src => balanceOf[src] - amount
+                           , dst => balanceOf[dst] + amount ]
 
   returns 1
 
@@ -51,8 +52,8 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
   updates
 
-     balanceOf[src] := balanceOf[src] - amount
-     balanceOf[dst] := balanceOf[dst] + amount
+     balanceOf := balanceOf[ src => balanceOf[src] - amount
+                           , dst => balanceOf[dst] + amount ]
 
   returns 1
 
@@ -60,9 +61,9 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   updates
 
-    allowance[src][CALLER] := allowance[src][CALLER] - amount
-    balanceOf[src]         := balanceOf[src] - amount
-    balanceOf[dst]         := balanceOf[dst] + amount
+    allowance := allowance[ src => allowance[src][CALLER => allowance[src][CALLER] - amount] ]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount ]
 
   returns 1
 
@@ -70,12 +71,13 @@ case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
   updates
 
-    allowance[src][CALLER] := allowance[src][CALLER] - amount
+    allowance := allowance[ src => allowance[src][CALLER => allowance[src][CALLER] - amount] ]
 
   returns 1
 
 case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
 
+  updates
   returns 1
 
 
@@ -90,12 +92,13 @@ case CALLER != spender:
 
   updates
 
-    allowance[CALLER][spender] := amount
+    allowance := allowance[ CALLER => allowance[CALLER][spender => amount] ]
 
   returns 1
 
 case CALLER == spender:
 
+  updates
   returns 1
 
 
@@ -110,7 +113,7 @@ iff
 updates
 
   totalSupply := totalSupply - amount
-  balanceOf[CALLER] := balanceOf[CALLER] - amount
+  balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - amount ]
 
 returns 1
 
@@ -128,7 +131,7 @@ case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
   updates
 
     totalSupply := totalSupply - amount
-    balanceOf[src] := balanceOf[src] - amount
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
   returns 1
 
@@ -137,8 +140,8 @@ case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
   updates
 
     totalSupply := totalSupply - amount
-    allowance[src][CALLER] := allowance[src][CALLER] - amount
-    balanceOf[src]         := balanceOf[src] - amount
+    allowance := allowance[ src => allowance[src][CALLER => allowance[src][CALLER] - amount] ]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
   returns 1
 
@@ -147,30 +150,26 @@ case CALLER == src:
   updates
 
     totalSupply := totalSupply - amount
-    balanceOf[src] := balanceOf[src] - amount
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
   returns 1
 
 ensures
 
-  pre(balanceOf[src]) - post(balanceOf[src]) == pre(totalSupply) - post(totalSupply)
+  pre(balanceOf)[src] - post(balanceOf)[src] == pre(totalSupply) - post(totalSupply)
 
 
 transition mint(address dst, uint256 amount) : uint256
 
-iff in range uint256
-
-  totalSupply + amount
-  balanceOf[dst] + amount
-
 iff
-
+  inRange(uint256, totalSupply + amount)
+  inRange(uint256, balanceOf[dst] + amount)
   CALLVALUE == 0
 
 updates
 
   totalSupply := totalSupply + amount
-  balanceOf[dst] := balanceOf[dst] + amount
+  balanceOf := balanceOf[ dst => balanceOf[dst] + amount ]
 
 returns 1
 
@@ -183,7 +182,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(totalSupply)
+updates
+returns totalSupply
 
 transition balanceOf(address idx) : uint256
 
@@ -191,7 +191,8 @@ iff
 
   CALLVALUE == 0
 
-returns pre(balanceOf[idx])
+updates
+returns balanceOf[idx]
 
 transition allowance(address idx1, address idx2) : uint256
 
@@ -199,7 +200,9 @@ iff
 
   CALLVALUE == 0
 
-returns pre(allowance[idx1][idx2])
+updates
+returns allowance[idx1][idx2]
+
 
 contract Amm
 
@@ -232,11 +235,11 @@ case CALLER != THIS and token0.allowance[CALLER][THIS] == 2^256 - 1:
 
 updates
 
-    token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
-    token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
+    token0.balanceOf := token0.balanceOf[ CALLER => token0.balanceOf[CALLER] - amt
+                                        , THIS   => token0.balanceOf[THIS] + amt ]
 
-    token1.balanceOf[THIS]   := token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
-    token1.balanceOf[CALLER] := token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+    token1.balanceOf := token1.balanceOf[ THIS   => token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+                                        , CALLER => token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt)) ]
 
 returns 1
 
@@ -244,23 +247,24 @@ case CALLER != THIS and token0.allowance[CALLER][THIS] < 2^256 - 1:
 
 updates
 
-    token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
-    token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
-    token0.allowance[CALLER][THIS] := token0.allowance[CALLER][THIS] - amt
+    token0.balanceOf := token0.balanceOf[ CALLER => token0.balanceOf[CALLER] - amt
+                                        , THIS   => token0.balanceOf[THIS] + amt ]
+    token0.allowance := token0.allowance[ CALLER => token0.allowance[CALLER][THIS => token0.allowance[CALLER][THIS] - amt] ]
 
-    token1.balanceOf[THIS]   := token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
-    token1.balanceOf[CALLER] := token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+    token1.balanceOf := token1.balanceOf[ THIS   => token1.balanceOf[THIS] - ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt))
+                                        , CALLER => token1.balanceOf[CALLER] + ((token1.balanceOf[THIS] * amt) / (token0.balanceOf[THIS] + amt)) ]
 
 returns 1
 
 case CALLER == THIS:
 
+updates
 returns 1
 
 ensures
 
-    pre(token0.balanceOf[THIS]) * pre(token1.balanceOf[THIS]) <= post(token0.balanceOf[THIS]) * post(token1.balanceOf[THIS])
-    post(token0.balanceOf[THIS]) * post(token1.balanceOf[THIS]) <= pre(token0.balanceOf[THIS]) * pre(token1.balanceOf[THIS]) + pre(token0.balanceOf[THIS]) + amt
+    pre(token0).balanceOf[THIS] * pre(token1).balanceOf[THIS] <= post(token0).balanceOf[THIS] * post(token1).balanceOf[THIS]
+    post(token0).balanceOf[THIS] * post(token1).balanceOf[THIS] <= pre(token0).balanceOf[THIS] * pre(token1).balanceOf[THIS] + pre(token0).balanceOf[THIS] + amt
 
 
 transition swap1(uint256 amt) : uint256
@@ -280,11 +284,11 @@ case CALLER != THIS and token1.allowance[CALLER][THIS] == 2^256 - 1:
 
 updates
 
-    token1.balanceOf[CALLER] := token1.balanceOf[CALLER] - amt
-    token1.balanceOf[THIS]   := token1.balanceOf[THIS] + amt
+    token1.balanceOf := token1.balanceOf[ CALLER => token1.balanceOf[CALLER] - amt
+                                        , THIS   => token1.balanceOf[THIS] + amt ]
 
-    token0.balanceOf[THIS]   := token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
-    token0.balanceOf[CALLER] := token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
+    token0.balanceOf := token0.balanceOf[ THIS   => token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
+                                        , CALLER => token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt)) ]
 
 returns 1
 
@@ -292,20 +296,21 @@ case CALLER != THIS and token1.allowance[CALLER][THIS] < 2^256 - 1:
 
 updates
 
-    token1.balanceOf[CALLER] := token1.balanceOf[CALLER] - amt
-    token1.balanceOf[THIS]   := token1.balanceOf[THIS] + amt
-    token1.allowance[CALLER][THIS] := token1.allowance[CALLER][THIS] - amt
+    token1.balanceOf := token1.balanceOf[ CALLER => token1.balanceOf[CALLER] - amt
+                                        , THIS   => token1.balanceOf[THIS] + amt ]
+    token1.allowance := token1.allowance[ CALLER => token1.allowance[CALLER][THIS => token1.allowance[CALLER][THIS] - amt] ]
 
-    token0.balanceOf[THIS]   := token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
-    token0.balanceOf[CALLER] := token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
+    token0.balanceOf := token0.balanceOf[ THIS   => token0.balanceOf[THIS] - ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt))
+                                        , CALLER => token0.balanceOf[CALLER] + ((token0.balanceOf[THIS] * amt) / (token1.balanceOf[THIS] + amt)) ]
 
 returns 1
 
 case CALLER == THIS:
 
+updates
 returns 1
 
 ensures
 
-    pre(token0.balanceOf[THIS]) * pre(token1.balanceOf[THIS]) <= post(token0.balanceOf[THIS]) * post(token1.balanceOf[THIS])
-    post(token0.balanceOf[THIS]) * post(token1.balanceOf[THIS]) <= pre(token0.balanceOf[THIS]) * pre(token1.balanceOf[THIS]) + pre(token1.balanceOf[THIS]) + amt
+    pre(token0).balanceOf[THIS] * pre(token1).balanceOf[THIS] <= post(token0).balanceOf[THIS] * post(token1).balanceOf[THIS]
+    post(token0).balanceOf[THIS] * post(token1).balanceOf[THIS] <= pre(token0).balanceOf[THIS] * pre(token1).balanceOf[THIS] + pre(token1).balanceOf[THIS] + amt

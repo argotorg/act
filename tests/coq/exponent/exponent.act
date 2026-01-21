@@ -15,13 +15,9 @@ creates
 
 transition exp()
 
-iff in range uint
-
-    r * b
-    e - 1
-
 iff
-
+    inRange(uint, r * b)
+    inRange(uint, e - 1)
     e > 1
 
 updates

@@ -1,5 +1,5 @@
 {
-  "specifications" : ["amm.act", "../erc20/erc20.act"],
+  "specifications" : ["../erc20/erc20.act", "amm.act"],
   "sources" : {
     "../erc20/erc20.sol" : { "language" : "Solidity" },
     "amm.sol" : { "language" : "Solidity" }

@@ -3,6 +3,7 @@
 Require Import StateMachine.StateMachine.
 Require Import ActLib.ActLib.
 Require Import Stdlib.ZArith.ZArith.
+From Stdlib Require Import Lia.
 Open Scope Z_scope.
 
 Import StateMachine.
@@ -13,24 +14,23 @@ Proof.
   destruct Hreach as [ Hinit Hmulti ].
   destruct Hmulti as [ | s s' Hstep];
       [destruct Hinit | destruct Hstep as [e Hextstep];
-                        destruct Hextstep as [e s s' HSMstep];
-                        destruct HSMstep as [e s Hconds | e s Hconds | e s Hconds]].
+                        destruct Hextstep as [e' s'' s''' HSMstep]
+                        ].
   {
+    destruct H.
     simpl. split.
     - intros contra. discriminate.
     - intros contra. discriminate.
   } {
+    destruct s''.
+    destruct H.
+    destruct H.
+    destruct H.
     simpl. split.
     - intros contra. discriminate.
     - intros contra. discriminate.
-  } {
-    simpl. split.
-    - intros contra. discriminate.
-    - intros contra. discriminate.
-  } {
-    simpl. split.
-    - intros contra. discriminate.
-    - intros contra. discriminate.
+    - destruct H. destruct H; simpl. lia.
+    - destruct H. destruct H; simpl. lia.
   }
-Qed. Check invariant.
+Qed.
 

@@ -10,6 +10,26 @@ Import Amm.
 
 Definition MAX_ADDRESS := UINT_MAX 160.
 
+Ltac convert_neq :=
+  repeat match goal with
+    [ H : _ <> _ |- _ ] => let H_og := fresh H "'" in eapply not_eq_sym in H as H_og; eapply Z.eqb_neq in H; eapply Z.eqb_neq in H_og
+  end.
+
+Ltac convert_eq :=
+  repeat match goal with
+    [ H : _ = _ |- _ ] => let H_og := fresh H "'" in eapply eq_sym in H as H_og; eapply Z.eqb_eq in H; eapply Z.eqb_eq in H_og
+  end.
+
+Ltac destructAnds :=
+  repeat match goal with
+    [ H : _ /\ _ |- _ ] => destruct H
+  end.
+
+Ltac rewrite_eqs :=
+  repeat match goal with
+    [ H : _ =? _ = _ |- _ ] => rewrite H
+  end.
+
 Lemma le_neq_lt : forall n : Z, 0 <= n -> n <> 0 -> 0 < n.
 Proof.
   lia.
@@ -94,273 +114,59 @@ Proof.
   - lia.
 Qed.
 
-Lemma swap00_post0_witness : swap00_post0.
+Lemma swap0_post0_witness : swap0_post0.
 Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
+  intros NA NA' ENV STATE STATE' amt HConds Hreach Htransition.
   destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply div_prop; lia.
+  destruct Htransition; simpl.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply div_prop; lia.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply div_prop; lia.
+  - reflexivity.
 Qed.
 
-Lemma swap00_post1_witness : swap00_post1.
+Lemma swap0_post1_witness : swap0_post1.
 Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
+  intros NA NA' ENV STATE STATE' amt HConds Hreach Htransition.
   destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply mod_prop; lia.
-Qed.
-
-Lemma swap00_post2_witness : swap00_post2.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap00_post3_witness : swap00_post3.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap00_post4_witness : swap00_post4.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap00_post5_witness : swap00_post5.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  split.
-  - apply Z.add_nonneg_nonneg; lia. 
+  destruct Htransition; simpl.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply mod_prop. lia.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply mod_prop; lia.
   - lia.
 Qed.
 
-Lemma swap01_post0_witness : swap01_post0.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
+Lemma swap1_post0_witness : swap1_post0.
+Proof.
+  intros NA NA' ENV STATE STATE' amt HConds Hreach Htransition.
   destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply div_prop; lia.
+  destruct Htransition; simpl.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply mod_prop2; lia.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply mod_prop2; lia.
+  - reflexivity.
 Qed.
 
-Lemma swap01_post1_witness : swap01_post1.
+Lemma swap1_post1_witness : swap1_post1.
 Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
+  intros NA NA' ENV STATE STATE' amt HConds Hreach Htransition.
   destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply mod_prop; lia.
+  destruct Htransition; simpl.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply div_prop2; lia.
+  - destructAnds. convert_neq. rewrite_eqs.
+    rewrite Z.eqb_refl.
+    apply div_prop2; lia.
+  - lia.
 Qed.
 
-Lemma swap01_post2_witness : swap01_post2.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap01_post3_witness : swap01_post3.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap01_post4_witness : swap01_post4.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  repeat rewrite Z.eqb_refl.
-  simpl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap01_post5_witness : swap01_post5.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap10_post0_witness : swap10_post0.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply mod_prop2; lia.
-Qed.
-
-Lemma swap10_post1_witness : swap10_post1.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply div_prop2; lia.
-Qed.
-
-Lemma swap10_post2_witness : swap10_post2.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap10_post3_witness : swap10_post3.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap10_post4_witness : swap10_post4.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap10_post5_witness : swap10_post5.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap11_post0_witness : swap11_post0.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply mod_prop2; lia.
-Qed.
-
-Lemma swap11_post1_witness : swap11_post1.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  apply div_prop2; lia.
-Qed.
-
-Lemma swap11_post2_witness : swap11_post2.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((Caller ENV =? addr STATE) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
-
-Lemma swap11_post3_witness : swap11_post3.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap11_post4_witness : swap11_post4.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  repeat rewrite Z.eqb_refl.
-  simpl.
-  destruct HConds.
-  lia.
-Qed.
-
-Lemma swap11_post5_witness : swap11_post5.
-Proof.
-  intros ENV STATE STATE' amt HConds Hreach Hstep.
-  rewrite Hstep.
-  simpl.
-  rewrite Z.eqb_refl.
-  destruct HConds.
-  assert ((addr STATE =? Caller ENV) = false) as HifCond. lia.
-  rewrite HifCond.
-  lia.
-Qed.
