@@ -1,0 +1,15 @@
+contract A
+
+constructor()
+
+creates
+  uint128 x := 0
+  uint128 y := 0
+
+transition f() : uint128
+
+iff
+  inRange(uint128, x * y)
+
+updates
+returns x * y

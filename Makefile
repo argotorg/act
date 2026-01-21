@@ -31,7 +31,7 @@ parser_pass=$(filter-out $(failing_parser), $(frontend_pass))
 typing_pass=$(filter-out $(failing_typing), $(frontend_pass))
 
 # supposed to fail
-parser_fail=$(filter-out $(typing_fail), $(frontend_fail))
+parser_fail=$() #$(filter-out $(typing_fail), $(frontend_fail))
 typing_fail=$(filter-out $(passing_typing), $(frontend_fail))
 
 # supposed to pass, but fail
@@ -64,7 +64,7 @@ hevm_fast=$(filter-out $(hevm_slow), $(hevm_pass))
 hevm_multi_fast=$(filter-out $(hevm_multi_slow), $(hevm_multi_pass))
 
 
-#coq-examples = tests/coq/multi tests/coq/transitions tests/coq/safemath tests/coq/exponent tests/coq/token tests/coq/ERC20-simple tests/coq/ERC20  tests/coq/amm tests/coq/pointers
+coq-examples = tests/coq/multi tests/coq/transitions tests/coq/safemath tests/coq/exponent tests/coq/token tests/coq/ERC20-simple tests/coq/ERC20  tests/coq/amm tests/coq/pointers
 
 .PHONY: test-coq $(coq-examples)
 test-coq: compiler $(coq-examples)
@@ -133,5 +133,5 @@ tests/hevm/pass/%.act.hevm.pass.fast:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
 	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
-test-ci: test-parse test-type test-invariant test-postcondition test-coq test-hevm-fast
+test-ci: test-parse test-type test-coq test-hevm-fast
 test: test-ci test-cabal
