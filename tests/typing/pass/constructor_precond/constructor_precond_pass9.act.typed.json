@@ -180,6 +180,18 @@
                     "type": "int"
                   }
                 }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
               }
             ],
             "caseCondition": {
@@ -317,7 +329,7 @@
         "contract": "C",
         "interface": {
           "args": [],
-          "id": "AlexPn 274 22 12",
+          "id": "AlexPn 304 23 12",
           "kind": "Interface"
         },
         "invariants": [],
@@ -378,6 +390,13 @@
         ]
       },
       "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "a1": [
           {
             "name": "A",

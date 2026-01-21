@@ -15,6 +15,7 @@ iff
 creates
     A a1 := x
     A a2 := new A(42) with callvalue(6)
+    uint BALANCE := CALLVALUE
 
 
 contract C

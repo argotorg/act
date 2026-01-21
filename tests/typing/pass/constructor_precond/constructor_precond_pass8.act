@@ -16,6 +16,7 @@ iff
 creates
     A a1 := x
     A a2 := y
+    uint BALANCE := CALLVALUE
 
 
 contract C
