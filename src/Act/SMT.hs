@@ -566,7 +566,7 @@ parseModel = \case
   (TArray _ _) -> error "TODO array parse model"
   (TMapping _ _) -> error "TODO array parse model"
   (TStruct _) -> error "TODO struct parse model"
-  (TContract _) -> error "TODO contract parse model"
+  (TContract _) -> \ _ ->  TExp TBoolean (LitBool nowhere False) -- TODO change
   where
     readBool "true" = True
     readBool "false" = False
@@ -709,10 +709,10 @@ expToSMT2 :: forall (a :: ActType). SType a -> Exp a -> Ctx SMT2
 expToSMT2 typ expr = case expr of
   -- calls to create can never return the same result
   -- temproary workaround for lack of contract creation in SMT encoding
-  (Eq _ _ (Create _ _ _ _) _) -> pure "false"
-  (Eq _ _ _ (Create _ _ _ _)) -> pure "false"
-  (NEq _ _ (Create _ _ _ _) _) -> pure "true"
-  (NEq _ _ _ (Create _ _ _ _)) -> pure "true"
+  (Eq _ _ (Address _ _ (Create _ _ _ _)) _) -> pure "false"
+  (Eq _ _ _ (Address _ _ (Create _ _ _ _))) -> pure "false"
+  (NEq _ _ (Address _ _ (Create _ _ _ _)) _) -> pure "true"
+  (NEq _ _ _ (Address _ _(Create _ _ _ _))) -> pure "true"
   (InRange _ TAddress (Address _ _ (Create _ _ _ _))) -> pure "true"
   -- booleans
   And _ a b -> binop "and" SBoolean SBoolean a b

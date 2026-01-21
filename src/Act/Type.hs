@@ -152,7 +152,7 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
     -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
-    checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    -- 
+    checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    --
     -- check postconditions
     (checkConstrCases env'' (initBalance payable cases)) `bindValidation` \(storageType, cases', cnstr2) -> do
     -- construct the new environment
@@ -249,7 +249,7 @@ checkConstrCases env cases = do
     -- make the storage typing from a list of assignments
     makeStorageTyping :: [U.Assign] -> Integer ->  [(Id, (ValueType, Integer))]
     makeStorageTyping [] _ = []
-    makeStorageTyping ((U.StorageVar _ typ name, _):rest) slot = 
+    makeStorageTyping ((U.StorageVar _ typ name, _):rest) slot =
         -- The BALANCE field is a special case as it is not a storage variable so we map it to slot -1
         if name == "BALANCE" then (name, (typ, -1)):makeStorageTyping rest slot
         else (name, (typ, slot)):makeStorageTyping rest (slot + 1)
@@ -405,7 +405,7 @@ initBalance NonPayable cases =
         else
           let balanceUpdate = (U.StorageVar p (ValueType (TInteger 256 Unsigned)) "BALANCE", U.IntLit nowhere 0) in
           U.Case p cond (balanceUpdate : updates)
-    
+
     -- Check if BALANCE is already there
     hasBalanceField :: [U.Assign] -> Bool
     hasBalanceField [] = False
@@ -715,8 +715,8 @@ inferExpr env@Env{constructors} mode e = case e of
   U.ELEQ    p v1 v2 -> boolOp2 (LEQ  p) TUnboundedInt v1 v2
   U.EGEQ    p v1 v2 -> boolOp2 (GEQ  p) TUnboundedInt v1 v2
   U.EGT     p v1 v2 -> boolOp2 (GT   p) TUnboundedInt v1 v2
-  U.EEq     p v1 v2 -> first (TExp TBoolean) <$> polycheck p Eq v1 v2
-  U.ENeq    p v1 v2 -> first (TExp TBoolean) <$> polycheck p NEq v1 v2
+  U.EEq     p v1 v2 -> first (TExp TBoolean) <$> polyEqcheck p Eq v1 v2
+  U.ENeq    p v1 v2 -> first (TExp TBoolean) <$> polyEqcheck p NEq v1 v2
   U.BoolLit p v1    -> pure (TExp TBoolean (LitBool p v1), [])
   U.EInRange _ (fromAbiType -> ValueType tr@(TInteger _ _)) v ->
     inferExpr env mode v `bindValidation` \(TExp t te, cnstr) ->
@@ -804,13 +804,25 @@ inferExpr env@Env{constructors} mode e = case e of
     arithOp2 f e1 e2 = do
       -- Could generate more precise int type here
       (\(e1', c1) (e2', c2) -> (TExp TUnboundedInt (f e1' e2'), c1 ++ c2)) <$> checkExpr env mode TUnboundedInt e1 <*> checkExpr env mode TUnboundedInt e2
-    polycheck :: forall z. Pn -> (forall y. Pn -> TValueType y -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err (z, [Constraint t])
-    polycheck pn cons e1 e2 = do
+    polyEqcheck :: forall z. Pn -> (forall y. Pn -> TValueType y -> Exp y t -> Exp y t -> z) -> U.Expr -> U.Expr -> Err (z, [Constraint t])
+    polyEqcheck pn cons e1 e2 = do
        ((,) <$> (inferExpr env mode e1) <*> (inferExpr env mode e2)) `bindValidation` \( (TExp t1 te1, c1), (TExp t2 te2, c2) ) ->
+        eqType pn t1 *>
+        eqType pn t1 *>
         case relaxedtestEquality t1 t2 of
           Nothing   -> typeMismatchErr pn t1 t2
           Just Refl -> pure (cons pn t1 te1 te2, c1 ++ c2)
 
+    eqType :: Pn -> TValueType a -> Err ()
+    eqType _ TInteger{} = pure ()
+    eqType _ TUnboundedInt = pure ()
+    eqType _ TBoolean = pure ()
+    eqType _ TAddress = pure ()
+    eqType pn (TContract _) = throw (pn, "Equality is not supported for contract types")
+    eqType pn (TArray _ _) = throw (pn, "Equality is not supported for array types")
+    eqType pn (TMapping _ _) = throw (pn, "Equality is not supported for mapping types")
+    eqType pn (TStruct ts) = traverse_ (\(ValueType t) -> eqType pn t) ts
+    eqType _ (TByteStr) = pure ()
 
 -- | Type check a list of argument expressions against a list of expected types
 checkArgs :: forall t. Env -> Mode t -> Pn -> [ValueType] -> [U.Expr] -> Err ([TypedExp t], [Constraint t])
