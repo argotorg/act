@@ -120,44 +120,6 @@
             ],
             "arity": 2,
             "symbol": "inrange"
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "timing": "TInteger 256 Unsigned",
-                "var": {
-                  "abitype": {
-                    "abitype": {
-                      "size": "256",
-                      "type": "UInt"
-                    },
-                    "kind": "AbiArgument"
-                  },
-                  "kind": "Var",
-                  "var": "x"
-                }
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           }
         ]
       },
@@ -244,26 +206,34 @@
           {
             "args": [
               {
-                "timing": "TContract \"A\"",
-                "var": {
-                  "abitype": {
-                    "kind": "ContractArgument",
-                    "name": "A"
-                  },
-                  "kind": "Var",
-                  "var": "x"
-                }
+                "arg": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                },
+                "arity": 1,
+                "symbol": "addr"
               },
               {
-                "timing": "TContract \"A\"",
-                "var": {
-                  "abitype": {
-                    "kind": "ContractArgument",
-                    "name": "A"
-                  },
-                  "kind": "Var",
-                  "var": "y"
-                }
+                "arg": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "y"
+                  }
+                },
+                "arity": 1,
+                "symbol": "addr"
               }
             ],
             "arity": 2,
@@ -282,20 +252,6 @@
             ],
             "arity": 2,
             "symbol": "<"
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           },
           {
             "args": [
@@ -420,7 +376,7 @@
         "contract": "C",
         "interface": {
           "args": [],
-          "id": "AlexPn 273 23 12",
+          "id": "AlexPn 291 23 12",
           "kind": "Interface"
         },
         "invariants": [],
@@ -440,20 +396,6 @@
             ],
             "arity": 2,
             "symbol": "=="
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           },
           {
             "args": [

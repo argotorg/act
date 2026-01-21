@@ -8,7 +8,7 @@ contract B
 
 constructor(address<A> x, address<A> y)
 iff
-    x != y
+    address(x) != address(y)
 creates
     A a1 := x
     A a2 := y
@@ -24,6 +24,6 @@ creates
 
 transition foo()
 iff 
-  a1 != a2
+  address(a1) != address(a2)
 updates
     b := new B(a1, a2)

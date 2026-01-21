@@ -11,7 +11,7 @@ contract B
 
 constructor(address<A> x, address<A> y) payable
 iff
-    x != y
+    address(x) != address(y)
     CALLVALUE < 10
 creates
     A a1 := x

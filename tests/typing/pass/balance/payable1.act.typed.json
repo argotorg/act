@@ -532,105 +532,6 @@
               ],
               "arity": 2,
               "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "timing": "TInteger 256 Unsigned",
-                  "var": {
-                    "indexes": {
-                      "expression": {
-                        "ethEnv": "Caller",
-                        "type": "int"
-                      },
-                      "kind": "TypedExpr",
-                      "type": "TAddress"
-                    },
-                    "kind": "Mapping",
-                    "reference": {
-                      "kind": "SRHS",
-                      "ref": {
-                        "contract": "PayableVault",
-                        "kind": "SVar",
-                        "svar": "credit",
-                        "time": "Pre"
-                      },
-                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                    }
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "timing": "TInteger 256 Unsigned",
-                  "var": {
-                    "contract": "PayableVault",
-                    "kind": "SVar",
-                    "svar": "totalCredit",
-                    "time": "Pre"
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "timing": "TInteger 256 Unsigned",
-                  "var": {
-                    "contract": "PayableVault",
-                    "kind": "SVar",
-                    "svar": "BALANCE",
-                    "time": "Pre"
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "ethEnv": "Callvalue",
-                  "type": "int"
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "type": "Address"
-                },
-                {
-                  "ethEnv": "Caller",
-                  "type": "int"
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
             }
           ]
         },
@@ -701,58 +602,6 @@
             {
               "literal": "True",
               "type": "bool"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "timing": "TInteger 256 Unsigned",
-                  "var": {
-                    "contract": "PayableVault",
-                    "kind": "SVar",
-                    "svar": "BALANCE",
-                    "time": "Pre"
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "timing": "TInteger 256 Unsigned",
-                  "var": {
-                    "contract": "PayableVault",
-                    "kind": "SVar",
-                    "svar": "totalCredit",
-                    "time": "Pre"
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "ethEnv": "Callvalue",
-                  "type": "int"
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
             },
             {
               "args": [
@@ -892,33 +741,6 @@
             ],
             "arity": 2,
             "symbol": "=="
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
-          },
-          {
-            "args": [
-              {
-                "type": "Address"
-              },
-              {
-                "ethEnv": "Caller",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           },
           {
             "args": [

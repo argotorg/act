@@ -425,44 +425,6 @@
               ],
               "arity": 2,
               "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "timing": "TInteger 256 Unsigned",
-                  "var": {
-                    "abitype": {
-                      "abitype": {
-                        "size": "256",
-                        "type": "UInt"
-                      },
-                      "kind": "AbiArgument"
-                    },
-                    "kind": "Var",
-                    "var": "z"
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "ethEnv": "Callvalue",
-                  "type": "int"
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
             }
           ]
         }
@@ -525,20 +487,6 @@
             ],
             "arity": 2,
             "symbol": "=="
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           },
           {
             "args": [

@@ -127,53 +127,6 @@
               ],
               "arity": 2,
               "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "type": "Address"
-                },
-                {
-                  "timing": "TAddress",
-                  "var": {
-                    "indexes": {
-                      "literal": "1",
-                      "type": "int"
-                    },
-                    "kind": "Array",
-                    "reference": {
-                      "abitype": {
-                        "abitype": {
-                          "arrayType": {
-                            "type": "Address"
-                          },
-                          "size": "2",
-                          "type": "Array"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "xs"
-                    }
-                  }
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
-            },
-            {
-              "args": [
-                {
-                  "size": "256",
-                  "type": "UInt"
-                },
-                {
-                  "ethEnv": "Callvalue",
-                  "type": "int"
-                }
-              ],
-              "arity": 2,
-              "symbol": "inrange"
             }
           ]
         }
@@ -224,20 +177,6 @@
             ],
             "arity": 2,
             "symbol": "=="
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           },
           {
             "args": [

@@ -258,20 +258,6 @@
             ],
             "arity": 2,
             "symbol": "inrange"
-          },
-          {
-            "args": [
-              {
-                "size": "256",
-                "type": "UInt"
-              },
-              {
-                "ethEnv": "Callvalue",
-                "type": "int"
-              }
-            ],
-            "arity": 2,
-            "symbol": "inrange"
           }
         ]
       },
