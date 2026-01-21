@@ -142,7 +142,7 @@ checkContracts env ((U.Contract p cid cnstr behvs):cs) =
 
 -- | Typecheck a constructor
 checkConstructor :: Env -> U.Constructor -> Err (Constructor, Env, [Constraint Untimed])
-checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases posts _) =
+checkConstructor env (U.Constructor p (Interface p' params) payable iffs cases posts _) =
     -- find constructor name
     let cid = contract env
     -- add parameters to environment
@@ -153,6 +153,8 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
     checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    --
     -- check postconditions
     (checkConstrCases env'' (initBalance payable cases)) `bindValidation` \(storageType, cases', cnstr2) -> do
+    -- Check if payable constructor has BALANCE declared (in non-payable coinstructor we add it implicitly)
+    balanaceDeclared p storageType
     -- construct the new environment
     let env''' = addConstrStorage cid storageType env''
     -- check case consistency
@@ -160,11 +162,16 @@ checkConstructor env (U.Constructor _ (Interface p params) payable iffs cases po
     -- check postconditions
     ensures <- map fst <$> traverse (checkExpr env''' U TBoolean) posts
     -- Note: ivariants are ignored for the time being and not checked
-    pure $ let constr = Constructor cid (Interface p params) payable iffs' cases' ensures []
+    pure $ let constr = Constructor cid (Interface p' params) payable iffs' cases' ensures []
                -- add the constructor to the environment
                env'''' = addConstructor cid constr env'''
            in(constr, clearLocalEnv env'''', cnstr1 ++ cnstr2 ++ casecnstrs)
 
+balanaceDeclared :: Pn -> Map Id (ValueType, Integer) -> Err ()
+balanaceDeclared p storageTyping =
+    case Map.lookup "BALANCE" storageTyping of
+      Just _ -> pure ()
+      Nothing -> throw (p, "A payable constructor must explicitly declare BALANCE of type uint256")
 
 -- | Extend a list of constraints with additional preconditions. Useful for adding integer bounds.
 addIffs :: [Exp ABoolean Untimed] -> [Constraint Untimed] -> [Constraint Untimed]

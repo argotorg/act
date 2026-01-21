@@ -10,7 +10,6 @@ import Data.Type.Equality
 
 import Act.Syntax
 import Act.Syntax.Typed
-import Data.Array (bounds)
 
 
 {-|
