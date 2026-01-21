@@ -1,0 +1,990 @@
+{
+  "contracts": [
+    {
+      "behaviours": [
+        {
+          "cases": [
+            {
+              "body": [
+                [
+                  {
+                    "location": {
+                      "contract": "PayableVault",
+                      "kind": "SVar",
+                      "svar": "credit",
+                      "time": "Pre"
+                    },
+                    "value": {
+                      "entries": [
+                        [
+                          {
+                            "ethEnv": "Caller",
+                            "type": "int"
+                          },
+                          {
+                            "args": [
+                              {
+                                "timing": "TInteger 256 Unsigned",
+                                "var": {
+                                  "indexes": {
+                                    "expression": {
+                                      "ethEnv": "Caller",
+                                      "type": "int"
+                                    },
+                                    "kind": "TypedExpr",
+                                    "type": "TAddress"
+                                  },
+                                  "kind": "Mapping",
+                                  "reference": {
+                                    "kind": "SRHS",
+                                    "ref": {
+                                      "contract": "PayableVault",
+                                      "kind": "SVar",
+                                      "svar": "credit",
+                                      "time": "Pre"
+                                    },
+                                    "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                                  }
+                                }
+                              },
+                              {
+                                "ethEnv": "Callvalue",
+                                "type": "int"
+                              }
+                            ],
+                            "arity": 2,
+                            "symbol": "+"
+                          }
+                        ]
+                      ],
+                      "keyType": "TAddress",
+                      "ref": {
+                        "contract": "PayableVault",
+                        "kind": "SVar",
+                        "svar": "credit",
+                        "time": "Pre"
+                      },
+                      "symbol": "mappingUpd",
+                      "valueType": "TInteger 256 Unsigned"
+                    }
+                  },
+                  {
+                    "location": {
+                      "contract": "PayableVault",
+                      "kind": "SVar",
+                      "svar": "totalCredit",
+                      "time": "Pre"
+                    },
+                    "value": {
+                      "args": [
+                        {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
+                            "contract": "PayableVault",
+                            "kind": "SVar",
+                            "svar": "totalCredit",
+                            "time": "Pre"
+                          }
+                        },
+                        {
+                          "ethEnv": "Callvalue",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "+"
+                    }
+                  },
+                  {
+                    "location": {
+                      "contract": "PayableVault",
+                      "kind": "SVar",
+                      "svar": "BALANCE",
+                      "time": "Pre"
+                    },
+                    "value": {
+                      "args": [
+                        {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
+                            "contract": "PayableVault",
+                            "kind": "SVar",
+                            "svar": "BALANCE",
+                            "time": "Pre"
+                          }
+                        },
+                        {
+                          "ethEnv": "Callvalue",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "+"
+                    }
+                  }
+                ],
+                {
+                  "expression": {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "indexes": {
+                        "expression": {
+                          "ethEnv": "Caller",
+                          "type": "int"
+                        },
+                        "kind": "TypedExpr",
+                        "type": "TAddress"
+                      },
+                      "kind": "Mapping",
+                      "reference": {
+                        "kind": "SRHS",
+                        "ref": {
+                          "contract": "PayableVault",
+                          "kind": "SVar",
+                          "svar": "credit",
+                          "time": "Pre"
+                        },
+                        "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                      }
+                    }
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TInteger 256 Unsigned"
+                }
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "PayableVault",
+          "interface": {
+            "args": [],
+            "id": "AlexPn 221 11 19",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "deposit",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": ">"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "indexes": {
+                          "expression": {
+                            "ethEnv": "Caller",
+                            "type": "int"
+                          },
+                          "kind": "TypedExpr",
+                          "type": "TAddress"
+                        },
+                        "kind": "Mapping",
+                        "reference": {
+                          "kind": "SRHS",
+                          "ref": {
+                            "contract": "PayableVault",
+                            "kind": "SVar",
+                            "svar": "credit",
+                            "time": "Pre"
+                          },
+                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "inrange"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "ethEnv": "Callvalue",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    },
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "args": [
+                            {
+                              "timing": "TInteger 256 Unsigned",
+                              "var": {
+                                "indexes": {
+                                  "expression": {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                  },
+                                  "kind": "TypedExpr",
+                                  "type": "TAddress"
+                                },
+                                "kind": "Mapping",
+                                "reference": {
+                                  "kind": "SRHS",
+                                  "ref": {
+                                    "contract": "PayableVault",
+                                    "kind": "SVar",
+                                    "svar": "credit",
+                                    "time": "Pre"
+                                  },
+                                  "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                                }
+                              }
+                            },
+                            {
+                              "ethEnv": "Callvalue",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "+"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "and"
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "contract": "PayableVault",
+                        "kind": "SVar",
+                        "svar": "totalCredit",
+                        "time": "Pre"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "inrange"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "ethEnv": "Callvalue",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    },
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "args": [
+                            {
+                              "timing": "TInteger 256 Unsigned",
+                              "var": {
+                                "contract": "PayableVault",
+                                "kind": "SVar",
+                                "svar": "totalCredit",
+                                "time": "Pre"
+                              }
+                            },
+                            {
+                              "ethEnv": "Callvalue",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "+"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "and"
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "contract": "PayableVault",
+                        "kind": "SVar",
+                        "svar": "BALANCE",
+                        "time": "Pre"
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "inrange"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "ethEnv": "Callvalue",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    },
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "args": [
+                            {
+                              "timing": "TInteger 256 Unsigned",
+                              "var": {
+                                "contract": "PayableVault",
+                                "kind": "SVar",
+                                "svar": "BALANCE",
+                                "time": "Pre"
+                              }
+                            },
+                            {
+                              "ethEnv": "Callvalue",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "+"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "and"
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "PayableVault",
+                        "kind": "SVar",
+                        "svar": "credit",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "totalCredit",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "BALANCE",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "ethEnv": "Caller",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "PayableVault",
+                        "kind": "SVar",
+                        "svar": "credit",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "totalCredit",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "BALANCE",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "ethEnv": "Caller",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            }
+          ]
+        },
+        {
+          "cases": [
+            {
+              "body": [
+                [],
+                {
+                  "expression": {
+                    "args": [
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "contract": "PayableVault",
+                          "kind": "SVar",
+                          "svar": "BALANCE",
+                          "time": "Pre"
+                        }
+                      },
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "contract": "PayableVault",
+                          "kind": "SVar",
+                          "svar": "totalCredit",
+                          "time": "Pre"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": ">="
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TBoolean"
+                }
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "PayableVault",
+          "interface": {
+            "args": [],
+            "id": "AlexPn 1302 50 20",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "solvency",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "literal": "True",
+              "type": "bool"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "BALANCE",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "totalCredit",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "BALANCE",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "contract": "PayableVault",
+                    "kind": "SVar",
+                    "svar": "totalCredit",
+                    "time": "Pre"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "PayableVault",
+                  "kind": "SVar",
+                  "svar": "credit",
+                  "time": "Pre"
+                },
+                "value": {
+                  "entries": [
+                    [
+                      {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      {
+                        "literal": "0",
+                        "type": "int"
+                      }
+                    ]
+                  ],
+                  "keyType": "TAddress",
+                  "symbol": "mapping",
+                  "valueType": "TInteger 256 Unsigned"
+                }
+              },
+              {
+                "location": {
+                  "contract": "PayableVault",
+                  "kind": "SVar",
+                  "svar": "totalCredit",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "PayableVault",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "PayableVault",
+        "interface": {
+          "args": [],
+          "id": "AlexPn 34 3 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "type": "Address"
+              },
+              {
+                "ethEnv": "Caller",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "type": "Address"
+              },
+              {
+                "ethEnv": "Caller",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "PayableVault": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "credit": [
+          {
+            "keyType": {
+              "type": "Address"
+            },
+            "type": "Mapping",
+            "valueType": {
+              "size": "256",
+              "type": "UInt"
+            }
+          },
+          0
+        ],
+        "totalCredit": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          1
+        ]
+      }
+    }
+  }
+}

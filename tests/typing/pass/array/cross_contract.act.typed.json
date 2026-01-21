@@ -10,6 +10,18 @@
                 "location": {
                   "contract": "A",
                   "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
                   "svar": "ar",
                   "time": "Pre"
                 },
@@ -66,70 +78,30 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           }
         ]
       },
@@ -141,6 +113,18 @@
         "cases": [
           {
             "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
               {
                 "location": {
                   "contract": "B",
@@ -215,326 +199,96 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "arg": {
-                      "timing": "TContract \"A\"",
-                      "var": {
-                        "abitype": {
-                          "kind": "ContractArgument",
-                          "name": "A"
-                        },
-                        "kind": "Var",
-                        "var": "a"
-                      }
-                    },
-                    "arity": 1,
-                    "symbol": "addr"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "arg": {
-                      "timing": "TContract \"A\"",
-                      "var": {
-                        "abitype": {
-                          "kind": "ContractArgument",
-                          "name": "A"
-                        },
-                        "kind": "Var",
-                        "var": "a"
-                      }
-                    },
-                    "arity": 1,
-                    "symbol": "addr"
-                  },
-                  {
-                    "literal": "1461501637330902918203684832716283019655932542975",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "indexes": {
+                    "literal": "2",
                     "type": "int"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "2",
-                        "type": "int"
+                  "kind": "Array",
+                  "reference": {
+                    "contract": "A",
+                    "field": "ar",
+                    "kind": "Field",
+                    "reference": {
+                      "abitype": {
+                        "kind": "ContractArgument",
+                        "name": "A"
                       },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "field": "ar",
-                        "kind": "Field",
-                        "reference": {
-                          "abitype": {
-                            "kind": "ContractArgument",
-                            "name": "A"
-                          },
-                          "kind": "Var",
-                          "var": "a"
-                        }
-                      }
+                      "kind": "Var",
+                      "var": "a"
                     }
                   }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "2",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "field": "ar",
-                        "kind": "Field",
-                        "reference": {
-                          "abitype": {
-                            "kind": "ContractArgument",
-                            "name": "A"
-                          },
-                          "kind": "Var",
-                          "var": "a"
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "arg": {
-                      "timing": "TContract \"A\"",
-                      "var": {
-                        "abitype": {
-                          "kind": "ContractArgument",
-                          "name": "A"
-                        },
-                        "kind": "Var",
-                        "var": "a"
-                      }
-                    },
-                    "arity": 1,
-                    "symbol": "addr"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "arg": {
-                      "timing": "TContract \"A\"",
-                      "var": {
-                        "abitype": {
-                          "kind": "ContractArgument",
-                          "name": "A"
-                        },
-                        "kind": "Var",
-                        "var": "a"
-                      }
-                    },
-                    "arity": 1,
-                    "symbol": "addr"
-                  },
-                  {
-                    "literal": "1461501637330902918203684832716283019655932542975",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "indexes": {
+                    "literal": "2",
                     "type": "int"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
+                  "kind": "Array",
+                  "reference": {
+                    "contract": "A",
+                    "field": "ar",
+                    "kind": "Field",
+                    "reference": {
+                      "abitype": {
+                        "kind": "ContractArgument",
+                        "name": "A"
+                      },
+                      "kind": "Var",
+                      "var": "a"
+                    }
                   }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
-          },
-          {
-            "args": [
-              {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "2",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "field": "ar",
-                        "kind": "Field",
-                        "reference": {
-                          "abitype": {
-                            "kind": "ContractArgument",
-                            "name": "A"
-                          },
-                          "kind": "Var",
-                          "var": "a"
-                        }
-                      }
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              },
-              {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "indexes": {
-                        "literal": "2",
-                        "type": "int"
-                      },
-                      "kind": "Array",
-                      "reference": {
-                        "contract": "A",
-                        "field": "ar",
-                        "kind": "Field",
-                        "reference": {
-                          "abitype": {
-                            "kind": "ContractArgument",
-                            "name": "A"
-                          },
-                          "kind": "Var",
-                          "var": "a"
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
-              }
-            ],
-            "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           }
         ]
       },
@@ -546,6 +300,13 @@
     "kind": "Storages",
     "storages": {
       "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "ar": [
           {
             "arrayType": {
@@ -559,6 +320,13 @@
         ]
       },
       "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "y": [
           {
             "size": "256",

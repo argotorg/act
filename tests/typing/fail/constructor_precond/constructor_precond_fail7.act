@@ -1,0 +1,34 @@
+contract A
+
+constructor(uint x, uint y)
+iff
+    x + y > 42
+    inRange(uint, x + y)
+case x == y:
+creates
+    uint w := x * 2
+    uint v := y * 2
+case x != y:
+creates
+    uint w := x
+    uint v := y
+
+contract B
+
+constructor(address<A> x, uint q)
+iff
+    q > 10
+    x.w > 42
+creates
+    A a := x
+    uint z := q
+
+
+contract C
+
+constructor(uint alpha)
+iff
+    alpha > 21
+    inRange(uint, alpha + alpha)
+creates
+    B b := new B(new A(alpha, alpha + 1), alpha)

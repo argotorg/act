@@ -1,0 +1,24 @@
+contract A
+
+constructor(uint x) payable
+iff 
+    CALLVALUE > 5
+creates
+    uint w := x
+    uint BALANCE := CALLVALUE
+
+contract B
+
+constructor(address<A> x) payable
+iff
+    CALLVALUE < 10
+creates
+    A a1 := x
+    A a2 := new A(42) with callvalue(6)
+
+
+contract C
+
+constructor()
+creates
+    B b := new B(new A(11) with callvalue(6)) with callvalue(2)

@@ -481,682 +481,302 @@
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
+                    "kind": "Var",
+                    "var": "value"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "timing": "TAddress",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "type": "Address"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "to"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "timing": "TAddress",
+                        "var": {
                           "abitype": {
-                            "size": "256",
-                            "type": "UInt"
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "AbiArgument"
                           },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "value"
-                      }
+                          "kind": "Var",
+                          "var": "to"
+                        }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
                     }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "ethEnv": "Caller",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "value"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "timing": "TAddress",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "type": "Address"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "to"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "timing": "TAddress",
+                        "var": {
                           "abitype": {
-                            "size": "256",
-                            "type": "UInt"
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "AbiArgument"
                           },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "value"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "to"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "to"
-                      }
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                          "kind": "Var",
+                          "var": "to"
                         }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
                     }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "to"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "to"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Callvalue",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "type": "Address"
                 },
                 {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Caller",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "value"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "value"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "to"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "to"
-                      }
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "to"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "to"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             }
           ]
         },
@@ -1678,28 +1298,8 @@
                         }
                       },
                       {
-                        "args": [
-                          {
-                            "args": [
-                              {
-                                "literal": "2",
-                                "type": "int"
-                              },
-                              {
-                                "literal": "256",
-                                "type": "int"
-                              }
-                            ],
-                            "arity": 2,
-                            "symbol": "^"
-                          },
-                          {
-                            "literal": "1",
-                            "type": "int"
-                          }
-                        ],
-                        "arity": 2,
-                        "symbol": "-"
+                        "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                        "type": "int"
                       }
                     ],
                     "arity": 2,
@@ -2141,28 +1741,8 @@
                         }
                       },
                       {
-                        "args": [
-                          {
-                            "args": [
-                              {
-                                "literal": "2",
-                                "type": "int"
-                              },
-                              {
-                                "literal": "256",
-                                "type": "int"
-                              }
-                            ],
-                            "arity": 2,
-                            "symbol": "^"
-                          },
-                          {
-                            "literal": "1",
-                            "type": "int"
-                          }
-                        ],
-                        "arity": 2,
-                        "symbol": "-"
+                        "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+                        "type": "int"
                       }
                     ],
                     "arity": 2,
@@ -2632,172 +2212,178 @@
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "src"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "type": "Address"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "src"
-                      }
+                  "timing": "TAddress",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "type": "Address"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "src"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "dst"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "type": "Address"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "dst"
-                      }
+                  "timing": "TAddress",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "type": "Address"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "dst"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "amount"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "amount"
-                      }
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "amount"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "timing": "TAddress",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
                     },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "timing": "TAddress",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
                         "indexes": {
                           "expression": {
                             "timing": "TAddress",
@@ -2821,22 +2407,222 @@
                           "ref": {
                             "contract": "Token",
                             "kind": "SVar",
-                            "svar": "balanceOf",
+                            "svar": "allowance",
                             "time": "Pre"
                           },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                          "type": "TMapping (ValueType TAddress) (ValueType (TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))))"
                         }
-                      }
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
                     }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "ethEnv": "Caller",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "timing": "TAddress",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "type": "Address"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "src"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "type": "Address"
+                },
+                {
+                  "timing": "TAddress",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "type": "Address"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "dst"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "amount"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "timing": "TAddress",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "src"
+                        }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "timing": "TAddress",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "type": "Address"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "dst"
+                        }
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
+                        "contract": "Token",
+                        "kind": "SVar",
+                        "svar": "balanceOf",
+                        "time": "Pre"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "indexes": {
+                      "expression": {
+                        "ethEnv": "Caller",
+                        "type": "int"
+                      },
+                      "kind": "TypedExpr",
+                      "type": "TAddress"
+                    },
+                    "kind": "Mapping",
+                    "reference": {
+                      "kind": "SRHS",
+                      "ref": {
                         "indexes": {
                           "expression": {
                             "timing": "TAddress",
@@ -2860,838 +2646,46 @@
                           "ref": {
                             "contract": "Token",
                             "kind": "SVar",
-                            "svar": "balanceOf",
+                            "svar": "allowance",
                             "time": "Pre"
                           },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
+                          "type": "TMapping (ValueType TAddress) (ValueType (TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))))"
                         }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
+                      },
+                      "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
                     }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "dst"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "dst"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Callvalue",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "indexes": {
-                              "expression": {
-                                "timing": "TAddress",
-                                "var": {
-                                  "abitype": {
-                                    "abitype": {
-                                      "type": "Address"
-                                    },
-                                    "kind": "AbiArgument"
-                                  },
-                                  "kind": "Var",
-                                  "var": "src"
-                                }
-                              },
-                              "kind": "TypedExpr",
-                              "type": "TAddress"
-                            },
-                            "kind": "Mapping",
-                            "reference": {
-                              "kind": "SRHS",
-                              "ref": {
-                                "contract": "Token",
-                                "kind": "SVar",
-                                "svar": "allowance",
-                                "time": "Pre"
-                              },
-                              "type": "TMapping (ValueType TAddress) (ValueType (TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))))"
-                            }
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "type": "Address"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "indexes": {
-                              "expression": {
-                                "timing": "TAddress",
-                                "var": {
-                                  "abitype": {
-                                    "abitype": {
-                                      "type": "Address"
-                                    },
-                                    "kind": "AbiArgument"
-                                  },
-                                  "kind": "Var",
-                                  "var": "src"
-                                }
-                              },
-                              "kind": "TypedExpr",
-                              "type": "TAddress"
-                            },
-                            "kind": "Mapping",
-                            "reference": {
-                              "kind": "SRHS",
-                              "ref": {
-                                "contract": "Token",
-                                "kind": "SVar",
-                                "svar": "allowance",
-                                "time": "Pre"
-                              },
-                              "type": "TMapping (ValueType TAddress) (ValueType (TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))))"
-                            }
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Caller",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "src"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "src"
-                      }
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "dst"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TAddress",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "type": "Address"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "dst"
-                      }
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "amount"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "amount"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "src"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "src"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "dst"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "timing": "TAddress",
-                            "var": {
-                              "abitype": {
-                                "abitype": {
-                                  "type": "Address"
-                                },
-                                "kind": "AbiArgument"
-                              },
-                              "kind": "Var",
-                              "var": "dst"
-                            }
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "contract": "Token",
-                            "kind": "SVar",
-                            "svar": "balanceOf",
-                            "time": "Pre"
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "indexes": {
-                              "expression": {
-                                "timing": "TAddress",
-                                "var": {
-                                  "abitype": {
-                                    "abitype": {
-                                      "type": "Address"
-                                    },
-                                    "kind": "AbiArgument"
-                                  },
-                                  "kind": "Var",
-                                  "var": "src"
-                                }
-                              },
-                              "kind": "TypedExpr",
-                              "type": "TAddress"
-                            },
-                            "kind": "Mapping",
-                            "reference": {
-                              "kind": "SRHS",
-                              "ref": {
-                                "contract": "Token",
-                                "kind": "SVar",
-                                "svar": "allowance",
-                                "time": "Pre"
-                              },
-                              "type": "TMapping (ValueType TAddress) (ValueType (TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))))"
-                            }
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "indexes": {
-                          "expression": {
-                            "ethEnv": "Caller",
-                            "type": "int"
-                          },
-                          "kind": "TypedExpr",
-                          "type": "TAddress"
-                        },
-                        "kind": "Mapping",
-                        "reference": {
-                          "kind": "SRHS",
-                          "ref": {
-                            "indexes": {
-                              "expression": {
-                                "timing": "TAddress",
-                                "var": {
-                                  "abitype": {
-                                    "abitype": {
-                                      "type": "Address"
-                                    },
-                                    "kind": "AbiArgument"
-                                  },
-                                  "kind": "Var",
-                                  "var": "src"
-                                }
-                              },
-                              "kind": "TypedExpr",
-                              "type": "TAddress"
-                            },
-                            "kind": "Mapping",
-                            "reference": {
-                              "kind": "SRHS",
-                              "ref": {
-                                "contract": "Token",
-                                "kind": "SVar",
-                                "svar": "allowance",
-                                "time": "Pre"
-                              },
-                              "type": "TMapping (ValueType TAddress) (ValueType (TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))))"
-                            }
-                          },
-                          "type": "TMapping (ValueType TAddress) (ValueType (TInteger 256 Unsigned))"
-                        }
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
-            },
-            {
-              "args": [
-                {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                },
-                {
-                  "args": [
-                    {
-                      "ethEnv": "Caller",
-                      "type": "int"
-                    },
-                    {
-                      "literal": "1461501637330902918203684832716283019655932542975",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
-                }
-              ],
-              "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             }
           ]
         }
@@ -3700,6 +2694,18 @@
         "cases": [
           {
             "body": [
+              {
+                "location": {
+                  "contract": "Token",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
               {
                 "location": {
                   "contract": "Token",
@@ -3889,246 +2895,104 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "_totalSupply"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "_totalSupply"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "_totalSupply"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Caller",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "type": "Address"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Caller",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "1461501637330902918203684832716283019655932542975",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Caller",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "_totalSupply"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "_totalSupply"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "_totalSupply"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Caller",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "type": "Address"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Caller",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "1461501637330902918203684832716283019655932542975",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Caller",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           }
         ]
       },
@@ -4140,6 +3004,13 @@
     "kind": "Storages",
     "storages": {
       "Token": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "allowance": [
           {
             "keyType": {

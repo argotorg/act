@@ -33,7 +33,7 @@ import Act.Bounds
 
 type Err = Error String
 
--- | A map containing the interfaces of all available constructors, a payable flag, and the constructor preconditions.
+-- | A map containing the definitions off all constructors
 type Constructors = Map Id Constructor
 
 -- | The type checking environment.
@@ -92,14 +92,14 @@ clearLocalEnv env =
 -- An integer constraint constrains an integer expression to fit within the bounds of a given type.
 -- A call constraint constrains the arguments of a constructor call to satisfy the constructor's preconditions.
 data Constraint t =
-    BoolCnstr Pn String Env (Exp ABoolean t) -- ^ Boolean constraint with a message, environment, and boolean expression. Generated to check integer bounds, case consistency, and array bounds.
-  | CallCnstr Pn String Env [TypedExp t] Id  -- ^ Call constraint with a message, environment, argument list, and constructor id. Generated to check that preconditions of the called constructor are satisfied.
+    BoolCnstr Pn String Env (Exp ABoolean t)                          -- ^ Boolean constraint with a message, environment, and boolean expression. Generated to check integer bounds, case consistency, and array bounds.
+  | CallCnstr Pn String Env [TypedExp t] (Maybe (Exp AInteger t)) Id  -- ^ Call constraint with a message, environment, argument list, callvalue, and constructor id. Generated to check that preconditions of the called constructor are satisfied.
     deriving (Show, Eq)
 
 instance Annotatable Constraint where
   annotate :: Constraint Untimed -> Constraint Timed
   annotate (BoolCnstr p msg env e) = BoolCnstr p msg env (setPre e)
-  annotate (CallCnstr p msg env es i) = CallCnstr p msg env (setPre <$> es) i
+  annotate (CallCnstr p msg env es cv i) = CallCnstr p msg env (setPre <$> es) (setPre <$> cv) i
 
 
 -- | Create an integer bound constraint
@@ -181,8 +181,8 @@ addIffs iffs cnstrs = addIff <$> cnstrs
     addIff :: Constraint Untimed -> Constraint Untimed
     addIff (BoolCnstr p msg env e) =
         BoolCnstr p msg (addPreconds iffs env) e
-    addIff (CallCnstr p msg env args cid) =
-        CallCnstr p msg (addPreconds iffs env) args cid
+    addIff (CallCnstr p msg env args cv cid) =
+        CallCnstr p msg (addPreconds iffs env) args cv cid
 
 -- | Check that constructor/transition parameters have valid types
 checkParams :: Env -> U.Arg -> Err ()
@@ -767,7 +767,7 @@ inferExpr env@Env{constructors} mode e = case e of
         argsc <- checkArgs env mode p (argToValueType <$> sig) args
         pure $ let (args', cnstr1) = argsc
                    (cv, cnstr2) = cvc
-                   callcnstr = CallCnstr p msg env args' c
+                   callcnstr = CallCnstr p msg env args' cv c
                    msg = "Preconditions of constructor call to " <> show c <> " are not guaranteed to hold"
                 in (TExp (TContract c) (Create p c args' cv), callcnstr:cnstr1 ++ cnstr2)
     Nothing -> throw (p, "Unknown constructor " <> show c)

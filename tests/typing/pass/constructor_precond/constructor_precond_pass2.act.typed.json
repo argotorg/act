@@ -10,6 +10,18 @@
                 "location": {
                   "contract": "A",
                   "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
                   "svar": "a",
                   "time": "Pre"
                 },
@@ -109,6 +121,110 @@
               {
                 "args": [
                   {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "x"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "inrange"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "y"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
+                  },
+                  {
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "args": [
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "x"
+                            }
+                          },
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "y"
+                            }
+                          }
+                        ],
+                        "arity": 2,
+                        "symbol": "+"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "and"
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
                     "timing": "TInteger 256 Unsigned",
                     "var": {
                       "abitype": {
@@ -151,286 +267,126 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "x"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "x"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "x"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "y"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "y"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "y"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "x"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "x"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "x"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "y"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "y"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "y"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           }
         ]
       },
@@ -534,7 +490,7 @@
                 "kind": "Declaration"
               }
             ],
-            "id": "AlexPn 212 19 15",
+            "id": "AlexPn 265 21 15",
             "kind": "Interface"
           },
           "kind": "Behaviour",
@@ -608,8 +564,8 @@
                 {
                   "args": [
                     {
-                      "literal": "0",
-                      "type": "int"
+                      "size": "256",
+                      "type": "UInt"
                     },
                     {
                       "timing": "TInteger 256 Unsigned",
@@ -627,31 +583,81 @@
                     }
                   ],
                   "arity": 2,
-                  "symbol": "<="
+                  "symbol": "inrange"
                 },
                 {
                   "args": [
                     {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
                         },
-                        "kind": "Var",
-                        "var": "m"
-                      }
+                        {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
+                            "abitype": {
+                              "abitype": {
+                                "size": "256",
+                                "type": "UInt"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "n"
+                          }
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
                     },
                     {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        {
+                          "args": [
+                            {
+                              "timing": "TInteger 256 Unsigned",
+                              "var": {
+                                "abitype": {
+                                  "abitype": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "kind": "AbiArgument"
+                                },
+                                "kind": "Var",
+                                "var": "m"
+                              }
+                            },
+                            {
+                              "timing": "TInteger 256 Unsigned",
+                              "var": {
+                                "abitype": {
+                                  "abitype": {
+                                    "size": "256",
+                                    "type": "UInt"
+                                  },
+                                  "kind": "AbiArgument"
+                                },
+                                "kind": "Var",
+                                "var": "n"
+                              }
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "+"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
                     }
                   ],
                   "arity": 2,
-                  "symbol": "<="
+                  "symbol": "and"
                 }
               ],
               "arity": 2,
@@ -660,232 +666,126 @@
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "n"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "n"
-                      }
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "m"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "n"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "m"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "m"
-                      }
-                    },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "ethEnv": "Callvalue",
+                  "type": "int"
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "n"
-                      }
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "timing": "TInteger 256 Unsigned",
-                      "var": {
-                        "abitype": {
-                          "abitype": {
-                            "size": "256",
-                            "type": "UInt"
-                          },
-                          "kind": "AbiArgument"
-                        },
-                        "kind": "Var",
-                        "var": "n"
-                      }
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "m"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
             },
             {
               "args": [
                 {
-                  "args": [
-                    {
-                      "literal": "0",
-                      "type": "int"
-                    },
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                  "size": "256",
+                  "type": "UInt"
                 },
                 {
-                  "args": [
-                    {
-                      "ethEnv": "Callvalue",
-                      "type": "int"
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
                     },
-                    {
-                      "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                      "type": "int"
-                    }
-                  ],
-                  "arity": 2,
-                  "symbol": "<="
+                    "kind": "Var",
+                    "var": "n"
+                  }
                 }
               ],
               "arity": 2,
-              "symbol": "and"
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
             }
           ]
         }
@@ -894,6 +794,18 @@
         "cases": [
           {
             "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
               {
                 "location": {
                   "contract": "B",
@@ -983,7 +895,7 @@
               "kind": "Declaration"
             }
           ],
-          "id": "AlexPn 123 12 12",
+          "id": "AlexPn 148 13 12",
           "kind": "Interface"
         },
         "invariants": [],
@@ -1057,8 +969,8 @@
               {
                 "args": [
                   {
-                    "literal": "0",
-                    "type": "int"
+                    "size": "256",
+                    "type": "UInt"
                   },
                   {
                     "timing": "TInteger 256 Unsigned",
@@ -1076,31 +988,81 @@
                   }
                 ],
                 "arity": 2,
-                "symbol": "<="
+                "symbol": "inrange"
               },
               {
                 "args": [
                   {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
                       },
-                      "kind": "Var",
-                      "var": "p"
-                    }
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "q"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
                   },
                   {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "args": [
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "p"
+                            }
+                          },
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "q"
+                            }
+                          }
+                        ],
+                        "arity": 2,
+                        "symbol": "+"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
                   }
                 ],
                 "arity": 2,
-                "symbol": "<="
+                "symbol": "and"
               }
             ],
             "arity": 2,
@@ -1109,232 +1071,126 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "q"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "q"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "p"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "q"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "p"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "p"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "q"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "q"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "p"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "q"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
           }
         ]
       },
@@ -1346,6 +1202,18 @@
         "cases": [
           {
             "body": [
+              {
+                "location": {
+                  "contract": "C",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
               {
                 "location": {
                   "contract": "C",
@@ -1435,7 +1303,7 @@
               "kind": "Declaration"
             }
           ],
-          "id": "AlexPn 308 28 12",
+          "id": "AlexPn 389 31 12",
           "kind": "Interface"
         },
         "invariants": [],
@@ -1509,8 +1377,8 @@
               {
                 "args": [
                   {
-                    "literal": "0",
-                    "type": "int"
+                    "size": "256",
+                    "type": "UInt"
                   },
                   {
                     "timing": "TInteger 256 Unsigned",
@@ -1528,31 +1396,81 @@
                   }
                 ],
                 "arity": 2,
-                "symbol": "<="
+                "symbol": "inrange"
               },
               {
                 "args": [
                   {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
                       },
-                      "kind": "Var",
-                      "var": "alpha"
-                    }
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "beta"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
                   },
                   {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "args": [
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "alpha"
+                            }
+                          },
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "beta"
+                            }
+                          }
+                        ],
+                        "arity": 2,
+                        "symbol": "+"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
                   }
                 ],
                 "arity": 2,
-                "symbol": "<="
+                "symbol": "and"
               }
             ],
             "arity": 2,
@@ -1561,232 +1479,126 @@
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "beta"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "beta"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "alpha"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "beta"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "alpha"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "alpha"
-                    }
-                  },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "ethEnv": "Callvalue",
+                "type": "int"
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "beta"
-                    }
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "timing": "TInteger 256 Unsigned",
-                    "var": {
-                      "abitype": {
-                        "abitype": {
-                          "size": "256",
-                          "type": "UInt"
-                        },
-                        "kind": "AbiArgument"
-                      },
-                      "kind": "Var",
-                      "var": "beta"
-                    }
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "alpha"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
           },
           {
             "args": [
               {
-                "args": [
-                  {
-                    "literal": "0",
-                    "type": "int"
-                  },
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                "size": "256",
+                "type": "UInt"
               },
               {
-                "args": [
-                  {
-                    "ethEnv": "Callvalue",
-                    "type": "int"
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
                   },
-                  {
-                    "literal": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-                    "type": "int"
-                  }
-                ],
-                "arity": 2,
-                "symbol": "<="
+                  "kind": "Var",
+                  "var": "beta"
+                }
               }
             ],
             "arity": 2,
-            "symbol": "and"
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
           }
         ]
       },
@@ -1798,6 +1610,13 @@
     "kind": "Storages",
     "storages": {
       "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "a": [
           {
             "size": "256",
@@ -1814,6 +1633,13 @@
         ]
       },
       "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "a": [
           {
             "name": "A",
@@ -1823,6 +1649,13 @@
         ]
       },
       "C": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
         "b": [
           {
             "name": "B",

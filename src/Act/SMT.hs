@@ -707,6 +707,13 @@ typedExpToSMT2 (TExp typ e) = expToSMT2 (toSType typ) e
 -- | encodes the given Exp as an smt2 expression
 expToSMT2 :: forall (a :: ActType). SType a -> Exp a -> Ctx SMT2
 expToSMT2 typ expr = case expr of
+  -- calls to create can never return the same result
+  -- temproary workaround for lack of contract creation in SMT encoding
+  (Eq _ _ (Create _ _ _ _) _) -> pure "false"
+  (Eq _ _ _ (Create _ _ _ _)) -> pure "false"
+  (NEq _ _ (Create _ _ _ _) _) -> pure "true"
+  (NEq _ _ _ (Create _ _ _ _)) -> pure "true"
+  (InRange _ TAddress (Address _ _ (Create _ _ _ _))) -> pure "true"
   -- booleans
   And _ a b -> binop "and" SBoolean SBoolean a b
   Or _ a b -> binop "or" SBoolean SBoolean a b
@@ -758,8 +765,7 @@ expToSMT2 typ expr = case expr of
           defaultConst SStruct = error "TODO"
 
   -- contracts
-  Create _ _ _ _ -> pure "0" -- TODO just a dummy address for now
-
+  Create _ _ _ _ -> error "Internal Error: unexpected create call in the SMT expression"
   -- polymorphic
   --  For array comparisons, expands both arrays to their elements and compares elementwise,
   --  as SMT's default array equality requires equality for all possible Int values,
@@ -783,7 +789,7 @@ expToSMT2 typ expr = case expr of
   NEq p s a b -> unop "not" SBoolean (Eq p s a b)
 
   ITE _ a b c -> triop "ite" SBoolean typ typ a b c
-  VarRef _ t item -> entry item
+  VarRef _ _ item -> entry item
   Address _ _ e -> expToSMT2 SContract e -- TODO: get contract, maybe?
 
   Mapping _ _ _ _ -> expToSMT2 SContract undefined -- TODO
