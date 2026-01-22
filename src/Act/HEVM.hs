@@ -316,16 +316,13 @@ symAddrCnstr :: ContractMap -> [EVM.Prop]
 symAddrCnstr cmap =
     (\(a1, a2) -> EVM.PNeg (EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2))) <$> comb (M.keys cmap)
 
-translateBehvs :: Monad m => ContractMap -> [Behaviour] -> ActT m [(Id, IsPayable, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])]
-translateBehvs cmap behvs = mapM (translateBehv cmap) behvs
-
 ifaceToSig :: Id -> Interface -> Sig
 ifaceToSig name (Interface _ args) = Sig (T.pack name) (fmap fromdecl args)
   where
     fromdecl (Arg argtype _) = argToAbiType argtype
 
-translateBehv :: Monad m => ContractMap -> Behaviour -> ActT m (Id, IsPayable, [(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])
-translateBehv cmap (Behaviour behvName _ iface payable preconds cases _)  = do
+translateBehv :: App m => ContractMap -> Behaviour -> ActT m ([(EVM.Expr EVM.End, ContractMap)], [EVM.Prop])
+translateBehv cmap (Behaviour behvName _ iface _ preconds cases _)  = do
   let argConstraints = signExtendArgConstraints iface
   -- We collect all integer bounds from all cases of a given behaviour.
   -- These bounds are set as preconditions for all cases of a behaviour,
@@ -338,10 +335,9 @@ translateBehv cmap (Behaviour behvName _ iface payable preconds cases _)  = do
     -- Branch into a path for each transition case
     bcase <- lift . lift $ fromFoldable cases
     (translateBehvCase cmap (snd behvCalldata) bounds preconds) bcase
-  pure (behvName, payable, first (addPathCondition argConstraints) <$> (integratePathConds <$> ends), behvCalldata, behvSig, bounds)
+  pure (first (addPathCondition argConstraints) <$> (integratePathConds <$> ends), bounds)
   where
     behvCalldata = makeCalldata behvName iface
-    behvSig = ifaceToSig behvName iface
     integratePathConds ((end, cm), pcs) = (addPathCondition pcs end, cm)
 
 translateBehvCase :: Monad m => ContractMap -> [EVM.Prop] -> [EVM.Prop] -> [Exp ABoolean] -> Bcase -> ActBTT m (EVM.Expr EVM.End, ContractMap)
@@ -352,6 +348,16 @@ translateBehvCase cmap cdataprops bounds preconds (Case _ casecond (upds, ret)) 
   cmap' <- applyUpdates cmap cmap emptyEnv upds
   let acmap = abstractCmap initAddr (M.map (first simplify) cmap')
   pure (simplify $ EVM.Success (preconds' <> bounds <> [casecond'] <> cdataprops <> symAddrCnstr cmap') mempty ret' (M.map fst cmap'), acmap)
+
+-- | Show a contract map for debugging purposes
+showCmap :: ContractMap -> String
+showCmap cmap = intercalate "\n\n" $ map (\(addr, (c, cid)) -> showContract addr cid c) (M.toList cmap)
+  where
+    showContract :: EVM.Expr EVM.EAddr -> Id -> EVM.Expr EVM.EContract -> String
+    showContract addr cid (EVM.C _ storage _ bal _) =
+       "Contract: " ++ cid ++ " at address " ++ show addr ++ ":\n" ++
+       "{ storage = " ++ show storage ++ "\n. balance = " ++ show bal ++ "}" ++ show cid
+    showContract _ _ (EVM.GVar _) = "GVar"
 
 
 applyUpdates :: Monad m => ContractMap -> ContractMap -> CallEnv -> [StorageUpdate] -> ActBTT m ContractMap
@@ -1054,7 +1060,7 @@ comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
 checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface payable preconds _ _ _)  _) = do
   -- Construct the initial contract state
-  (actinitmap, checks) <- getInitContractState solvers cname iface preconds M.empty
+  (actinitmap, errors) <- getInitContractState solvers cname iface preconds M.empty
   let (hevminitmap, checks') = translateCmap actinitmap payable
   -- Translate Act constructor to Expr
   fresh <- getFresh
@@ -1070,7 +1076,7 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
   res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
   lift $ showMsg "\x1b[1mChecking if constructor input spaces are the same.\x1b[m"
   res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
-  pure $ traverse_ (checkStoreIsomorphism (head fcmaps)) (tail fcmaps) *> checks *> res1 *> res2 *> checkTree (head fcmaps) *> Success (head fcmaps)
+  pure $ traverse_ (checkStoreIsomorphism (head fcmaps)) (tail fcmaps) *> errors *> res1 *> res2 *> checkTree (head fcmaps) *> Success (head fcmaps)
   where
     removeFails branches = filter isSuccess branches
 
@@ -1078,11 +1084,17 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
 checkBehaviours :: forall m. App m => SolverGroup -> Contract -> ContractMap -> ActT m (Error String ())
 checkBehaviours solvers (Contract _ behvs) actstorage = do
   fresh <- getFresh
-  actbehvs <- translateBehvs actstorage behvs
-  (fmap $ concatError def) $ forM actbehvs $ \(name,payable,actbehv,calldata,sig,bounds) -> do
+  (fmap $ concatError def) $ forM behvs $ \behv@(Behaviour name _ iface payable preconds cases _) -> do
+    let calldata = makeCalldata name iface
+    let sig = ifaceToSig name iface
+    -- construct initial contract state for the transition by adding the contracts passed as arguments
+    (initstore, errors) <- getInitContractState solvers name iface preconds actstorage  
+    -- translate Act behaviour to Expr
+    (actbehv,bounds) <- translateBehv initstore behv
     let (behvs', fcmaps) = unzip actbehv
-    let (hevmstorage, checks) = translateCmap actstorage payable
-    
+    -- translate Act contract map to hevm contract map
+    let (hevmstorage, checks) = translateCmap initstore payable
+    -- symbolically execute bytecode
     solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata (checks ++ bounds) fresh
     
     -- when (name == "deposit") $ do
@@ -1098,7 +1110,7 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
     -- input space exhaustiveness check
     lift $ showMsg "\x1b[1mChecking if the input spaces are the same\x1b[m"
     res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
-    pure $ traverse_ (checkStoreIsomorphism actstorage) (fcmaps) *> res1 *> res2
+    pure $ traverse_ (checkStoreIsomorphism actstorage) (fcmaps) *> res1 *> res2 *> errors
 
   where
     removeFails branches = filter isSuccess branches
@@ -1228,10 +1240,10 @@ checkStoreIsomorphism cmap1 cmap2 =
       case (M.lookup a1 map1, M.lookup a2 map2) of
         (Just a2', Just a1') ->
           if a2 == a2' && a1 == a1' then visit addrs1 addrs2 map1 map2 discovered
-          else throw (nowhere, "The shape of the resulting map is not preserved.")
+          else throw (nowhere, "1: The shape of the resulting map is not preserved.")
         (Nothing, Nothing) -> visit addrs1 addrs2 (M.insert a1 a2 map1) (M.insert a2 a1 map2) ((a1, a2): discovered)
-        (_, _) -> throw (nowhere, "The shape of the resulting map is not preserved.")
-    visit _ _ _ _  _ = throw (nowhere, "The shape of the resulting map is not preserved.")
+        (_, _) -> throw (nowhere, "2: The shape of the resulting map is not preserved.")
+    visit _ _ _ _  _ = throw (nowhere, "3: The shape of the resulting map is not preserved.")
 
 -- Find addresses mentioned in storage
 getAddrs :: EVM.Expr EVM.Storage -> [(Int, EVM.Expr EVM.EAddr)]
