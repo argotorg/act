@@ -185,9 +185,9 @@ Proof.
   intros B S.
   eapply step_multi_step with (P := fun s1 s2 => balances_sum s1 = balances_sum s2).
   - intros s s' Hstep.
-    induction Hstep as [e Hestep].
-    destruct Hestep as [na [e' Hestep]].
-    destruct Hestep as [na na' e s s' Hstep].
+    destruct Hstep as [ENV Hestep].
+    destruct Hestep as [NextAddr [NextAddr' Hestep]].
+    destruct Hestep as [Hstep].
     destruct Hstep.
     destruct H. (* X as [Hpc1 Hpc2 Hpc3 Hpc4 Hpc5 Hpc6 Hpc7 Hpc8 Hpc9 Hpc10 Hpc11 Hpc12].*)
     destructAnds.

@@ -16,8 +16,8 @@ Proof.
 Qed.
 
 Theorem mul_correct : forall na e s x y,
-  mul_conds na e s x y ->
-  range256 x /\ range256 y /\ range256 (x * y) <-> mul_ret na e s x y (x * y).
+  mul_conds e x y s na ->
+  range256 x /\ range256 y /\ range256 (x * y) <-> mul_ret e x y s na (x * y).
 Proof.
   intros.
   split. {
@@ -38,7 +38,7 @@ Qed.
 
 Theorem mul_is_mul :
   forall na e s x y z,
-    mul_ret na e s x y z ->
+    mul_ret e x y s na z ->
     z = x * y.
 Proof.
   intros. inversion H.

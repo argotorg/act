@@ -322,7 +322,7 @@ Qed.
 
 Theorem initialSupply': forall ENV _totalSupply (n : nat), forall NA NA' STATE,
     0 <= Caller ENV ->
-    constructor NA ENV _totalSupply STATE NA' ->
+    constructor ENV _totalSupply NA STATE NA' ->
     balanceOf_sum' (balanceOf STATE) n 0 =
     if (Z.of_nat n <? (Caller ENV)) then 0 else totalSupply STATE.
 Proof.
@@ -368,7 +368,7 @@ Qed.
 
 Theorem initialSupply: forall NA ENV _totalSupply STATE NA',
     0 <= Caller ENV <= MAX_ADDRESS ->
-    constructor NA ENV _totalSupply STATE NA' ->
+    constructor ENV _totalSupply NA STATE NA' ->
     balanceOf_sum STATE =
     totalSupply STATE.
 Proof.
@@ -398,7 +398,7 @@ Proof.
   intros STATE Hreach.
   destruct Hreach as [ BASE Hreach ], Hreach as [ Hinit Hmulti ].
 
-  induction Hmulti as [ | STATE NEXT Hstep ].
+  induction Hmulti as [ | STATE STATE' Hstep ].
   - destruct Hinit as [ENV ? ? ? Hcnstr].
     eapply initialSupply.
     2: eassumption.
@@ -413,8 +413,8 @@ Proof.
     assert ( forall a b c,
       a - b = -c <-> a + c = b) as Ha4. lia.
 
-    destruct Hstep as [NA [NA' [ENV Hextstep]]].
-    destruct Hextstep as [NA NA'  ENV STATE STATE' Hstep].
+    destruct Hstep as [ENV [NA [NA' Hextstep]]].
+    destruct Hextstep as [Hstep].
     destruct Hstep.
     + remember STATE' eqn:Hstate'.
       destruct H.

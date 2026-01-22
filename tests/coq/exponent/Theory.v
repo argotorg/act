@@ -18,13 +18,13 @@ Proof.
     reflexivity.
 Qed.
 
-Definition invariantProp (ENV : Env) (b0 : Z) (e0 : Z) (STATE : State) :=
+Definition invariantProp (ENV : Env) (b0 : Z) (e0 : Z) (NextAddr : address) (STATE : State) :=
   (r STATE) * (b STATE) ^ ((e STATE) - 1) = b0 ^ e0.
 
 Lemma invInitProof : invariantInit invariantProp.
 Proof.
   unfold invariantProp.
-  intros na env _b _e s na' Hinit .
+  intros env _b _e na s na' Hinit .
   simpl.
   destruct Hinit; simpl.
   rewrite Z.sub_1_r.
@@ -38,7 +38,7 @@ Qed.
 Lemma invStepProof : invariantStep invariantProp.
 Proof.
   unfold invariantProp.
-  intros na env s s' _b _e Hinit Hstep HinvPre.
+  intros env _b _e na s s' Hinit Hstep HinvPre.
   destruct Hstep as [e Hestep].
   destruct Hestep as [NA [NA' Hestep]].
   destruct Hestep.
@@ -48,13 +48,13 @@ Proof.
   simpl.
   rewrite Z.sub_1_r.
   rewrite <- Z.mul_assoc.
-  rewrite pow_pred with (a := b STATE) (e := Exponent.e STATE - 1).
+  rewrite pow_pred with (a := b s) (e := Exponent.e s - 1).
   - assumption.
   - lia.
 Qed.
 
 Lemma invariant : forall na env b0 e0 s,
-  reachableFromInit na env b0 e0 s -> (r s) * (b s) ^ ((e s) - 1) = b0 ^ e0.
+  reachableFromInit env b0 e0 na s -> (r s) * (b s) ^ ((e s) - 1) = b0 ^ e0.
 Proof.
   intros na env b0 e0 s Hreach.
   eapply invariantReachable with (IP := invariantProp) (ENV := env).
@@ -64,7 +64,7 @@ Proof.
 Qed.
 
 Theorem exp_correct : forall na env b0 e0 s,
-  reachableFromInit na env b0 e0 s -> e s = 1 -> r s = b0 ^ e0.
+  reachableFromInit env b0 e0 na s -> e s = 1 -> r s = b0 ^ e0.
 Proof.
   intros na env b0 e0 s H He.
   eapply invariant in H.

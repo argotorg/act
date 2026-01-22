@@ -231,10 +231,10 @@ Theorem constant_balanceOf : forall BASE STATE,
 Proof.
   intros BASE S.
   eapply step_multi_step with (P := fun s1 s2 => balanceOf_sum s1 = balanceOf_sum s2).
-  - intros ? ? Hstep.
-    induction Hstep as [? Hestep];
-    destruct Hestep as [? [ENV10 [? ? ? ? ? Hlocalstep]]].
-    remember STATE'.
+  - intros STATE STATE' Hstep.
+    induction Hstep as [ENV Hestep];
+    destruct Hestep as [NextAddr [NextAddr' [Hlocalstep]]].
+    remember STATE' eqn:Heqs0.
     destruct Hlocalstep;
     destruct H.
     destruct H.
@@ -244,7 +244,7 @@ Proof.
         { unfold transfer', transfer_from, transfer_to in *.
           convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
         }
-        rewrite Heqs0. rewrite H18. constructor.
+        rewrite Heqs0. rewrite H15. constructor.
       }
     + reflexivity.
     + destruct H.

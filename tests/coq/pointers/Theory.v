@@ -12,7 +12,6 @@ Ltac destructAnds :=
     [ H : _ /\ _ |- _ ] => destruct H
   end.
 
-(*
 Lemma unique_after_step : forall STATE STATE',
      step STATE STATE'
   -> noAliasing STATE
@@ -25,36 +24,37 @@ Proof.
   destruct Hestep as [ ENV na s s' na' Hstep
                      | ENV na s s' HenvConstr Hstep
                      | ENV na s s' HenvConstr Hstep Haddr_const Ha1_const].
-  - destruct Hstep as [ENV na pa1 pa2 s s'' na' Hconds]. 
-    constructor.
-    + simpl.
-      intros p HaddrIn.
-      apply Z.neq_sym.
-      apply Z.lt_neq.
-      apply Z.lt_trans with (n := p) (m := NextAddr ENV).
-      * apply Z.gt_lt.
-        destruct Hconds.
-        apply H11.
-        apply address_subcontract.
-        apply addressOf_a1.
-        assumption.
-      * lia.
-    + simpl.
-      intros p HaddrIn.
-      remember ({|
-        B.addr := NextAddr ENV + 1 + 1;
-        B.bu1 := A.addr pa2;
-        B.bu2 := NextAddr ENV + 1;
-        B.a := {| A.addr := NextAddr ENV + 1 + 1 + 1; A.x := 17 |};
-        B.y := 42
-      |}) as s_b1' eqn:Histate_b1.
-      destruct HaddrIn as [s_b1| p s_b1 HaddrIn_a];
-      try (rewrite Histate_b1); simpl.
-      * lia.
-      * remember (B.a s_b1) eqn:Histate_b1_a.
-        destruct HaddrIn_a.
-        rewrite Histate_b1_a, Histate_b1; simpl.
-        lia.
+  - destruct Hstep as [ENV na pa1 pa2 s s'' na' Hstep]. 
+    * destruct Hstep.
+      constructor.
+      + simpl.
+        intros p HaddrIn.
+        apply Z.neq_sym.
+        apply Z.lt_neq.
+        apply Z.lt_trans with (n := p) (m := NextAddr ENV).
+        * apply Z.gt_lt.
+          destruct Hconds.
+          apply H11.
+          apply address_subcontract.
+          apply addressOf_a1.
+          assumption.
+        * lia.
+      + simpl.
+        intros p HaddrIn.
+        remember ({|
+          B.addr := NextAddr ENV + 1 + 1;
+          B.bu1 := A.addr pa2;
+          B.bu2 := NextAddr ENV + 1;
+          B.a := {| A.addr := NextAddr ENV + 1 + 1 + 1; A.x := 17 |};
+          B.y := 42
+        |}) as s_b1' eqn:Histate_b1.
+        destruct HaddrIn as [s_b1| p s_b1 HaddrIn_a];
+        try (rewrite Histate_b1); simpl.
+        * lia.
+        * remember (B.a s_b1) eqn:Histate_b1_a.
+          destruct HaddrIn_a.
+          rewrite Histate_b1_a, Histate_b1; simpl.
+          lia.
     + simpl.
       intros p p' HaddrIn_a1 HaddrIn_b1.
       remember ({|

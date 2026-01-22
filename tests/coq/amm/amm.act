@@ -211,7 +211,7 @@ constructor(address<Token> t0, address<Token> t1)
 iff
 
     CALLVALUE == 0
-    t0 != t1
+    address(t0) != address(t1)
 
 creates
 

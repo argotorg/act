@@ -12,25 +12,25 @@ Theorem reachable_value_f S:
 Proof.
   intros HR p. destruct HR as [S0 Hreach], Hreach as [ Hinit Hmulti ].
   induction Hmulti as [ | S' S'' Hstep ].
-  - destruct Hinit, H, H, H5, H2, H8. simpl; eauto.
+  - destruct Hinit, H, H, H5, H2, H12. simpl; eauto.
 
-  - destruct Hstep as [NA [NA' [ENV Hextstep]]].
-    destruct Hextstep as [ NA NA' ENV s s' HCstep
-                         | NA NA' ENV s s' _ _ _ HBstep].
-    + destruct HCstep as [ENV i s| ENV i s]; simpl.
-      destruct H; simpl.
+  - destruct Hstep as [ENV [NA [NA' Hextstep]]].
+    destruct Hextstep as [ HCstep
+                         | s s' _ _ HBstep].
+    + destruct HCstep as [ i0 H| i H]; simpl.
+      destruct H, H; simpl.
       * destruct (p =? i0).
         -- right. left. reflexivity.
         -- assumption.
       * destruct H; simpl. assumption.
-    + destruct HBstep as [ NA NA' ENV sb sb' HBstep
-                         | NA NA' ENV sb sb' _ _ _ HAextstep].
+    + destruct HBstep as [ HBstep
+                         |  _ _ _ _ HAextstep].
       * destruct HBstep; simpl.
-        -- destruct H3; simpl. assumption.
-        -- destruct H3; simpl. destruct (p =? i).
+        -- destruct H2; simpl. assumption.
+        -- destruct H2; simpl. destruct (p =? i).
            ++ right; right; reflexivity.
            ++ assumption.
-      * destruct HAextstep as [NA NA' ENV sa sa' HAstep].
+      * destruct HAextstep as [HAstep].
         destruct HAstep.
 Qed.
 
@@ -42,7 +42,7 @@ Proof.
   induction Hmulti as [ | S' S'' Hstep ]. 
   - destruct Hinit; destruct H; auto.
   - destruct Hstep as [NA [NA' [ENV Hextstep]]].
-    destruct Hextstep as [NA NA' ENV s s' HCstep | NA NA' ENV s s' _ _ _ HBstep _ _ Hw_const].
+    destruct Hextstep as [HCstep | s s' _ _ HBstep _ _ Hw_const].
     + destruct HCstep, H; simpl.
       * assumption.
       * auto.
