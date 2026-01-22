@@ -14,6 +14,7 @@ import Prelude hiding (GT, LT)
 
 import Data.Containers.ListUtils (nubOrd)
 import Data.List
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.ByteString as BS
 import Control.Monad.ST (stToIO, ST)
@@ -23,7 +24,7 @@ import Control.Monad
 import Act.Syntax.Typed
 
 import qualified EVM.Types as EVM
-import EVM.Types (VM(..))
+import EVM.Types (VM(..), SMTCex(..))
 import EVM.Expr hiding (op2, inRange)
 import EVM.SymExec hiding (isPartial, abstractVM, loadSymVM)
 import EVM.Solvers
@@ -32,6 +33,8 @@ import qualified EVM.Fetch as Fetch
 import qualified EVM
 import EVM.FeeSchedule (feeSchedule)
 import EVM.Effects
+import EVM.ABI
+import EVM.Format
 
 -- TODO move this to HEVM
 type Calldata = (EVM.Expr EVM.Buf, [EVM.Prop])
@@ -197,3 +200,82 @@ loadSymVM (entryaddr, entrycontract) othercontracts callvalue cd create fresh =
      , freshAddresses = fresh
      , beaconRoot = 0
      })
+
+
+-- We reimplement this function only to be able to include printing of address balances
+formatCex :: EVM.Expr EVM.Buf -> Maybe Sig -> SMTCex -> T.Text
+formatCex cd sig m@(SMTCex _ addrs _ store blockContext txContext) = T.unlines $
+  [ "Calldata:", indent 2 cd' ]
+  <> storeCex
+  <> txCtx
+  <> blockCtx
+  <> addrsCex
+  where
+    -- we attempt to produce a model for calldata by substituting all variables
+    -- and buffers provided by the model into the original calldata expression.
+    -- If we have a concrete result then we display it, otherwise we display
+    -- `Any`. This is a little bit of a hack (and maybe unsound?), but we need
+    -- it for branches that do not refer to calldata at all (e.g. the top level
+    -- callvalue check inserted by solidity in contracts that don't have any
+    -- payable functions).
+    cd' = case sig of
+      Nothing -> case (defaultSymbolicValues $ subModel m cd) of
+        Right k -> prettyBuf $ EVM.Expr.concKeccakSimpExpr k
+        Left err -> T.pack err
+      Just (Sig n ts) -> prettyCalldata m cd n ts
+
+    storeCex :: [T.Text]
+    storeCex
+      | M.null store = []
+      | otherwise =
+          [ "Storage:"
+          , indent 2 $ T.unlines $ M.foldrWithKey (\key val acc ->
+              ("Addr " <> (T.pack . show $ key)
+                <> ": " <> (T.pack $ show (M.toList val))) : acc
+            ) mempty store
+          ]
+
+    txCtx :: [T.Text]
+    txCtx
+      | M.null txContext = []
+      | otherwise =
+        [ "Transaction Context:"
+        , indent 2 $ T.unlines $ M.foldrWithKey (\key val acc ->
+            (showTxCtx key <> ": " <> (T.pack $ show val)) : acc
+          ) mempty (filterSubCtx txContext)
+        ]
+
+    addrsCex :: [T.Text]
+    addrsCex
+      | M.null addrs = []
+      | otherwise =
+          [ "Addrs:"
+          , indent 2 $ T.unlines $ M.foldrWithKey (\key val acc ->
+              ((T.pack . show $ key) <> ": " <> (T.pack $ show val)) : acc
+            ) mempty addrs
+          ]
+
+    -- strips the frame arg from frame context vars to make them easier to read
+    showTxCtx :: EVM.Expr EVM.EWord -> T.Text
+    showTxCtx (EVM.TxValue) = "TxValue"
+    showTxCtx x = T.pack $ show x
+
+    -- strips all frame context that doesn't come from the top frame
+    filterSubCtx :: M.Map (EVM.Expr EVM.EWord) EVM.W256 -> M.Map (EVM.Expr EVM.EWord) EVM.W256
+    filterSubCtx = M.filterWithKey go
+      where
+        go :: EVM.Expr EVM.EWord -> EVM.W256 -> Bool
+        go (EVM.TxValue) _ = True
+        go (EVM.Balance {}) _ = True
+        go (EVM.Gas {}) _ = error "TODO: Gas"
+        go _ _ = False
+
+    blockCtx :: [T.Text]
+    blockCtx
+      | M.null blockContext = []
+      | otherwise =
+        [ "Block Context:"
+        , indent 2 $ T.unlines $ M.foldrWithKey (\key val acc ->
+            (T.pack $ show key <> ": " <> show val) : acc
+          ) mempty txContext
+        ]

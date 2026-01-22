@@ -1,6 +1,6 @@
 contract SafeAdd
 
-constructor () payable
+constructor ()
 creates
 
 transition add(uint256 x, uint256 y) : uint256

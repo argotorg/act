@@ -51,7 +51,7 @@ import EVM.ABI (Sig(..))
 import qualified EVM hiding (bytecode)
 import qualified EVM.Types as EVM hiding (FrameState(..))
 import EVM.Expr hiding (op2, inRange, div, xor, not, readStorage, Array)
-import EVM.SymExec hiding (isPartial, reachable)
+import EVM.SymExec hiding (isPartial, reachable, formatCex)
 import EVM.SMT (assertProps)
 import EVM.Solvers
 import EVM.Effects
@@ -1399,7 +1399,7 @@ checkResult calldata sig res =
           pure $ Success ()
     True -> do
       let cexs = mapMaybe getCex res
-      showMsg $ T.unpack . T.unlines $ [ "\x1b[41mNot equivalent.\x1b[m", "" , "-----", ""] <> (intersperse (T.unlines [ "", "-----" ]) $ fmap (\(msg, cex) -> T.pack msg <> "\n" <> T.pack (show cex)) cexs)
+      showMsg $ T.unpack . T.unlines $ [ "\x1b[41mNot equivalent.\x1b[m", "" , "-----", ""] <> (intersperse (T.unlines [ "", "-----" ]) $ fmap (\(msg, cex) -> T.pack msg <> "\n" <> formatCex (fst calldata) sig cex) cexs)
       pure $ Failure $ NE.singleton (nowhere, "Failure: Cannot prove equivalence.")
 
 -- | Pretty prints a list of hevm behaviours for debugging purposes

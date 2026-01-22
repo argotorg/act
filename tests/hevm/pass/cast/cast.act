@@ -23,7 +23,7 @@ contract B
 constructor(address<A> x, address<A> y)
 
 iff
-    x != y
+    address(x) != address(y)
 
 creates
     A a1 := x

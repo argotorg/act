@@ -1,6 +1,6 @@
 contract Inputs
 
-constructor () payable
+constructor ()
 creates
 
 transition test(uint128 x) : uint128

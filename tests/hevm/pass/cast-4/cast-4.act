@@ -19,7 +19,7 @@ contract B
 constructor(address<A> x, address<A> y)
 
 iff
-    x != y
+    address(x) != address(y)
     // address(x.c) != address(y.c) -- Do we not need this?
 
 creates
