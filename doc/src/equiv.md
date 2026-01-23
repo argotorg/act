@@ -29,7 +29,7 @@ equivalence can be checked with the equivalence checker of hevm.
 ## Usage 
 
 The hevm backend performs automated equivalence checking between act specifications and EVM bytecode implementations.
-It is language agnostic, currently (version 0.1.0) supporting verification of contracts written in both Solidity and Vyper.
+It is language agnostic, currently (version 0.2.0) supporting verification of contracts written in both Solidity and Vyper.
 
 ### Basic Usage Patterns
 
@@ -318,7 +318,7 @@ the hevm equivalence checker. For each pair of nodes in the two lists,
 we check that for all inputs that satisfy the combined path conditions the
 result and final storage are the same. 
 
-In act v0.1.0 the order of creating new contracts is relevant. 
+In act v0.2.0 the order of creating new contracts is relevant. 
 Writing 
 ```act
 A a := A()

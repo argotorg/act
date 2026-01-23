@@ -153,7 +153,7 @@ The preconditions of a transition are specified in the `iff` block. They define 
 - **Explicit requirements**: These are conditions that are explicitly checked in the Solidity code using `require` statements. Each `require` statement translates to a line in the `iff` block.
 Some preconditions arise from the unique ownership requirement, i.e. storage of the contract does not contain any aliased reference to another contract, see [aliasing](./aliasing.md) section. This would usually mean that if many contract addresses are taken as parameters to constructors or transitions, the ones stored in the storage have to be distinct. Note that these 
 need to already be present in the Solidity implementation of the contract, not merely in the act specification.
-- **Implicit requirements**: These are conditions that are not explicitly listed in the code but are necessary for the correct execution of the transition. For example, checks to prevent arithmetic overflow/underflow. <span style="color:red">Can this be anything else other than requires and inranges? </span> Arithmetic safety is addressed using the `inRange` expression. To ensure every arithmetic operation is safe, an `inRange` check has to be added for every occurring operation. 
+- **Implicit requirements**: These are conditions that are not explicitly listed in the code but are necessary for the correct execution of the transition: These are checks to prevent arithmetic overflow/underflow.  Arithmetic safety is addressed using the `inRange` expression. To ensure every arithmetic operation is safe, an `inRange` check has to be added for every occurring operation. 
 
 **Guidelines:**
 - Convert each `require(condition)` to a line in the `iff` block
