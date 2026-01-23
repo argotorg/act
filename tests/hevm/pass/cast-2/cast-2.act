@@ -1,0 +1,42 @@
+contract C
+constructor(uint z0)
+
+creates
+    uint z := z0
+
+transition setz(uint z1)
+updates
+  z := z1
+
+
+contract A
+constructor(uint x0)
+
+creates
+    uint x := x0
+    C c := new C(42)
+
+transition getx() : uint
+updates
+returns x
+
+transition setx(uint x1)
+updates
+  x := x1
+
+
+transition setc(uint z1)
+
+updates
+  c.z := z1
+
+
+contract B
+constructor(address<A> x, address<A> y)
+iff
+    address(x) != address(y)
+    address(x.c) != address(y.c)
+
+creates
+    A a1 := x
+    A a2 := y

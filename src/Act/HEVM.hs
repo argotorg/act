@@ -982,9 +982,11 @@ checkEquiv solvers l1 l2 = do
 -- Assumes that all calldata variables have unique names (TODO alpha renaming)
 getInitContractState :: App m => SolverGroup -> Id -> Interface -> [Exp ABoolean] -> ContractMap -> ActT m (ContractMap, Error String ())
 getInitContractState solvers cname iface preconds cmap = do
-  let casts = castsFromIFace iface
-  let casts' = groupBy (\x y -> fst x == fst y) casts
-  (cmaps, checks) <- mapAndUnzipM getContractState (fmap nub casts')
+  let contracts = contractsFromIFace iface
+  (cmaps, checks) <- mapAndUnzipM getContractState contracts
+--   traceM $ "Constructing initial map for contract " <> show cname <> " with contracts: " <> show contracts
+--   traceM $ "Initial cmap: " <> showCmap cmap
+--   traceM $ concatMap (\c -> showCmap c <> "\n") cmaps
 
   let finalmap = M.unions (cmap:cmaps)
 
@@ -992,15 +994,16 @@ getInitContractState solvers cname iface preconds cmap = do
   pure (finalmap, check <* sequenceA_ checks <* checkUniqueAddr (cmap:cmaps))
 
   where
-    castsFromIFace :: Interface -> [(Id, Id)]
-    castsFromIFace (Interface _ decls) = mapMaybe castingDecl decls
+    -- extract contracts present in the interface
+    contractsFromIFace :: Interface -> [(Id, Id)]
+    contractsFromIFace (Interface _ decls) = mapMaybe castingDecl decls
       where
       castingDecl (Arg (ContractArg _ cid) name) = Just (name, cid)
       castingDecl _ = Nothing
-
-    getContractState :: App m => [(Id, Id)] -> ActT m (ContractMap, Error String ())
-    getContractState [(x, cid)] = do
-      let addr = EVM.SymAddr $ T.pack x
+    
+    getContractState :: App m => (Id, Id) -> ActT m (ContractMap, Error String ())
+    getContractState (x, cid) = do
+      let addr = EVM.SymAddr $ T.pack x -- TODO freshen symbolic addresses to ensure global uniqueness
       codemap <- getCodemap
       case M.lookup cid codemap of
         Just (Contract (Constructor cname' iface' _ preconds' ((Case _ _ upds):_) _ _) _, _, bytecode) -> do
@@ -1015,10 +1018,8 @@ getInitContractState solvers cname iface preconds cmap = do
           cmap' <- localCaddr addr cname' $ collectAllPaths $ applyUpdates icmap' icmap' emptyEnv upds
           pure (abstractCmap addr (fst $ head cmap'), check)
         Just (Contract (Constructor _ _ _ _ [] _ _) _, _, _) ->
-          error $ "Internal error: Contract " <> cid <> " has no cases from which to form init map\n" <> show codemap
+          error $ "Internal error: Contract " <> cid <> " has no cases\n"
         Nothing -> error $ "Internal error: Contract " <> cid <> " not found\n" <> show codemap
-    getContractState [] = error "Internal error: Cast cannot be empty"
-    getContractState _ = error "Error: Cannot have different casts to the same address"
 
     checkAliasing :: App m => ContractMap -> [ContractMap] -> ActT m (Error String ())
     checkAliasing cmap' cmaps = do
@@ -1026,12 +1027,10 @@ getInitContractState solvers cname iface preconds cmap = do
       -- gather all tuples that must be distinct
       let allpairs = concatMap (\(l1, l2) -> (,) <$> l1 <*> l2) $ comb allkeys
       -- gather all tuples that we know are distinct
-      fresh <- getFresh
-      let distpairs = (\(a1, a2) -> neqProp (makeSymAddr a1) (makeSymAddr a2)) <$> comb [1..fresh]
       let dquery = EVM.por $ (\((a1, c1),(a2, c2)) ->
                                 if c1 == c2 then EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2) else EVM.PBool False) <$> allpairs
       preconds' <- mapM (toProp cmap' emptyEnv) preconds
-      lift $ checkQueries (dquery:distpairs <> preconds')
+      lift $ checkQueries (dquery:preconds')
 
     checkQueries :: App m => [EVM.Prop] -> m (Error String ())
     checkQueries queries = do
@@ -1070,6 +1069,12 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
   solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata (checks' ++ bounds) fresh
 
+  when (cname == "B") $ do
+    traceM "Act"
+    traceM (showBehvs behvs') 
+    traceM "Solidity"
+    traceM (showBehvs solbehvs) 
+    
 
   -- Check equivalence
   lift $ showMsg "\x1b[1mChecking if constructor results are equivalent.\x1b[m"
@@ -1084,7 +1089,7 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
 checkBehaviours :: forall m. App m => SolverGroup -> Contract -> ContractMap -> ActT m (Error String ())
 checkBehaviours solvers (Contract _ behvs) actstorage = do
   fresh <- getFresh
-  (fmap $ concatError def) $ forM behvs $ \behv@(Behaviour name _ iface payable preconds cases _) -> do
+  (fmap $ concatError def) $ forM behvs $ \behv@(Behaviour name _ iface payable preconds _ _) -> do
     let calldata = makeCalldata name iface
     let sig = ifaceToSig name iface
     -- construct initial contract state for the transition by adding the contracts passed as arguments

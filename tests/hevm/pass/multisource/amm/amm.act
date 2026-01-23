@@ -3,7 +3,7 @@ contract Amm
 constructor(address<Token> t0, address<Token> t1)
 
 iff
-    t0 != t1
+    address(t0) != address(t1)
 
 creates
     Token token0 := t0 

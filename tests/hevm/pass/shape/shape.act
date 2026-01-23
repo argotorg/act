@@ -41,10 +41,9 @@ constructor(address<B> y)
 
 creates
    A a := y.a
-   B b := y
-   //B b := new B(42) 
+   B b := new B(42) 
 
 transition change()
 
 updates
-  b.a.x := 17
+  a.x := 17

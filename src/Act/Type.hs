@@ -152,8 +152,8 @@ checkConstructor env (U.Constructor p (Interface p' params) payable iffs cases p
     -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
     checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    --
     -- check postconditions
-    (checkConstrCases env'' (initBalance payable cases)) `bindValidation` \(storageType, cases', cnstr2) -> do
-    -- Check if payable constructor has BALANCE declared (in non-payable coinstructor we add it implicitly)
+    (checkConstrCases env'' (initBalance payable (adjustCasePosn p cases))) `bindValidation` \(storageType, cases', cnstr2) -> do
+    -- Check if payable constructor has BALANCE declared (in non-payable constructor we add it implicitly)
     balanaceDeclared p storageType
     -- construct the new environment
     let env''' = addConstrStorage cid storageType env''
@@ -285,7 +285,7 @@ checkBehaviours env (b:bhs) = do
 
 -- | Type check a single transition
 checkBehaviour :: Env -> U.Transition -> Err (Behaviour, [Constraint Untimed])
-checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params) payable rettype iffs cases posts) =
+checkBehaviour env@Env{contract} (U.Transition p name iface@(Interface _ params) payable rettype iffs cases posts) =
     -- add parameters to environment
     let env' = addCalldata params env in
     -- check that parameter types are valid
@@ -293,7 +293,7 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
     -- check preconditions
     checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') -> do
     -- check cases
-    casesc <- unzip <$> traverse (checkBehvCase env'' (argToValueType <$> rettype)) cases
+    casesc <- unzip <$> traverse (checkBehvCase env'' (argToValueType <$> rettype)) (adjustCasePosn p cases)
     -- check postconditions
     ensures <- map fst <$> traverse (checkExpr env'' T TBoolean) posts
     -- return the behaviour
@@ -301,6 +301,12 @@ checkBehaviour env@Env{contract} (U.Transition _ name iface@(Interface _ params)
                -- check case consistency
                casecnstrs = checkCaseConsistency env' cases'
            in  (Behaviour name contract iface payable iffs' cases' ensures, cnstr1 ++ concat cnstrs2 ++ casecnstrs)
+
+adjustCasePosn :: Pn -> [U.Case a] -> [U.Case a]
+adjustCasePosn p cases =
+    map adjust cases
+  where
+    adjust (U.Case p' cond updates) = U.Case (if p' == nowhere then p else p') cond updates
 
 -- | Type check a single case of a behaviour
 checkBehvCase :: Env -> Maybe ValueType -> U.Case (U.StorageUpdates, Maybe U.Expr)
