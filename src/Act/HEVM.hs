@@ -314,7 +314,7 @@ translateConstructorCase bytecode initmap cdataprops bounds preconds (Case _ cas
 
 symAddrCnstr :: ContractMap -> [EVM.Prop]
 symAddrCnstr cmap =
-    (\(a1, a2) -> EVM.PNeg (EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2))) <$> comb (M.keys cmap)
+    (\(a1, a2) -> EVM.PNeg (EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2))) <$> comb ([EVM.SymAddr "origin", EVM.SymAddr "coinbase"] ++ M.keys cmap)
 
 ifaceToSig :: Id -> Interface -> Sig
 ifaceToSig name (Interface _ args) = Sig (T.pack name) (fmap fromdecl args)
@@ -1057,6 +1057,11 @@ getInitContractState solvers cname iface preconds cmap = do
 comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
+addOrigin :: EVM.Expr EVM.End -> EVM.Expr EVM.End
+addOrigin (EVM.Success p tx b cs) = (EVM.Success p tx b (M.insert (EVM.SymAddr "origin") og cs))
+  where og = (EVM.C (EVM.RuntimeCode (EVM.ConcreteRuntimeCode "")) (EVM.ConcreteStore mempty) (EVM.ConcreteStore mempty) (EVM.Sub (EVM.Lit 0) EVM.TxValue) (Just 0x1))
+addOrigin e = e
+
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
 checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface payable preconds _ _ _)  _) = do
   -- Construct the initial contract state
@@ -1070,10 +1075,12 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
   solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata (checks' ++ bounds) fresh
 
+  traceM $ "Act\n" ++ (showBehvs (addOrigin <$> behvs')) ++ "\nSolidity\n" ++ (showBehvs solbehvs) 
+  -- traceM $ "SolidityRaw\n" ++ (show solbehvs) 
 
   -- Check equivalence
   lift $ showMsg "\x1b[1mChecking if constructor results are equivalent.\x1b[m"
-  res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
+  res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs (addOrigin <$> behvs')
   lift $ showMsg "\x1b[1mChecking if constructor input spaces are the same.\x1b[m"
   res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
   pure $ traverse_ (checkStoreIsomorphism (head fcmaps)) (tail fcmaps) *> errors *> res1 *> res2 *> checkTree (head fcmaps) *> Success (head fcmaps)
@@ -1097,16 +1104,12 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
     -- symbolically execute bytecode
     solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata (checks ++ bounds) fresh
     
-    -- when (name == "deposit") $ do
-    --     traceM "Act"
-    --     traceM (showBehvs behvs') 
-    --     traceM "Solidity"
-    --     traceM (showBehvs solbehvs) 
+    traceM $ "Act\n" ++ (showBehvs (addOrigin <$> behvs')) ++ "\nSolidity\n" ++ (showBehvs solbehvs) 
     
     lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
     -- equivalence check
     lift $ showMsg "\x1b[1mChecking if behaviour is matched by EVM\x1b[m"
-    res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
+    res1 <- lift $ checkResult calldata (Just sig) =<< checkEquiv solvers solbehvs (addOrigin <$> behvs')
     -- input space exhaustiveness check
     lift $ showMsg "\x1b[1mChecking if the input spaces are the same\x1b[m"
     res2 <- lift $ checkResult calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'

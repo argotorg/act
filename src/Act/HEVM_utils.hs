@@ -35,6 +35,7 @@ import EVM.FeeSchedule (feeSchedule)
 import EVM.Effects
 import EVM.ABI
 import EVM.Format
+import EVM.Transaction (initTx)
 
 -- TODO move this to HEVM
 type Calldata = (EVM.Expr EVM.Buf, [EVM.Prop])
@@ -146,14 +147,14 @@ abstractInitVM contractCode contracts cd precond fresh = do
   let value = EVM.TxValue
   let code = EVM.InitCode contractCode (fst cd)
   vm <- loadSymVM (EVM.SymAddr "entrypoint", EVM.initialContract code) contracts value cd True fresh
-  pure $ vm { constraints = vm.constraints <> precond }
+  pure $ initTx $ vm { constraints = vm.constraints <> precond }
 
 abstractVM :: [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> [EVM.Prop] -> Int -> ST s (EVM.VM EVM.Symbolic s)
 abstractVM contracts cd precond fresh = do
   let value = EVM.TxValue
   let (c, cs) = findInitContract
   vm <- loadSymVM c cs value cd False fresh
-  pure $ vm { constraints = vm.constraints <> precond }
+  pure $ initTx $ vm { constraints = vm.constraints <> precond }
 
   where
     findInitContract :: ((EVM.Expr 'EVM.EAddr, EVM.Contract), [(EVM.Expr 'EVM.EAddr, EVM.Contract)])
