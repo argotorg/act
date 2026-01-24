@@ -37,7 +37,7 @@ import qualified EVM.Solvers as Solvers
 import Debug.Trace
 
 -- | Check whether a set of constraints generated during typing is always valid
-checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
+checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (ErrSrc ())
 checkEntailment solver smttimeout debug constraints = do
     solver' <- case solver of
           Solvers.Bitwuzla -> do
@@ -47,19 +47,19 @@ checkEntailment solver smttimeout debug constraints = do
     let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout) debug
     smtSolver <- spawnSolver config
     let qs = mkEntailmentSMT <$> constraints
-    r <- forM qs (\(smtQuery, line, msg, model) -> do
+    r <- forM qs (\(smtQuery, line, src, msg, model) -> do
                            -- traceM $ "Entailment SMT Query:\n" <> renderString (prettyAnsi smtQuery) <> "\n" <> msg <> "\n"          
                            res <- checkSat smtSolver model smtQuery
-                           pure (res, line, msg))
+                           pure (res, line, src, msg))
     sequenceA_ <$> mapM checkRes r
   where
-    checkRes :: (SMT.SMTResult, Pn, String) -> IO (Err ())
-    checkRes (res, pn, msg) =
+    checkRes :: (SMT.SMTResult, Pn, FilePath, String) -> IO (ErrSrc ())
+    checkRes (res, pn, src, msg) =
         case res of
-          Sat model -> pure $ throw (pn, msg <> "\n" <> renderString (prettyAnsi model))
+          Sat model -> pure $ throw (pn, (src, msg <> "\n" <> renderString (prettyAnsi model)))
           Unsat -> pure $ pure ()
-          Unknown -> pure $ throw (pn, msg <> "\nSolver timeout.")
-          SMT.Error _ err -> pure $ throw (pn, msg <> "Solver Error\n" <> err)
+          Unknown -> pure $ throw (pn, (src, msg <> "\nSolver timeout."))
+          SMT.Error _ err -> pure $ throw (pn, (src, msg <> "Solver Error\n" <> err))
 
 -- | Convert calldata map to list of Args
 calldataToList :: M.Map Id ArgType -> [Arg]
@@ -67,9 +67,9 @@ calldataToList m = [ Arg t n | (n,t) <- M.toList m ]
 
 -- | Create an SMT query for an entailment constraint, along with a function
 -- to extract a model if the solver returns `sat`
-mkEntailmentSMT :: Constraint Timed -> (SMTExp, Pn, String, (SolverInstance -> IO Model))
-mkEntailmentSMT (BoolCnstr p str env e) =
-  (query, p, str, getModel locs calldataVars ethVars)
+mkEntailmentSMT :: Constraint Timed -> (SMTExp, Pn, FilePath, String, (SolverInstance -> IO Model))
+mkEntailmentSMT (BoolCnstr p src str env e) =
+  (query, p, src, str, getModel locs calldataVars ethVars)
   where
     -- current preconditions
     iff = setPre <$> preconds env
@@ -83,14 +83,14 @@ mkEntailmentSMT (BoolCnstr p str env e) =
     calldataVars = calldataToList (calldata env)
     -- the SMT query
     query = mkDefaultSMT locs ethVars "" calldataVars (bounds <> iff) [] (Neg p e)
-mkEntailmentSMT (CallCnstr p msg env args cv cid) =
+mkEntailmentSMT (CallCnstr p src msg env args cv cid) =
 --    trace ("Generating entailment SMT for constructor call to " <> show cid) $
 --    trace ("With args: " <> showTypedExps args) $
 --    trace ("With preconditions: " <> showExps (setPre <$> preconds env)) $
 --    trace ("Query condition: " <> showExps [cond]) $
 --    trace ("Query condition raw: " <> show cond) $
 --    trace ("Message: " <> msg) $
-  (query, p, msg, getModel locs calldataVars ethVars)
+  (query, p, src, msg, getModel locs calldataVars ethVars)
 
   where
     -- current preconditions
@@ -230,11 +230,12 @@ getModel locs calldataVars ethVars solver = do
 -- For debugging purposes
 
 showCnstr :: Constraint Timed -> String
-showCnstr (BoolCnstr _ msg env e) = "Boolean constraint:\n" <> 
-  msg <> "\n"
+showCnstr (BoolCnstr _ src msg env e) = "Boolean constraint:\n" <>
+  src <> ":\n"
+  <> msg <> "\n"
     <> "Preconditions: \n" <> showExps (setPre <$> preconds env) <> "\n"
     <> "Expression: " <> prettyExp e <> "\n"
-showCnstr (CallCnstr _ msg _ _ _ _) = "Call constraint: " <> msg
+showCnstr (CallCnstr _ src msg _ _ _ _) = "Call constraint: " <> msg
     
 showCnstrs :: [Constraint Timed] -> String
 showCnstrs cs = intercalate "\n\n" (map showCnstr cs)

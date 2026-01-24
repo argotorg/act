@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE TupleSections #-}
 
 module Act.CLI (main, compile, proceed, prettyErrs) where
 
@@ -22,6 +23,7 @@ import System.FilePath
 import Data.Text (unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Data.List
+import Data.Tuple.Extra (firstM)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe
@@ -44,6 +46,7 @@ import Act.Error
 import Act.Lex (lexer, AlexPosn(..))
 import Act.Parse
 import Act.Syntax.TypedExplicit hiding (_Array)
+import qualified Act.Syntax.TypedImplicit as TypedImplicit
 import Act.Syntax.Timing 
 import Act.Bounds
 import Act.SMT as SMT
@@ -61,29 +64,36 @@ import Act.Overflow
 import qualified EVM.Solvers as Solvers
 import EVM.Solidity
 import EVM.Effects
-import Control.Arrow (Arrow(first))
+import Control.Arrow (Arrow(first,second))
 
 import Debug.Trace
 
 --command line options
 data Command w
-  = Lex             { file       :: w ::: String               <?> "Path to file"}
+  = Lex             { file       :: w ::: Maybe String         <?> "Path to file"
+                    , sources    :: w ::: Maybe String         <?> "Path to sources .json"
+                    }
 
-  | Parse           { file       :: w ::: String               <?> "Path to file"}
+  | Parse           { file       :: w ::: Maybe String         <?> "Path to file"
+                    , sources    :: w ::: Maybe String         <?> "Path to sources .json"
+                    }
 
-  | Type            { file       :: w ::: String               <?> "Path to file"
+  | Type            { file       :: w ::: Maybe String         <?> "Path to file"
+                    , sources    :: w ::: Maybe String         <?> "Path to sources .json"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
                     }
 
-  | Prove           { file       :: w ::: String               <?> "Path to file"
+  | Prove           { file       :: w ::: Maybe String         <?> "Path to file"
+                    , sources    :: w ::: Maybe String         <?> "Path to sources .json"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
                     }
 
-  | Coq             { file       :: w ::: String               <?> "Path to file"
+  | Coq             { file       :: w ::: Maybe String         <?> "Path to file"
+                    , sources    :: w ::: Maybe String         <?> "Path to sources .json"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
@@ -121,17 +131,17 @@ main :: IO ()
 main = do
     cmd <- unwrapRecord "Act -- Smart contract specifier"
     case cmd of
-      Lex f -> lex' f
-      Parse f -> parse' f
-      Type f solver' smttimeout' debug' -> do
+      Lex f json -> lex' f json
+      Parse f json -> parse' f json
+      Type f json solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
-        type' f solver'' smttimeout' debug'
-      Prove file' solver' smttimeout' debug' -> do
+        type' f json solver'' smttimeout' debug'
+      Prove file' json solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
-        prove file' solver'' smttimeout' debug'
-      Coq f solver' smttimeout' debug' -> do
+        prove file' json solver'' smttimeout' debug'
+      Coq f json solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
-        coq' f solver'' smttimeout' debug'
+        coq' f json solver'' smttimeout' debug'
       HEVM spec' sol' vy' code' initcode' sources' solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         hevm spec' sol' vy' code' initcode' sources' solver'' smttimeout' debug'
@@ -145,23 +155,28 @@ main = do
 ---------------------------------
 
 
-lex' :: FilePath -> IO ()
-lex' f = do
-  contents <- readFile f
-  print $ lexer contents
+lex' :: Maybe FilePath -> Maybe FilePath -> IO ()
+lex' f json = do
+  (fs, _) <- processSources json f Nothing Nothing Nothing Nothing
+  contents <- mapM readFile fs
+  print $ lexer <$> contents
 
-parse' :: FilePath -> IO ()
-parse' f = do
-  contents <- readFile f
-  validation (prettyErrs contents) print (parse $ lexer contents)
+parse' :: Maybe FilePath -> Maybe FilePath -> IO ()
+parse' f json = do
+  (fs, _) <- processSources json f Nothing Nothing Nothing Nothing
+  contents <- flip zip fs <$> mapM readFile fs
+  let parsed = traverse (\(content,source) -> (,source) <$> (errorSource source $ parse $ lexer content)) contents
+  validation (prettyErrs contents) print parsed
 
-type' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-type' f solver' smttimeout' debug' = do
-  contents <- readFile f
-  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+type' :: Maybe FilePath -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+type' f json solver' smttimeout' debug' = do
+  -- contents <- readFile f
+  (fs, _) <- processSources json f Nothing Nothing Nothing Nothing
+  contents <- flip zip fs <$> mapM readFile fs
+  proceed contents (compile contents) $ \(spec', cnstrs) -> do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
-    checkUpdateAliasing spec solver' smttimeout' debug'
-    B.putStrLn $ encode spec
+    checkUpdateAliasing spec' solver' smttimeout' debug'
+    B.putStrLn $ encode spec'
 
 parseSolver :: Maybe Text -> IO Solvers.Solver
 parseSolver s = case s of
@@ -172,10 +187,10 @@ parseSolver s = case s of
                               "bitwuzla" -> pure Solvers.Bitwuzla
                               input -> render (text $ "unrecognised solver: " <> Text.pack input) >> exitFailure
 
-prove :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+prove :: Maybe FilePath -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 prove _ _ _ _ = error "SMT TBD"
 
-checkTypeConstraints :: String -> Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO ()
+checkTypeConstraints :: [(String, FilePath)] -> Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO ()
 checkTypeConstraints contents solver' smttimeout' debug' cnstrs = do
   errs <- checkEntailment solver' smttimeout' debug' cnstrs
   proceed contents errs $ \_ -> pure ()
@@ -238,13 +253,14 @@ prove file' solver' smttimeout' debug' = do
     -}
 
 
-coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-coq' f solver' smttimeout' debug' = do
-  contents <- readFile f
-  proceed contents (compile contents) $ \(spec, cnstrs) -> do
+coq' :: Maybe FilePath -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+coq' f json solver' smttimeout' debug' = do
+  (fs, _) <- processSources json f Nothing Nothing Nothing Nothing
+  contents <- flip zip fs <$> mapM readFile fs
+  proceed contents (compile contents) $ \(spec', cnstrs) -> do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
-    TIO.putStr $ coq spec
+    TIO.putStr $ coq spec'
 
 decompile' :: FilePath -> Text -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 decompile' _ _ _ _ _ = error "Decompile TBD"
@@ -272,8 +288,9 @@ hevm :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -
 hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   let config = if debug' then debugActConfig else defaultActConfig
   cores <- liftM fromIntegral getNumProcessors
-  (actspecs, inputsMap) <- processSources
-  specsContents <- intercalate "\n" <$> traverse readFile actspecs
+  (actspecs, maybeInputsMap) <- processSources sources' actspec sol' vy' code' initcode'
+  inputsMap <- maybe (render (text "JSON file missing sources and/or contract information" <> line) >> exitFailure) pure maybeInputsMap
+  specsContents <- flip zip actspecs <$> mapM readFile actspecs
   proceed specsContents (compile specsContents) $ \(Act store contracts, constraints) -> do
     checkTypeConstraints specsContents solver' timeout debug' constraints
     cmap <- createContractMap contracts inputsMap
@@ -281,7 +298,7 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
       checkContracts solvers store cmap
     case res of
       Success _ -> pure ()
-      Failure err -> prettyErrs "" err
+      Failure err -> prettyErrs [("","")] (second ("",) <$> err)
   where
 
     -- Creates maps of storage layout modes and bytecodes, for all contracts contained in the given Act specification
@@ -297,24 +314,28 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
     createContractMap contracts inputsMap = do
       pure $ foldr (\spec'@(Contract cnstr _) cmap ->
                 let cid =  _cname cnstr
-                    (layoutMode, initcode'', runtimecode') = fromMaybe (error $ "Contract " <> cid <> "not found in sources") $ Map.lookup (Just cid) inputsMap
+                    (layoutMode, initcode'', runtimecode') = fromMaybe (error $ "Contract " <> cid <> " not found in sources") $ Map.lookup (Just cid) inputsMap
                 in (Map.insert cid (spec', initcode'', runtimecode', layoutMode) cmap)
              ) mempty contracts
 
-    -- Creates a map of information for contracts available from source code or bytecode arguments
-    processSources :: IO ([FilePath], Map (Maybe Id) (LayoutMode, ByteString, ByteString))
-    processSources =
-      case (sources', actspec, sol', vy', code', initcode') of
-        (Just f, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
-          jsonContents  <- TIO.readFile f
-          let (specs, contractSources, sourceLangs) =
-                case readSourcesJSON jsonContents of
-                  Right res -> res
-                  Left err -> error err
-          let specs' = locateSpecs f specs
-          let sourceLayouts = checkLanguages sourceLangs
-          bytecodeMap <- compileSources f sourceLayouts
-          let contractMap = Map.fromList $ map (\(cid,src) ->
+-- Creates a map of information for contracts available from source code or bytecode arguments
+processSources :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString ->  IO ([FilePath], Maybe (Map (Maybe Id) (LayoutMode, ByteString, ByteString)))
+processSources sources' actspec sol' vy' code' initcode' =
+  case (sources', actspec, sol', vy', code', initcode') of
+    (Just f, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
+      jsonContents  <- TIO.readFile f
+      (specs, maybeContractSourcesAndSourceLangs) <-
+            case readSourcesJSON jsonContents of
+              Right res -> pure res
+              Left err -> render (text ("Error when parsing json:") <> line <> text (Text.pack err) <> line) >> exitFailure
+      let specs' = locateSpecs f specs
+      let maybeSourceLayouts = checkLanguages . snd <$> maybeContractSourcesAndSourceLangs
+      maybeBytecodeMap <- mapM (compileSources f) maybeSourceLayouts
+      let contractMap = do
+            sourceLayouts <- maybeSourceLayouts
+            bytecodeMap <- maybeBytecodeMap
+            contractSources <- fst <$> maybeContractSourcesAndSourceLangs
+            pure $ Map.fromList $ map (\(cid,src) ->
                       let src' = Text.unpack src
                           cid' = Text.unpack cid
                           sourceMap = fromMaybe (error $ "Source " <> Text.unpack src <> " of " <> cid' <> " not found in sources") $ Map.lookup src' bytecodeMap
@@ -323,41 +344,43 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
                             SolidityLayout -> fromMaybe (error $ "Contract " <> cid' <> " not found in " <> src') $ Map.lookup (Just cid') sourceMap
                             VyperLayout -> fromJust $ Map.lookup Nothing sourceMap
                       in (Just cid', (layoutMode, initcode'', runtimecode'))) $ Map.toList contractSources
-          pure (specs', contractMap)
-        (Just _, Just _, _, _, _, _) -> render (text "Both a sources JSON file and Act spec file are given. Please specify only one.") >> exitFailure
-        (Just _, _, Just _, _, _, _) -> render (text "Both a sources JSON file and Solidity file are given. Please specify only one.") >> exitFailure
-        (Just _, _, _, Just _, _, _) -> render (text "Both a sources JSON file and Vyper file are given. Please specify only one.") >> exitFailure
-        (Just _, _, _, _, Just _, _) -> render (text "Both a sources JSON file and runtime code are given. Please specify only one.") >> exitFailure
-        (Just _, _, _, _, _, Just _) -> render (text "Both a sources JSON file and initcode code are given. Please specify only one.") >> exitFailure
-        (Nothing, Nothing, _, _, _, _) -> render (text "No Act specification is given" <> line) >> exitFailure
-        (Nothing, Just a, Just f, Nothing, Nothing, Nothing) -> do
-          bcs <- bytecodes f SolidityLayout
-          pure ([a], Map.map (\(b1,b2) -> (SolidityLayout, b1, b2)) bcs)
-        (Nothing, _, Just _, Just _, _, _) -> render (text "Both Solidity and Vyper file are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, _, Just _, _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, _, Just _, _, _, Just _) -> render (text "Both Solidity file and initial code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, Just a, Nothing, Just f, Nothing, Nothing) -> do
-          bcs <- bytecodes f VyperLayout
-          pure ([a], Map.map (\(b1,b2) -> (VyperLayout, b1, b2)) bcs)
-        (Nothing, _, Nothing, Just _, Just _, _) -> render (text "Both Vyper file and runtime code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, _, Nothing, Just _, _, Just _) -> render (text "Both Vyper file and initial code are given. Please specify only one." <> line) >> exitFailure
-        (Nothing, _, Nothing, Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
-        (Nothing, _, Nothing, Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
-        (Nothing, _, Nothing, Nothing, Just _, Just _) -> render (text "Only Solidity or Vyper files supported") >> exitFailure -- TODO pure (i, c)
+      pure (specs', contractMap)
+    (Just _, Just _, _, _, _, _) -> render (text "Both a sources JSON file and Act spec file are given. Please specify only one.") >> exitFailure
+    (Just _, _, Just _, _, _, _) -> render (text "Both a sources JSON file and Solidity file are given. Please specify only one.") >> exitFailure
+    (Just _, _, _, Just _, _, _) -> render (text "Both a sources JSON file and Vyper file are given. Please specify only one.") >> exitFailure
+    (Just _, _, _, _, Just _, _) -> render (text "Both a sources JSON file and runtime code are given. Please specify only one.") >> exitFailure
+    (Just _, _, _, _, _, Just _) -> render (text "Both a sources JSON file and initcode code are given. Please specify only one.") >> exitFailure
+    (Nothing, Nothing, _, _, _, _) -> render (text "No Act specification is given" <> line) >> exitFailure
+    (Nothing, Just a, Just f, Nothing, Nothing, Nothing) -> do
+      bcs <- bytecodes f SolidityLayout
+      pure ([a], Just $ Map.map (\(b1,b2) -> (SolidityLayout, b1, b2)) bcs)
+    (Nothing, _, Just _, Just _, _, _) -> render (text "Both Solidity and Vyper file are given. Please specify only one." <> line) >> exitFailure
+    (Nothing, _, Just _, _, Just _, _) -> render (text "Both Solidity file and runtime code are given. Please specify only one." <> line) >> exitFailure
+    (Nothing, _, Just _, _, _, Just _) -> render (text "Both Solidity file and initial code are given. Please specify only one." <> line) >> exitFailure
+    (Nothing, Just a, Nothing, Just f, Nothing, Nothing) -> do
+      bcs <- bytecodes f VyperLayout
+      pure ([a], Just $ Map.map (\(b1,b2) -> (VyperLayout, b1, b2)) bcs)
+    (Nothing, _, Nothing, Just _, Just _, _) -> render (text "Both Vyper file and runtime code are given. Please specify only one." <> line) >> exitFailure
+    (Nothing, _, Nothing, Just _, _, Just _) -> render (text "Both Vyper file and initial code are given. Please specify only one." <> line) >> exitFailure
+    (Nothing, _, Nothing, Nothing, Nothing, _) -> render (text "No runtime code is given" <> line) >> exitFailure
+    (Nothing, _, Nothing, Nothing, _, Nothing) -> render (text "No initial code is given" <> line) >> exitFailure
+    (Nothing, _, Nothing, Nothing, Just _, Just _) -> render (text "Only Solidity or Vyper files supported") >> exitFailure -- TODO pure (i, c)
 
 
-readSourcesJSON :: Text -> Either String ([Text], Map Text Text, Map Text Text)
+maybeEither :: Maybe (Either a b) -> Either a (Maybe b)
+maybeEither Nothing = Right Nothing
+maybeEither (Just e) = Just <$> e
+
+readSourcesJSON :: Text -> Either String ([Text], Maybe (Map Text Text, Map Text Text))
 readSourcesJSON json = case eitherDecode $ BS.fromStrict $ encodeUtf8 json of
   Left s -> error s
   Right decoded -> do
-    (specs, contractObjs, sourcesObjs) <- flip parseEither decoded $ \obj -> do
-      specs <- obj .: "specifications"
-      contractsObjs <- obj .: "contracts"
-      sourcesObjs <- obj .: "sources"
-      pure (specs, contractsObjs, sourcesObjs)
-    contractSources <- sequence (Map.map (parseEither (.: "source")) contractObjs)
-    sourceLangs  <- sequence (Map.map (parseEither (.: "language")) sourcesObjs)
-    pure (specs, contractSources, sourceLangs)
+    specs <- flip parseEither decoded (.: "specifications")
+    let contractObjs = flip parseMaybe decoded (.: "contracts")
+    let sourceObjs = flip parseMaybe decoded (.: "sources")
+    contractSources <- maybeEither $ fmap (sequence . Map.map (parseEither (.: "source"))) contractObjs
+    sourceLangs <- maybeEither $ fmap (sequence . Map.map (parseEither (.: "language"))) sourceObjs
+    pure (specs, (,) <$> contractSources <*> sourceLangs)
 
 locateSpecs :: FilePath -> [Text] -> [FilePath]
 locateSpecs jsonPath specs = ((</>) (takeDirectory jsonPath) . Text.unpack) <$> specs
@@ -386,7 +409,7 @@ bytecodes :: FilePath -> LayoutMode -> IO (Map (Maybe Id) (BS.ByteString, BS.Byt
 bytecodes srcFile SolidityLayout = do
   src <- TIO.readFile srcFile
   json <- solc Solidity src False
-  let (Contracts sol', _, _) = fromJust $ readStdJSON json
+  (Contracts sol', _, _) <- maybe (render (text ("Compilation of Solidity source \"" <> Text.pack srcFile <> "\" failed") <> line) >> exitFailure) pure (readStdJSON json)
   pure $ Map.fromList $ map (\(fn,c) -> (Just $ Text.unpack $ snd $ Text.breakOnEnd ":" fn, (c.creationCode, c.runtimeCode))) $ Map.toList sol'
 bytecodes srcFile VyperLayout = Map.singleton Nothing <$> vyper srcFile
 
@@ -410,9 +433,18 @@ toCode fromFile t = case BS16.decodeBase16Untyped (encodeUtf8 t) of
 -- *** Util *** ---
 -------------------
 
+-- | Join multiple Act specifications into one, after all checks have been completed
+joinActs :: [TypedImplicit.Act] -> TypedImplicit.Act
+joinActs as = Act actStore (concatMap actContracts as)
+  where actContracts (Act _ contracts) = contracts
+        actStore = case head as of
+          (Act store _) -> store
+
 -- | Fail on error, or proceed with continuation
-proceed :: Validate err => String -> err (NonEmpty (Pn, String)) a -> (a -> IO ()) -> IO ()
+proceed :: Validate err => [(String,FilePath)] -> err (NonEmpty (Pn, (FilePath, String))) a -> (a -> IO ()) -> IO ()
 proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
 
-compile :: String -> Error String (Act, [Constraint Timed])
-compile = pure . (first annotate) <==< pure . (\(act, cnstr) -> (act, checkIntegerBoundsAct act ++ cnstr)) <==< typecheck <==< parse . lexer
+compile :: [(String, FilePath)] -> Error (FilePath ,String) (Act, [Constraint Timed])
+compile = pure . (first annotate) <==< pure . (\(acts, cnstr) -> (joinActs (fst <$> acts), (concatMap (uncurry checkIntegerBoundsAct) acts) ++ cnstr))
+  <==< typecheck <==< (traverse (\(content, src) -> (,src) <$> (errorSource src $ parse $ lexer content)))
+
