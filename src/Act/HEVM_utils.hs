@@ -24,7 +24,7 @@ import Control.Monad
 import Act.Syntax.Typed
 
 import qualified EVM.Types as EVM
-import EVM.Types (VM(..), SMTCex(..))
+import EVM.Types (VM(..), SMTCex(..), Contract(..))
 import EVM.Expr hiding (op2, inRange)
 import EVM.SymExec hiding (isPartial, abstractVM, loadSymVM)
 import EVM.Solvers
@@ -132,22 +132,35 @@ getRuntimeBranches solvers contracts calldata precond fresh = do
 
 
 -- | decompiles the given EVM initcode into a list of Expr branches
-getInitcodeBranches :: App m => SolverGroup -> BS.ByteString -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> Calldata -> [EVM.Prop] -> Int -> m [EVM.Expr EVM.End]
-getInitcodeBranches solvers initcode contracts calldata precond fresh = do
-  initVM <- liftIO $ stToIO $ abstractInitVM initcode contracts calldata precond fresh
+getInitcodeBranches :: App m => SolverGroup -> BS.ByteString -> IsPayable -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> Calldata -> [EVM.Prop] -> Int -> m [EVM.Expr EVM.End]
+getInitcodeBranches solvers initcode payable contracts calldata precond fresh = do
+  initVM <- liftIO $ stToIO $ abstractInitVM initcode payable contracts calldata precond fresh
   expr <- interpret (Fetch.oracle solvers Nothing) iterConfig initVM runExpr
   let simpl = simplify expr
   let nodes = flattenExpr simpl
   checkPartial nodes
   pure nodes
 
-abstractInitVM :: BS.ByteString -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> [EVM.Prop] -> Int -> ST s (EVM.VM EVM.Symbolic s)
-abstractInitVM contractCode contracts cd precond fresh = do
+abstractInitVM :: BS.ByteString -> IsPayable -> [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> [EVM.Prop] -> Int -> ST s (EVM.VM EVM.Symbolic s)
+abstractInitVM contractCode payable contracts cd precond fresh = do
   let value = EVM.TxValue
   let code = EVM.InitCode contractCode (fst cd)
-  vm <- loadSymVM (EVM.SymAddr "entrypoint", EVM.initialContract code) contracts value cd True fresh
+  vm <- loadSymVM (EVM.SymAddr "entrypoint", initialContract payable code) contracts value cd True fresh
   pure $ vm { constraints = vm.constraints <> precond }
 
+initialContract :: IsPayable -> EVM.ContractCode -> EVM.Contract
+initialContract isPayable code = EVM.Contract
+  { EVM.code        = code
+  , EVM.storage     = EVM.ConcreteStore mempty
+  , EVM.tStorage    = EVM.ConcreteStore mempty
+  , EVM.origStorage = EVM.ConcreteStore mempty
+  , EVM.balance     = if isPayable == Payable then EVM.TxValue else EVM.Lit 0
+  , EVM.nonce       = if EVM.isCreation code then Just 1 else Just 0
+  , EVM.codehash    = EVM.hashcode code
+  , EVM.opIxMap     = EVM.mkOpIxMap code
+  , EVM.codeOps     = EVM.mkCodeOps code
+  , EVM.external    = False
+  }
 abstractVM :: [(EVM.Expr EVM.EAddr, EVM.Contract)] -> (EVM.Expr EVM.Buf, [EVM.Prop]) -> [EVM.Prop] -> Int -> ST s (EVM.VM EVM.Symbolic s)
 abstractVM contracts cd precond fresh = do
   let value = EVM.TxValue

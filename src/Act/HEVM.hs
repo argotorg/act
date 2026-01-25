@@ -1075,13 +1075,12 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
   let (behvs', fcmaps) = unzip actbehvs
     -- Symbolically execute bytecode
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
-  solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode hevminitmap calldata (checks' ++ bounds) fresh
-
-  when (cname == "B") $ do
-    traceM "Act"
-    traceM (showBehvs behvs') 
-    traceM "Solidity"
-    traceM (showBehvs solbehvs) 
+  solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode payable hevminitmap calldata (checks' ++ bounds) fresh
+--   when (cname == "A") $ do
+--     traceM "Act"
+--     traceM (showBehvs behvs') 
+--     traceM "Solidity"
+--     traceM (showBehvs solbehvs) 
     
 
   -- Check equivalence
