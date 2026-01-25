@@ -1,0 +1,30 @@
+contract A
+
+constructor() payable
+
+creates
+  uint256 BALANCE := CALLVALUE
+
+transition deposit() payable
+
+iff
+  inRange(uint256, BALANCE + CALLVALUE)
+
+updates
+  BALANCE := BALANCE + CALLVALUE
+
+contract B
+
+constructor() payable
+iff
+  CALLVALUE >= 42
+creates
+  A a := new A() with callvalue (42)
+  uint BALANCE := CALLVALUE - 42
+
+transition newA(uint256 amt)
+iff
+   amt <= BALANCE
+updates
+  a := new A() with callvalue (amt)
+  BALANCE := BALANCE - amt
