@@ -488,7 +488,7 @@ createCastedContract readMap writeMap callenv freshAddr (Address _ _ (Create pn 
 createCastedContract _ _ _ _ _ = error "Internal error: constructor call expected"
 
 createContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr EVM.EAddr -> Exp AContract -> ActBTT m ContractMap
-createContract readMap writeMap callenv freshAddr (Create _ cid args _) = do
+createContract readMap writeMap callenv freshAddr (Create _ cid args cv) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
     Just (Contract (Constructor _ _ _ _ [] _ _) _, _, _) ->
@@ -500,7 +500,7 @@ createContract readMap writeMap callenv freshAddr (Create _ cid args _) = do
       where
         applyCase :: Monad m => Ccase -> ActBTT m ContractMap
         applyCase (Case _ caseCond upds) = do
-          callenv' <- makeCallEnv readMap callenv iface args
+          callenv' <- makeCallEnv readMap callenv iface args cv
           caseCond' <- toProp readMap callenv' caseCond
           tell [caseCond']
           applyUpdates readMap (M.insert freshAddr (contract, cid) writeMap) callenv' upds
@@ -520,12 +520,17 @@ emptyEnv :: CallEnv
 emptyEnv = M.empty
 
 -- | Create constructor call environment
-makeCallEnv :: Monad m => ContractMap -> CallEnv -> Interface -> [TypedExp] -> ActBTT m CallEnv
-makeCallEnv cmap callenv (Interface _ decls) args = do
+makeCallEnv :: Monad m => ContractMap -> CallEnv -> Interface -> [TypedExp] -> Maybe (Exp AInteger) -> ActBTT m CallEnv
+makeCallEnv cmap callenv (Interface _ decls) args cv = do
   lst <- zipWithM (\(Arg _ x) texp -> do
     wexpr <- typedExpToWord cmap callenv texp
     pure (x, wexpr)) decls args
-  pure $ M.fromList lst
+  lst' <- case cv of
+    Just e -> do
+      wexpr <- toExpr cmap callenv e
+      pure $ lst ++ [("CALLVALUE", wexpr)]
+    Nothing -> pure lst 
+  pure $ M.fromList lst'
 
 -- | Expand n LSBs to full 256 word
 lsbsToWord :: Int -> Bool -> LayoutMode -> EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord
@@ -641,13 +646,16 @@ baseAddr cmap callenv (RMapIdx _ (TRef _ _ ref) _) = baseAddr cmap callenv ref
 baseAddr cmap callenv (RArrIdx _ ref _ _) = baseAddr cmap callenv ref
 
 
-ethEnvToWord :: Monad m => EthEnv -> ActT m (EVM.Expr EVM.EWord)
-ethEnvToWord Callvalue = pure EVM.TxValue
-ethEnvToWord Caller = do
+ethEnvToWord :: Monad m => CallEnv -> EthEnv -> ActT m (EVM.Expr EVM.EWord)
+ethEnvToWord callenv Callvalue = 
+    case M.lookup "CALLVALUE" callenv of
+        Just e -> pure e
+        Nothing -> pure EVM.TxValue
+ethEnvToWord callenv Caller = do
   c <- getCaller
   pure $ EVM.WAddr c
-ethEnvToWord Origin = pure $ EVM.WAddr (EVM.SymAddr "origin") -- Why not: pure $ EVM.Origin
-ethEnvToWord This = do
+ethEnvToWord callenv Origin = pure $ EVM.WAddr (EVM.SymAddr "origin") -- Why not: pure $ EVM.Origin
+ethEnvToWord callenv This = do
   c <- getCaddr
   pure $ EVM.WAddr c
 
@@ -761,7 +769,7 @@ toExpr cmap callenv =  fmap stripMods . go
       (Mod _ e1 e2) -> signedop2 EVM.Mod EVM.SMod e1 e2
       (Exp _ e1 e2) -> op2 EVM.Exp e1 e2
       (LitInt _ n) -> pure $ EVM.Lit (fromIntegral n)
-      (IntEnv _ env) -> ethEnvToWord env
+      (IntEnv _ env) -> ethEnvToWord callenv env
       -- bounds
       (IntMin _ n) -> pure $ EVM.Lit (fromIntegral $ intmin n)
       (IntMax _ n) -> pure $ EVM.Lit (fromIntegral $ intmax n)
