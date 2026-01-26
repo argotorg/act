@@ -24,7 +24,7 @@ import Control.Monad
 import Act.Syntax.Typed
 
 import qualified EVM.Types as EVM
-import EVM.Types (VM(..), SMTCex(..), Contract(..))
+import EVM.Types (VM(..), SMTCex(..))
 import EVM.Expr hiding (op2, inRange)
 import EVM.SymExec hiding (isPartial, abstractVM, loadSymVM)
 import EVM.Solvers

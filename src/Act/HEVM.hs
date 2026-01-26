@@ -59,7 +59,6 @@ import EVM.Format as Format
 import EVM.Traversals
 import qualified Data.Bifunctor as Bifunctor
 
-import Debug.Trace
 
 type family ExprType a where
   ExprType 'AInteger  = EVM.EWord
@@ -529,7 +528,7 @@ makeCallEnv cmap callenv (Interface _ decls) args cv = do
     Just e -> do
       wexpr <- toExpr cmap callenv e
       pure $ lst ++ [("CALLVALUE", wexpr)]
-    Nothing -> pure lst 
+    Nothing -> pure lst
   pure $ M.fromList lst'
 
 -- | Expand n LSBs to full 256 word
@@ -647,15 +646,15 @@ baseAddr cmap callenv (RArrIdx _ ref _ _) = baseAddr cmap callenv ref
 
 
 ethEnvToWord :: Monad m => CallEnv -> EthEnv -> ActT m (EVM.Expr EVM.EWord)
-ethEnvToWord callenv Callvalue = 
+ethEnvToWord callenv Callvalue =
     case M.lookup "CALLVALUE" callenv of
         Just e -> pure e
         Nothing -> pure EVM.TxValue
-ethEnvToWord callenv Caller = do
+ethEnvToWord _ Caller = do
   c <- getCaller
   pure $ EVM.WAddr c
-ethEnvToWord callenv Origin = pure $ EVM.WAddr (EVM.SymAddr "origin") -- Why not: pure $ EVM.Origin
-ethEnvToWord callenv This = do
+ethEnvToWord _ Origin = pure $ EVM.WAddr (EVM.SymAddr "origin") -- Why not: pure $ EVM.Origin
+ethEnvToWord _ This = do
   c <- getCaddr
   pure $ EVM.WAddr c
 
@@ -731,7 +730,7 @@ toProp cmap callenv = \case
       where
         condProp :: (a -> EVM.Prop) -> (a,[EVM.Prop]) -> EVM.Prop
         condProp f (p,cs) = EVM.PImpl (EVM.pand cs) $ f p
-      
+
 
 pattern MAX_UINT :: EVM.W256
 pattern MAX_UINT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -992,9 +991,6 @@ getInitContractState :: App m => SolverGroup -> Id -> Interface -> [Exp ABoolean
 getInitContractState solvers cname iface preconds cmap = do
   let contracts = contractsFromIFace iface
   (cmaps, checks) <- mapAndUnzipM getContractState contracts
---   traceM $ "Constructing initial map for contract " <> show cname <> " with contracts: " <> show contracts
---   traceM $ "Initial cmap: " <> showCmap cmap
---   traceM $ concatMap (\c -> showCmap c <> "\n") cmaps
 
   let finalmap = M.unions (cmap:cmaps)
 
@@ -1008,7 +1004,7 @@ getInitContractState solvers cname iface preconds cmap = do
       where
       castingDecl (Arg (ContractArg _ cid) name) = Just (name, cid)
       castingDecl _ = Nothing
-    
+
     getContractState :: App m => (Id, Id) -> ActT m (ContractMap, Error String ())
     getContractState (x, cid) = do
       let addr = EVM.SymAddr $ T.pack x -- TODO freshen symbolic addresses to ensure global uniqueness
@@ -1034,7 +1030,8 @@ getInitContractState solvers cname iface preconds cmap = do
       let allkeys = M.foldrWithKey (\k (_, cid) l -> (k, cid):l) [] <$> cmaps
       -- gather all tuples that must be distinct
       let allpairs = concatMap (\(l1, l2) -> (,) <$> l1 <*> l2) $ comb allkeys
-      -- gather all tuples that we know are distinct
+      -- Require them to be distinct, if they have the same contract type. We assume that addresses assumed to be of different types
+      -- are distinct
       let dquery = EVM.por $ (\((a1, c1),(a2, c2)) ->
                                 if c1 == c2 then EVM.PEq (EVM.WAddr a1) (EVM.WAddr a2) else EVM.PBool False) <$> allpairs
       preconds' <- mapM (toProp cmap' emptyEnv) preconds
@@ -1045,9 +1042,6 @@ getInitContractState solvers cname iface preconds cmap = do
       conf <- readConfig
       res <- liftIO $ checkSat solvers Nothing (assertProps conf queries)
       checkResult (makeCalldata cname iface) Nothing [toVRes msg res]
-
-    makeSymAddr n = EVM.WAddr (EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show n))
-    neqProp a1 a2 = EVM.PNeg (EVM.PEq a1 a2)
 
     msg = "\x1b[1mThe following addresses cannot be proved distinct:\x1b[m"
 
@@ -1076,12 +1070,6 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
     -- Symbolically execute bytecode
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
   solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode payable hevminitmap calldata (checks' ++ bounds) fresh
---   when (cname == "A") $ do
---     traceM "Act"
---     traceM (showBehvs behvs') 
---     traceM "Solidity"
---     traceM (showBehvs solbehvs) 
-    
 
   -- Check equivalence
   lift $ showMsg "\x1b[1mChecking if constructor results are equivalent.\x1b[m"
@@ -1100,7 +1088,7 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
     let calldata = makeCalldata name iface
     let sig = ifaceToSig name iface
     -- construct initial contract state for the transition by adding the contracts passed as arguments
-    (initstore, errors) <- getInitContractState solvers name iface preconds actstorage  
+    (initstore, errors) <- getInitContractState solvers name iface preconds actstorage
     -- translate Act behaviour to Expr
     (actbehv,bounds) <- translateBehv initstore behv
     let (behvs', fcmaps) = unzip actbehv
@@ -1108,13 +1096,7 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
     let (hevmstorage, checks) = translateCmap initstore payable
     -- symbolically execute bytecode
     solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata (checks ++ bounds) fresh
-    
-    -- when (name == "deposit") $ do
-    --     traceM "Act"
-    --     traceM (showBehvs behvs') 
-    --     traceM "Solidity"
-    --     traceM (showBehvs solbehvs) 
-    
+
     lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
     -- equivalence check
     lift $ showMsg "\x1b[1mChecking if behaviour is matched by EVM\x1b[m"
@@ -1132,12 +1114,12 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
 translateCmap :: ContractMap -> IsPayable -> ([(EVM.Expr EVM.EAddr, EVM.Contract)], [EVM.Prop])
 translateCmap cmap payable = foldl go ([], []) (M.toList cmap)
   where
-    go (storage, props) (addr, (c, _)) = 
+    go (storage, props) (addr, (c, _)) =
         let (contract, newprops) = toContract addr c in
         ((addr, contract):storage, newprops ++ props)
-    
+
     toContract :: EVM.Expr EVM.EAddr -> EVM.Expr EVM.EContract -> (EVM.Contract, [EVM.Prop])
-    toContract addr (EVM.C code storage tstorage balance nonce) = 
+    toContract addr (EVM.C code storage tstorage balance nonce) =
       (EVM.Contract
         { EVM.code        = code
         , EVM.storage     = storage
