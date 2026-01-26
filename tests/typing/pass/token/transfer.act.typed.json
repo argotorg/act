@@ -58,7 +58,7 @@
                                     "kind": "AbiArgument"
                                   },
                                   "kind": "Var",
-                                  "var": "value"
+                                  "var": "val"
                                 }
                               }
                             ],
@@ -126,7 +126,7 @@
                                     "kind": "AbiArgument"
                                   },
                                   "kind": "Var",
-                                  "var": "value"
+                                  "var": "val"
                                 }
                               }
                             ],
@@ -228,7 +228,7 @@
                   },
                   "kind": "AbiArgument"
                 },
-                "id": "\"value\"",
+                "id": "\"val\"",
                 "kind": "Declaration"
               },
               {
@@ -276,7 +276,7 @@
                       "kind": "AbiArgument"
                     },
                     "kind": "Var",
-                    "var": "value"
+                    "var": "val"
                   }
                 },
                 {
@@ -396,7 +396,7 @@
                                   "kind": "AbiArgument"
                                 },
                                 "kind": "Var",
-                                "var": "value"
+                                "var": "val"
                               }
                             }
                           ],
@@ -455,7 +455,7 @@
                                       "kind": "AbiArgument"
                                     },
                                     "kind": "Var",
-                                    "var": "value"
+                                    "var": "val"
                                   }
                                 }
                               ],
@@ -495,7 +495,7 @@
                       "kind": "AbiArgument"
                     },
                     "kind": "Var",
-                    "var": "value"
+                    "var": "val"
                   }
                 }
               ],
@@ -1684,7 +1684,7 @@
                 "kind": "Declaration"
               }
             ],
-            "id": "AlexPn 769 41 24",
+            "id": "AlexPn 758 40 24",
             "kind": "Interface"
           },
           "kind": "Behaviour",

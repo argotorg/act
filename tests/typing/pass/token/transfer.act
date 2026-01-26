@@ -17,18 +17,18 @@ invariants
   symbol == _symbol
 
 
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 val, address to) : uint256
 
 iff
 
-  value <= balanceOf[CALLER]
-  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
+  val <= balanceOf[CALLER]
+  CALLER != to ==> inRange(uint256, balanceOf[to] + val)
 
 case CALLER != to:
 
   updates
 
-    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - value, to => balanceOf[to] + value]
+    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - val, to => balanceOf[to] + val]
 
   returns 1
 
@@ -36,7 +36,6 @@ case CALLER == to:
   updates
 
   returns 1
-
 
 transition transferFrom(address src, address dst, uint amount) : uint256
 

@@ -59,7 +59,7 @@ tokens :-
   pre                                   { mk PRE }
   post                                  { mk POST }
   with                                  { mk WITH }
-  callvalue                             { mk VALUE }
+  value                                 { mk VALUE }
   payable                               { mk PAYABLE }
   -- builtin types
   uint $digit+                          { \ p s -> L (UINT (read (drop 4 s))) p }
@@ -71,7 +71,7 @@ tokens :-
   address                               { mk ADDRESS }
   bool                                  { mk BOOL }
   string                                { mk STRING }
-
+  address(0)                            { mk ADDR0 }
   -- builtin functions
   newAddr                               { mk NEWADDR }
 
@@ -104,6 +104,8 @@ tokens :-
   ")"                                   { mk RPAREN }
   "["                                   { mk LBRACK }
   "]"                                   { mk RBRACK }
+  "{"                                   { mk LBRACE }
+  "}"                                   { mk RBRACE }
   "="                                   { mk Act.Lex.EQ }
   ">"                                   { mk Act.Lex.GT }
   "<"                                   { mk Act.Lex.LT }
@@ -163,6 +165,7 @@ data LEX =
   | VALUE
   | NEW
   | WITH
+  | ADDR0
   -- builtin types
   | UINT  Int
   | INT   Int
@@ -202,6 +205,8 @@ data LEX =
   | RPAREN
   | LBRACK
   | RBRACK
+  | LBRACE
+  | RBRACE
   | EQ
   | GT
   | LT

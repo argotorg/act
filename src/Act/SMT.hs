@@ -3,8 +3,6 @@
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DataKinds #-}
-{-# Language RecordWildCards #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE KindSignatures #-}
@@ -74,7 +72,6 @@ import Act.Print
 
 import EVM.Solvers (Solver(..))
 import Data.Type.Equality ((:~:)(..), testEquality)
-import Debug.Trace
 
 --- ** Data ** ---
 
@@ -496,7 +493,7 @@ collectArrayExps tl = case tl of
 getArrayExp :: SolverInstance -> TValueType a -> Id -> NonEmpty Int -> [Int] -> IO (TypedExp)
 getArrayExp solver typ name (h:|[]) idcs = collectArrayExps <$> typedExps
   where
-    typedExps = mapM getArrayElement (map ((++) idcs . singleton)  [0..(h-1)])
+    typedExps = mapM (getArrayElement . (++) idcs . singleton) [0 .. (h - 1)]
 
     getArrayElement :: [Int] -> IO TypedExp
     getArrayElement idcs' =
@@ -763,6 +760,7 @@ expToSMT2 typ expr = case expr of
           defaultConst SByteStr = error "TODO"
           defaultConst SContract = error "TODO"
           defaultConst SStruct = error "TODO"
+          defaultConst SMapping = error "TODO"
 
   -- contracts
   Create _ _ _ _ -> error "Internal Error: unexpected create call in the SMT expression"

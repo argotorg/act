@@ -44,11 +44,11 @@ import Act.Error
   'pre'                       { L PRE _ }
   'post'                      { L POST _ }
   'payable'                   { L PAYABLE _ }
-  'contract'                  { L CONTRACT _ }  
+  'contract'                  { L CONTRACT _ }
   'new'                       { L NEW _ }
   'with'                      { L WITH _ }
-  'callvalue'                 { L VALUE _ }
-  
+  'value'                     { L VALUE _ }
+  'address(0)'                { L ADDR0 _ }
   -- builtin types
   'uint'                      { L (UINT $$) _ }
   'int'                       { L (INT $$) _ }
@@ -56,7 +56,7 @@ import Act.Error
   'address'                   { L ADDRESS _ }
   'bool'                      { L BOOL _ }
   'string'                    { L STRING _ }
-  
+
 
   -- environment variables
   'CALLER'                    { L CALLER _ }
@@ -77,16 +77,18 @@ import Act.Error
   ':='                        { L ASSIGN _ }
   '==>'                       { L ARROW _ }
   '=='                        { L EQEQ _ }
-  '!='                       { L NEQ _ }
+  '!='                        { L NEQ _ }
   '>='                        { L GE _ }
   '<='                        { L LE _ }
   '++'                        { L CAT _ }
   '..'                        { L SLICE _ }
-  '=>'                       { L MAPSTO _ }
+  '=>'                        { L MAPSTO _ }
   '('                         { L LPAREN _ }
   ')'                         { L RPAREN _ }
   '['                         { L LBRACK _ }
   ']'                         { L RBRACK _ }
+  '{'                         { L LBRACE _ }
+  '}'                         { L RBRACE _ }
   '='                         { L EQ _ }
   '>'                         { L GT _ }
   '<'                         { L LT _ }
@@ -180,7 +182,7 @@ Transition : 'transition'
               ReturnType
               Precondition
               Cases
-              Ensures                                  { Transition (posn $1) (name $2) 
+              Ensures                                  { Transition (posn $1) (name $2)
                                                          $3 $4 $5 $6 $7 $8 }
 
 
@@ -197,7 +199,7 @@ Invariants : optblock('invariants', Expr)             { $1 }
 Interface : '(' seplist(Arg, ',') ')'                 { Interface (posn $1) $2 }
 
 
-ConstrCases : Creates                                 { [Case nowhere (BoolLit nowhere True) $1] } 
+ConstrCases : Creates                                 { [Case nowhere (BoolLit nowhere True) $1] }
             | nonempty(ConstrCase)                    { $1 }
 
 ConstrCase : 'case' Expr ':' Creates                  { Case (posn $1) $2 $4 }
@@ -289,8 +291,8 @@ Expr : '(' Expr ')'                                   { $2 }
   | 'if' Expr 'then' Expr 'else' Expr                 { EITE (posn $1) $2 $4 $6 }
   | Ref                                               { ERef $1 }
   | 'new' id '(' seplist(Expr, ',') ')'               { ECreate (posn $1) (name $2) $4 Nothing }
-  | 'new' id '(' seplist(Expr, ',') ')' 'with' 'callvalue' '(' Expr ')' 
-                                                      { ECreate (posn $1) (name $2) $4 (Just $9) }
+  | 'new' id '{' 'value' ':' Expr '}' '(' seplist(Expr, ',') ')'
+                                                      { ECreate (posn $1) (name $2) $9 (Just $6) }
   | 'address' '(' Expr ')'                            { AddrOf (posn $1) $3 }
 
   | '[' neseplist(Expr, ',') ']'                      { EArray  (posn $1) $ NonEmpty.toList $2 }
@@ -302,6 +304,7 @@ Expr : '(' Expr ')'                                   { $2 }
   | 'CALLVALUE'                                       { EnvExp (posn $1) Callvalue }
   | 'ORIGIN'                                          { EnvExp (posn $1) Origin }
   | 'THIS'                                            { EnvExp (posn $1) This }
+  | 'address(0)'                                      { AddrOf (posn $1) (IntLit (posn $1) 0) }
 
 
 MapsTo : Expr '=>' Expr                               { ($1, $3) }

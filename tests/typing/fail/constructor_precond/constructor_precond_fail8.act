@@ -21,4 +21,4 @@ contract C
 
 constructor()
 creates
-    B b := new B(new A(11) with callvalue(1), new A(42) with callvalue(12))
+    B b := new B(new A{value : 1}(11), new A{value : 12}(42))
