@@ -784,6 +784,7 @@ inferExpr env@Env{constructors} mode e = case e of
   U.ERef ref ->
     (\(ValueType typ, tref, cnstr) -> (TExp typ (VarRef (getPosRef ref) typ tref), cnstr)) <$> checkRef env SRHS mode ref
   -- Address-of operator
+  U.AddrOf _ (U.IntLit p' 0) -> pure (TExp TAddress (LitInt p' 0), []) -- address(0) becomes literal 0
   U.AddrOf p e1 -> do
     inferExpr env mode e1 `bindValidation` \(TExp ty e', cnstr) ->
       case ty of
