@@ -1058,6 +1058,22 @@ getInitContractState p solvers cname iface preconds cmap = do
 comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
+showErrors :: App m => Error String a -> m ()
+showErrors (Failure msgs) = mapM_ showErrMsg msgs
+  where
+    showErrMsg (_, msg) = showMsg $ "\x1b[41m" <> msg <> "\x1b[m"
+
+showErrors _ = showMsg "\x1b[42mSuccess.\x1b[m "
+
+showOneError :: App m => Error String a -> m ()
+showOneError (Failure msgs) = go (NE.toList msgs)
+  where
+    go [] = pure ()
+    go ((_, msg):_) = showMsg $ "\x1b[31m" <> msg <> "\x1b[m"
+
+showOneError _ = showMsg "\x1b[42mSuccess.\x1b[m "
+
+
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
 checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor p cname iface payable preconds _ _ _)  _) = do
   -- Construct the initial contract state
@@ -1071,19 +1087,32 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor p cna
     -- TODO check if contrainsts about preexistsing fresh symbolic addresses are necessary
   solbehvs <- lift $ removeFails <$> getInitcodeBranches solvers initcode payable hevminitmap calldata (checks' ++ bounds) fresh
 
+  -- Check if the initial state can contain aliased contracts (TODO: can we lift this by considering all possible aliasings?)
+  lift $ showMsg "\x1b[1mConstructing the initial state.\x1b[m"
+  lift $ showErrors errors
+
   -- Check equivalence
   lift $ showMsg "\x1b[1mChecking if constructor results are equivalent.\x1b[m"
   res1 <- lift $ checkResult p calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
+  lift $ showErrors res1
+
   lift $ showMsg "\x1b[1mChecking if constructor input spaces are the same.\x1b[m"
   res2 <- lift $ checkResult p calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
+  lift $ showErrors res2
+
   -- check if the resulting store preserves the tree structure
-  pure $ traverse_ (checkStoreIsomorphism p (head fcmaps)) (tail fcmaps) *> errors *> res1 *> res2 *> checkTree (head fcmaps) *> Success (head fcmaps)
+  lift $ showMsg "\x1b[1mChecking if the resulting state can contain aliasing.\x1b[m"
+  let treeCheck = checkTree (head fcmaps)
+  let isoCheck = traverse_ (checkStoreIsomorphism p (head fcmaps)) (tail fcmaps)
+  lift $ showOneError (isoCheck <* treeCheck)
+
+  pure $ isoCheck *> errors *> res1 *> res2 *> treeCheck *> Success (head fcmaps)
   where
     removeFails branches = filter isSuccess branches
 
 
 checkBehaviours :: forall m. App m => SolverGroup -> Contract -> ContractMap -> ActT m (Error String ())
-checkBehaviours solvers (Contract _ behvs) actstorage = do
+checkBehaviours solvers (Contract cnstr behvs) actstorage = do
   fresh <- getFresh
   (fmap $ concatError def) $ forM behvs $ \behv@(Behaviour p name _ iface payable preconds _ _) -> do
     let calldata = makeCalldata name iface
@@ -1098,16 +1127,29 @@ checkBehaviours solvers (Contract _ behvs) actstorage = do
     -- symbolically execute bytecode
     solbehvs <- lift $ removeFails <$> getRuntimeBranches solvers hevmstorage calldata (checks ++ bounds) fresh
 
-    lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of Act\x1b[m"
+
+    lift $ showMsg $ "\x1b[1mChecking behavior \x1b[4m" <> name <> "\x1b[m of " <> _cname cnstr <> "\x1b[m"
+
+    -- Check if the initial state can contain aliased contracts
+    lift $ showMsg "\x1b[1mConstructing the initial state.\x1b[m"
+    lift $ showErrors errors
+
     -- equivalence check
     lift $ showMsg "\x1b[1mChecking if behaviour is matched by EVM\x1b[m"
     res1 <- lift $ checkResult p calldata (Just sig) =<< checkEquiv solvers solbehvs behvs'
+    lift $ showErrors res1
+
     -- input space exhaustiveness check
     lift $ showMsg "\x1b[1mChecking if the input spaces are the same\x1b[m"
     res2 <- lift $ checkResult p calldata (Just sig) =<< checkInputSpaces solvers solbehvs behvs'
-    -- check if the resulting store preserves the tree structure
-    pure $ traverse_ (checkStoreIsomorphism p actstorage) (fcmaps) *> res1 *> res2 *> errors
+    lift $ showErrors res2
 
+    -- check if the resulting store preserves the tree structure
+    lift $ showMsg "\x1b[1mChecking if the resulting state can contain aliasing.\x1b[m"
+    let isoCheck = traverse_ (checkStoreIsomorphism p actstorage) (fcmaps)
+    lift $ showOneError isoCheck
+
+    pure $ isoCheck *> res1 *> res2 *> errors
   where
     removeFails branches = filter isSuccess branches
     def = Success ()
@@ -1236,10 +1278,10 @@ checkStoreIsomorphism p cmap1 cmap2 =
       case (M.lookup a1 map1, M.lookup a2 map2) of
         (Just a2', Just a1') ->
           if a2 == a2' && a1 == a1' then visit addrs1 addrs2 map1 map2 discovered
-          else throw (p, "Found aliasing in the resulting state.")
+          else throw (p, "Detected aliasing in the resulting state.")
         (Nothing, Nothing) -> visit addrs1 addrs2 (M.insert a1 a2 map1) (M.insert a2 a1 map2) ((a1, a2): discovered)
-        (_, _) -> throw (p, "Found aliasing in the resulting state.")
-    visit _ _ _ _  _ = throw (p, "Found aliasing in the resulting state.")
+        (_, _) -> throw (p, "Detected aliasing in the resulting state.")
+    visit _ _ _ _  _ = throw (p, "Detected aliasing in the resulting state.")
 
 -- Find addresses mentioned in storage
 getAddrs :: EVM.Expr EVM.Storage -> [(Int, EVM.Expr EVM.EAddr)]
@@ -1263,7 +1305,7 @@ checkTree cmap = do
     pure ()
   where
     traverseTree :: EVM.Expr EVM.EAddr -> S.Set (EVM.Expr EVM.EAddr) -> Error String (S.Set (EVM.Expr EVM.EAddr))
-    traverseTree root seen | S.member root seen = throw (nowhere, "Detected aliasing in resulting store")
+    traverseTree root seen | S.member root seen = throw (nowhere, "Detected aliasing in resulting state.")
     traverseTree root seen =
         case M.lookup root cmap of
         Just (EVM.C _ storage _ _ _, _) ->
@@ -1313,8 +1355,10 @@ checkAbi solver contract cmap = do
   evmBehvs <- getRuntimeBranches solver hevmstorage (txdata, []) [] 0 -- TODO what freshAddr goes here?
   conf <- readConfig
   let queries =  fmap (assertProps conf) $ filter (/= []) $ fmap (checkBehv selectorProps) evmBehvs
-  res <- liftIO $ mapConcurrently (checkSat solver Nothing) queries
-  checkResult nowhere (txdata, []) Nothing (fmap (toVRes msg) res)
+  smtRes <- liftIO $ mapConcurrently (checkSat solver Nothing) queries
+  res <- checkResult nowhere (txdata, []) Nothing (fmap (toVRes msg) smtRes)
+  showErrors res
+  pure res
 
   where
     actSig (Behaviour _ bname _ iface _ _ _ _) = T.pack $ makeIface bname iface
@@ -1344,7 +1388,7 @@ checkContracts solvers store codeLayoutMap =
         abi <- checkAbi solvers contract cmap
         pure $ behvs *> abi
       Failure e -> do
-        showMsg $ "\x1b[1mFailure: Constructors of \x1b[4m" <> nameOfContract contract <> "\x1b[m are not equivalent"
+        -- showMsg $ "\x1b[1mFailure: Constructors of \x1b[4m" <> nameOfContract contract <> "\x1b[m are not equivalent"
         pure $ Failure e)
   where
     def = Success ()
@@ -1388,15 +1432,13 @@ checkResult p calldata sig res =
     False ->
       case any EVM.isUnknown res || any EVM.isError res of
         True -> do
-          showMsg "\x1b[41mNo discrepancies found but timeouts or solver errors were encountered. \x1b[m"
-          pure $ Failure $ NE.singleton (p, "Failure: Cannot prove equivalence.")
+          pure $ Failure $ NE.singleton (p, "No discrepancies found but timeouts or solver errors were encountered.")
         False -> do
-          showMsg "\x1b[42mNo discrepancies found.\x1b[m "
           pure $ Success ()
     True -> do
       let cexs = mapMaybe getCex res
-      showMsg $ T.unpack . T.unlines $ [ "\x1b[41mNot equivalent.\x1b[m", "" , "-----", ""] <> (intersperse (T.unlines [ "", "-----" ]) $ fmap (\(msg, cex) -> T.pack msg <> "\n" <> formatCex (fst calldata) sig cex) cexs)
-      pure $ Failure $ NE.singleton (p, "Failure: Cannot prove equivalence.")
+      let errMsg = T.unpack . T.unlines $ [ "\x1b[41mNot equivalent.\x1b[m", "" , "-----", ""] <> (intersperse (T.unlines [ "", "-----" ]) $ fmap (\(msg, cex) -> T.pack msg <> "\n" <> formatCex (fst calldata) sig cex) cexs)
+      pure $ Failure $ NE.singleton (p, errMsg)
 
 -- | Pretty prints a list of hevm behaviours for debugging purposes
 showBehvs :: [EVM.Expr a] -> String

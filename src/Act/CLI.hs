@@ -16,10 +16,8 @@ import Data.Aeson hiding (Bool, Number, json, Success)
 import Data.Aeson.Types hiding (Success, parse)
 import GHC.Generics
 import System.Exit ( exitFailure )
-import System.IO (hPutStrLn, stderr)
 import System.Process
 import System.FilePath
-import Data.Text (unpack)
 import Data.Text.Encoding (encodeUtf8)
 import Data.List
 import qualified Data.Map as Map
@@ -41,12 +39,11 @@ import Control.Monad
 import Control.Lens.Getter
 
 import Act.Error
-import Act.Lex (lexer, AlexPosn(..))
+import Act.Lex (lexer)
 import Act.Parse
-import Act.Syntax.TypedExplicit hiding (_Array)
+import Act.Syntax.TypedExplicit
 import Act.Syntax.Timing 
 import Act.Bounds
-import Act.SMT as SMT
 import Act.Type hiding (Env)
 import Act.Coq hiding (indent, (<+>))
 import Act.HEVM
@@ -63,7 +60,6 @@ import EVM.Solidity
 import EVM.Effects
 import Control.Arrow (Arrow(first))
 
-import Debug.Trace
 
 --command line options
 data Command w
@@ -241,10 +237,10 @@ prove file' solver' smttimeout' debug' = do
 coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 coq' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (compile contents) $ \(spec, cnstrs) -> do
+  proceed contents (compile contents) $ \(spec', cnstrs) -> do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
-    TIO.putStr $ coq spec
+    TIO.putStr $ coq spec'
 
 decompile' :: FilePath -> Text -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 decompile' _ _ _ _ _ = error "Decompile TBD"
@@ -281,7 +277,7 @@ hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
       checkContracts solvers store cmap
     case res of
       Success _ -> pure ()
-      Failure err -> prettyErrs "" err
+      Failure _ -> exitFailure
   where
 
     -- Creates maps of storage layout modes and bytecodes, for all contracts contained in the given Act specification
