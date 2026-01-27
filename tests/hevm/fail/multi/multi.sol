@@ -2,11 +2,11 @@ contract A {
     uint x;
 
     constructor (uint z)  {
-	x = z + 42;
+        x = z + 42;
     }
 
     function set_x(uint z) public {
-	x = z;
+        x = z;
     }
 }
 
@@ -16,7 +16,7 @@ contract B {
     A a;
 
     constructor(uint v) {
-	y = 0;
-	a = new A(v);
+        y = 11;
+        a = new A(v);
     }
 }

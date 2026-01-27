@@ -9,8 +9,9 @@ creates
 
 transition x() : uint256
 
-returns
-   pre(x)
+updates
+
+returns x
 
 // contract C
 contract C

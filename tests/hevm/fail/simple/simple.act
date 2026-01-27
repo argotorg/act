@@ -10,7 +10,7 @@ transition f() : uint256
 
 updates
 
-  x[0] := 1
+  x := x[0 => 1]
 
 returns
 

@@ -17,11 +17,8 @@ updates
 contract B
 
 constructor(uint v)
-
-iff
-   // This condition must be present for equivalence check to pass
-   // inRange(uint256, v + 42)
-
+iff 
+  inRange (uint256, v + 42)
 creates
    uint y := 0
    A a := new A(v)
