@@ -321,13 +321,13 @@ result and final storage are the same.
 In act v0.2.0 the order of creating new contracts is relevant. 
 Writing 
 ```act
-A a := A()
-B b := B()
+A a := new A()
+B b := new B()
 ```
 is not equivalent to 
 ```act
-B b := B()
-A a := A()
+B b := new B()
+A a := new A()
 ```
 as the pointers to the contract storage are not the same. The order of contract creation
 must match the one in the EVM bytecode for the equivalence checker to succeed.

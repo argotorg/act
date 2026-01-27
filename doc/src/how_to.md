@@ -304,7 +304,7 @@ What is left to do is
 - For `payable` constructors, initialize the contract's balance in Ether using the special variable `BALANCE`
 - For mappings, use `[]` for empty mappings or `[<key> => <value>, ...]` to initialize specific entries. Entries that are not specified are set to the type's default value.
 - In every `case` block  **all** storage variables must be initialized.
-- As in Solidity, **constructors** of other contracts can be called and assigned.
+- As in Solidity, **constructors** of other contracts can be called and assigned using the keyword `new`.
 - Use the special variables to describe EVM environment:
     - `CALLER` instead of `msg.sender`
     - `CALLVALUE` for the amount of Ether sent
@@ -333,7 +333,7 @@ constructor(uint256 _value)
 iff true
 creates
     uint256 value := _value
-    Admins admins := Admins(CALLER)
+    Admins admins := new Admins(CALLER)
     mapping(address => uint256) balanceOf := [THIS => _value]
 ```
 
@@ -443,7 +443,7 @@ iff true
 case CALLER == admins.admin1 or CALLER == admins.admin2
 
 updates
-   admins := Admins(new_admin1)
+   admins := new Admins(new_admin1)
    admins.admin2 := new_admin2
 
 case not (CALLER == admins.admin1 or CALLER == admins.admin2)

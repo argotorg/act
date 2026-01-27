@@ -114,7 +114,7 @@ Expressions appear throughout constructor and transition declarations: in precon
 
 ### Overview of Expressions
 
-1. **Storage Expressions (Slot Expressions)**: Expressions that manipulate storage data. Used in the `creates` and `updates` block to initialize or update storage variables. Examples in the ERC20 constructor: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `Token(100)`.
+1. **Storage Expressions (Slot Expressions)**: Expressions that manipulate storage data. Used in the `creates` and `updates` block to initialize or update storage variables. Examples in the ERC20 constructor: `_totalSupply`, `[CALLER => _totalSupply]`, `[]`, `new Token(100)`.
 
 2. **References**: Variable references that denote storage locations or calldata. Used in preconditions, case conditions, and to reference existing values (as it is done in storage updates). Examples in the ERC20: `totalSupply`, `balanceOf[CALLER]`, `CALLVALUE`, `allowance`.
 
@@ -133,11 +133,11 @@ Every key not explicitly mentioned maps to the default value of the mapping's va
 Further, exists the syntax for **adapting mappings** (used in `updates` blocks of transitions):
     - `my_map[my_key => my_value]` (defines a mapping, where  `my_key` maps to `my_value` and every other key has value `my_map[key]`)
     - similarly, multple entries can be changed at once: `my_map[key1 => value1, key2 => value2,...]`
-- **Contract creation**: An instance of another contract (an ERC20 `Token` for example) can be part of a contract's storage. The corresponding storage expression is `Token(100)`. It creates a new ERC20 contract instance with total supply 100.
+- **Contract creation**: An instance of another contract (an ERC20 `Token` for example) can be part of a contract's storage. The corresponding storage expression is `new Token(100)`. It creates a new ERC20 contract instance with total supply 100. The keyword `new` indicates that a new contract instance is created. The parentheses contain the arguments passed to the constructor of the other contract.
 
     Depending on whether this other contract's constructor is `payable` or not (see [Payable and Non-Payable Constructors](./constructors.md#payable-and-non-payable-constructors)), the storage expression requires to specify the amount of Ether to send.
-    - For a non-payable constructor, no Ether is sent and therefore nothing extra has to be specified. Hence `Token(100)` suffices.
-    - For a payable constructor, the amount of Ether to send must be specified. Assume there is a payable constructor `TokenPayable`, then the storage expression would be e.g. `TokenPayable(100) with value 10` to create a new instance of `TokenPayable` with initial supply `100` and send `10` wei during construction.
+    - For a non-payable constructor, no Ether is sent and therefore nothing extra has to be specified. Hence `new Token(100)` suffices.
+    - For a payable constructor, the amount of Ether to send must be specified. Assume there is a payable constructor `TokenPayable`, then the storage expression would be e.g. `new TokenPayable{value:10}(100)` to create a new instance of `TokenPayable` with initial supply `100` and send `10` wei during construction. The keyword to specify the amount of Ether (wei) to send is `value`.
 - **references to existing contracts**: `erc_token` (a reference to a deployed contract instance)
 - **Addresses of existing contracts**: `token_addr` (an address of a deployed contract instance)
 

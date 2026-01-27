@@ -199,7 +199,7 @@ Note that the act spec describes only the end-result of the constructor executio
 
 ## Constructors Cannot Modify Existing Contracts
 An important design choice in act is that constructors:
-- **may create new contracts**. E.g. `Token new_token := Token(100)` could be used to create a new ERC20 contract with an initial supply of `100` and assign it to the storage variable `new_token`.
+- **may create new contracts**. E.g. `Token new_token := new Token(100)` could be used to create a new ERC20 contract with an initial supply of `100` and assign it to the storage variable `new_token`.
 - **must initialize their own storage** (e.g.`uint256 totalSupply := _totalSupply` in the ERC20 example).
 - **may not mutate existing contract storage**. I.e. only assigning existing contracts to storage variablesis allowed. E.g. `Token token0 := t0` as in the AMM constructor.
 This restriction ensures that contract creation is local and predictable, and it plays a key role later when we reason about ownership and functional semantics.

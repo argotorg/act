@@ -279,7 +279,7 @@ constructor(uint256 _value)
 iff true
 creates
     uint256 value := _value
-    Admins admins := Admins(CALLER)
+    Admins admins := new Admins(CALLER)
     mapping(address => uint256) balanceOf := [THIS => _value]
 
 
@@ -308,7 +308,7 @@ iff true
 case CALLER == admins.admin1 or CALLER == admins.admin2
 
 updates
-   admins := Admins(new_admin1)
+   admins := new Admins(new_admin1)
    admins.admin2 := new_admin2
 
 case not (CALLER == admins.admin1 or CALLER == admins.admin2)
@@ -326,7 +326,7 @@ Let's consider now the `Asset` contract above.
  **Ordered Updates**
 
   Consider the `setAdmins` transition, where in the first case `case CALLER == admins.admin1 or CALLER == admins.admin2` both admin addresses are updated. We are in the situation described earlier: there is a **general update of a storage slot** and afterwards a **specific field of that slot** is updated:
-   - `admins := Admins(new_admin1)` (general update)
+   - `admins := new Admins(new_admin1)` (general update)
    - `admins.admin2 := new_admin2` (specific field update)
   
 This ordering is necessary to ensure that the updates have unambiguous semantics. 

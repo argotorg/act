@@ -179,7 +179,7 @@ How does one express over/underflow in act? The ideal way would be to write `(a+
 
 ## 2. Constructor Precondition Verification
 
-When a constructor is called to create a new contract instance (e.g., `Token(100)` in a storage update), act verifies that the constructor's preconditions are satisfied at the call site.
+When a constructor is called to create a new contract instance (e.g., `new Token(100)` in a storage update), act verifies that the constructor's preconditions are satisfied at the call site.
 
 **Why this matters:**
 
@@ -213,7 +213,7 @@ contract Wrapper
 constructor(address<Token> t0, address<Token> t1)
 iff true
 creates
-    Amm amm := Amm(t0, t1)
+    Amm amm := new Amm(t0, t1)
 ```
 
 For the constructor call `Amm(t0, t1)`, the SMT solver verifies that given the current information: 
