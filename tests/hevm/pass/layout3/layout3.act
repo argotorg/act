@@ -18,11 +18,10 @@ updates
 returns f[x]
 
 
-//transition set(uint256 value, uint key) : uint256
-transition set(uint128 value, uint key) : uint256
+transition set(uint128 val, uint key) : uint256
 
 updates
 
-  f := f[key => value]
+  f := f[key => val]
 
 returns 1

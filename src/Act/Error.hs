@@ -29,10 +29,13 @@ import qualified Data.Text as Text
 -- Reexport NonEmpty so that we can use `-XOverloadedLists` without thinking.
 import Data.List.NonEmpty as Act.Error (NonEmpty)
 
+
+-- Error with position information
 type Error e = Validation (NonEmpty (Pn,e))
 
 throw :: (Pn,e) -> Error e a
 throw msg = Failure [msg]
+
 
 assert :: (Pn, e) -> Bool -> Error e ()
 assert err b = if b then pure () else throw err
@@ -40,6 +43,13 @@ assert err b = if b then pure () else throw err
 foldValidation :: (b -> a -> Error err b) -> b -> [a] -> Error err b
 foldValidation _ b [] = pure b
 foldValidation f b (a:as) = f b a `bindValidation` \b' -> foldValidation f b' as
+
+
+-- Error without position information for use with HEVM equivalence
+type EquivError e = Validation (NonEmpty e)
+
+throwErr :: e -> EquivError e a
+throwErr msg = Failure [msg]
 
 infixr 1 <==<, >==>
 

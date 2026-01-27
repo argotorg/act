@@ -10,19 +10,19 @@ transition balanceOf(address x) : uint256
 updates
 returns balanceOf[x]
 
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 val, address to) : uint256
 
 iff
 
-  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
-  inRange(uint256,balanceOf[CALLER] - value)
+  CALLER != to ==> inRange(uint256, balanceOf[to] + val)
+  inRange(uint256,balanceOf[CALLER] - val)
 
 case CALLER != to:
   
   updates
 
-    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - value
-                          , to => balanceOf[to] + value]
+    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - val
+                          , to => balanceOf[to] + val]
 
   returns 1
 

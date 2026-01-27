@@ -29,7 +29,7 @@ prettyContract :: Contract t -> String
 prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
-prettyCtor (Constructor name interface _ pres cases posts invs)
+prettyCtor (Constructor _ name interface _ pres cases posts invs)
   =   "constructor of " <> name
   >-< "interface " <> show interface
   <> prettyPre pres
@@ -57,7 +57,7 @@ prettyValueType :: ValueType -> String
 prettyValueType (ValueType t) = prettyTValueType t
 
 prettyBehaviour :: Behaviour t -> String
-prettyBehaviour (Behaviour name contract interface _ preconditions cases postconditions)
+prettyBehaviour (Behaviour _ name contract interface _ preconditions cases postconditions)
   =   "behaviour " <> name <> " of " <> contract
   >-< "interface " <> (show interface)
   <> prettyPre preconditions

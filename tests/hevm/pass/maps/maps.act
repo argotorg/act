@@ -17,7 +17,7 @@ updates
 returns f[x]
 
 
-transition set(uint value, uint key) : uint256
+transition set(uint val, uint key) : uint256
 
 iff
 
@@ -25,6 +25,6 @@ iff
 
 updates
 
-  f := f[key => value]
+  f := f[key => val]
 
 returns 1

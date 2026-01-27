@@ -97,7 +97,7 @@ contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
     store' = contractStore _cname store
 
 constructorCode :: StorageTyping -> Constructor -> T.Text
-constructorCode store (Constructor cname iface _ precs cases _ invs) = T.unlines $
+constructorCode store (Constructor _ cname iface _ precs cases _ invs) = T.unlines $
   [ initPrecs iface precs ]
   -- <> evalSeq (ctorCreates store cname iface) cases
   -- <> [ ctorCall cname iface cases ]
@@ -261,7 +261,7 @@ initStateBefore name i cases = inductive
 
 
 behaviourCode :: StorageTyping -> Behaviour -> T.Text
-behaviourCode store (Behaviour name cname iface _ precs cases _) = T.unlines $
+behaviourCode store (Behaviour _ name cname iface _ precs cases _) = T.unlines $
   [ behvConds name iface precs ]
   <> [ behvPred store name cname iface cases ]
   <> [ retVal name iface cases ]
@@ -382,7 +382,7 @@ localStep contract behvs = inductive
   where
     -- | constructor for the step relation
     stepBehv :: Behaviour -> (T.Text, Maybe T.Text, T.Text)
-    stepBehv (Behaviour name _ i _ _ _ _) = (T.pack name <> stepSuffix, bindings, constructorBody)
+    stepBehv (Behaviour _ name _ i _ _ _ _) = (T.pack name <> stepSuffix, bindings, constructorBody)
       where
         bindings = case interface i of
           "" -> Nothing
@@ -663,7 +663,7 @@ multistepBefore = definition
 
 -- | definition of reachable states from initial constructor parameters
 reachableFromInit :: Constructor -> T.Text
-reachableFromInit (Constructor _ i _ _ _ _ _ ) = definition
+reachableFromInit (Constructor _ _ i _ _ _ _ _ ) = definition
   reachableFromInitType args value
   where
     args = envDecl <+> interface i <+> nextAddrDecl <+> stateDecl
@@ -749,12 +749,12 @@ retVal name i cases@((Case _ _ (_, Just ret0)):_) = do
 
 -- | Definition of postcondition claim for constructor
 postCondConstr :: Constructor -> [T.Text]
-postCondConstr (Constructor cname iface _ _ _ postcs _) = evalSeq (go cname iface) postcs
+postCondConstr (Constructor _ cname iface _ _ _ postcs _) = evalSeq (go cname iface) postcs
   where
   go :: Id -> Interface -> Exp ABoolean -> Fresh T.Text
   go name i postc = do
     postName <- fresh (name <> "_post")
-    return $ definition postName "" body
+    pure $ definition postName "" body
     where
       body = indent 2 $ T.unlines
         [ forAll $ nextAddrDecl <+> envDecl <+> stateDecl' <+> interface i
@@ -768,12 +768,12 @@ postCondConstr (Constructor cname iface _ _ _ postcs _) = evalSeq (go cname ifac
 -- | Definition of postcondition claim for behaviour cases
 -- TODO: need way to call behaviour with all cases, maybe through transition predicate?
 postCondBehv :: Behaviour -> [T.Text]
-postCondBehv (Behaviour bname _ iface _ _ _ postcs) = evalSeq (go bname iface) postcs
+postCondBehv (Behaviour _ bname _ iface _ _ _ postcs) = evalSeq (go bname iface) postcs
   where
   go :: Id -> Interface -> Exp ABoolean -> Fresh T.Text
   go name i postc = do
     postName <- fresh (name <> "_post")
-    return $ definition postName "" (body postName)
+    pure $ definition postName "" (body postName)
     where
       body n = indent 2 $ T.unlines
         [ forAll $ nextAddrDecl <+> nextAddrDecl' <+> envDecl <+> stateDecl <+> stateDecl' <+> interface i
@@ -797,7 +797,7 @@ invariants i invs =
 
 -- | Definition of invariant claim at constructor poststate
 invariantInit :: Constructor -> T.Text
-invariantInit (Constructor _ i _ _ _ _ _) =
+invariantInit (Constructor _ _ i _ _ _ _ _) =
   definition invInitType (invPropDecl i) claim
   where
     claim = indent 2 $ T.unlines
@@ -810,7 +810,7 @@ invariantInit (Constructor _ i _ _ _ _ _) =
 
 -- | Definition of invariant claim for behaviour cases
 invariantStep :: Constructor -> T.Text
-invariantStep (Constructor _ i _ _ _ _ _) =
+invariantStep (Constructor _ _ i _ _ _ _ _) =
   definition invStepType (invPropDecl i) claim
   where
     claim = indent 2 $ T.unlines
@@ -826,7 +826,7 @@ invariantStep (Constructor _ i _ _ _ _ _) =
 -- | Lemma extending invariant properties' hold to reachable states,
 -- given proof of init and step invariance
 invariantReachable :: Constructor -> T.Text
-invariantReachable (Constructor _ i _ _ _ _ _) =
+invariantReachable (Constructor _ _ i _ _ _ _ _) =
   lemma invReachType "" claim proof
   where
     claim = indent 2 $ T.unlines

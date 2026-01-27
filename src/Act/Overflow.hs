@@ -40,7 +40,7 @@ checkIntegerBoundsContract (Contract ctor behvs) =
     checkIntegerBoundsConstructor ctor ++ concatMap checkIntegerBoundsBehaviour behvs
 
 checkIntegerBoundsConstructor :: Constructor -> [Constraint Untimed]
-checkIntegerBoundsConstructor (Constructor _ (Interface _ decls) _ pre cases _ _) =
+checkIntegerBoundsConstructor (Constructor _ _ (Interface _ decls) _ pre cases _ _) =
     -- add calldata to env
     let env = addCalldata decls emptyEnv in
     -- add preconditions to env
@@ -52,7 +52,7 @@ checkIntegerBoundsConstructor (Constructor _ (Interface _ decls) _ pre cases _ _
 
 
 checkIntegerBoundsBehaviour :: Behaviour -> [Constraint Untimed]
-checkIntegerBoundsBehaviour (Behaviour _ _ (Interface _ decls) _ pre cases _) =
+checkIntegerBoundsBehaviour (Behaviour _ _ _ (Interface _ decls) _ pre cases _) =
     -- add calldata to env
     let env = addCalldata decls emptyEnv in
     -- add preconditions to env

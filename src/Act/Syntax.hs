@@ -33,7 +33,7 @@ invExp :: TypedExplicit.InvariantPred -> TypedExplicit.Exp ABoolean
 invExp (PredTimed pre post) = pre <> post
 
 locsFromBehaviour :: Typed.Behaviour t -> [Typed.TypedRef t]
-locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
+locsFromBehaviour (Behaviour _ _ _ _ _ preconds cases _) = nub $
   concatMap locsFromExp preconds
   -- TODO: commenting out postconds for now as it causes issues with timing. 
   -- We need to get rid of the umplicit timing to add this back
@@ -45,7 +45,7 @@ locsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
   locsFromExp cond <> concatMap locsFromUpdateRHS rewrites <> maybe [] locsFromTypedExp mret
 
 locsFromConstructor :: Typed.Constructor t -> [Typed.TypedRef t]
-locsFromConstructor (Typed.Constructor _ _ _ pre cases post inv) = nub $
+locsFromConstructor (Typed.Constructor _ _ _ _ pre cases post inv) = nub $
   concatMap locsFromExp pre
   <> concatMap locsFromExp post
   <> concatMap locsFromConstrInvariant inv
@@ -59,22 +59,22 @@ locsFromInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromInvariant (Invariant _ pre bounds (PredTimed predpre predpost)) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
   <> locsFromExp predpre <> locsFromExp predpost
-locsFromInvariant (Invariant _ pre bounds (PredUntimed pred)) =
+locsFromInvariant (Invariant _ pre bounds (PredUntimed pred')) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
-  <> locsFromExp pred
+  <> locsFromExp pred'
 
 locsFromConstrInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
   concatMap locsFromExp pre <> locsFromExp predpost
-locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred)) =
-  concatMap locsFromExp pre <> locsFromExp pred
+locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred')) =
+  concatMap locsFromExp pre <> locsFromExp pred'
 
 ------------------------------------
 -- * Extract from any typed AST * --
 ------------------------------------
 
 nameOfContract :: Contract t -> Id
-nameOfContract (Contract (Constructor cname _ _ _ _ _ _) _) = cname
+nameOfContract (Contract (Constructor _ cname _ _ _ _ _ _) _) = cname
 
 behvsFromAct :: Typed.Act t -> [Behaviour t]
 behvsFromAct (Act _ contracts) = behvsFromContracts contracts
@@ -229,7 +229,7 @@ createsFromConstrCase (Typed.Case _ cond rewrites) = nub $
   createsFromExp cond <> concatMap createsFromUpdate rewrites
 
 createsFromConstructor :: Constructor t -> [Id]
-createsFromConstructor (Constructor _ _ _ pre cases post inv) = nub $
+createsFromConstructor (Constructor _ _ _ _ pre cases post inv) = nub $
   concatMap createsFromExp pre
   <> concatMap createsFromExp post
   <> concatMap createsFromInvariant inv
@@ -252,7 +252,7 @@ createsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
   createsFromExp cond <> concatMap createsFromUpdate rewrites <> maybe [] createsFromTypedExp mret
 
 createsFromBehaviour :: Behaviour t -> [Id]
-createsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
+createsFromBehaviour (Behaviour _ _ _ _ _ preconds cases postconds) = nub $
   concatMap createsFromExp preconds
   <> concatMap createsFromExp postconds
   <> concatMap createsFromCase cases
@@ -263,11 +263,11 @@ pointersFromContract (Contract constr behvs) =
   nub $ pointersFromConstructor constr <> concatMap pointersFromBehaviour behvs
 
 pointersFromConstructor :: Constructor t -> [Id]
-pointersFromConstructor (Constructor _ (Interface _ decls) _ _ _ _ _) =
+pointersFromConstructor (Constructor _ _ (Interface _ decls) _ _ _ _ _) =
   mapMaybe (fmap snd . pointerFromDecl) decls
 
 pointersFromBehaviour :: Behaviour t -> [Id]
-pointersFromBehaviour (Behaviour _ _ (Interface _ decls) _ _ _ _) =
+pointersFromBehaviour (Behaviour _ _ _ (Interface _ decls) _ _ _ _) =
   mapMaybe (fmap snd . pointerFromDecl) decls
 
 pointerFromDecl :: Arg -> Maybe (Id, Id)
@@ -279,7 +279,7 @@ ethEnvFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites <> maybe [] ethEnvFromTypedExp mret
 
 ethEnvFromBehaviour :: Behaviour t -> [EthEnv]
-ethEnvFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
+ethEnvFromBehaviour (Behaviour _ _ _ _ _ preconds cases postconds) = nub $
   concatMap ethEnvFromExp preconds
   <> concatMap ethEnvFromCase cases
   <> concatMap ethEnvFromExp postconds
@@ -289,7 +289,7 @@ ethEnvFromConstrCase (Typed.Case _ cond rewrites) = nub $
   ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites
 
 ethEnvFromConstructor :: Typed.Constructor t -> [EthEnv]
-ethEnvFromConstructor (Typed.Constructor _ _ _ pre cases post inv) = nub $
+ethEnvFromConstructor (Typed.Constructor _ _ _ _ pre cases post inv) = nub $
   concatMap ethEnvFromExp pre
   <> concatMap ethEnvFromExp post
   <> concatMap ethEnvFromInvariant inv

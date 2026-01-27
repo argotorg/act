@@ -105,7 +105,8 @@ type Bcase t = Case ([StorageUpdate t], Maybe (TypedExp t)) t
 type Cases a t = [Case a t]
 
 data Constructor t = Constructor
-  { _cname :: Id
+  { _cpos :: Pn 
+  , _cname :: Id
   , _cinterface :: Interface
   , _cisPayable :: IsPayable
   , _cpreconditions :: [Exp ABoolean t]
@@ -117,7 +118,8 @@ data Constructor t = Constructor
 -- After typing each behavior may be split to multiple behaviors, one for each case branch.
 -- In this case, only the `_caseconditions`, `_stateUpdates`, and `_returns` fields are different.
 data Behaviour t = Behaviour
-  { _name :: Id
+  { _pos :: Pn
+  , _name :: Id
   , _contract :: Id
   , _interface :: Interface
   , _isPayable :: IsPayable

@@ -162,7 +162,7 @@ checkConstructor env (U.Constructor p (Interface p' params) payable iffs cases p
     -- check postconditions
     ensures <- map fst <$> traverse (checkExpr env''' U TBoolean) posts
     -- Note: ivariants are ignored for the time being and not checked
-    pure $ let constr = Constructor cid (Interface p' params) payable iffs' cases' ensures []
+    pure $ let constr = Constructor p cid (Interface p' params) payable iffs' cases' ensures []
                -- add the constructor to the environment
                env'''' = addConstructor cid constr env'''
            in(constr, clearLocalEnv env'''', cnstr1 ++ cnstr2 ++ casecnstrs)
@@ -300,7 +300,7 @@ checkBehaviour env@Env{contract} (U.Transition p name iface@(Interface _ params)
     pure $ let (cases', cnstrs2) = casesc
                -- check case consistency
                casecnstrs = checkCaseConsistency env' cases'
-           in  (Behaviour name contract iface payable iffs' cases' ensures, cnstr1 ++ concat cnstrs2 ++ casecnstrs)
+           in  (Behaviour p name contract iface payable iffs' cases' ensures, cnstr1 ++ concat cnstrs2 ++ casecnstrs)
 
 adjustCasePosn :: Pn -> [U.Case a] -> [U.Case a]
 adjustCasePosn p cases =

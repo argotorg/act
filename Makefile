@@ -31,7 +31,7 @@ parser_pass=$(filter-out $(failing_parser), $(frontend_pass))
 typing_pass=$(filter-out $(failing_typing), $(frontend_pass))
 
 # supposed to fail
-parser_fail=$() #$(filter-out $(typing_fail), $(frontend_fail))
+parser_fail=$() # no tests that are supposed to fail parsing
 typing_fail=$(filter-out $(passing_typing), $(frontend_fail))
 
 # supposed to pass, but fail
@@ -77,7 +77,7 @@ test-type: parser compiler $(typing_pass:=.type.pass) $(typing_fail:=.type.fail)
 test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_fail:=.invariant.fail)
 test-postcondition: parser compiler $(postcondition_pass:=.postcondition.pass) $(postcondition_fail:=.postcondition.fail)
 test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
-test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_fast:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
+test-hevm-fast: parser compiler  $(hevm_fail:=.hevm.fail)
 test-cabal: src/*.hs
 	cabal v2-run test
 
