@@ -77,23 +77,23 @@ test-type: parser compiler $(typing_pass:=.type.pass) $(typing_fail:=.type.fail)
 test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_fail:=.invariant.fail)
 test-postcondition: parser compiler $(postcondition_pass:=.postcondition.pass) $(postcondition_fail:=.postcondition.fail)
 test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
-test-hevm-fast: parser compiler  $(hevm_fail:=.hevm.fail)
+test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_fast:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
 test-cabal: src/*.hs
 	cabal v2-run test
 
 # Just checks parsing
 tests/%.parse.pass:
-	./bin/act parse --file tests/$* > tests/$*.parsed.hs
-	# diff tests/$*.parsed.hs.out tests/$*.parsed.hs
-	# rm tests/$*.parsed.hs
+	./bin/act parse --file tests/$* > tests/$*.parsed.hs.out
+	diff tests/$*.parsed.hs.out tests/$*.parsed.hs
+	rm tests/$*.parsed.hs
 
 tests/%.parse.fail:
 	./bin/act parse --file tests/$* && exit 1 || echo 0
 
 tests/%.type.pass:
-	./bin/act type --file tests/$* | jq . > tests/$*.typed.json
-	#diff tests/$*.typed.json.out tests/$*.typed.json
-	#rm tests/$*.typed.json.out
+	./bin/act type --file tests/$* | jq . > tests/$*.typed.json.out
+	diff tests/$*.typed.json.out tests/$*.typed.json
+	rm tests/$*.typed.json.out
 
 tests/%.type.fail:
 	./bin/act type --file tests/$* && exit 1 || echo 0
