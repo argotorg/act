@@ -282,14 +282,14 @@ Module Token.
 
 Record State : Set := state
 { addr : address
-; balance : Z
+; BALANCE : Z
 ; allowance : address -> address -> Z
 ; balanceOf : address -> Z
 ; totalSupply : Z
 }.
 ```
 The contract will be represented as a **record** with the fields corresponding to the storage variables, and two additional
-fields: the address of the contract `addr` and the balance of the contract (the number of wei sent to it) `balance`.
+fields: the address of the contract `addr` and the balance of the contract (the number of wei sent to it) `BALANCE`.
 Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
 
  The `Actlib` also defines an **environment** type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value (`Callvalue`), the caller address 
@@ -300,17 +300,7 @@ Record Env : Set :=
   { Callvalue : Z;
     Caller : address;
     This : address;
-    Blockhash : Z;
-    Blocknumber : Z;
-    Difficulty : Z;
-    Timestamp : Z;
-    Gaslimit : Z;
-    Coinbase : address;
-    Chainid : Z;
-    Origin : address;
-    Nonce : Z;
-    Calldepth : Z;
-    NextAddr : address }.
+    Origin : address;}.
 ```
 
 <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain

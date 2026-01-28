@@ -121,6 +121,10 @@ This is not really a limitation on the number of contract's we can specify, as a
 
 
 This **output error** for the above example looks as follows:
+
+
+
+
 ```sh
 Operands of / must be both signed or both unsigned
 counterexample:
@@ -131,7 +135,6 @@ counterexample:
 
   environment:
 
-    CALLVALUE = 0
     CALLVALUE = 0
 
   storage:
@@ -155,7 +158,6 @@ counterexample:
   environment:
 
     CALLVALUE = 0
-    CALLVALUE = 0
 
   storage:
     
@@ -178,7 +180,6 @@ counterexample:
   environment:
 
     CALLVALUE = 0
-    CALLVALUE = 0
 
   storage:
     
@@ -192,6 +193,7 @@ counterexample:
 9 |       a := x*b/b
                   ^
 ```
+
 
 **Expressing Overflow/Underflow in act**
 
@@ -221,7 +223,7 @@ We revisit the constructor of an AMM contract.
 contract Amm
 
 constructor(address<Token> t0, address<Token> t1)
-iff    t0 != t1
+iff   address(t0) != address(t1)
 creates
     Token token0 := t0
     Token token1 := t1
@@ -244,13 +246,13 @@ For the constructor call `Amm(t0, t1)`, the SMT solver verifies that given the c
 - case conditions: none 
 - information about the values `t0`, `t1`: they are of type `address<Token>`
 
-the constructor precondition `t0 != t1` holds. In this example, this is clearly not the case, since `t0` and `t1` could be equal addresses. Therefore, this semantic check would fail and therefore the  act specification does not type-check, reporting an error 
+the constructor precondition `address(t0) != address(t1)` holds. In this example, this is clearly not the case, since `t0` and `t1` could be equal addresses. Therefore, this semantic check would fail and therefore the  act specification does not type-check, reporting an error 
 ```sh
 Preconditions of constructor call to "Amm" are not guaranteed to hold
 ``` 
 and listing a counterexample calldata.
 
-To fix the example, add the precondition `t0 != t1` to the `Wrapper` constructor.   
+To fix the example, add the precondition `address(t0) != address(t1)` to the `Wrapper` constructor.   
 
 ## 3. Case Condition Verification
 
