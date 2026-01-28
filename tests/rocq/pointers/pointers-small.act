@@ -1,0 +1,21 @@
+contract A
+
+constructor()
+
+creates
+  uint x := 0
+
+contract B
+
+constructor(address p)
+
+creates
+  address bu1 := p
+
+contract C
+
+constructor(address<A> pa1)
+
+creates
+  B b1 := new B(address(pa1))
+

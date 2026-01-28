@@ -1,6 +1,6 @@
 {-
  -
- - coq backend for act
+ - rocq backend for act
  -
  - unsupported features:
  - + bytestrings
@@ -22,7 +22,7 @@
 {-# Language ViewPatterns #-}
 
 
-module Act.Coq where
+module Act.Rocq where
 
 import Prelude hiding (GT, LT)
 
@@ -52,8 +52,8 @@ header = T.unlines
   ]
 
 -- | produce a coq representation of a specification
-coq :: Act -> T.Text
-coq (Act store contracts) =
+rocq :: Act -> T.Text
+rocq (Act store contracts) =
   header <> (T.intercalate "\n\n" $ contractCode store <$> contracts)
 
 contractCode :: StorageTyping -> Contract -> T.Text

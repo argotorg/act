@@ -35,7 +35,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import Data.ByteString (ByteString)
 
-import Control.Monad
 import Control.Lens.Getter
 
 import Act.Error
@@ -45,7 +44,7 @@ import Act.Syntax.TypedExplicit
 import Act.Syntax.Timing 
 import Act.Bounds
 import Act.Type hiding (Env)
-import Act.Coq hiding (indent, (<+>))
+import Act.Rocq hiding (indent, (<+>))
 import Act.HEVM
 import Act.HEVM_utils
 import Act.Consistency
@@ -73,13 +72,7 @@ data Command w
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
                     }
 
-  | Prove           { file       :: w ::: String               <?> "Path to file"
-                    , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
-                    , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
-                    , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
-                    }
-
-  | Coq             { file       :: w ::: String               <?> "Path to file"
+  | Rocq            { file       :: w ::: String               <?> "Path to file"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
@@ -91,12 +84,6 @@ data Command w
                     , code       :: w ::: Maybe ByteString     <?> "Runtime code"
                     , initcode   :: w ::: Maybe ByteString     <?> "Initial code"
                     , sources    :: w ::: Maybe String         <?> "Path to sources .json"
-                    , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
-                    , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
-                    , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
-                    }
-  | Decompile       { solFile    :: w ::: String               <?> "Path to .sol"
-                    , contract   :: w ::: String               <?> "Contract name"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
@@ -122,24 +109,17 @@ main = do
       Type f solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         type' f solver'' smttimeout' debug'
-      Prove file' solver' smttimeout' debug' -> do
+      Rocq f solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
-        prove file' solver'' smttimeout' debug'
-      Coq f solver' smttimeout' debug' -> do
-        solver'' <- parseSolver solver'
-        coq' f solver'' smttimeout' debug'
+        rocq' f solver'' smttimeout' debug'
       HEVM spec' sol' vy' code' initcode' sources' solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         hevm spec' sol' vy' code' initcode' sources' solver'' smttimeout' debug'
-      Decompile sol' contract' solver' smttimeout' debug' -> do
-        solver'' <- parseSolver solver'
-        decompile' sol' (Text.pack contract') solver'' smttimeout' debug'
 
 
 ---------------------------------
 -- *** CLI implementation *** ---
 ---------------------------------
-
 
 lex' :: FilePath -> IO ()
 lex' f = do
@@ -154,10 +134,10 @@ parse' f = do
 type' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f solver' smttimeout' debug' = do
   contents <- readFile f
-  proceed contents (first addBounds <$> compile contents) $ \(spec, cnstrs) -> do
+  proceed contents (first addBounds <$> compile contents) $ \(spec', cnstrs) -> do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
-    checkUpdateAliasing spec solver' smttimeout' debug'
-    B.putStrLn $ encode spec
+    checkUpdateAliasing spec' solver' smttimeout' debug'
+    B.putStrLn $ encode spec'
 
 parseSolver :: Maybe Text -> IO Solvers.Solver
 parseSolver s = case s of
@@ -168,106 +148,25 @@ parseSolver s = case s of
                               "bitwuzla" -> pure Solvers.Bitwuzla
                               input -> render (text $ "unrecognised solver: " <> Text.pack input) >> exitFailure
 
-prove :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-prove _ _ _ _ = error "SMT TBD"
 
 checkTypeConstraints :: String -> Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO ()
 checkTypeConstraints contents solver' smttimeout' debug' cnstrs = do
   errs <- checkEntailment solver' smttimeout' debug' cnstrs
   proceed contents errs $ \_ -> pure ()
 
-{-
-prove file' solver' smttimeout' debug' = do
-  let config = SMT.SMTConfig solver' (fromMaybe 20000 smttimeout') debug'
-  contents <- readFile file'
-  proceed contents (addBounds <$> compile contents) $ \claims -> do
-    --checkArrayBounds claims solver' smttimeout' debug'
-    checkCases claims solver' smttimeout' debug'
-    --checkRewriteAliasing claims solver' smttimeout' debug'
-    let
-      catModels results = [m | Sat m <- results]
-      catErrors results = [e | e@SMT.Error {} <- results]
-      catUnknowns results = [u | u@SMT.Unknown {} <- results]
 
-      (<->) :: DocAnsi -> [DocAnsi] -> DocAnsi
-      x <-> y = x <$$> line <> (indent 2 . vsep $ y)
-
-      failMsg :: [SMT.SMTResult] -> DocAnsi
-      failMsg results
-        | not . null . catUnknowns $ results
-            = text "could not be proven due to a" <+> (yellow . text $ "solver timeout")
-        | not . null . catErrors $ results
-            = (red . text $ "failed") <+> "due to solver errors:" <-> ((fmap viaShow) . catErrors $ results)
-        | otherwise
-            = (red . text $ "violated") <> colon <-> (fmap prettyAnsi . catModels $ results)
-
-      passMsg :: DocAnsi
-      passMsg = (green . text $ "holds") <+> (bold . text $ "∎")
-
-      accumulateResults :: (Bool, DocAnsi) -> (Query, [SMT.SMTResult]) -> (Bool, DocAnsi)
-      accumulateResults (status, report) (query, results) = (status && holds, report <$$> msg <$$> smt)
-        where
-          holds = all isPass results
-          msg = identifier query <+> if holds then passMsg else failMsg results
-          smt = if debug' then line <> getSMT query else emptyDoc
-
-    solverInstance <- spawnSolver config
-    pcResults <- mapM (runQuery solverInstance) (mkPostconditionQueries claims)
-    invResults <- mapM (runQuery solverInstance) (mkInvariantQueries claims)
-    stopSolver solverInstance
-
-    let
-      invTitle = line <> (underline . bold . text $ "Invariants:") <> line
-      invOutput = foldl' accumulateResults (True, emptyDoc) invResults
-
-      pcTitle = line <> (underline . bold . text $ "Postconditions:") <> line
-      pcOutput = foldl' accumulateResults (True, emptyDoc) pcResults
-
-    render $ vsep
-      [ ifExists invResults invTitle
-      , indent 2 $ snd invOutput
-      , ifExists pcResults pcTitle
-      , indent 2 $ snd pcOutput
-      ]
-
-    unless (fst invOutput && fst pcOutput) exitFailure
-    -}
-
-
-coq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-coq' f solver' smttimeout' debug' = do
+rocq' :: FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+rocq' f solver' smttimeout' debug' = do
   contents <- readFile f
   proceed contents (compile contents) $ \(spec', cnstrs) -> do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
     --checkRewriteAliasing claims solver' smttimeout' debug'
-    TIO.putStr $ coq spec'
-
-decompile' :: FilePath -> Text -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-decompile' _ _ _ _ _ = error "Decompile TBD"
-{-
-decompile' solFile' cid solver' timeout debug' = do
-  let config = if debug' then debugActConfig else defaultActConfig
-  cores <- fmap fromIntegral getNumProcessors
-  json <- flip (solc Solidity) False =<< TIO.readFile solFile'
-  let (Contracts contracts, _, _) = fromJust $ readStdJSON json
-  case Map.lookup ("hevm.sol:" <> cid) contracts of
-    Nothing -> do
-      putStrLn "compilation failed"
-      exitFailure
-    Just c -> do
-      res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers -> decompile c solvers
-      case res of
-        Left e -> do
-          TIO.putStrLn e
-          exitFailure
-        Right s -> do
-          putStrLn (prettyAct s)
--}
+    TIO.putStr $ rocq spec'
 
 hevm :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   let config = if debug' then debugActConfig else defaultActConfig
-  cores <- liftM fromIntegral getNumProcessors
+  cores <- fmap fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processSources
   specsContents <- intercalate "\n" <$> traverse readFile actspecs
   proceed specsContents (compile specsContents) $ \(Act store contracts, constraints) -> do

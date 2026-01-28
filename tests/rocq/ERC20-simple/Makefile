@@ -1,9 +1,9 @@
 .PHONY: verify
-verify: RocqMakefile StateMachine.v
+verify: RocqMakefile ERC20.v
 	make -f RocqMakefile
 
-StateMachine.v: state_machine.act
-	act coq --file state_machine.act > StateMachine.v
+ERC20.v: erc20.act
+	act rocq --file erc20.act > ERC20.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile
@@ -11,5 +11,5 @@ RocqMakefile: _CoqProject
 .PHONY: clean
 clean:
 	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
-	rm -f StateMachine.v RocqMakefile RocqMakefile.conf
+	rm -f ERC20.v RocqMakefile RocqMakefile.conf
 	rm -f *.glob *.vo *.vok *.vos

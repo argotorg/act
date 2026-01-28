@@ -9,19 +9,19 @@ creates
   mapping(address=>mapping(address=>uint)) allowance := []
 
 
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 _value    , address to) : uint256
 
 iff
 
-  inRange(uint256, balanceOf[CALLER] - value)
-  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
+  inRange(uint256, balanceOf[CALLER] - _value    )
+  CALLER != to ==> inRange(uint256, balanceOf[to] + _value    )
 
 case CALLER != to:
 
   updates
 
-     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - value
-                           , to     => balanceOf[to] + value ]
+     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
+                           , to     => balanceOf[to] + _value     ]
 
   returns 1
 
@@ -178,7 +178,7 @@ returns 1
 
 transition totalSupply() : uint256
 
-iff 
+iff
 
   CALLVALUE == 0
 
@@ -187,7 +187,7 @@ returns totalSupply
 
 transition balanceOf(address idx) : uint256
 
-iff 
+iff
 
   CALLVALUE == 0
 
@@ -196,7 +196,7 @@ returns balanceOf[idx]
 
 transition allowance(address idx1, address idx2) : uint256
 
-iff 
+iff
 
   CALLVALUE == 0
 
@@ -215,7 +215,7 @@ iff
 
 creates
 
-    Token token0 := t0 
+    Token token0 := t0
     Token token1 := t1
 
 transition swap0(uint256 amt) : uint256

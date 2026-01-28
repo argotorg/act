@@ -3,7 +3,7 @@ verify: RocqMakefile ERC20.v
 	make -f RocqMakefile
 
 ERC20.v: erc20.act
-	act coq --file erc20.act > ERC20.v
+	act rocq --file erc20.act > ERC20.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile

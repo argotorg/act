@@ -3,7 +3,7 @@ verify: RocqMakefile AMM.v
 	make -f RocqMakefile
 
 AMM.v: amm.act
-	act coq --file amm.act > AMM.v
+	act rocq --file amm.act > AMM.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile

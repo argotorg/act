@@ -7,71 +7,31 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Act.SMT (
-  Solver(..),
-  SMTConfig(..),
-  Query(..),
-  SMTResult(..),
-  SMTExp(..),
-  SolverInstance(..),
-  Model(..),
-  Transition(..),
-  SMT2,
-  spawnSolver,
-  stopSolver,
-  sendLines,
-  runQuery,
-  mkDefaultSMT,
-  --mkPostconditionQueries,
-  --mkPostconditionQueriesBehv,
-  --mkInvariantQueries,
-  target,
-  getQueryContract,
-  isFail,
-  isPass,
-  ifExists,
-  getBehvName,
-  identifier,
-  getSMT,
-  checkSat,
-  getCtorModel,
-  getPostconditionModel,
-  mkAssert,
-  declareTRef,
-  declareArg,
-  declareEthEnv,
-  getLocationValue,
-  getCalldataValue,
-  getEnvironmentValue,
-  mkEqualityAssertion,
-) where
+module Act.SMT where
 
 import Prelude hiding (GT, LT)
 
-import Data.Containers.ListUtils (nubOrd)
-import System.Process (createProcess, cleanupProcess, proc, ProcessHandle, std_in, std_out, std_err, StdStream(..))
 import Text.Regex.TDFA hiding (empty)
-import Prettyprinter hiding (Doc)
-
+import System.Process (createProcess, cleanupProcess, proc, ProcessHandle, std_in, std_out, std_err, StdStream(..))
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.Containers.ListUtils (nubOrd)
+import Data.Maybe
+import Data.ByteString.UTF8 (fromString)
+import Data.Type.Equality ((:~:)(..), testEquality)
+import Data.List
+import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Map as M
+import Control.Monad
 import Control.Applicative ((<|>))
 import Control.Monad.Reader
-import Control.Monad
-
-import Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.List.NonEmpty as NonEmpty
-import Data.Maybe
-import qualified Data.Map as M
-import Data.List
+import Prettyprinter hiding (Doc)
 import GHC.IO.Handle (Handle, hGetLine, hPutStr, hFlush)
-import Data.ByteString.UTF8 (fromString)
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit hiding (array)
-
 import Act.Print
 
 import EVM.Solvers (Solver(..))
-import Data.Type.Equality ((:~:)(..), testEquality)
 
 --- ** Data ** ---
 
@@ -644,7 +604,7 @@ mkConstantAssertion name updates tref@(TRef _ _ ref) = constancy
     aliasedAssertions = mkEqualityAssertion tref <$> relevantUpdates
     isConstantAssertion = foldl mkAnd (LitBool nowhere True) aliasedAssertions
 
-    locSMTRep whn = if isIndexed tref
+    locSMTRep _ = if isIndexed tref
       then withInterface name $ select ref (NonEmpty.fromList $ ixsFromRef ref)
       else nameFromTRef tref
 
