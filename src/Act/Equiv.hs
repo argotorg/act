@@ -12,7 +12,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Act.HEVM where
+module Act.Equiv where
 
 import Prelude hiding (GT, LT)
 

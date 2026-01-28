@@ -74,7 +74,7 @@ library
     Act.Traversals
     Act.Type
     Act.Bounds
-    Act.HEVM
+    Act.Equiv
     Act.HEVM_utils
     Act.Consistency
     Act.Entailment

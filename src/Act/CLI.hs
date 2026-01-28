@@ -45,7 +45,7 @@ import Act.Syntax.Timing
 import Act.Bounds
 import Act.Type hiding (Env)
 import Act.Rocq hiding (indent, (<+>))
-import Act.HEVM
+import Act.Equiv
 import Act.HEVM_utils
 import Act.Consistency
 import Act.Print
@@ -78,7 +78,7 @@ data Command w
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
                     }
 
-  | HEVM            { spec       :: w ::: Maybe String         <?> "Path to spec"
+  | Equiv           { spec       :: w ::: Maybe String         <?> "Path to spec"
                     , sol        :: w ::: Maybe String         <?> "Path to .sol"
                     , vy         :: w ::: Maybe String         <?> "Path to .vy"
                     , code       :: w ::: Maybe ByteString     <?> "Runtime code"
@@ -112,9 +112,9 @@ main = do
       Rocq f solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         rocq' f solver'' smttimeout' debug'
-      HEVM spec' sol' vy' code' initcode' sources' solver' smttimeout' debug' -> do
+      Equiv spec' sol' vy' code' initcode' sources' solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
-        hevm spec' sol' vy' code' initcode' sources' solver'' smttimeout' debug'
+        equivCheck spec' sol' vy' code' initcode' sources' solver'' smttimeout' debug'
 
 
 ---------------------------------
@@ -163,8 +163,8 @@ rocq' f solver' smttimeout' debug' = do
     --checkRewriteAliasing claims solver' smttimeout' debug'
     TIO.putStr $ rocq spec'
 
-hevm :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-hevm actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
+equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe ByteString -> Maybe ByteString -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+equivCheck actspec sol' vy' code' initcode' sources' solver' timeout debug' = do
   let config = if debug' then debugActConfig else defaultActConfig
   cores <- fmap fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processSources

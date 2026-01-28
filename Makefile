@@ -76,24 +76,24 @@ test-parse: parser compiler $(parser_pass:=.parse.pass) $(parser_fail:=.parse.fa
 test-type: parser compiler $(typing_pass:=.type.pass) $(typing_fail:=.type.fail)
 test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_fail:=.invariant.fail)
 test-postcondition: parser compiler $(postcondition_pass:=.postcondition.pass) $(postcondition_fail:=.postcondition.fail)
-test-hevm: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
-test-hevm-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_fast:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
+test-equiv: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
+test-equiv-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_fast:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
 test-cabal: src/*.hs
 	cabal v2-run test
 
 # Just checks parsing
 tests/%.parse.pass:
-	./bin/act parse --file tests/$* > tests/$*.parsed.hs
-	# diff tests/$*.parsed.hs.out tests/$*.parsed.hs
-	# rm tests/$*.parsed.hs
+	./bin/act parse --file tests/$* > tests/$*.parsed.hs.out
+	diff tests/$*.parsed.hs.out tests/$*.parsed.hs
+	rm tests/$*.parsed.hs
 
 tests/%.parse.fail:
 	./bin/act parse --file tests/$* && exit 1 || echo 0
 
 tests/%.type.pass:
-	./bin/act type --file tests/$* | jq . > tests/$*.typed.json
-	# diff tests/$*.typed.json.out tests/$*.typed.json
-	# rm tests/$*.typed.json.out
+	./bin/act type --file tests/$* | jq . > tests/$*.typed.json.out
+	diff tests/$*.typed.json.out tests/$*.typed.json
+	rm tests/$*.typed.json.out
 
 tests/%.type.fail:
 	./bin/act type --file tests/$* && exit 1 || echo 0
@@ -116,22 +116,21 @@ tests/%.postcondition.fail:
 
 tests/hevm/pass/%.act.hevm.pass:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
+	./bin/act equiv --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
 tests/hevm/pass/%.act.hevm.vy.pass:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.vy))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --vy tests/hevm/pass/$*.vy --solver bitwuzla --smttimeout 100000000
-
+	./bin/act equiv --spec tests/hevm/pass/$*.act --vy tests/hevm/pass/$*.vy --solver bitwuzla --smttimeout 100000000
 tests/hevm/pass/%.json.hevm.multi.pass:
-	./bin/act hevm --sources tests/hevm/pass/$*.json --solver bitwuzla --smttimeout 100000000
+	./bin/act equiv --sources tests/hevm/pass/$*.json --solver bitwuzla --smttimeout 100000000
 
 tests/hevm/fail/%.act.hevm.fail:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/fail/$*.sol))
-	./bin/act hevm --spec tests/hevm/fail/$*.act --sol tests/hevm/fail/$*.sol --solver bitwuzla && exit 1 || echo 0
+	./bin/act equiv --spec tests/hevm/fail/$*.act --sol tests/hevm/fail/$*.sol --solver bitwuzla && exit 1 || echo 0
 
 tests/hevm/pass/%.act.hevm.pass.fast:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
-	./bin/act hevm --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
+	./bin/act equiv --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
-test-ci: test-parse test-type test-rocq test-hevm-fast
+test-ci: test-parse test-type test-rocq test-equiv-fast
 test: test-ci test-cabal
