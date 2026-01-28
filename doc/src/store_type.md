@@ -99,6 +99,7 @@ The following types are used for function parameters and return values, mirrorin
     
      This special type exists to allow act to reason about calls to this contract now called `erc_token`, which *lives* at address `token_addr` inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in [Input Space Equivalence](./equiv.md#input-space-equivalence).
 
+
     
 *Note:* Not all types in act are allowed everywhere. There is a distinction between **ABI types** and **Storage types**:
 1. **ABI types** include **base types** and **annotated address types**. They are used for function parameters and return values.
@@ -245,6 +246,8 @@ Base expressions are composite expressions built using operators, literals and v
 **Literals and Other Expressions**:
 - Literals: `5`, `true`, `false`
 - Variable references of ABI types (integers, booleans, addresses, and annotated address type `address<ContractType>`), e.g. `totalSupply`, `CALLER`, `value`
+
+  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in arithmetic), it has to be cast to a regular `address` type using `address(expr)`.
 - Address conversion of deployed contracts: `addr(t0)` (if `t0` is a contract reference)
 
 **Examples of Base Expressions**:

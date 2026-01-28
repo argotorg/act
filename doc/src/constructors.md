@@ -117,17 +117,17 @@ Consider the following constructor from an automated market maker (AMM) contract
 constructor(address<Token> t0, address<Token> t1)
 
 iff
-    t0 != t1
+    address(t0) != address(t1)
 
 creates
 
     Token token0 := t0
     Token token1 := t1
 ```
-It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).
+It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in arithmetic), it has to be cast to a regular `address` type using `address(expr)`.
 
 The `iff` clause specifies the **necessary and sufficient condition** under which the constructor succeeds. If this condition does not hold, the constructor reverts.
-In this example, the precondition `t0 != t1` ensures that the two token addresses are distinct. If a user attempts to deploy the AMM contract with identical token addresses, the constructor will revert, preventing the creation of an invalid AMM instance.
+In this example, the precondition `address(t0) != address(t1)` ensures that the two token addresses are distinct. If a user attempts to deploy the AMM contract with identical token addresses, the constructor will revert, preventing the creation of an invalid AMM instance.
 
 The precondition block extends the `require`/`assert` statements commonly used in Solidity/Vyper constructors by explicitly listing requirements that are implicit in the code. In the above case the `iff` block is the same as the `require`/`assert` statement in Solidity/Vyper: 
 

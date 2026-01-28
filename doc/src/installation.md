@@ -35,7 +35,7 @@ test your installation by running the `HelloWorld` contract specification:
 
 The hevm backend:
 ```sh
-cabal run act -- hevm --spec tests/helloworld/helloworld.act --sol tests/helloworld/helloworld.sol
+cabal run act --equiv --spec tests/helloworld/helloworld.act --sol tests/helloworld/helloworld.sol
 ```
 (the output should conclude with `No discrepancies found.`)
 

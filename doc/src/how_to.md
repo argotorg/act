@@ -161,6 +161,7 @@ need to already be present in the Solidity implementation of the contract, not m
 - Each arithmetic operation that can overflow/underflow must have a corresponding `inRange` check (Syntax `inRange(<type>, <expression>)`)
 - Use logical operators (`and`, `or`, `==>` (implication), etc.) as needed. Full list of operators can be found in [Base Expressions](./store_type.md#base-expressions)
 - The syntax to access fields of a mapping is `mapping_name[key]`.
+- When using annotated addresses as pure addresses (e.g., in arithmetic), cast them to regular `address` type using `address(<expression>)`.
 - When accessing fields of other contracts, use dot notation: `contract_instance.field_name`
 - Use the special variables to describe EVM environment:
     - `CALLER` instead of `msg.sender`
@@ -465,7 +466,7 @@ Note that in `setAdmins`, we are in this special case where a contract instance 
 ## Summary
 
 1. **Be explicit about control flow**: Use `case` blocks liberally to avoid ambiguity
-2. **Use annotated address type**: If an address is used as a contract instance in the source code, annotate it with the contract type (e.g., `address<ContractName>`).
+2. **Use annotated address type**: If an address is used as a contract instance in the source code, annotate it with the contract type (e.g., `address<ContractName>`). When an annotated address is used as a pure address, cast it to a regular `address` type using `address(<expression>)`.
 3. **Check arithmetic safety**: Use `inRange` for every operation that could overflow/underflow and add it to `iff`
 4. **Remember updates are simultaneous**: All right-hand sides refer to the pre-state
 5. **Initialize all storage variables**: Every storage variable must appear in every `creates` block (in the constructor).

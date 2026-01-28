@@ -54,7 +54,7 @@ nix flake update
 
 # Usage
 
-Once you are in the nix shell, you can use act backends for `smt`, `hevm` and `rocq` as follows.
+Once you are in the nix shell, you can use act backends for `smt`, `equiv` and `rocq` as follows.
 
 ```sh
 cabal run act -- <OPTIONS>
