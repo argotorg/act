@@ -52,7 +52,7 @@ Rocq to process them. Support for multiple sources is underway.
 | `--debug` | Boolean | `false` | Print verbose output during generation |
 
 
-#### Setting Up a Rocq Project
+### Setting Up a Rocq Project
 
 To fully use this feature you should also set up a `Makefile` and `_RocqProject`. Following the example in `tests/rocq/ERC20/`, 
 the project structure should look something like this:
@@ -67,7 +67,7 @@ my-contract/
 
 act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts. It should be included in your Rocq project.
 
-**1. Create a `_RocqProject` file:**
+### 1. Create a `_RocqProject` file:
 
 The `_RocqProject` file tells Rocq where to find dependencies and which files to compile:
 
@@ -95,7 +95,7 @@ ERC20.v
 Theory.v
 ```
 
-**2. Create a `Makefile`:**
+### 2. Create a `Makefile`:
 
 This Makefile automates the entire workflow from act spec to verified proofs:
 
@@ -135,7 +135,7 @@ regenerate: clean MyContract.v verify
 - **`make regenerate`** - Clean rebuild from scratch
 
 
-**3. Write custom proofs in `Theory.v`:**
+### 3. Write custom proofs in `Theory.v`:
 
 Start with the basic structure:
 
@@ -149,7 +149,7 @@ Import MyContract.
 (* Prove invariants and properties about the contract *)
 ```
 
-**4. Build and verify:**
+### 4. Build and verify:
 
 ```sh
 # Initial build (generates .v file and compiles everything)
@@ -170,7 +170,7 @@ Alternatively you can use a local Rocq executable, if present, and `make` outsid
 ## A Brief Introduction to Proof in Rocq
 
 Rocq is a complex system with a steep learning curve, and while a full tutorial on programming in Rocq
-is out of the scope of this blog post, we can give a little taste of how things work. For a more
+is out of the scope of this documentation, we can give a little taste of how things work. For a more
 thorough introduction, the books Software Foundations and Certified Programming With Dependent Types
 are both excellent. Software Foundations in particular is a great introduction for users with little
 experience in the fields of formal logic and proof theory.
@@ -180,13 +180,13 @@ a tactics language for proof construction (Ltac), and a “vernacular” for int
 kernel. Let’s start with the very basics: defining the natural numbers and proving something about
 addition.
 
-We start by defining the type of natural numbers. There are infinitely many natural numbers, so of
-course they must be defined inductively. In fact, all type definitions are done with the Inductive
-vernacular command, even if they are not in fact inductive. Rocq’s Inductive is analogous to
-Haskell’s data and OCaml’s type (with the added power of dependent types).
+We start by defining the type of natural numbers. There are infinitely many natural numbers, so 
+they must be defined inductively. In fact, **all type definitions** are done with the `Inductive`
+vernacular command, even if they are not in fact inductive. Rocq’s `Inductive` is analogous to
+Haskell’s `data` and OCaml’s `type` (with the added power of dependent types).
 
-We define two constructors: `O`, representing 0, and `S`, which when applied to the natural number n
-produces the representation of the number `n + 1` (S as in "successor"). To give a concrete example, 3
+We define two constructors: `O`, representing 0, and `S`, representing the successor function, which when applied to the natural number n
+produces the representation of the number `n + 1`. To give a concrete example, 3
 would be represented in this encoding as `S (S (S 0)))` i.e `1 + (1 + (1 + 0))`.
 
 ```Rocq
@@ -198,7 +198,7 @@ Inductive nat : Type :=
 This is an example of a unary number representation. It can often be helpful to represent numbers
 this way, since the inductive nature of the definition lends itself to inductive proof techniques.
 
-Let’s continue by defining addition over our nat type:
+Let’s continue by defining addition over our `nat` type:
 
 ```Rocq
 Fixpoint plus (n : nat) (m : nat) : nat :=
@@ -208,10 +208,10 @@ Fixpoint plus (n : nat) (m : nat) : nat :=
   end.
 ```
 
-Here we define a recursive function (a `Fixpoint`) that takes two numbers n and m and returns the
+Here we define a recursive function (a `Fixpoint`) that takes two numbers `n` and `m` and returns the
 sum of these two numbers. The implementation is defined recursively with pattern matching. You might
-think of this definition as “unwrapping” each application of S from the first argument until we
-reach its O. Then we start wrapping the second argument in the same number of Ss.
+think of this definition as “unwrapping” each application of `S` from the first argument until we
+reach its `O`. Then we start wrapping the second argument in the same number of `S`s.
 
 Now we’re ready to prove something! Let’s prove that `0 + n == n`:
 
@@ -223,15 +223,15 @@ Proof.
 Qed.
 ```
 
-We first define our theorem and give it a name (plus_O_n). Then we define the proof goal, in the
-form of a dependent type. We claim that for all n, where n is an instance of our nat type, 0 + n is
-equal to n. Finally, we construct a proof, in the form of a series of tactics. Tactics may implement
+We first define our `Theorem` and give it a name (`plus_O_n`). Then we define the proof goal, in the
+form of a dependent type. We claim that for all `n`, where `n` is an instance of our `nat` type, `0 + n` is
+equal to `n`. Finally, we construct a proof, in the form of a series of tactics. Tactics may implement
 either backwards inference (transforming the goal) or forwards inference (transforming evidence).
 
 The best way to understand the system is to run the software yourself, and play around with the
 various tactics. In this case the goal is simple enough; once we’ve specified that the proof will be
-on n, Rocq is able to simplify plus O n into n, leaving us the goal n = n. This turns out to be true
-by the definition of equality, and we invoke definitional equality by reflexivity.
+on `n` (`intros n`), Rocq is able to simplify `plus O n` into `n` (`simpl`), leaving us the goal `n = n`. This turns out to be true
+by the definition of equality, and we invoke definitional equality by reflexivity (`reflexivity`).
 
 More complicated proofs do not typically require proving basic facts about arithmetic, because Rocq
 ships a substantial standard library of useful definitions and theorems. The above example hopefully
@@ -288,9 +288,12 @@ Record State : Set := state
 ; totalSupply : Z
 }.
 ```
-The contract will be represented as a record with the fields corresponding to the storage variables, and two additional
+The contract will be represented as a **record** with the fields corresponding to the storage variables, and two additional
 fields: the address of the contract `addr` and the balance of the contract (the number of wei sent to it) `balance`.
-Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`. The `Actlib` also defines an **environment** type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value, the caller address, and the current block information, as well as the next available address.
+Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
+
+ The `Actlib` also defines an **environment** type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value (`Callvalue`), the caller address 
+ (`Caller`), and the current block information (`Blockhash`, `Blocknumber`, `Difficulty`,...), as well as the next available address (`NextAddr`).
 The structure of the environment in Rocq is as follows:
 ```rocq
 Record Env : Set :=
@@ -313,7 +316,7 @@ Record Env : Set :=
 <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
 how the balance is handled.</span>
 
-Next, the output contains some additional type definitions, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">some of these may be outdated.</span>).
+Next, the output contains some **additional type definitions**, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">some of these may be outdated.</span>).
 ```Rocq
 Inductive contractAddressIn : Z -> State -> Prop :=
 | addressOf_This : forall (STATE : State),
@@ -353,7 +356,8 @@ Definition nextAddrConstraint (ENV : Env) (STATE : State) :=
 .
 ```
 
-Next, the `Token` constructor state transition of type `Env -> Z -> Env * State` is defined as follows: 
+Next, the `Token` **constructor state transition**
+ of type `Env -> Z -> Env * State` is defined as follows: 
 
 ```Rocq
 Definition Token (ENV : Env) (_totalSupply : Z) :=
@@ -370,7 +374,7 @@ The constructor will take the environment and its input arguments, and produce a
 
 Similarly, a state transition is generated for every case of every transition in the contract specification.
 
-Next the preconditions for the constructor are generated as follows:
+Next the **preconditions for the constructor** are generated as follows:
 ```
 Inductive initPreconds (ENV : Env) (_totalSupply : Z) : Prop :=
 | ctorPreconds :
@@ -388,7 +392,7 @@ Inductive initPreconds (ENV : Env) (_totalSupply : Z) : Prop :=
 The proposition holds, when the preconditions are satisfied: the integer bounds are respected, the
 addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
 
-Similarly preconditions are generated for every case of every transition in the contract specification. For instance for the `transfer` transition, the case where the `to` address is not the caller, the preconditions are the following
+Similarly **preconditions** are generated **for every case of every transition** in the contract specification. For instance for the `transfer` transition, the case where the `to` address is not the caller, the preconditions are the following
 
 ```rocq
 Inductive transfer0_conds (ENV : Env) (value : Z) (to : address) (STATE : State) : Prop :=
@@ -430,7 +434,7 @@ Inductive transfer0_conds (ENV : Env) (value : Z) (to : address) (STATE : State)
 The first precondition requires that the call value is zero, as the transition is not payable. 
 The second precondition ensures that the caller has a sufficient balance to cover the transfer amount, and the value being transferred is within the allowed range. Then the precondition ensures the case we are in. Next, the `to` address needs to not overflow and has to be a valid address. The environment before and after the transition must also be well-formed (for instance the next address is greater than all current addresses).
 
-Next, the postconditions after the constructor are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
+Next, the **postconditions after the constructor** are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
 ```rocq
 Definition Token_post0 :=
   forall (ENV : Env) (_totalSupply : Z) (STATE' : State),
@@ -440,7 +444,7 @@ Definition Token_post0 :=
      /\ ((Token.totalSupply STATE') <= (UINT_MAX 256))).
 ```
 
-For every case and every transition, a return value predicate is generated as follows: 
+For every case and every transition, a **return value predicate** is generated as follows: 
 ```rocq
 Inductive transfer0_ret (ENV : Env) (STATE : State) (value : Z) (to : address) : Z -> Prop :=
 | transfer0_ret_intro :
@@ -451,7 +455,7 @@ Inductive transfer0_ret (ENV : Env) (STATE : State) (value : Z) (to : address) :
 The predicate holds if the preconditions hold, the case condition is satisfied, and the return value 
 is as expected (in this case 1).
 
-Finally the state transition system is defined by the `step` relation and the `reachable` proposition.
+Finally the **state transition system** is defined by the `step` relation and the `reachable` proposition.
 The `Contract_step` is a relation on pairs of environments and states, and it 
 includes one constructor for every transition case in the system. For the ERC20 Token example, the 
 `Token_step` relation has the following form:
@@ -471,7 +475,7 @@ Inductive Token_step : Env -> State -> Env -> State -> Prop :=
   -> Token_step ENV STATE (fst (allowance0 ENV STATE idx1 idx2)) (snd (allowance0 ENV STATE idx1 idx2)).
 ```
 
-To define the reachability relation, we introduce the "exists step" relation on 
+To define the **reachability relation**, we introduce the "exists step" relation on 
 pairs of states and environments, called `extStep`. For the ERC20 Token contract example, 
 the `extStep` relation has the following form:
 
@@ -514,7 +518,7 @@ Definition reachable (STATE : State) :=
 exists STATE', init STATE' /\ multistep STATE' STATE.
 ```
 
-For every case of every transition the postconditions are defined on reachable states.
+For every case of every transition the **postconditions are defined on reachable states**.
 For instance the ERC20 token transfer has the following postcondition:
 ```rocq
 Definition transfer0_post0 :=
@@ -529,7 +533,7 @@ It states that if the preconditions for the transfer are met and the state is re
 then the balance of the caller after the transfer is valid and within the expected range.
 A similar postcondition is generated for the balance of the recipient.
 
-Finally, a schema for proving invariant properties on reachable states is defined. Parametric to 
+Finally, a **schema for proving invariant properties on reachable states** is defined. Parametric to 
 the invariant property `IP : Env -> Z -> State -> Prop`, 
 if we know that invariant property holds at the initial state
 ```rocq
