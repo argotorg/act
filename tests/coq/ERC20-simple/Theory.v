@@ -240,7 +240,7 @@ Proof.
     destruct H.
     + eapply (balances_after_transfer) with (src := Caller ENV) (dst := to); try auto.
       { econstructor.
-        assert (balanceOf STATE' = transfer' (balanceOf STATE) (Caller ENV) to value).
+        assert (balanceOf STATE' = transfer' (balanceOf STATE) (Caller ENV) to _value).
         { unfold transfer', transfer_from, transfer_to in *.
           convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
         }
