@@ -63,7 +63,7 @@ library
     Act.SMT
     Act.Lex
     Act.Parse
-    Act.Coq
+    Act.Rocq
     Act.Syntax
     Act.Syntax.Untyped
     Act.Syntax.Typed
@@ -74,7 +74,6 @@ library
     Act.Traversals
     Act.Type
     Act.Bounds
-    Act.Dev
     Act.HEVM
     Act.HEVM_utils
     Act.Consistency

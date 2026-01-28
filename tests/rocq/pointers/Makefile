@@ -1,9 +1,9 @@
 .PHONY: verify
-verify: RocqMakefile SafeMath.v
+verify: RocqMakefile POINTERS.v
 	make -f RocqMakefile
 
-SafeMath.v: safemath.act
-	act coq --file safemath.act > SafeMath.v
+POINTERS.v: pointers.act
+	act rocq --file pointers.act > POINTERS.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile
@@ -11,5 +11,5 @@ RocqMakefile: _CoqProject
 .PHONY: clean
 clean:
 	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
-	rm -f SafeMath.v RocqMakefile RocqMakefile.conf
+	rm -f POINTERS.v RocqMakefile RocqMakefile.conf
 	rm -f *.glob *.vo *.vok *.vos

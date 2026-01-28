@@ -1,9 +1,9 @@
 .PHONY: verify
-verify: RocqMakefile Token.v
+verify: RocqMakefile Multi.v
 	make -f RocqMakefile
 
-Token.v: token.act
-	act coq --file token.act > Token.v
+Multi.v: multi.act
+	act rocq --file multi.act > Multi.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile
@@ -11,5 +11,5 @@ RocqMakefile: _CoqProject
 .PHONY: clean
 clean:
 	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
-	rm -f Token.v RocqMakefile RocqMakefile.conf
+	rm -f Multi.v RocqMakefile RocqMakefile.conf
 	rm -f *.glob *.vo *.vok *.vos

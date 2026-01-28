@@ -1,9 +1,9 @@
 .PHONY: verify
-verify: RocqMakefile POINTERS.v
+verify: RocqMakefile Exponent.v
 	make -f RocqMakefile
 
-POINTERS.v: pointers.act
-	act coq --file pointers.act > POINTERS.v
+Exponent.v: exponent.act
+	act rocq --file exponent.act > Exponent.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile
@@ -11,5 +11,5 @@ RocqMakefile: _CoqProject
 .PHONY: clean
 clean:
 	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
-	rm -f POINTERS.v RocqMakefile RocqMakefile.conf
+	rm -f Exponent.v RocqMakefile RocqMakefile.conf
 	rm -f *.glob *.vo *.vok *.vos

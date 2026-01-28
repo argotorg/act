@@ -1,9 +1,9 @@
 .PHONY: verify
-verify: RocqMakefile Exponent.v
+verify: RocqMakefile SafeMath.v
 	make -f RocqMakefile
 
-Exponent.v: exponent.act
-	act coq --file exponent.act > Exponent.v
+SafeMath.v: safemath.act
+	act rocq --file safemath.act > SafeMath.v
 
 RocqMakefile: _CoqProject
 	rocq makefile -f _CoqProject -o RocqMakefile
@@ -11,5 +11,5 @@ RocqMakefile: _CoqProject
 .PHONY: clean
 clean:
 	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
-	rm -f Exponent.v RocqMakefile RocqMakefile.conf
+	rm -f SafeMath.v RocqMakefile RocqMakefile.conf
 	rm -f *.glob *.vo *.vok *.vos

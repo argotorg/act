@@ -196,8 +196,8 @@ modelExpand (TArray _ t@(TArray _ _)) (Array _ l) = concat <$> mapM (modelExpand
 modelExpand typ (VarRef _ t ref) = do
   model <- ask
   case lookup (TRef t SRHS ref) (_mprestate model) of
-    Just (TExp sType e') -> case testEquality typ sType of
-      Just Refl -> pure $ expandArrayExpr sType e'
+    Just (TExp styp e') -> case testEquality typ styp of
+      Just Refl -> pure $ expandArrayExpr styp e'
       _ -> error "modelEval: Storage Location given does not match type"
     _ -> error $ "modelEval: Storage Location not found in model" <> show ref
 modelExpand typ (ITE pn tbool e1 e2) = do
@@ -266,7 +266,7 @@ modelEval e = case e of
   VarRef _ vt ref -> do
     model <- ask
     case lookup (TRef vt SRHS ref) (_mprestate model) of
-      Just (TExp vType e') -> case testEquality vt vType of
+      Just (TExp vtyp e') -> case testEquality vt vtyp of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           (LitBool _ b) -> pure b
@@ -279,7 +279,7 @@ modelEval e = case e of
   IntEnv _ env     -> do
     model <- ask
     case lookup env $ _menvironment model of
-      Just (TExp sType e') -> case testEquality (sing @a) (toSType sType) of
+      Just (TExp styp e') -> case testEquality (sing @a) (toSType styp) of
         Just Refl -> case e' of
           (LitInt _ i) -> pure i
           _ -> error "modelEval: Model did not return an Integer literal"

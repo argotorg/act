@@ -5,9 +5,7 @@
 {-# Language ScopedTypeVariables #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Act.Entailment (
-  checkEntailment
-) where
+module Act.Entailment where
 
 
 import Prelude hiding (GT, LT)
@@ -33,6 +31,7 @@ import Act.Bounds
 import System.IO (hPutStrLn, stderr)
 
 import qualified EVM.Solvers as Solvers
+
 
 -- | Check whether a set of constraints generated during typing is always valid
 checkEntailment :: Solvers.Solver -> Maybe Integer -> Bool -> [Constraint Timed] -> IO (Err ())
