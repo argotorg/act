@@ -269,18 +269,30 @@ addPathCondition _ end = end
 
 -- | The ABI requires that values of types with size less than 256 bits are padded, using sign extension where necessary
 -- This function generates checks that the padding is valid, i.e. no garbage exists in the extra bits
-signExtendArgConstraints :: Interface -> [EVM.Prop]
-signExtendArgConstraints (Interface _ args) = mapMaybe signExtendArgConstraint args
+callArgConstraints :: CallEnv -> Interface -> [EVM.Prop]
+callArgConstraints callenv (Interface _ args) = map callArgConstraint args
   where
-  signExtendArgConstraint :: Arg -> Maybe EVM.Prop
-  signExtendArgConstraint (Arg atyp x) =
-    let (sgnExt, size) = (signExtendArgType atyp, sizeOfArgType atyp) in
-    if sgnExt then
-      pure $ EVM.PEq (EVM.Var $ T.pack x) (EVM.SEx (EVM.Lit (fromIntegral size - 1)) (EVM.Var $ T.pack x))
-    else Nothing
+  callArgConstraint :: Arg -> EVM.Prop
+  callArgConstraint arg = case arg of
+    (Arg atyp@(AbiArg AbiBoolType) x) -> EVM.POr (EVM.PEq (call x atyp) (EVM.Lit 0)) (EVM.PEq (call x atyp) (EVM.Lit 1)) 
+    (Arg atyp x) ->
+      let (sgnExt, size) = (signExtendArgType atyp, sizeOfArgType atyp) in
+        if sgnExt
+        then EVM.PEq (EVM.Var $ T.pack x) (EVM.SEx (EVM.Lit (fromIntegral size - 1)) (EVM.Var $ T.pack x))
+        else EVM.PEq (call x atyp) (EVM.And (EVM.Lit (2^(size*8) - 1)) (call x atyp))
+    where
+      call a t = case M.lookup a callenv of
+        Just e -> e
+        Nothing -> fromCalldataFramgment $ symAbiArg (T.pack a) (argToAbiType t)
+
+      fromCalldataFramgment :: CalldataFragment -> EVM.Expr EVM.EWord
+      fromCalldataFramgment (St _ word) = word
+      fromCalldataFramgment _ = error "Internal error: only static types are supported"
+
 
 translateConstructor :: Monad m => BS.ByteString -> Constructor -> ContractMap -> ActT m ([(EVM.Expr EVM.End, ContractMap)], Calldata, Sig, [EVM.Prop])
 translateConstructor bytecode (Constructor _ cid iface _ preconds cases _ _) cmap = do
+  let argConstraints = callArgConstraints emptyEnv iface
   let initmap = M.insert initAddr (initcontract, cid) cmap
   -- After `addBounds`, `preconds` contains all integer locations that have been constrained in the Act spec.
   -- All must be enforced again to avoid discrepancies. Necessary for Vyper.
@@ -291,7 +303,7 @@ translateConstructor bytecode (Constructor _ cid iface _ preconds cases _ _) cma
     -- Branch into a path for each constructor case
     ccase <- lift . lift $ fromFoldable cases
     translateConstructorCase bytecode initmap (snd calldata) bounds preconds ccase
-  pure (integratePathConds <$> ends, calldata, ifaceToSig cid iface, bounds)
+  pure (first (addPathCondition argConstraints) <$> integratePathConds <$> ends, calldata, ifaceToSig cid iface, bounds)
   where
     calldata = makeCtrCalldata iface
     initcontract = EVM.C { EVM.code    = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
@@ -322,7 +334,7 @@ ifaceToSig name (Interface _ args) = Sig (T.pack name) (fmap fromdecl args)
 
 translateBehv :: App m => ContractMap -> Behaviour -> ActT m ([(EVM.Expr EVM.End, ContractMap)], [EVM.Prop])
 translateBehv cmap (Behaviour _ behvName _ iface _ preconds cases _)  = do
-  let argConstraints = signExtendArgConstraints iface
+  let argConstraints = callArgConstraints emptyEnv iface
   -- We collect all integer bounds from all cases of a given behaviour.
   -- These bounds are set as preconditions for all cases of a behaviour,
   -- even if some are not necessary for all cases, because the input space
@@ -494,15 +506,16 @@ createContract readMap writeMap callenv freshAddr (Create _ cid args cv) = do
       error $ "Internal error: Contract " <> cid <> " has no cases from which to form map\n" <> show codemap
     Just (Contract (Constructor _ _ iface _ _ cases _ _) _, _, bytecode) -> do
       -- Create a path for each case
+      callenv' <- makeCallEnv readMap callenv iface args cv
+      tell $ callArgConstraints callenv' iface
       ccase <- lift . lift $ fromFoldable cases
-      applyCase ccase
+      applyCase callenv' ccase
       where
-        applyCase :: Monad m => Ccase -> ActBTT m ContractMap
-        applyCase (Case _ caseCond upds) = do
-          callenv' <- makeCallEnv readMap callenv iface args cv
-          caseCond' <- toProp readMap callenv' caseCond
+        applyCase :: Monad m => CallEnv -> Ccase -> ActBTT m ContractMap
+        applyCase callenv'' (Case _ caseCond upds) = do
+          caseCond' <- toProp readMap callenv'' caseCond
           tell [caseCond']
-          applyUpdates readMap (M.insert freshAddr (contract, cid) writeMap) callenv' upds
+          applyUpdates readMap (M.insert freshAddr (contract, cid) writeMap) callenv'' upds
 
         contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                            , EVM.storage = EVM.ConcreteStore mempty
@@ -766,7 +779,11 @@ toExpr cmap callenv =  fmap stripMods . go
       (Mul _ e1 e2) -> op2 EVM.Mul e1 e2
       (Div _ e1 e2) -> signedop2 EVM.Div EVM.SDiv e1 e2
       (Mod _ e1 e2) -> signedop2 EVM.Mod EVM.SMod e1 e2
-      (Exp _ e1 e2) -> op2 EVM.Exp e1 e2
+      (Exp _ _ (eval -> Just 0)) -> pure $ EVM.Lit 1
+      (Exp _ e1 (eval -> Just 1)) -> toExpr cmap callenv e1
+      (Exp _ e1 (eval -> Just n)) | hasSign Signed e1 -> (negExp0 =<< toExpr cmap callenv e1) `mplus` (flip negExpN n =<< toExpr cmap callenv e1)
+      (Exp _ e1 e2) | hasSign Unsigned e1 -> op2 EVM.Exp e1 e2
+      (Exp _ _ (eval -> Nothing)) -> error "Currently cannot support exponents containing variables"
       (LitInt _ n) -> pure $ EVM.Lit (fromIntegral n)
       (IntEnv _ env) -> ethEnvToWord callenv env
       -- bounds
@@ -845,6 +862,18 @@ toExpr cmap callenv =  fmap stripMods . go
     comp2 :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
     comp2 = (.) . (.)
 
+    negExp0 :: EVM.Expr EVM.EWord -> ActBTT m (EVM.Expr EVM.EWord)
+    negExp0 base = do
+      tell [EVM.PEq base (EVM.Lit 0)]
+      pure $ EVM.Lit 0
+
+    negExpN :: EVM.Expr EVM.EWord -> Integer -> ActBTT m (EVM.Expr EVM.EWord)
+    negExpN base expon = do
+      tell [EVM.PNeg $ EVM.PEq base (EVM.Lit 0)]
+      let power = if even expon then EVM.Lit 1 else base
+      let ((finalBase, finalPower), _) = exponentiate power (EVM.Mul base base) (EVM.Lit 0 {- doesn't matter here, ignoring Checks-}) (fromIntegral expon `div` 2)
+      pure $ EVM.Mul finalPower finalBase
+
 
 
 -- | Extract a value from a slot using its offset and size
@@ -892,6 +921,12 @@ accessStorage cmap slot addr = case M.lookup addr cmap of
 evmMinSigned :: EVM.W256
 evmMinSigned = ((^) :: EVM.W256 -> EVM.W256 -> EVM.W256) 2 255
 
+evmMaxSigned :: EVM.W256
+evmMaxSigned = ((^) :: EVM.W256 -> EVM.W256 -> EVM.W256) 2 255
+
+evmMaxUnsigned :: EVM.W256
+evmMaxUnsigned = ((^) :: EVM.W256 -> EVM.W256 -> EVM.W256) 2 256 - 1
+
 evmMaxAddr :: EVM.W256
 evmMaxAddr = ((^) :: EVM.W256 -> EVM.W256 -> EVM.W256) 2 160 - 1
 
@@ -901,6 +936,7 @@ inRange cmap callenv (TInteger 256 s) e = checkOp cmap callenv 256 s e
 inRange cmap callenv (TInteger n s) e@(Mul {}) | n > 128 = checkOp cmap callenv n s e
 inRange cmap callenv (TInteger n s) e@(Mod {}) = checkOp cmap callenv n s e
 inRange cmap callenv (TInteger n s) e@(Div {}) = checkOp cmap callenv n s e
+inRange cmap callenv (TInteger n s) e@(Exp {}) = checkOp cmap callenv n s e
 inRange cmap callenv (TInteger n Unsigned) e = do
   e' <- toExpr cmap callenv e
   pure $ EVM.LEq e' (EVM.Lit $ 2^n - 1)
@@ -960,13 +996,40 @@ checkOp cmap callenv _ _ (Mod _ _ e2) = do
   e2' <- toExpr cmap callenv e2
   pure (EVM.IsZero (EVM.Eq (EVM.Lit 0) e2'))
 checkOp _ _ _ _ (Address _ _ _) = pure $ EVM.Lit 1
-checkOp _ _ _ _ (Exp _ _ _) = error "Internal error: checkOp: TODO: EXP"
-checkOp _ _ _ _ e@(IntMin _ _)  =  error $ "Internal error: checkOp:invalid in range expression" ++ show e
-checkOp _ _ _ _ e@(IntMax _ _)  =  error $ "Internal error: checkOp:invalid in range expression" ++ show e
-checkOp _ _ _ _ e@(UIntMin _ _) =  error $ "Internal error: checkOp:invalid in range expression" ++ show e
-checkOp _ _ _ _ e@(UIntMax _ _) =  error $ "Internal error: checkOp:invalid in range expression" ++ show e
+checkOp _ _ _ _ (Exp _ _ (eval -> Just 0)) = pure $ EVM.Lit 1
+checkOp _ _ _ _ (Exp _ _ (eval -> Just 1)) = pure $ EVM.Lit 1
+checkOp cmap callenv n Unsigned (Exp _ e1 (eval -> Just expon)) = do
+  e1' <- toExpr cmap callenv e1
+  let max' = EVM.Lit (2^n-1)
+  let power = EVM.Lit 1
+  let ((finalBase, finalPower), checks) = exponentiate power e1' max' $ fromIntegral expon
+  pure $ EVM.Or (EVM.Eq e1' (EVM.Lit 0)) $ foldr1 EVM.And $ (EVM.LEq finalPower (EVM.Div max' finalBase)) : checks
+checkOp cmap callenv n Signed (Exp _ e1 (eval -> Just expon)) = do
+  e1' <- toExpr cmap callenv e1
+  let max' = EVM.Lit (2^(n-1)-1)
+  let min' = EVM.Lit (-2^(n-1))
+  let power = if even expon then EVM.Lit 1 else e1'
+  let ((finalBase, finalPower), checks) = exponentiate power (EVM.Mul e1' e1') max' (fromIntegral expon `div` 2)
+  pure $ EVM.Or (EVM.Eq e1' (EVM.Lit 0)) $ foldr1 EVM.And $ [ EVM.Or (EVM.IsZero $ EVM.SGT e1' (EVM.Lit 0)) (EVM.LEq e1' (EVM.Div max' e1'))
+                                                            , EVM.Or (EVM.IsZero $ EVM.IsZero $ EVM.SGT e1' (EVM.Lit 0)) (EVM.IsZero $ EVM.SLT e1' (EVM.SDiv max' e1'))
+                                                            , EVM.IsZero $ EVM.And (EVM.SGT finalPower (EVM.Lit 0)) (EVM.GT finalPower (EVM.Div max' (finalBase)))
+                                                            , EVM.IsZero $ EVM.And (EVM.SLT finalPower (EVM.Lit 0)) (EVM.SLT finalPower (EVM.SDiv min' (finalBase))) ]
+                                                            ++ checks
+checkOp _ _ _ _ (Exp _ _ _) = error "Currently cannot support exponents containing variables"
+checkOp _ _ _ _ e@(IntMin _ _)  =  error $ "Internal error: checkOp: invalid in range expression" ++ show e
+checkOp _ _ _ _ e@(IntMax _ _)  =  error $ "Internal error: checkOp: invalid in range expression" ++ show e
+checkOp _ _ _ _ e@(UIntMin _ _) =  error $ "Internal error: checkOp: invalid in range expression" ++ show e
+checkOp _ _ _ _ e@(UIntMax _ _) =  error $ "Internal error: checkOp: invalid in range expression" ++ show e
 checkOp _ _ _ _ (ITE _ _ _ _) =  error "TODO ITE in checkOp"
 checkOp _ _ _ _ (IntEnv _ _) = pure $ EVM.Lit 1
+
+          
+-- TODO: check is this is the same for vyper
+--                 Power       ->        Base        ->         Max        -> Exp -> ((Base',Power,Checks)
+exponentiate :: EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> EVM.Expr EVM.EWord -> Int -> ((EVM.Expr EVM.EWord, EVM.Expr EVM.EWord), [EVM.Expr EVM.EWord])
+exponentiate pow base max' expon | expon > 1 && even expon = second (EVM.LEq base (EVM.Div max' base) :) $ exponentiate pow (EVM.Mul base base) max' (expon `div` 2)
+exponentiate pow base max' expon | expon > 1 && odd expon = bimap (second $ flip EVM.Mul base) (EVM.LEq base (EVM.Div max' base) :) $ exponentiate pow (EVM.Mul base base) max' (expon `div` 2)
+exponentiate pow base _ _ = ((base, pow), [])
 
 
 -- Equivalence checking
@@ -1120,7 +1183,7 @@ checkBehaviours solvers (Contract cnstr behvs) actstorage = do
     -- construct initial contract state for the transition by adding the contracts passed as arguments
     (initstore, errors) <- getInitContractState p solvers name iface preconds actstorage
     -- translate Act behaviour to Expr
-    (actbehv,bounds) <- translateBehv initstore behv
+    (actbehv,bounds) <- translateBehv (initstore) behv
     let (behvs', fcmaps) = unzip actbehv
     -- translate Act contract map to hevm contract map
     let (hevmstorage, checks) = translateCmap initstore payable
@@ -1383,8 +1446,8 @@ checkContracts solvers store codeLayoutMap =
     showMsg $ "\x1b[1mChecking contract \x1b[4m" <> cid <> "\x1b[m"
     (res, actenv') <- flip runStateT actenv $ checkConstructors solvers initcode bytecode contract
     case res of
-      Success cmap -> do
-        (behvs, _) <- flip runStateT actenv' $ checkBehaviours solvers contract cmap
+      Success (cmap) -> do
+        (behvs, _) <- flip runStateT (actenv') $ checkBehaviours solvers contract cmap
         abi <- checkAbi solvers contract cmap
         pure $ behvs *> abi
       Failure e -> do
