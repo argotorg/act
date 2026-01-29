@@ -306,13 +306,13 @@ hevm actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' = 
     createContractMap :: [Contract] -> Map (Maybe Id) (LayoutMode, ByteString, ByteString) -> IO (Map Id (Contract, BS.ByteString, BS.ByteString, LayoutMode))
     createContractMap contracts inputsMap | Map.keys inputsMap == [Nothing] =
       case contracts of
-        [spec'@(Contract cnstr _)] -> do
+        [spec'@(Contract _ cnstr _)] -> do
           let cid =  _cname cnstr
               (layout'', initcode'', runtimecode') = fromJust $ Map.lookup Nothing inputsMap
           pure (Map.singleton cid (spec', initcode'', runtimecode', layout''))
         _ -> render (text "Specification contains multiple contracts, while a single bytecode object is given" <> line) >> exitFailure
     createContractMap contracts inputsMap = do
-      pure $ foldr (\spec'@(Contract cnstr _) cmap ->
+      pure $ foldr (\spec'@(Contract _ cnstr _) cmap ->
                 let cid =  _cname cnstr
                     (layoutMode, initcode'', runtimecode') = fromMaybe (error $ "Contract " <> cid <> " not found in sources") $ Map.lookup (Just cid) inputsMap
                 in (Map.insert cid (spec', initcode'', runtimecode', layoutMode) cmap)
@@ -464,18 +464,11 @@ toCode fromFile t = case BS16.decodeBase16Untyped (encodeUtf8 (stripSuffixIf "\n
 -- *** Util *** ---
 -------------------
 
--- | Join multiple Act specifications into one, after all checks have been completed
-joinActs :: [TypedImplicit.Act] -> TypedImplicit.Act
-joinActs as = Act actStore (concatMap actContracts as)
-  where actContracts (Act _ contracts) = contracts
-        actStore = case head as of
-          (Act store _) -> store
-
 -- | Fail on error, or proceed with continuation
 proceed :: Validate err => [(String,FilePath)] -> err (NonEmpty (Pn, (FilePath, String))) a -> (a -> IO ()) -> IO ()
 proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
 
 compile :: [(String, FilePath)] -> Error (FilePath ,String) (Act, [Constraint Timed])
-compile = pure . (first annotate) <==< pure . (\(acts, cnstr) -> (joinActs (fst <$> acts), (concatMap (uncurry checkIntegerBoundsAct) acts) ++ cnstr))
+compile = pure . (first annotate) <==< pure . (\(acts, cnstr) -> (acts, (checkIntegerBoundsAct acts) ++ cnstr))
   <==< typecheck <==< (traverse (\(content, src) -> (,src) <$> (errorSource src $ parse $ lexer content)))
 

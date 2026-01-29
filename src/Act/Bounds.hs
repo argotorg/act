@@ -24,7 +24,7 @@ Description : This pass adds integer type bounds as preconditions.
 addBounds :: Act t -> Act t
 addBounds (Act store contracts) = Act store (addBoundsContract <$> contracts)
   where
-    addBoundsContract (Contract ctors behvs) = Contract (addBoundsConstructor ctors) (addBoundsBehaviour <$> behvs)
+    addBoundsContract (Contract src ctors behvs) = Contract src (addBoundsConstructor ctors) (addBoundsBehaviour <$> behvs)
 
 -- | Adds type bounds for calldata, environment vars, and external storage vars
 -- as preconditions

@@ -120,25 +120,18 @@ makeArrayBoundConstraint :: Pn -> String -> Env -> Int -> Exp AInteger t -> Cons
 makeArrayBoundConstraint p str env len e = BoolCnstr p "" str env (LT p e (LitInt p (fromIntegral len)))
 
 -- | Top-level typechecking function
-typecheck :: [(U.Act, String)] -> ErrSrc ([(Act, FilePath)], [Constraint Timed])
+typecheck :: [(U.Act, String)] -> ErrSrc (Act, [Constraint Timed])
 typecheck acts =
-    (\(storageTyping, tcontracts, cnstrs) -> (reAct storageTyping tcontracts, annotate <$> cnstrs)) <$> checkContracts' allContracts
+    (\(storageTyping, tcontracts, cnstrs) -> (Act storageTyping tcontracts, annotate <$> cnstrs)) <$> checkContracts' allContracts
     where
         mergeContracts (U.Main contracts, source) = (,source) <$> contracts
         allContracts = concatMap mergeContracts acts
 
-        reAct :: StorageTyping -> [(Contract, FilePath)] -> [(Act, FilePath)]
-        reAct store cs = reAct' <$> groupContracts
-          where groupContracts = groupBy (\a b -> snd a == snd b) cs
-                reAct' :: [(Contract, FilePath)] -> (Act, FilePath)
-                reAct' gcs = bimap (Act store) head (unzip gcs)
-
-
-checkContracts' :: [(U.Contract, FilePath)] -> ErrSrc (StorageTyping, [(Contract, FilePath)], [Constraint Untimed])
+checkContracts' :: [(U.Contract, FilePath)] -> ErrSrc (StorageTyping, [Contract], [Constraint Untimed])
 checkContracts' cs = (\(s, tcs, cnstrs) -> (storage s, tcs, cnstrs)) <$> checkContracts emptyEnv cs
 
 -- | Typecheck a list of contracts
-checkContracts :: Env -> [(U.Contract, FilePath)] -> ErrSrc (Env, [(Contract, FilePath)], [Constraint Untimed])
+checkContracts :: Env -> [(U.Contract, FilePath)] -> ErrSrc (Env, [Contract], [Constraint Untimed])
 checkContracts env [] = pure (env, [], [])
 checkContracts env ((U.Contract p cid cnstr behvs, source):cs) =
     -- Check that the constructor name is not already defined
@@ -152,7 +145,7 @@ checkContracts env ((U.Contract p cid cnstr behvs, source):cs) =
     -- Check remaining contracts
     (env''', cs', cnstrs3) <- checkContracts env'' cs
     pure $ let (behvs', cnstrs2) = behvsc in
-           (env''', (Contract constr' behvs', source) : cs', (cnstrSrc <$> cnstrs1 ++ cnstrs2) ++ cnstrs3)
+           (env''', (Contract source constr' behvs') : cs', (cnstrSrc <$> cnstrs1 ++ cnstrs2) ++ cnstrs3)
     where
         checkContrName :: Id -> Env -> Err ()
         checkContrName cid' Env{constructors} =

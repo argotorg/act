@@ -62,7 +62,6 @@ import Control.Monad
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe
-import qualified Data.Map as M
 import Data.List
 import GHC.IO.Handle (Handle, hGetLine, hPutStr, hFlush)
 import Data.ByteString.UTF8 (fromString)
@@ -74,7 +73,6 @@ import Act.Print
 
 import EVM.Solvers (Solver(..))
 import Data.Type.Equality ((:~:)(..), testEquality)
-import Debug.Trace
 
 --- ** Data ** ---
 
@@ -595,6 +593,7 @@ parseSMTModel s
 
 --- ** SMT2 Generation ** ---
 
+{-
 stateName :: Id -> SMT2
 stateName cid = cid <> "_state"
 
@@ -623,6 +622,7 @@ tValueTypeToSMT2 (TMapping key t) =
 tValueTypeToSMT2 (TArray _ t) =
   "(Array Int " <> tValueTypeToSMT2 t <> ")"
 tValueTypeToSMT2 (TStruct _) = error "TODO struct not supported"
+-}
 
 mkEqualityAssertion :: TypedRef -> TypedRef -> Exp ABoolean
 mkEqualityAssertion l1 l2 = foldr mkAnd (LitBool nowhere True) (zipWith eqIdx ix1 ix2)
@@ -638,6 +638,7 @@ mkEqualityAssertion l1 l2 = foldr mkAnd (LitBool nowhere True) (zipWith eqIdx ix
 
     mkAnd r c = And nowhere c r
 
+{-
 mkConstantAssertion :: Id -> [TypedRef] -> TypedRef -> SMT2
 mkConstantAssertion name updates tref@(TRef _ _ ref) = constancy
   where
@@ -671,6 +672,7 @@ encodeUpdate ifaceName (Update typ item expr) =
     postentry  = withInterface ifaceName $ expToSMT2 (toSType typ) (VarRef nowhere typ (refToRHS item))
     expression = withInterface ifaceName $ expToSMT2 (toSType typ) expr
   in "(assert (= " <> postentry <> " " <> expression <> "))"
+    -}
 
 declareTRef :: TypedRef -> SMT2
 declareTRef (TRef typ _ ref) = declareRef typ name ref
@@ -763,6 +765,7 @@ expToSMT2 typ expr = case expr of
           defaultConst SByteStr = error "TODO"
           defaultConst SContract = error "TODO"
           defaultConst SStruct = error "TODO"
+          defaultConst SMapping = error "TODO"
 
   -- contracts
   Create _ _ _ _ -> error "Internal Error: unexpected create call in the SMT expression"
@@ -837,6 +840,7 @@ array name argNum ret = "(declare-const " <> name <> " " <> valueDecl argNum <> 
     valueDecl n | n <= 0 = vType ret
     valueDecl n = "(Array " <> aType AInteger <> " " <> valueDecl (n-1) <> ")"
 
+{-
 -- | declare a (potentially nested) array representing a mapping in smt2
 mappingArray :: Id -> [ValueType] -> TValueType a -> SMT2
 mappingArray name args ret = "(declare-const " <> name <> valueDecl args <> ")"
@@ -844,6 +848,7 @@ mappingArray name args ret = "(declare-const " <> name <> valueDecl args <> ")"
     valueDecl :: [ValueType] -> SMT2
     valueDecl [] = vType ret
     valueDecl ((ValueType h) : t) = "(Array " <> vType h <> " " <> valueDecl t <> ")"
+    -}
 
 -- | encode an array lookup with Integer indices in smt2
 selectIntIdx :: String -> NonEmpty Int -> SMT2
@@ -889,8 +894,8 @@ vType (TMapping (ValueType k) (ValueType a)) = "(Array " <> vType k <> " " <> vT
 
 
 -- | act -> smt2 type translation
-sType' :: TypedExp -> SMT2
-sType' (TExp t _) = vType t
+-- sType' :: TypedExp -> SMT2
+-- sType' (TExp t _) = vType t
 
 --- ** Variable Names ** ---
 

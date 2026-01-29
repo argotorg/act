@@ -31,12 +31,12 @@ makeSignedOpConstraint p str env e1 e2 = BoolCnstr p "" str env (Or nowhere (And
                                                                          (And nowhere (InRange nowhere uint256 e1) (InRange nowhere uint256 e2)))
 
 
-checkIntegerBoundsAct :: Act -> FilePath -> [Constraint Timed]
-checkIntegerBoundsAct (Act _store contracts) src = constraintSource src <$> annotate <$> concatMap checkIntegerBoundsContract contracts
+checkIntegerBoundsAct :: Act -> [Constraint Timed]
+checkIntegerBoundsAct (Act _store contracts) = annotate <$> concatMap checkIntegerBoundsContract contracts
 
 -- Note that we only need to popullate the calldata and preconditions field of the env
 checkIntegerBoundsContract :: Contract -> [Constraint Untimed]
-checkIntegerBoundsContract (Contract ctor behvs) =
+checkIntegerBoundsContract (Contract src ctor behvs) = constraintSource src <$>
     checkIntegerBoundsConstructor ctor ++ concatMap checkIntegerBoundsBehaviour behvs
 
 checkIntegerBoundsConstructor :: Constructor -> [Constraint Untimed]

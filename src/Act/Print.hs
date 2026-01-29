@@ -26,7 +26,7 @@ prettyAct (Act _ contracts)
   = unlines (fmap prettyContract contracts)
 
 prettyContract :: Contract t -> String
-prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
+prettyContract (Contract _ ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
 prettyCtor (Constructor name interface _ pres cases posts invs)

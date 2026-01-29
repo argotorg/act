@@ -33,7 +33,7 @@ invExp :: TypedExplicit.InvariantPred -> TypedExplicit.Exp ABoolean
 invExp (PredTimed pre post) = pre <> post
 
 locsFromBehaviour :: Typed.Behaviour t -> [Typed.TypedRef t]
-locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
+locsFromBehaviour (Behaviour _ _ _ _ preconds cases _) = nub $
   concatMap locsFromExp preconds
   -- TODO: commenting out postconds for now as it causes issues with timing. 
   -- We need to get rid of the umplicit timing to add this back
@@ -59,31 +59,31 @@ locsFromInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromInvariant (Invariant _ pre bounds (PredTimed predpre predpost)) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
   <> locsFromExp predpre <> locsFromExp predpost
-locsFromInvariant (Invariant _ pre bounds (PredUntimed pred)) =
+locsFromInvariant (Invariant _ pre bounds (PredUntimed predic)) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
-  <> locsFromExp pred
+  <> locsFromExp predic
 
 locsFromConstrInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
   concatMap locsFromExp pre <> locsFromExp predpost
-locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred)) =
-  concatMap locsFromExp pre <> locsFromExp pred
+locsFromConstrInvariant (Invariant _ pre _ (PredUntimed predic)) =
+  concatMap locsFromExp pre <> locsFromExp predic
 
 ------------------------------------
 -- * Extract from any typed AST * --
 ------------------------------------
 
 nameOfContract :: Contract t -> Id
-nameOfContract (Contract (Constructor cname _ _ _ _ _ _) _) = cname
+nameOfContract (Contract _ (Constructor cname _ _ _ _ _ _) _) = cname
 
 behvsFromAct :: Typed.Act t -> [Behaviour t]
 behvsFromAct (Act _ contracts) = behvsFromContracts contracts
 
 behvsFromContracts :: [Contract t] -> [Behaviour t]
-behvsFromContracts contracts = concatMap (\(Contract _ b) -> b) contracts
+behvsFromContracts contracts = concatMap (\(Contract _ _ b) -> b) contracts
 
 constrFromContracts :: [Contract t] -> [Constructor t]
-constrFromContracts contracts = fmap (\(Contract c _) -> c) contracts
+constrFromContracts contracts = fmap (\(Contract _ c _) -> c) contracts
 
 isStorageTRef :: TypedRef t -> Bool
 isStorageTRef (TRef _ _ ref) = isLocalRef ref
@@ -221,7 +221,7 @@ createsFromTypedExp :: TypedExp t -> [Id]
 createsFromTypedExp (TExp _ e) = createsFromExp e
 
 createsFromContract :: Contract t -> [Id]
-createsFromContract (Contract constr behvs) =
+createsFromContract (Contract _ constr behvs) =
   createsFromConstructor constr <> concatMap createsFromBehaviour behvs
 
 createsFromConstrCase :: Ccase t -> [Id]
@@ -259,7 +259,7 @@ createsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds) = nub $
 
 
 pointersFromContract :: Contract t -> [Id]
-pointersFromContract (Contract constr behvs) =
+pointersFromContract (Contract _ constr behvs) =
   nub $ pointersFromConstructor constr <> concatMap pointersFromBehaviour behvs
 
 pointersFromConstructor :: Constructor t -> [Id]

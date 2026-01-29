@@ -485,9 +485,9 @@ createContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr E
 createContract readMap writeMap callenv freshAddr (Create _ cid args _) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
-    Just (Contract (Constructor _ _ _ _ [] _ _) _, _, _) ->
+    Just (Contract _ (Constructor _ _ _ _ [] _ _) _, _, _) ->
       error $ "Internal error: Contract " <> cid <> " has no cases from which to form map\n" <> show codemap
-    Just (Contract (Constructor _ iface _ _ cases _ _) _, _, bytecode) -> do
+    Just (Contract _ (Constructor _ iface _ _ cases _ _) _, _, bytecode) -> do
       -- Create a path for each case
       ccase <- lift . lift $ fromFoldable cases
       applyCase ccase
@@ -997,7 +997,7 @@ getInitContractState solvers cname iface preconds cmap = do
       let addr = EVM.SymAddr $ T.pack x
       codemap <- getCodemap
       case M.lookup cid codemap of
-        Just (Contract (Constructor cname' iface' _ preconds' ((Case _ _ upds):_) _ _) _, _, bytecode) -> do
+        Just (Contract _ (Constructor cname' iface' _ preconds' ((Case _ _ upds):_) _ _) _, _, bytecode) -> do
           (icmap, check) <- getInitContractState solvers cname' iface' preconds' M.empty
           let contract = EVM.C { EVM.code  = EVM.RuntimeCode (EVM.ConcreteRuntimeCode bytecode)
                                , EVM.storage = EVM.ConcreteStore mempty
@@ -1008,7 +1008,7 @@ getInitContractState solvers cname iface preconds cmap = do
           let icmap' = M.insert addr (contract, cid) icmap
           cmap' <- localCaddr addr cname' $ collectAllPaths $ applyUpdates icmap' icmap' emptyEnv upds
           pure (abstractCmap addr (fst $ head cmap'), check)
-        Just (Contract (Constructor _ _ _ _ [] _ _) _, _, _) ->
+        Just (Contract _ (Constructor _ _ _ _ [] _ _) _, _, _) ->
           error $ "Internal error: Contract " <> cid <> " has no cases from which to form init map\n" <> show codemap
         Nothing -> error $ "Internal error: Contract " <> cid <> " not found\n" <> show codemap
     getContractState [] = error "Internal error: Cast cannot be empty"
@@ -1052,7 +1052,7 @@ comb :: Show a => [a] -> [(a,a)]
 comb xs = [(x,y) | (x:ys) <- tails xs, y <- ys]
 
 checkConstructors :: App m => SolverGroup -> ByteString -> ByteString -> Contract -> ActT m (Error String ContractMap)
-checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname iface payable preconds _ _ _)  _) = do
+checkConstructors solvers initcode runtimecode (Contract _ ctor@(Constructor cname iface payable preconds _ _ _)  _) = do
   -- Construct the initial contract state
   (actinitmap, checks) <- getInitContractState solvers cname iface preconds M.empty
   let (hevminitmap, checks') = translateCmap actinitmap payable
@@ -1076,7 +1076,7 @@ checkConstructors solvers initcode runtimecode (Contract ctor@(Constructor cname
 
 
 checkBehaviours :: forall m. App m => SolverGroup -> Contract -> ContractMap -> ActT m (Error String ())
-checkBehaviours solvers (Contract _ behvs) actstorage = do
+checkBehaviours solvers (Contract _ _ behvs) actstorage = do
   fresh <- getFresh
   actbehvs <- translateBehvs actstorage behvs
   (fmap $ concatError def) $ forM actbehvs $ \(name,payable,actbehv,calldata,sig,bounds) -> do
@@ -1310,7 +1310,7 @@ checkAbi solver contract cmap = do
 
   where
     actSig (Behaviour bname _ iface _ _ _ _) = T.pack $ makeIface bname iface
-    actSigs (Contract _ behvs) = actSig <$> behvs
+    actSigs (Contract _ _ behvs) = actSig <$> behvs
 
     checkBehv :: [EVM.Prop] -> EVM.Expr EVM.End -> [EVM.Prop]
     checkBehv assertions (EVM.Success cnstr _ _ _) = assertions <> cnstr
