@@ -10,12 +10,12 @@
 {-# Language InstanceSigs #-}
 {-# Language TupleSections #-}
 
-module Act.Type (typecheck, Err, Constraint(..), Env(..), Constructors, addCalldata, addPreconds, emptyEnv, addIffs, hasSign) where
+module Act.Type (typecheck, Err, ErrSrc, Constraint(..), Env(..), Constructors, addCalldata, addPreconds, constraintSource, emptyEnv, addIffs, hasSign, errorSource) where
 
 import Prelude hiding (GT, LT)
+import Data.Maybe (isJust)
 import Data.Map.Strict    (Map)
 import Data.Bifunctor (first)
-import Data.Maybe
 import qualified Data.Map.Strict    as Map
 import Data.Typeable ((:~:)(Refl))
 import Data.Type.Equality (TestEquality(..))
@@ -30,6 +30,13 @@ import Act.Error
 import Act.Print
 
 type Err = Error String
+-- Error including source path
+type ErrSrc = Error (FilePath, String)
+
+-- | Enrich errors with source information
+errorSource :: String -> Err a -> ErrSrc a
+errorSource _ (Success a) = Success a
+errorSource source (Failure es) = Failure (fmap (\(p,e) -> (p,(source, e))) es)
 
 -- | A map containing the definitions off all constructors
 type Constructors = Map Id Constructor
@@ -90,55 +97,63 @@ clearLocalEnv env =
 -- An integer constraint constrains an integer expression to fit within the bounds of a given type.
 -- A call constraint constrains the arguments of a constructor call to satisfy the constructor's preconditions.
 data Constraint t =
-    BoolCnstr Pn String Env (Exp ABoolean t)                          -- ^ Boolean constraint with a message, environment, and boolean expression. Generated to check integer bounds, case consistency, and array bounds.
-  | CallCnstr Pn String Env [TypedExp t] (Maybe (Exp AInteger t)) Id  -- ^ Call constraint with a message, environment, argument list, callvalue, and constructor id. Generated to check that preconditions of the called constructor are satisfied.
+    BoolCnstr Pn FilePath String Env (Exp ABoolean t)                          -- ^ Boolean constraint with a message, environment, and boolean expression. Generated to check integer bounds, case consistency, and array bounds.
+  | CallCnstr Pn FilePath String Env [TypedExp t] (Maybe (Exp AInteger t)) Id  -- ^ Call constraint with a message, environment, argument list, callvalue, and constructor id. Generated to check that preconditions of the called constructor are satisfied.
     deriving (Show, Eq)
 
 instance Annotatable Constraint where
   annotate :: Constraint Untimed -> Constraint Timed
-  annotate (BoolCnstr p msg env e) = BoolCnstr p msg env (setPre e)
-  annotate (CallCnstr p msg env es cv i) = CallCnstr p msg env (setPre <$> es) (setPre <$> cv) i
+  annotate (BoolCnstr p src msg env e) = BoolCnstr p src msg env (setPre e)
+  annotate (CallCnstr p src msg env es cv i) = CallCnstr p src msg env (setPre <$> es) (setPre <$> cv) i
 
+constraintSource :: FilePath -> Constraint t -> Constraint t
+constraintSource src (BoolCnstr p _ str env e) = BoolCnstr p src str env e
+constraintSource src (CallCnstr p _ str env ts me e) = CallCnstr p src str env ts me e
 
 -- | Create an integer bound constraint
 makeIntegerBoundConstraint :: Pn -> String -> Env -> TValueType AInteger -> Exp AInteger t -> Constraint t
-makeIntegerBoundConstraint p str env t e = BoolCnstr p str env (InRange nowhere t e)
+makeIntegerBoundConstraint p str env t e = BoolCnstr p "" str env (InRange nowhere t e)
 
 -- | Create an array bound constraint
 makeArrayBoundConstraint :: Pn -> String -> Env -> Int -> Exp AInteger t -> Constraint t
-makeArrayBoundConstraint p str env len e = BoolCnstr p str env (LT p e (LitInt p (fromIntegral len)))
+makeArrayBoundConstraint p str env len e = BoolCnstr p "" str env (LT p e (LitInt p (fromIntegral len)))
 
 -- | Top-level typechecking function
-typecheck :: U.Act -> Err (Act, [Constraint Timed])
-typecheck (U.Main contracts) = do
-    (\(storageTyping, tcontracts, cnstrs) -> (Act storageTyping tcontracts, annotate <$> cnstrs)) <$> checkContracts' contracts
+typecheck :: [(U.Act, String)] -> ErrSrc (Act, [Constraint Timed])
+typecheck acts =
+    (\(storageTyping, tcontracts, cnstrs) -> (Act storageTyping tcontracts, annotate <$> cnstrs)) <$> checkContracts' allContracts
+    where
+        mergeContracts (U.Main contracts, source) = (,source) <$> contracts
+        allContracts = concatMap mergeContracts acts
 
-checkContracts' :: [U.Contract] -> Err (StorageTyping, [Contract], [Constraint Untimed])
+checkContracts' :: [(U.Contract, FilePath)] -> ErrSrc (StorageTyping, [Contract], [Constraint Untimed])
 checkContracts' cs = (\(s, tcs, cnstrs) -> (storage s, tcs, cnstrs)) <$> checkContracts emptyEnv cs
 
 -- | Typecheck a list of contracts
-checkContracts :: Env -> [U.Contract] -> Err (Env, [Contract], [Constraint Untimed])
+checkContracts :: Env -> [(U.Contract, FilePath)] -> ErrSrc (Env, [Contract], [Constraint Untimed])
 checkContracts env [] = pure (env, [], [])
-checkContracts env ((U.Contract p cid cnstr behvs):cs) =
+checkContracts env ((U.Contract p cid cnstr behvs, source):cs) =
     -- Check that the constructor name is not already defined
-    checkContrName cid env *>
+    errSrc (checkContrName cid env) *>
     -- Add contract name to environment
     let env' = addContractName cid env in
     -- Check constructor
-    checkConstructor env' cnstr `bindValidation` \(constr', env'', cnstrs1) -> do
+    (errorSource source $ checkConstructor env' cnstr) `bindValidation` \(constr', env'', cnstrs1) -> do
     -- Check behaviors
-    behvsc <- checkBehaviours env'' behvs
+    behvsc <- errSrc $ checkBehaviours env'' behvs
     -- Check remaining contracts
     (env''', cs', cnstrs3) <- checkContracts env'' cs
     pure $ let (behvs', cnstrs2) = behvsc in
-           (env''', Contract constr' behvs' : cs', cnstrs1 ++ cnstrs2 ++ cnstrs3)
-
+           (env''', (Contract source constr' behvs') : cs', (cnstrSrc <$> cnstrs1 ++ cnstrs2) ++ cnstrs3)
     where
         checkContrName :: Id -> Env -> Err ()
         checkContrName cid' Env{constructors} =
             case Map.lookup cid' constructors of
                 Just _ -> throw (p, "Constructor " <> cid' <> " is already defined")
                 Nothing -> pure ()
+        errSrc :: Err a -> ErrSrc a
+        errSrc = errorSource source
+        cnstrSrc = constraintSource source
 
 -- | Typecheck a constructor
 checkConstructor :: Env -> U.Constructor -> Err (Constructor, Env, [Constraint Untimed])
@@ -149,6 +164,9 @@ checkConstructor env (U.Constructor p (Interface p' params) payable iffs cases p
         env' = addCalldata params env in
     -- check that parameter types are valid
     traverse_ (checkParams env) params *>
+    -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
+    -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
+    
     -- check preconditions and add implicit CALLVALUE == 0 precondition if not payable
     checkPreconditions env' (addCallvalueZeroPrecond payable iffs) `bindValidation` \(iffs', cnstr1, env'') ->    --
     -- check postconditions
@@ -178,10 +196,10 @@ addIffs :: [Exp ABoolean Untimed] -> [Constraint Untimed] -> [Constraint Untimed
 addIffs iffs cnstrs = addIff <$> cnstrs
   where
     addIff :: Constraint Untimed -> Constraint Untimed
-    addIff (BoolCnstr p msg env e) =
-        BoolCnstr p msg (addPreconds iffs env) e
-    addIff (CallCnstr p msg env args cv cid) =
-        CallCnstr p msg (addPreconds iffs env) args cv cid
+    addIff (BoolCnstr p src msg env e) =
+        BoolCnstr p src msg (addPreconds iffs env) e
+    addIff (CallCnstr p src msg env args cv cid) =
+        CallCnstr p src msg (addPreconds iffs env) args cv cid
 
 -- | Check that constructor/transition parameters have valid types
 checkParams :: Env -> U.Arg -> Err ()
@@ -415,8 +433,8 @@ initBalance NonPayable cases =
 -- | Check that case conditions in a case block are mutually exclusive and exhaustive
 checkCaseConsistency :: Env -> Cases a -> [Constraint Untimed]
 checkCaseConsistency env cases =
-    [ BoolCnstr getCasePos "Cases are not mutually exclusive" env (mkNonoverlapAssertion conds)
-    , BoolCnstr getCasePos "Cases are not exhaustive" env (mkExhaustiveAssertion conds)
+    [ BoolCnstr getCasePos "" "Cases are not mutually exclusive" env (mkNonoverlapAssertion conds)
+    , BoolCnstr getCasePos "" "Cases are not exhaustive" env (mkExhaustiveAssertion conds)
     ]
     where
         getCasePos = case cases of
@@ -767,7 +785,7 @@ inferExpr env@Env{constructors} mode e = case e of
         argsc <- checkArgs env mode p (argToValueType <$> sig) args
         pure $ let (args', cnstr1) = argsc
                    (cv, cnstr2) = cvc
-                   callcnstr = CallCnstr p msg env args' cv c
+                   callcnstr = CallCnstr p "" msg env args' cv c
                    msg = "Preconditions of constructor call to " <> show c <> " are not guaranteed to hold"
                 in (TExp (TContract c) (Create p c args' cv), callcnstr:cnstr1 ++ cnstr2)
     Nothing -> throw (p, "Unknown constructor " <> show c)

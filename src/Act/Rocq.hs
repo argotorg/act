@@ -53,7 +53,7 @@ rocq (Act store contracts) =
   header <> (T.intercalate "\n\n" $ contractCode store <$> contracts)
 
 contractCode :: StorageTyping -> Contract -> T.Text
-contractCode store (Contract ctor@Constructor{..} behvs) = T.unlines $
+contractCode store (Contract _ ctor@Constructor{..} behvs) = T.unlines $
   [ "Module " <> T.pack _cname <> ".\n" ]
   <> [ stateRecord ]
   <> [ contractAddressIn _cname store ]

@@ -59,7 +59,7 @@ import Act.Syntax.Untyped as Act.Syntax.Typed (Interface(..), EthEnv(..), Arg(..
 data Act t = Act StorageTyping [Contract t]
   deriving (Show, Eq)
 
-data Contract t = Contract (Constructor t) [Behaviour t]
+data Contract t = Contract FilePath (Constructor t) [Behaviour t]
   deriving (Show, Eq)
 
 -- For each contract, we store the type of a storage variables and the order in
@@ -424,9 +424,9 @@ instance ToJSON (Act t) where
                                            , "contracts" .= toJSON contracts ]
 
 instance ToJSON (Contract t) where
-  toJSON (Contract ctor behv) = object [ "kind" .= String "Contract"
-                                       , "constructor" .= toJSON ctor
-                                       , "behaviours" .= toJSON behv ]
+  toJSON (Contract _ ctor behv) = object [ "kind" .= String "Contract"
+                                         , "constructor" .= toJSON ctor
+                                         , "behaviours" .= toJSON behv ]
 
 storeJSON :: StorageTyping -> Value
 storeJSON storages = object [ "kind" .= String "Storages"

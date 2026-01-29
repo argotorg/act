@@ -113,7 +113,7 @@ checkUpdateAliasing (Act _ contracts)  solver' smttimeout debug = do
   let solver'' = case solver' of
                    Solvers.Bitwuzla -> Solvers.CVC5
                    s -> s
-  forM_ contracts (\(Contract _ behvs) -> do
+  forM_ contracts (\(Contract _ _ behvs) -> do
     let config = SMT.SMTConfig solver'' (fromMaybe 20000 smttimeout) debug
     solver <- spawnSolver config
     let behvQs = concatMap checkBehvUpdateAliasing behvs

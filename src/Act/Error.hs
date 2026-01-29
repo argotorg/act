@@ -87,21 +87,25 @@ concatError def = \case
   x:xs -> foldl (*>) x xs
 
 
-prettyErrs :: Traversable t => String -> t (Pn, String) -> IO ()
-prettyErrs contents errs = mapM_ prettyErr errs >> exitFailure
+prettyErrs :: Traversable t => [(String, FilePath)] -> t (Pn, (FilePath, String)) -> IO ()
+prettyErrs sources errs = mapM_ prettyErr errs >> exitFailure
   where
-  prettyErr (pn, msg) | pn == nowhere = do
+  prettyErr (pn, (_, msg)) | pn == nowhere = do
     hPutStrLn stderr "Internal error:"
     hPutStrLn stderr msg
-  prettyErr (pn, msg) | pn == lastPos = do
+  prettyErr (pn, ((src :: FilePath), msg)) | pn == lastPos = do
+    contents <- maybe ((hPutStrLn stderr ("Internal error: Source file " <> src <> " not found")) >> exitFailure) (pure . fst) (find ((== src) . snd) sources)
     let culprit = last $ lines contents
         line' = length (lines contents) - 1
         col  = length culprit
     hPutStrLn stderr $ show line' <> " | " <> culprit
     hPutStrLn stderr $ Text.unpack (Text.replicate (col + length (show line' <> " | ") - 1) " " <> "^")
+    hPutStrLn stderr $ src <> ":"
     hPutStrLn stderr msg
-  prettyErr (AlexPn _ line' col, msg) = do
+  prettyErr (AlexPn _ line' col, (src, msg)) = do
+    contents <- maybe ((hPutStrLn stderr ("Internal error: Source file " <> src <> " not found")) >> exitFailure) (pure . fst) (find ((== src) . snd) sources)
     let cxt = safeDrop (line' - 1) (lines contents)
+    hPutStrLn stderr $ src <> ":"
     hPutStrLn stderr $ msg <> ":"
     hPutStrLn stderr $ show line' <> " | " <> head cxt
     hPutStrLn stderr $ Text.unpack (Text.replicate (col + length (show line' <> " | ") - 1) " " <> "^")

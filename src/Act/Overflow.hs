@@ -22,12 +22,12 @@ int2565 = TInteger 256 Signed
 
 -- | Integers should be restricted to int256 or uint256
 makeIntegerBoundConstraint :: Pn -> String -> Env -> Exp AInteger Untimed -> Constraint Untimed
-makeIntegerBoundConstraint p str env e = BoolCnstr p str env (Or nowhere (InRange nowhere uint256 e) (InRange nowhere int2565 e))
+makeIntegerBoundConstraint p str env e = BoolCnstr p "" str env (Or nowhere (InRange nowhere uint256 e) (InRange nowhere int2565 e))
 
 -- | Signed operations should have both operands either signed or unsigned
 -- In the future, we should use this check to infer the signedness of signed operations
 makeSignedOpConstraint :: Pn -> String -> Env -> Exp AInteger Untimed -> Exp AInteger Untimed -> Constraint Untimed
-makeSignedOpConstraint p str env e1 e2 = BoolCnstr p str env (Or nowhere (And nowhere (InRange nowhere int2565 e1) (InRange nowhere int2565 e2))
+makeSignedOpConstraint p str env e1 e2 = BoolCnstr p "" str env (Or nowhere (And nowhere (InRange nowhere int2565 e1) (InRange nowhere int2565 e2))
                                                                          (And nowhere (InRange nowhere uint256 e1) (InRange nowhere uint256 e2)))
 
 
@@ -36,7 +36,7 @@ checkIntegerBoundsAct (Act _store contracts) = annotate <$> concatMap checkInteg
 
 -- Note that we only need to popullate the calldata and preconditions field of the env
 checkIntegerBoundsContract :: Contract -> [Constraint Untimed]
-checkIntegerBoundsContract (Contract ctor behvs) =
+checkIntegerBoundsContract (Contract src ctor behvs) = constraintSource src <$>
     checkIntegerBoundsConstructor ctor ++ concatMap checkIntegerBoundsBehaviour behvs
 
 checkIntegerBoundsConstructor :: Constructor -> [Constraint Untimed]
@@ -111,8 +111,8 @@ checkIntegerBoundsExp env (Div p e1 e2) =
 checkIntegerBoundsExp env (Mod p e1 e2) =
     let cnstr = makeSignedOpConstraint p "Operands of % must be both signed or both unsigned" env e1 e2 in
     cnstr : checkIntegerBoundsExp env e1 ++ checkIntegerBoundsExp env e2
-checkIntegerBoundsExp env e@(Exp p e1 e2) =
-    let cnstr = makeIntegerBoundConstraint p "Result of ** must be in the range of int256 or uint256" env e in
+checkIntegerBoundsExp env e@(Exp p e1 e2) = 
+    let cnstr = makeIntegerBoundConstraint p "Result of ^ must be in the range of int256 or uint256" env e in
     cnstr : checkIntegerBoundsExp env e1 ++ checkIntegerBoundsExp env e2
 checkIntegerBoundsExp env (ITE _ cond e1 e2) =
     checkIntegerBoundsExp env cond ++ checkIntegerBoundsExp env e1 ++ checkIntegerBoundsExp env e2

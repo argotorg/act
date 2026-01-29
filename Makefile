@@ -122,7 +122,7 @@ tests/hevm/pass/%.act.hevm.vy.pass:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.vy))
 	./bin/act equiv --spec tests/hevm/pass/$*.act --vy tests/hevm/pass/$*.vy --solver bitwuzla --smttimeout 100000000
 tests/hevm/pass/%.json.hevm.multi.pass:
-	./bin/act equiv --sources tests/hevm/pass/$*.json --solver bitwuzla --smttimeout 100000000
+	./bin/act equiv --json tests/hevm/pass/$*.json --solver bitwuzla --smttimeout 100000000
 
 tests/hevm/fail/%.act.hevm.fail:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/fail/$*.sol))
