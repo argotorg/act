@@ -418,7 +418,7 @@ Proof.
     destruct Hstep.
     + remember STATE' eqn:Hstate'.
       destruct H.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         simpl.
         rewrite Hstate'. unfold MAX_ADDRESS in *.
         rewrite Z.sub_diag with (n := totalSupply STATE);
@@ -439,7 +439,7 @@ Proof.
       * simpl. rewrite <- IHHmulti. reflexivity.
     + remember STATE' eqn:Hstate'.
       destruct H.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         simpl.
         rewrite Hstate'. unfold MAX_ADDRESS in *.
         rewrite Z.sub_diag with (n := totalSupply STATE);
@@ -454,10 +454,10 @@ Proof.
             simpl. convert_neq. rewrite_eqs. reflexivity.
           - rewrite <- Hstate'.
             simpl. convert_neq. rewrite_eqs. rewrite Z.eqb_refl. lia.
-          - rewrite <- Hstate'. destruct H0.
+          - rewrite <- Hstate'. destruct H_case_cond.
             simpl. convert_neq. rewrite_eqs. rewrite Z.eqb_refl. lia.
             }
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         simpl.
         rewrite Hstate'. unfold MAX_ADDRESS in *.
         rewrite Z.sub_diag with (n := totalSupply STATE);
@@ -472,10 +472,10 @@ Proof.
             simpl. convert_neq. rewrite_eqs. reflexivity.
           - rewrite <- Hstate'.
             simpl. convert_neq. rewrite_eqs. rewrite Z.eqb_refl. lia.
-          - rewrite <- Hstate'. destruct H0. destruct H0.
+          - rewrite <- Hstate'. destruct H_case_cond. destruct H.
             simpl. convert_neq. rewrite_eqs. rewrite Z.eqb_refl. lia.
             }
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         simpl.
         rewrite Hstate'. unfold MAX_ADDRESS in *.
         rewrite Z.sub_diag with (n := totalSupply STATE);
@@ -490,7 +490,7 @@ Proof.
             simpl. convert_neq. rewrite_eqs. reflexivity.
           - rewrite <- Hstate'.
             simpl. convert_neq. rewrite_eqs. rewrite Z.eqb_refl. lia.
-          - rewrite <- Hstate'. destruct H0. destruct H0.
+          - rewrite <- Hstate'. destruct H_case_cond. destruct H.
             simpl. convert_neq. rewrite_eqs. rewrite Z.eqb_refl. lia.
             }
       * simpl. rewrite <- IHHmulti at 2. reflexivity.
@@ -498,7 +498,7 @@ Proof.
     + destruct H; simpl; rewrite <- IHHmulti; unfold balanceOf_sum;  simpl; reflexivity.
     + remember STATE' eqn:Hstate'.
       destruct H.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         simpl.
         rewrite Hstate'. unfold MAX_ADDRESS in *.
         rewrite Ha1. rewrite Ha2.
@@ -510,7 +510,7 @@ Proof.
            rewrite <- Hstate'; simpl. convert_neq. rewrite_eqs. lia.
     + remember STATE' eqn:Hstate'.
       destruct H.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         rewrite Hstate'.
         rewrite Ha1. rewrite Ha2.
         eapply (balances_after_burn) with (src := src) (amount := amount); [ unfold MAX_ADDRESS; split; lia | simpl ].
@@ -519,7 +519,7 @@ Proof.
         -- rewrite <- Hstate'; simpl. rewrite Z.eqb_refl. lia.
         -- intros p Hneq.
            rewrite <- Hstate'; simpl. convert_neq. rewrite_eqs. lia.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds].
         rewrite Hstate'.
         rewrite Ha1. rewrite Ha2.
         eapply (balances_after_burn) with (src := src) (amount := amount); [ unfold MAX_ADDRESS; split; lia | simpl ].
@@ -528,7 +528,7 @@ Proof.
         -- rewrite <- Hstate'; simpl. rewrite Z.eqb_refl. lia.
         -- intros p Hneq.
            rewrite <- Hstate'; simpl. convert_neq. rewrite_eqs. lia.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         rewrite Hstate'.
         rewrite Ha1. rewrite Ha2.
         eapply (balances_after_burn) with (src := src) (amount := amount); [ unfold MAX_ADDRESS; split; lia | simpl ].
@@ -539,7 +539,7 @@ Proof.
            rewrite <- Hstate'; simpl. convert_neq. rewrite_eqs. lia.
     + remember STATE' eqn:Hstate'.
       destruct H.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
+      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H_conds ].
         rewrite Hstate'.
         rewrite Ha3. rewrite Ha4.
         eapply (balances_after_mint) with (dst := dst) (amount := amount); [ unfold MAX_ADDRESS; split; lia | simpl ].
@@ -548,12 +548,7 @@ Proof.
         -- rewrite <- Hstate'; simpl. rewrite Z.eqb_refl. lia.
         -- intros p Hneq.
            rewrite <- Hstate'; simpl. convert_neq. rewrite_eqs. lia.
-    + remember STATE' eqn:Hstate'.
-      destruct H.
-      * apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [ assumption | simpl; destruct H ].
-        rewrite Hstate'. rewrite Z.sub_diag with (n := totalSupply STATE).
-        apply Zeq_minus.
-        rewrite <- Hstate'; simpl. unfold balanceOf_sum;  simpl; reflexivity.
+    + destruct H. simpl. unfold balanceOf_sum. rewrite <- IHHmulti.  simpl; reflexivity.
     + destruct H. simpl. unfold balanceOf_sum. rewrite <- IHHmulti.  simpl; reflexivity.
     + destruct H. simpl. unfold balanceOf_sum. rewrite <- IHHmulti.  simpl; reflexivity.
 Qed.

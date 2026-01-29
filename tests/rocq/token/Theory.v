@@ -191,7 +191,7 @@ Proof.
     destruct Hstep.
     destruct H. (* X as [Hpc1 Hpc2 Hpc3 Hpc4 Hpc5 Hpc6 Hpc7 Hpc8 Hpc9 Hpc10 Hpc11 Hpc12].*)
     destructAnds.
-    destruct H.
+    destruct H_conds.
     unfold UINT_MAX in *.
     + unfold balances_sum. simpl.
       erewrite <- transfer_thm' with (to := to) (from := Caller ENV);

@@ -30,7 +30,7 @@ Proof.
   rewrite Z.sub_1_r.
   rewrite pow_pred.
   - reflexivity.
-  - destruct H.
+  - destruct H_conds.
     apply Z.gt_lt.
     assumption.
 Qed.
@@ -44,7 +44,7 @@ Proof.
   destruct Hestep.
   induction H.
   destruct H.
-  destruct H.
+  destruct H_conds.
   simpl.
   rewrite Z.sub_1_r.
   rewrite <- Z.mul_assoc.

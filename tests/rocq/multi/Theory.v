@@ -12,13 +12,13 @@ Theorem reachable_value_f S:
 Proof.
   intros HR p. destruct HR as [S0 Hreach], Hreach as [ Hinit Hmulti ].
   induction Hmulti as [ | S' S'' Hstep ].
-  - destruct Hinit, H, H, H5, H2, H12. simpl; eauto.
+  - destruct Hinit, H, H_conds, H_bindings1, H_bindings2. simpl; eauto.
 
   - destruct Hstep as [ENV [NA [NA' Hextstep]]].
     destruct Hextstep as [ HCstep
                          | s s' _ _ HBstep].
     + destruct HCstep as [ i0 H| i H]; simpl.
-      destruct H, H; simpl.
+      destruct H, H_conds; simpl.
       * destruct (p =? i0).
         -- right. left. reflexivity.
         -- assumption.

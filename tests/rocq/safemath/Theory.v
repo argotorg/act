@@ -25,9 +25,9 @@ Proof.
     destruct H.
     destruct H0 as [Hx [Hy Hxy]].
     unfold range256 in *.
-    apply mul0_ret.
+    apply mul_case0_ret.
     - constructor;
-      repeat split; try lia. assumption.
+      repeat split; try lia; assumption.
     - trivial.
   } {
     intros Hmul_ret. destruct Hmul_ret. destruct H0.

@@ -237,47 +237,47 @@ Proof.
     remember STATE' eqn:Heqs0.
     destruct Hlocalstep;
     destruct H.
-    destruct H.
+    destruct H_conds.
     + eapply (balances_after_transfer) with (src := Caller ENV) (dst := to); try auto.
       { econstructor.
         assert (balanceOf STATE' = transfer' (balanceOf STATE) (Caller ENV) to _value).
         { unfold transfer', transfer_from, transfer_to in *.
-          convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+          convert_neq. rewrite Z.eqb_sym in H_case_cond. rewrite_eqs. rewrite <- Heqs0. reflexivity.
         }
-        rewrite Heqs0. rewrite H15. constructor.
+        rewrite Heqs0. rewrite H. constructor.
       }
     + reflexivity.
-    + destruct H.
-      destruct H0 as [H00 H01].
+    + destruct H_conds.
+      destruct H_case_cond as [H00 H01].
       eapply (balances_after_transfer) with (src := src) (dst := dst); try auto.
       { econstructor.
         assert (balanceOf STATE' = transfer' (balanceOf STATE) (src) dst amount).
         { unfold transfer', transfer_from, transfer_to in *.
           convert_neq. convert_neq. rewrite Z.eqb_sym in H00. rewrite_eqs. rewrite <- Heqs0. reflexivity.
         }
-        rewrite Heqs0. rewrite H0. constructor.
+        rewrite Heqs0. rewrite H. constructor.
       }
-    + destruct H.
+    + destruct H_conds.
       destructAnds.
       eapply (balances_after_transfer) with (src := src) (dst := dst); try auto.
       { econstructor.
         assert (balanceOf STATE' = transfer' (balanceOf STATE) (src) dst amount) as Hassert.
         { unfold transfer', transfer_from, transfer_to in *.
-          convert_neq. convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+          convert_neq. convert_neq. rewrite Z.eqb_sym in H. rewrite_eqs. rewrite <- Heqs0. reflexivity.
         }
         rewrite Heqs0. rewrite Hassert. constructor.
       }
-    + destruct H.
+    + destruct H_conds.
       destructAnds.
       eapply (balances_after_transfer) with (src := src) (dst := dst); try auto.
       { econstructor.
         assert (balanceOf STATE' = transfer' (balanceOf STATE) (src) dst amount) as Hassert.
         { unfold transfer', transfer_from, transfer_to in *.
-          convert_neq. convert_neq. rewrite Z.eqb_sym in H0. rewrite_eqs. rewrite <- Heqs0. reflexivity.
+          convert_neq. convert_neq. rewrite Z.eqb_sym in H. rewrite_eqs. rewrite <- Heqs0. reflexivity.
         }
         rewrite Heqs0. rewrite Hassert. constructor.
       }
-    + destruct H.
+    + destruct H_conds.
       destructAnds.
       reflexivity.
   - unfold Relation_Definitions.reflexive. reflexivity.

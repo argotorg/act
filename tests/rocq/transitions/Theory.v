@@ -29,8 +29,8 @@ Proof.
     simpl. split.
     - intros contra. discriminate.
     - intros contra. discriminate.
-    - destruct H. destruct H; simpl. lia.
-    - destruct H. destruct H; simpl. lia.
+    - destruct H. destruct H_conds; simpl. lia.
+    - destruct H. destruct H_conds; simpl. lia.
   }
 Qed.
 
