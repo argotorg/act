@@ -41,7 +41,7 @@ against your spec.
 Note: there is currently no support for generating the Rocq output when the contracts
 are specified in multiple files, so you may need to combine them into a single file for
 Rocq to process them. Support for multiple sources is underway.
-TODO: we will support this soon
+<span style="color:red">TODO: we will support this soon</span>
 
 #### Rocq Command-Line Flags
 
@@ -67,12 +67,13 @@ my-contract/
 ```
 
 act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts. It should be included in your Rocq project.
+<span style="color:red">this is confusing: it says Actlib should be included, but in example above it is not.</span>
 
 ### 1. Create a `_RocqProject` file:
 
 The `_RocqProject` file tells Rocq where to find dependencies and which files to compile:
 
-```coq-project
+```rocq-project
 -Q . MyContractName
 -Q /path/to/act/lib ActLib
 
@@ -87,7 +88,8 @@ Theory.v
 - List all `.v` files that should be compiled
 
 **For the ERC20 example in the act repository:**
-```coq-project
+<span style="color:red">Add link.</span>
+```rocq-project
 -Q . ERC20
 -Q ../../../lib ActLib
 
@@ -150,6 +152,8 @@ Import MyContract.
 (* Prove invariants and properties about the contract *)
 ```
 
+<span style="color:red">Add explanation.</span>
+
 ### 4. Build and verify:
 
 ```sh
@@ -162,6 +166,7 @@ make -f RocqMakefile
 # After modifying the .act spec, regenerate
 make regenerate
 ```
+<span style="color:red">Add explanation.</span>
 
 #### Interactive Proof Development
 
@@ -176,14 +181,13 @@ thorough introduction, the books Software Foundations and Certified Programming 
 are both excellent. Software Foundations in particular is a great introduction for users with little
 experience in the fields of formal logic and proof theory.
 
-The Rocq system is composed of three languages: a minimal functional programming language (Gallina),
+<!-- The Rocq system is composed of three languages: a minimal functional programming language (Gallina),
 a tactics language for proof construction (Ltac), and a “vernacular” for interaction with the
 kernel. Let’s start with the very basics: defining the natural numbers and proving something about
-addition.
+addition. -->
 
 We start by defining the type of natural numbers. There are infinitely many natural numbers, so 
-they must be defined inductively. In fact, **all type definitions** are done with the `Inductive`
-vernacular command, even if they are not in fact inductive. Rocq’s `Inductive` is analogous to
+they must be defined inductively. In fact, **all type definitions** are done with the `Inductive` <!--vernacular--> command, even if they are not in fact inductive. Rocq’s `Inductive` is analogous to
 Haskell’s `data` and OCaml’s `type` (with the added power of dependent types).
 
 We define two constructors: `O`, representing 0, and `S`, representing the successor function, which when applied to the natural number n
@@ -246,8 +250,9 @@ Calling `act rocq ...` will generate a Rocq file that encodes the contract as a 
 following the formal value semantics, given and **proven sound** in the
 <span style="color:green">tech report (to be available shortly).</span>
 
-The generated Rocq output will contain:
-- Gallina type definitions for contract **state**.
+The generated Rocq output will contain: <span style="color:red">talk about postconditions and invariants</span>
+<!--Gallina-->
+- type definitions for contract **state**.
 - For every case of the constructor and every transition: 
   * **State transition relation** (used for the step relation).
   * **Precondition** and **postcondition** predicates (additionally to the given preconditions, also requirements on integer bounds)
@@ -304,7 +309,7 @@ Record Env : Set :=
     Origin : address;}.
 ```
 
-Finally, a parameter of note is `NextAddr`, which exists in all constructor and transition relations. This parameter occurs twice in each instance of said relations, and represents the next address to be allocated by the EVM, prior to and after the transition.
+Finally, a parameter of note is `NextAddr`, which exists in all constructor and transition relations. This parameter occurs twice in each instance of said relations, and represents the next address to be allocated by the EVM, prior to and after the transition. <span style="color:red">next addr has been removed.</span>
 
 <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
 how the balance is handled.</span>
