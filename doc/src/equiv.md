@@ -35,22 +35,22 @@ It is language agnostic, currently (version 0.2.0) supporting verification of co
 
 **1. Single contract with Solidity:**
 ```sh
-act hevm --spec <PATH_TO_SPEC> --sol <PATH_TO_SOL>
+act equiv --spec <PATH_TO_SPEC> --sol <PATH_TO_SOL>
 ```
 
 **2. Single contract with Vyper:**
 ```sh
-act hevm --spec <PATH_TO_SPEC> --vy <PATH_TO_VY>
+act equiv --spec <PATH_TO_SPEC> --vy <PATH_TO_VY>
 ```
 
 **3. Multi-contract projects:** (more info in [Multi-Contract Projects](#verifying-multiple-contracts-with---sources))
 ```sh
-act hevm --sources <PATH_TO_CONFIG_JSON>
+act equiv --sources <PATH_TO_CONFIG_JSON>
 ```
 
 <!-- **4. Direct bytecode verification:**
 ```sh
-act hevm --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYTECODE>
+act equiv --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYTECODE>
 ``` -->
 
 ### Command-Line Flags
@@ -75,14 +75,14 @@ The act repository includes a complete ERC20 example demonstrating equivalence c
 **Verify ERC20 against Solidity implementation:**
 
 ```sh
-act hevm --spec tests/hevm/pass/multisource/erc20/erc20.act \
+act equiv --spec tests/hevm/pass/multisource/erc20/erc20.act \
          --sol tests/hevm/pass/multisource/erc20/erc20.sol
 ```
 
 **Verify ERC20 against Vyper implementation:**
 
 ```sh
-act hevm --spec tests/hevm/pass/multisource/erc20/erc20.act \
+act equiv --spec tests/hevm/pass/multisource/erc20/erc20.act \
          --vy tests/hevm/pass/multisource/erc20/erc20.vy
 ```
 
@@ -233,7 +233,7 @@ Note that specifications and sources may contain multiple contracts.
 
 **Running verification:**
 ```sh
-act hevm --sources project.json --solver bitwuzla --smttimeout 60000
+act equiv --sources project.json --solver bitwuzla --smttimeout 60000
 ```
 
 **Example: Automatic Market Maker (AMM) with Solidity and Vyper:**
@@ -266,7 +266,7 @@ Different solvers have different strengths:
 - **Bitwuzla**: Specialized for bitvector reasoning; excellent for bitwise operations
 
 ```sh
-act hevm --spec contract.act --sol contract.sol --solver z3
+act equiv --spec contract.act --sol contract.sol --solver z3
 ```
 
 **Debugging failed proofs:**
@@ -274,7 +274,7 @@ act hevm --spec contract.act --sol contract.sol --solver z3
 Use the `--debug` flag to see detailed SMT queries:
 
 ```sh
-act hevm --spec contract.act --sol contract.sol --debug
+act equiv --spec contract.act --sol contract.sol --debug
 ```
 
 This outputs:
