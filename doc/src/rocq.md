@@ -41,6 +41,7 @@ against your spec.
 Note: there is currently no support for generating the Rocq output when the contracts
 are specified in multiple files, so you may need to combine them into a single file for
 Rocq to process them. Support for multiple sources is underway.
+TODO: we will support this soon
 
 #### Rocq Command-Line Flags
 
@@ -248,15 +249,15 @@ following the formal value semantics, given and **proven sound** in the
 The generated Rocq output will contain:
 - Gallina type definitions for contract **state**.
 - For every case of the constructor and every transition: 
-  * **State transition function** (used for the step function).
+  * **State transition relation** (used for the step relation).
   * **Precondition** and **postcondition** predicates (additionally to the given preconditions, also requirements on integer bounds)
   for every storage variable, where applicable. For transitions, postconditions need only hold for the reachable states (see below).
   * **Return value** proposition (only for transitions).
-- **Transition system with a step function** (and then generalised to multistep)
-- Definition of a **reachable state** *from a given state*.
-- Definition of a **reachable state** *from the initial state*.
+- **Transition system with a step relation** (and then generalised to multistep)
+- Predicate characterising a **reachable state** *from a given state*.
+- Predicate characterising a **reachable state** *from the initial state*.
 - Definition schema for the **invariants**: 
-  * Parametrized by the invariant property `IP : Env -> Z -> State -> Prop`.
+  * Parametrized by the invariant property `IP : Env -> {argument-types} -> State -> Prop`, where `argument-types` will contain the types of the arguments of the constructor.
   * Invariant predicate definition for the Initial State.
   * Invariant predicate definition for the Step.
   * Proof of the invariant holding in all reachable states if `IP` holds in the initial state and for every step.
@@ -293,7 +294,7 @@ fields: the address of the contract `addr` and the balance of the contract (the 
 Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
 
  The `Actlib` also defines an **environment** type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value (`Callvalue`), the caller address 
- (`Caller`), and the current block information (`Blockhash`, `Blocknumber`, `Difficulty`,...), as well as the next available address (`NextAddr`).
+ (`Caller`).
 The structure of the environment in Rocq is as follows:
 ```rocq
 Record Env : Set :=
@@ -303,126 +304,134 @@ Record Env : Set :=
     Origin : address;}.
 ```
 
+Finally, a parameter of note is `NextAddr`, which exists in all constructor and transition relations. This parameter occurs twice in each instance of said relations, and represents the next address to be allocated by the EVM, prior to and after the transition.
+
 <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
 how the balance is handled.</span>
 
-Next, the output contains some **additional type definitions**, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">some of these may be outdated.</span>).
+Next, the output contains some **additional type definitions**, like `noAliasing` and `integerBounds` (see `amm.act` contract for examples on how to use it - <span style="color:red">The paper's version of the amm includes these in the proofs, no the one in the tests dir of the repo.</span>).
 ```Rocq
-Inductive contractAddressIn : Z -> State -> Prop :=
-| addressOf_This : forall (STATE : State),
-     contractAddressIn (addr STATE) STATE
-.
-
-Inductive addressIn : Z -> State -> Prop :=
-| address_addr : forall (STATE : State),
-     addressIn (addr STATE) STATE
-
-| address_subcontract : forall (p : address) (STATE : State),
-     contractAddressIn p STATE -> addressIn p STATE
+Inductive addressIn (STATE : State) : address -> Prop :=
+| addressOf_This :
+     addressIn STATE (addr STATE)
 .
 
 Inductive noAliasing (STATE : State) : Prop :=
 | noAliasingC : noAliasing STATE
 .
 
-Inductive integerBounds (STATE : State) : Prop :=
+Inductive stateIntegerBounds (STATE : State) : Prop :=
 | integerBoundsC :
-     (forall i0 i1, 0 <= allowance STATE i0 i1 <= UINT_MAX 256)
+     0 <= Token.addr STATE <= UINT_MAX 160
+  -> 0 <= BALANCE STATE <= UINT_MAX 256
+  -> (forall i0 i1, 0 <= allowance STATE i0 i1 <= UINT_MAX 256)
   -> (forall i0, 0 <= balanceOf STATE i0 <= UINT_MAX 256)
   -> 0 <= totalSupply STATE <= UINT_MAX 256
-  -> integerBounds STATE
+  -> stateIntegerBounds STATE
 .
 
-Inductive integerBoundsRec (STATE : State) : Prop :=
-| integerBoundsRecC :
-     (forall i0 i1, 0 <= allowance STATE i0 i1 <= UINT_MAX 256)
-  -> (forall i0, 0 <= balanceOf STATE i0 <= UINT_MAX 256)
-  -> 0 <= totalSupply STATE <= UINT_MAX 256
-  -> integerBoundsRec STATE
-.
-
-Definition nextAddrConstraint (ENV : Env) (STATE : State) :=
-  forall (p : address), addressIn p STATE -> NextAddr ENV > p
+Definition nextAddrConstraint (NextAddr : address) (STATE : State) :=
+  forall (p : address), addressIn STATE p -> NextAddr > p
 .
 ```
+
+Next the **preconditions for the constructor** are generated as follows:
+```
+Inductive constructor_conds (ENV : Env) (_totalSupply : Z) (NextAddr : address) : Prop :=
+| constructor_condsC : forall
+  ( H_iff0 : ((Callvalue ENV) = 0) )
+  ( H_argConstraints_intBounds__totalSupply : 0 <= _totalSupply <= UINT_MAX 256 )
+  ( H_CallerBound : 0 <= Caller ENV <= UINT_MAX 160 )
+  ( H_OriginBound : 0 <= Origin ENV <= UINT_MAX 160 )
+  ( H_ThisBound : 0 <= This ENV <= UINT_MAX 160 )
+  ( H_NextAddressBound : 0 <= NextAddr <= UINT_MAX 160 )
+  ( H_Caller_lt_NextAddr : Caller ENV < NextAddr )
+  ( H_Origin_lt_NextAddr : Origin ENV < NextAddr )
+  ( H_This_eq_NextAddr : This ENV = NextAddr ),
+  constructor_conds ENV _totalSupply NextAddr
+```
+
+The proposition holds, when the preconditions specified in the constructor's `iff` block are satisfied, the integer bounds are respected, the
+addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
 
 Next, the `Token` **constructor state transition**
  of type `Env -> Z -> Env * State` is defined as follows: 
 
 ```Rocq
-Definition Token (ENV : Env) (_totalSupply : Z) :=
-  let ENV1 := NextEnv ENV in
-  (ENV1, state (NextAddr ENV) 
-               0
-               (fun _binding_0 _binding_1 => ((fun _ _ => 0) _binding_0 _binding_1)) 
-               (fun _binding_0 => if ((_binding_0=?(Caller ENV)))%bool 
-                                  then _totalSupply 
-                                  else ((fun _ => 0) _binding_0)) 
-                _totalSupply).
+Inductive constructor (ENV : Env) (_totalSupply : Z) (NextAddr : address)
+                      : State -> address -> Prop :=
+| Token_case0 : forall NextAddr1
+  ( H_conds : constructor_conds ENV _totalSupply NextAddr )
+  ( H_case_cond : True )
+  ( H_bindings0 : NextAddr1 = NextAddr + 1 ),
+  constructor ENV _totalSupply NextAddr
+      (state NextAddr
+      0
+      (fun _binding_0 => (fun _ => 0))
+      (fun _binding_0 => if ((_binding_0) =? (Caller ENV))%bool then _totalSupply else 0)
+      _totalSupply)
+      (NextAddr1)
 ```
-The constructor will take the environment and its input arguments, and produce a new environment and a new state for the token contract. The contract will be stored in the next address `NextAddr ENV` and initialize the `balance` field to 0 (as the constructor is not payable). The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
+The constructor will take the environment, its input arguments and the address to be allocated next, and produce a new state for the token contract, and the new next allocated address . The contract will be stored in the next address `NextAddr` and initialize the `BALANCE` field to 0 (as the constructor is not payable). The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
 
-Similarly, a state transition is generated for every case of every transition in the contract specification.
-
-Next the **preconditions for the constructor** are generated as follows:
-```
-Inductive initPreconds (ENV : Env) (_totalSupply : Z) : Prop :=
-| ctorPreconds :
-     ((Callvalue ENV) = 0)
-  -> ((0 <= _totalSupply) /\ (_totalSupply <= (UINT_MAX 256)))
-  -> ((0 <= (Callvalue ENV)) /\ ((Callvalue ENV) <= (UINT_MAX 256)))
-  -> ((0 <= (Caller ENV)) /\ ((Caller ENV) <= (UINT_MAX 160)))
-  -> Caller ENV < NextAddr ENV
-  -> Origin ENV < NextAddr ENV
-  -> This ENV <> Caller ENV
-  -> This ENV <> Origin ENV
-  -> This ENV = NextAddr ENV
-  -> initPreconds ENV _totalSupply.
-```
-The proposition holds, when the preconditions are satisfied: the integer bounds are respected, the
-addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
-
-Similarly **preconditions** are generated **for every case of every transition** in the contract specification. For instance for the `transfer` transition, the case where the `to` address is not the caller, the preconditions are the following
+Similarly **preconditions** are generated **for every transition** in the contract specification. For instance for the `transfer` transition, the preconditions are the following
 
 ```rocq
-Inductive transfer0_conds (ENV : Env) (value : Z) (to : address) (STATE : State) : Prop :=
-| transfer0_condsC :
-     ((Callvalue ENV) = 0)
-  -> (((0 <= ((Token.balanceOf STATE) (Caller ENV))) 
-      /\ (((Token.balanceOf STATE) (Caller ENV)) <= (UINT_MAX 256))) 
-      /\ (((0 <= value) 
-      /\ (value <= (UINT_MAX 256))) 
-      /\ ((0 <= (((Token.balanceOf STATE) (Caller ENV)) - value)) 
-      /\ ((((Token.balanceOf STATE) (Caller ENV)) - value) <= (UINT_MAX 256)))))
-  -> (((Caller ENV) <> to) 
-  -> (((0 <= ((Token.balanceOf STATE) to)) 
-      /\ (((Token.balanceOf STATE) to) <= (UINT_MAX 256))) 
-      /\ (((0 <= value) /\ (value <= (UINT_MAX 256))) 
-      /\ ((0 <= (((Token.balanceOf STATE) to) + value)) 
-      /\ ((((Token.balanceOf STATE) to) + value) <= (UINT_MAX 256))))))
-  -> ((0 <= value) /\ (value <= (UINT_MAX 256)))
-  -> ((0 <= to) /\ (to <= (UINT_MAX 160)))
-  -> ((0 <= ((Token.balanceOf STATE) (Caller ENV))) 
-      /\ (((Token.balanceOf STATE) (Caller ENV)) <= (UINT_MAX 256)))
-  -> ((0 <= ((Token.balanceOf STATE) to)) 
-      /\ (((Token.balanceOf STATE) to) <= (UINT_MAX 256)))
-  -> ((0 <= (Callvalue ENV)) 
-      /\ ((Callvalue ENV) <= (UINT_MAX 256)))
-  -> ((0 <= (Caller ENV)) 
-      /\ ((Caller ENV) <= (UINT_MAX 160)))
-  -> ((Caller ENV) <> to)
-  -> nextAddrConstraint ENV STATE
-  -> to < NextAddr ENV
-  -> This ENV < NextAddr ENV
-  -> Caller ENV < NextAddr ENV
-  -> Origin ENV < NextAddr ENV
-  -> This ENV <> Caller ENV
-  -> This ENV <> Origin ENV
-  -> This ENV = addr STATE
-  -> transfer0_conds ENV value to STATE.
+Inductive transfer_conds (ENV : Env) (_value : Z) (to : address)
+                         (STATE : State) (NextAddr : address) : Prop :=
+| transfer_condsC : forall
+  ( H_iff0 : ((Callvalue ENV) = 0) )
+  ( H_iff1 : (((0 <= ((Token.balanceOf STATE) (Caller ENV)))
+              /\ (((Token.balanceOf STATE) (Caller ENV)) <= (UINT_MAX 256)))
+              /\ (((0 <= _value)
+              /\ (_value <= (UINT_MAX 256)))
+              /\ ((0 <= (((Token.balanceOf STATE) (Caller ENV)) - _value))
+              /\ ((((Token.balanceOf STATE) (Caller ENV)) - _value) <= (UINT_MAX 256))))))
+  ( H_iff2 : (((Caller ENV) <> to) -> (((0 <= ((Token.balanceOf STATE) to))
+              /\ (((Token.balanceOf STATE) to) <= (UINT_MAX 256)))
+              /\ (((0 <= _value)
+              /\ (_value <= (UINT_MAX 256)))
+              /\ ((0 <= (((Token.balanceOf STATE) to) + _value))
+              /\ ((((Token.balanceOf STATE) to) + _value) <= (UINT_MAX 256)))))) )
+  ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
+  ( H_argConstraints_intBounds__value : 0 <= _value <= UINT_MAX 256 )
+  ( H_argConstraints_intBounds_to : 0 <= to <= UINT_MAX 160 )
+  ( H_CallerBound : 0 <= Caller ENV <= UINT_MAX 160 )
+  ( H_OriginBound : 0 <= Origin ENV <= UINT_MAX 160 )
+  ( H_ThisBound : 0 <= This ENV <= UINT_MAX 160 )
+  ( H_NextAddressBound : 0 <= NextAddr <= UINT_MAX 160 )
+  ( H_This_lt_NextAddr : This ENV < NextAddr )
+  ( H_Caller_lt_NextAddr : Caller ENV < NextAddr )
+  ( H_Origin_lt_NextAddr : Origin ENV < NextAddr )
+  ( H_no_self_call : (forall (p : address), addressIn STATE p -> Caller ENV <> p) )
+  ( H_no_self_origin : (forall (p : address), addressIn STATE p -> Origin ENV <> p) )
+  ( H_This_eq_addState : This ENV = addr STATE ),
+  transfer_conds ENV _value to STATE NextAddr
 ```
-The first precondition requires that the call value is zero, as the transition is not payable. 
+
+The first precondition requires that the call value is zero, as the transition is not payable.
 The second precondition ensures that the caller has a sufficient balance to cover the transfer amount, and the value being transferred is within the allowed range. Then the precondition ensures the case we are in. Next, the `to` address needs to not overflow and has to be a valid address. The environment before and after the transition must also be well-formed (for instance the next address is greater than all current addresses).
+
+Then, a state transition is generated for every transition in the contract specification.
+
+Additionally, for every transition, a **return value predicate** is generated as follows: 
+```rocq
+Inductive transfer_ret (ENV : Env) (_value : Z) (to : address)
+                       (STATE : State) (NextAddr : address) : bool -> Prop :=
+| transfer_case0_ret :
+     transfer_conds ENV _value to STATE NextAddr
+  -> ((Caller ENV) <> to)
+  -> transfer_ret ENV _value to STATE NextAddr true
+
+| transfer_case1_ret :
+     transfer_conds ENV _value to STATE NextAddr
+  -> ((Caller ENV) = to)
+  -> transfer_ret ENV _value to STATE NextAddr true
+
+.
+```
+The predicate holds if the preconditions hold, the case condition is satisfied, and the return value 
+is as expected (in this case true).
 
 Next, the **postconditions after the constructor** are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
 ```rocq
@@ -434,73 +443,60 @@ Definition Token_post0 :=
      /\ ((Token.totalSupply STATE') <= (UINT_MAX 256))).
 ```
 
-For every case and every transition, a **return value predicate** is generated as follows: 
-```rocq
-Inductive transfer0_ret (ENV : Env) (STATE : State) (value : Z) (to : address) : Z -> Prop :=
-| transfer0_ret_intro :
-     transfer0_conds ENV value to STATE
-  -> ((Caller ENV) <> to)
-  -> transfer0_ret ENV STATE value to 1.
-```
-The predicate holds if the preconditions hold, the case condition is satisfied, and the return value 
-is as expected (in this case 1).
 
 Finally the **state transition system** is defined by the `step` relation and the `reachable` proposition.
-The `Contract_step` is a relation on pairs of environments and states, and it 
-includes one constructor for every transition case in the system. For the ERC20 Token example, the 
-`Token_step` relation has the following form:
+The `Contract_Transition` is a relation on pairs of states and next-addresses, given a starting environment, and it 
+includes one constructor for every transition of the contract. For the ERC20 Token example, the 
+`Token_Transition` relation has the following form:
 ```rocq
-Inductive Token_step : Env -> State -> Env -> State -> Prop :=
-| transfer0_step : forall (ENV : Env) (value : Z) (to : address) (STATE : State),
-     transfer0_conds ENV value to STATE
-  -> This ENV = addr STATE
-  -> Token_step ENV STATE (fst (transfer0 ENV STATE value to)) (snd (transfer0 ENV STATE value to))
-
-| transfer1_step : 
+Inductive Token_Transition (ENV : Env) (STATE : State) (NextAddr : address)
+                           (STATE' : State) (NextAddr' : address) : Prop :=
+| transfer_Token_Transition : forall (_value : Z) (to : address),
+   transfer_transition ENV _value to STATE NextAddr STATE' NextAddr'
+-> Token_Transition ENV STATE NextAddr STATE' NextAddr'
+| transferFrom_Token_Transition : forall (src : address) (dst : address) (amount : Z),
+   transferFrom_transition ENV src dst amount STATE NextAddr STATE' NextAddr'
 ...
 
-| allowance0_step : forall (ENV : Env) (idx1 : address) (idx2 : address) (STATE : State),
-     allowance0_conds ENV idx1 idx2 STATE
-  -> This ENV = addr STATE
-  -> Token_step ENV STATE (fst (allowance0 ENV STATE idx1 idx2)) (snd (allowance0 ENV STATE idx1 idx2)).
+| allowance_Token_Transition : forall (idx1 : address) (idx2 : address),
+   allowance_transition ENV idx1 idx2 STATE NextAddr STATE' NextAddr'
+-> Token_Transition ENV STATE NextAddr STATE' NextAddr'
 ```
 
-To define the **reachability relation**, we introduce the "exists step" relation on 
-pairs of states and environments, called `extStep`. For the ERC20 Token contract example, 
-the `extStep` relation has the following form:
+To define the **reachability relation**, we introduce the `State_Transition` relation on pairs of states and next addreses, which includes all transitions of the system, by all of the included contracts. For the ERC20 Token contract example, 
+the `State_Transition` relation has the following form:
 
 ```rocq
-Inductive extStep : Env -> State -> Env -> State -> Prop :=
-| extStep_Token : forall (ENV : Env) (ENV' : Env) (STATE : State) (STATE' : State),
-     Token_step ENV STATE ENV' STATE'
-  -> extStep ENV STATE ENV' STATE'.
+Inductive State_Transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : State) (NextAddr' : address) : Prop :=
+| State_Transition_Token :
+     Token_Transition ENV STATE NextAddr STATE' NextAddr'
+  -> State_Transition ENV STATE NextAddr STATE' NextAddr'
 ```
-Since the Token contract does not refer to other contracts in its storage, the `extStep` relation is essentially the same as the `Token_step` relation. However, if a contract interacts with other contracts, the `extStep` relation would need to account for those interactions as well. For instance, the Automated Market Maker contract [amm.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.act) stores two ERC20 Tokens in its storage, `token0` and `token1`. The state transitions can 
-thus arise from calling the `Amm` contract's own transitions, or from calling transitions on either of the two stored Token contracts. The `extStep` for `Amm` thus includes cases for the `Amm_step`, `Token_step` for `token0`, and `Token_step` for `token1` and has the following shape
+Since the Token contract does not refer to other contracts in its storage, the `State_Transition` relation is essentially the same as the `Token_Transition` relation. However, if a contract interacts with other contracts, the `State_Transition` relation would need to account for those interactions as well. For instance, the Automated Market Maker contract [amm.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.act) stores two ERC20 Tokens in its storage, `token0` and `token1`. The state transitions can 
+thus arise from calling the `Amm` contract's own transitions, or from calling transitions on either of the two stored Token contracts. The `State_Transition` for `Amm` thus includes cases for the `Amm_Transition`, `Token_Transition` for `token0`, and `Token_Transition` for `token1` and has the following shape
 ```rocq
-Inductive extStep : Env -> State -> Env -> State -> Prop :=
-| extStep_Amm : forall (ENV : Env) (ENV' : Env) (STATE : State) (STATE' : State),
-     Amm_step ENV STATE ENV' STATE'
-  -> extStep ENV STATE ENV' STATE'
+Inductive State_Transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : State) (NextAddr' : address) : Prop :=
+| State_Transition_Amm :
+     Amm_Transition ENV STATE NextAddr STATE' NextAddr'
+  -> State_Transition ENV STATE NextAddr STATE' NextAddr'
 
-| extStep_token0 : forall (ENV : Env) (STATE : State) ENV' (STATE' : State),
-     nextAddrConstraint ENV STATE
-  -> Token.extStep ENV (token0 STATE) ENV' (token0 STATE')
-  -> addr STATE = addr STATE'
+| State_Transition_token0 :
+     nextAddrConstraint NextAddr STATE
+  -> Token.State_Transition ENV (token0 STATE) NextAddr (token0 STATE') NextAddr'
   -> ...
-  -> extStep ENV STATE ENV' STATE'
+  -> State_Transition ENV STATE NextAddr STATE' NextAddr'
 
-| extStep_token1 : forall (ENV : Env) (STATE : State) ENV' (STATE' : State),
-     nextAddrConstraint ENV STATE
-  -> Token.extStep ENV (token1 STATE) ENV' (token1 STATE')
+| State_Transition_token1 :
+     nextAddrConstraint NextAddr STATE
+  -> Token.State_Transition ENV (token1 STATE) NextAddr (token1 STATE') NextAddr'
   -> ...
-  -> extStep ENV STATE ENV' STATE'.
+  -> State_Transition ENV STATE NextAddr STATE' NextAddr'
 ```
-With the `extStep` relation defined, we can now define the `step` relation on states, where 
+With the `State_Transition` relation defined, we can now define the `step` relation on states, where 
 the environments are also bound by an `exists` quantifier
 ```rocq
 Definition step (STATE : State) (STATE' : State) :=
-exists (ENV : Env) (ENV' : Env), extStep ENV STATE ENV' STATE'.
+exists (ENV : Env) (NextAddr : address) (NextAddr' : address), State_Transition ENV STATE NextAddr STATE' NextAddr'.
 ```
 and the `reachable` proposition, which states that a state is reachable from another state through a series of steps.
 ```rocq
@@ -508,14 +504,14 @@ Definition reachable (STATE : State) :=
 exists STATE', init STATE' /\ multistep STATE' STATE.
 ```
 
-For every case of every transition the **postconditions are defined on reachable states**.
+For every transition the **postconditions are defined on reachable states**.
 For instance the ERC20 token transfer has the following postcondition:
 ```rocq
 Definition transfer0_post0 :=
-  forall (ENV : Env) (STATE : State) (STATE' : State) (value : Z) (to : address),
-     transfer0_conds ENV value to STATE
+  forall (ENV : Env) (STATE : State) (STATE' : State) (_value : Z) (to : address),
+     transfer_conds ENV _value to STATE
   -> reachable STATE
-  -> STATE' = snd (transfer0 ENV STATE value to)
+  -> transfer_transition ENV _value to STATE NextAddr STATE' NextAddr'
   -> ((0 <= ((Token.balanceOf STATE') (Caller ENV))) 
      /\ (((Token.balanceOf STATE') (Caller ENV)) <= (UINT_MAX 256))).
 ```
@@ -524,32 +520,32 @@ then the balance of the caller after the transfer is valid and within the expect
 A similar postcondition is generated for the balance of the recipient.
 
 Finally, a **schema for proving invariant properties on reachable states** is defined. Parametric to 
-the invariant property `IP : Env -> Z -> State -> Prop`, 
+the invariant property `IP : Env -> {argument-types} -> State -> Prop`, 
 if we know that invariant property holds at the initial state
 ```rocq
-Definition invariantInit (IP : Env -> Z -> State -> Prop) :=
-  forall (ENV : Env) (_totalSupply : Z),
-     initPreconds ENV _totalSupply
-  -> IP ENV _totalSupply (snd (Token ENV _totalSupply)).
+Definition invariantInit (IP : Env -> Z -> address -> State -> Prop) :=
+  forall(ENV : Env) (_totalSupply : Z) (NextAddr : address) (STATE : State) (NextAddr' : address),
+     constructor ENV _totalSupply NextAddr STATE NextAddr'
+  -> IP ENV _totalSupply NextAddr STATE
 ```
 and the step 
 ```rocq
-Definition invariantStep (IP : Env -> Z -> State -> Prop) :=
-  forall (ENV : Env) (_totalSupply : Z) (STATE : State) (STATE' : State),
-     initPreconds ENV _totalSupply
+Definition invariantStep (IP : Env -> Z -> address -> State -> Prop) :=
+  forall(ENV : Env) (_totalSupply : Z) (NextAddr : address) (STATE : State) (STATE' : State),
+     constructor_conds ENV _totalSupply NextAddr
   -> step STATE STATE'
-  -> IP ENV _totalSupply STATE
-  -> IP ENV _totalSupply STATE'.
+  -> IP ENV _totalSupply NextAddr STATE
+  -> IP ENV _totalSupply NextAddr STATE'
 ```
 the generated output will contain a proof, that the invariant property holds at all reachable states:
 ```rocq 
 Lemma invariantReachable :
   forall (ENV : Env) 
-          (_totalSupply : Z) 
-          (STATE : State) 
-          (IP : Env -> Z -> State -> Prop) 
-          (HIPinvInit : invariantInit IP) 
-          (HIPinvStep : invariantStep IP),
+         (_totalSupply : Z) 
+         (STATE : State) 
+         (IP : Env -> Z -> State -> Prop) 
+         (HIPinvInit : invariantInit IP) 
+         (HIPinvStep : invariantStep IP),
      reachableFromInit ENV _totalSupply (STATE : State)
   -> IP ENV _totalSupply STATE.
 ```
