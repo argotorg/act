@@ -220,6 +220,7 @@ Creates : 'creates' list(Create)                      { $2 }
 Create : ValueType id ':=' Expr                       { (StorageVar (posn $3) $1 (name $2), $4) }
 
 Updates : 'updates' list(Store)                       { $2 }
+        | {- empty -}                                 { [] }
 
 Precondition :  optblock('iff', Expr)                 { $1 }
 
