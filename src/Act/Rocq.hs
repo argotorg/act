@@ -302,7 +302,7 @@ localStep contract behvs = inductive
   where
     -- | constructor for the step relation
     stepBehv :: Behaviour -> (T.Text, T.Text, T.Text)
-    stepBehv (Behaviour _ name _ i _ _ _ _) = (T.pack name <> "_" <> T.pack contract <> "_Transition", bindings, constructorBody)
+    stepBehv (Behaviour _ name _ i _ _ _ _) = (T.pack name <> "_" <> T.pack contract <> "_transition", bindings, constructorBody)
       where
         bindings = case interface i of
           "" -> ""
