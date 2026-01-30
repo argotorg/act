@@ -2,10 +2,6 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   uint128 x := 11
@@ -13,11 +9,7 @@ creates
 
 transition swap() : uint256
 
-iff
-
-  CALLVALUE == 0
-
-  storage
+  updates
 
     x := y
     y := x

@@ -11,7 +11,7 @@ transition f(uint24 y)
 iff in range uint24 
   x + y
 
-storage
+updates
 
   x := x + y
 

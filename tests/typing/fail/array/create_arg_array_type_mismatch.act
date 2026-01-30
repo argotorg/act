@@ -1,0 +1,12 @@
+contract A
+
+constructor(uint[2] n1)
+creates
+
+
+contract B
+
+constructor()
+
+creates
+  A a := new A([true, false])

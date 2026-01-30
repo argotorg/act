@@ -1,0 +1,1 @@
+[(Main [Contract (AlexPn 0 1 1) "A" (Constructor (AlexPn 12 3 1) () NonPayable [] [Case (AlexPn 0 0 0) (BoolLit (AlexPn 0 0 0) True) []] [] []) [Transition (AlexPn 35 6 1) "f" (AbiArg uint256 x) NonPayable (Just (AbiArg uint256)) [] [Case (AlexPn 0 0 0) (BoolLit (AlexPn 0 0 0) True) ([],Just (IntLit (AlexPn 83 9 9) 1))] []]],"tests/typing/pass/smoke/smoke.act")]

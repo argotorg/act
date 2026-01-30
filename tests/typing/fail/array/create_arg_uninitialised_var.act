@@ -1,0 +1,13 @@
+contract A
+
+constructor(uint foo)
+creates
+
+
+contract B
+
+constructor()
+
+creates
+  A a := new A(x)
+  uint x := 0

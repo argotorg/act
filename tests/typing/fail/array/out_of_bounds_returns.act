@@ -1,0 +1,15 @@
+contract B
+
+constructor()
+
+creates
+
+  int[2] a := [0,0]
+
+transition f() : int
+
+
+case a[0] < 0:
+
+updates
+returns a[100]

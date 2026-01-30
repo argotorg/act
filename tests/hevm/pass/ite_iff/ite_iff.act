@@ -1,0 +1,32 @@
+contract A
+constructor()
+
+iff CALLVALUE == 0
+
+creates
+  uint x := 0
+  uint y := 0
+
+transition f(uint a, uint b)
+
+iff
+  CALLVALUE == 0
+  x < 100
+  y < 100
+  (if (b>3) then x else y) + (if (a>2) then 42 else 17) < 30
+
+case a > 2 and b > 3:
+  updates
+  x := x+42
+
+case a <= 2 and b > 3:
+  updates
+  x := x+17
+
+case a > 2 and b <= 3:
+  updates
+  x := y+42
+
+case a <= 2 and b <= 3:
+  updates
+  x := y+17

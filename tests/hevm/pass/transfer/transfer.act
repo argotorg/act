@@ -19,13 +19,12 @@ transition transfer(uint256 value, address to) : uint256
 
 iff
 
-  CALLVALUE == 0
   value <= balanceOf[CALLER]
   CALLER != to ==> balanceOf[to] + value < 2^256
 
 case CALLER != to:
 
-  storage
+  updates
 
      balanceOf[CALLER] := balanceOf[CALLER] - value
      balanceOf[to]     := balanceOf[to] + value
@@ -34,7 +33,7 @@ case CALLER != to:
 
 case CALLER == to:
 
-  storage
+  updates
 
     balanceOf[CALLER]
     balanceOf[to]
@@ -49,11 +48,10 @@ iff
   amount <= balanceOf[CALLER]
   src    != dst ==> balanceOf[dst] + amount < 2^256
   CALLER != src ==> 0 <= allowance[src][CALLER] - amount
-  CALLVALUE == 0
 
 case src != dst and CALLER == src:
 
-  storage
+  updates
 
      balanceOf[CALLER]
      allowance[src][CALLER]
@@ -64,7 +62,7 @@ case src != dst and CALLER == src:
 
 case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
-  storage
+  updates
 
      balanceOf[CALLER]
      allowance[src][CALLER]
@@ -75,7 +73,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
 case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
-  storage
+  updates
 
     balanceOf[CALLER]
     allowance[src][CALLER] := allowance[src][CALLER] - amount
@@ -86,7 +84,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
 case src == dst:
 
-  storage
+  updates
 
      balanceOf[CALLER]
      allowance[src][CALLER]

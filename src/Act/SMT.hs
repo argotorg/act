@@ -3,80 +3,34 @@
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DataKinds #-}
-{-# Language RecordWildCards #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Act.SMT (
-  Solver(..),
-  SMTConfig(..),
-  Query(..),
-  SMTResult(..),
-  SMTExp(..),
-  SolverInstance(..),
-  Model(..),
-  Transition(..),
-  SMT2,
-  spawnSolver,
-  stopSolver,
-  sendLines,
-  runQuery,
-  mkDefaultSMT,
-  --mkPostconditionQueries,
-  --mkPostconditionQueriesBehv,
-  --mkInvariantQueries,
-  target,
-  getQueryContract,
-  isFail,
-  isPass,
-  ifExists,
-  getBehvName,
-  identifier,
-  getSMT,
-  checkSat,
-  getCtorModel,
-  getPostconditionModel,
-  mkAssert,
-  --declareInitialLocation,
-  --declareLocation,
-  declareTRef,
-  declareArg,
-  declareEthEnv,
-  getLocationValue,
-  getCalldataValue,
-  getEnvironmentValue,
-  mkEqualityAssertion,
-) where
+module Act.SMT where
 
 import Prelude hiding (GT, LT)
 
-import Data.Containers.ListUtils (nubOrd)
-import System.Process (createProcess, cleanupProcess, proc, ProcessHandle, std_in, std_out, std_err, StdStream(..))
 import Text.Regex.TDFA hiding (empty)
-import Prettyprinter hiding (Doc)
-
+import System.Process (createProcess, cleanupProcess, proc, ProcessHandle, std_in, std_out, std_err, StdStream(..))
+import Data.List.NonEmpty (NonEmpty(..))
+import Data.Containers.ListUtils (nubOrd)
+import Data.Maybe
+import Data.ByteString.UTF8 (fromString)
+import Data.Type.Equality ((:~:)(..), testEquality)
+import Data.List
+import qualified Data.List.NonEmpty as NonEmpty
+import Control.Monad
 import Control.Applicative ((<|>))
 import Control.Monad.Reader
-import Control.Monad
-
-import Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.List.NonEmpty as NonEmpty
-import Data.Maybe
-import qualified Data.Map as M
-import Data.List
+import Prettyprinter hiding (Doc)
 import GHC.IO.Handle (Handle, hGetLine, hPutStr, hFlush)
-import Data.ByteString.UTF8 (fromString)
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit hiding (array)
-
 import Act.Print
 
 import EVM.Solvers (Solver(..))
-import Data.Type.Equality ((:~:)(..), testEquality)
-import Debug.Trace
 
 --- ** Data ** ---
 
@@ -186,42 +140,23 @@ data SolverInstance = SolverInstance
 --- ** Analysis Passes ** ---
 
 -- | Produces an SMT expression in a format that services most SMT passes.
-mkDefaultSMT :: Bool -> [TypedRef] -> [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp ABoolean] -> [StorageUpdate] -> Exp ABoolean -> SMTExp
-mkDefaultSMT isCtor activeSLocs activeCLocs envs ifaceName decls preconds extraconds stateUpdates = mksmt
+-- Zoe: Can we merge preconds and extraconds?
+mkDefaultSMT :: [TypedRef] -> [EthEnv] -> Id -> [Arg] -> [Exp ABoolean] -> [Exp ABoolean] -> Exp ABoolean -> SMTExp
+mkDefaultSMT refs envs ifaceName args preconds extraconds = mksmt
   where
-    -- If called for a constructor, declare only the post-state for local storage,
-    -- and both states for other locations.
-    -- Otherwise, when called for a behaviour, declare declare both states for all locations.
-    storage = declareTRef <$> (activeSLocs <> activeCLocs)
-    -- if isCtor
-    --  then let (localSLocs, nonlocalSLocs) = partition isStorageTRef (activeSLocs) in nub $
-    --    concatMap (declareInitialLocation ifaceName) localSLocs <> concatMap (declareLocation ifaceName) nonlocalSLocs
-    --  else nub $ concatMap (declareLocation ifaceName) activeSLocs
-
     -- Declare calldata arguments and locations, and environmental variables
-    ifaceArgs = declareArg ifaceName <$> decls
-    activeArgs = declareTRef <$> activeCLocs
-    args = nub ifaceArgs <> activeArgs
-
-    env = declareEthEnv <$> envs
-
-    -- Collect all locations not tautologically equal to the updated locations,
-    -- to encode the conditions under which they stay constant.
-    -- For constructors this should involve only locations not from local storage.
-    updatedLocs = locFromUpdate <$> stateUpdates
-    maybeConstSLocs = let unUpdated = (nub activeSLocs) \\ updatedLocs in
-      if isCtor then filter (not . isStorageTRef) unUpdated else unUpdated
+    storage = nub (declareTRef <$> refs)
+    ifaceArgs = nub $ (declareArg ifaceName <$> args) \\ storage
+    env = nub $ declareEthEnv <$> envs
 
     -- Constraints
     pres = mkAssert ifaceName <$> preconds <> extraconds
-    updates = encodeUpdate ifaceName <$> stateUpdates
-    constants = encodeConstant ifaceName updatedLocs maybeConstSLocs
 
     mksmt e = SMTExp
       { _storage = storage
-      , _calldata = args
+      , _calldata = ifaceArgs
       , _environment = env
-      , _assertions = [mkAssert ifaceName e] <> pres <> updates <> constants
+      , _assertions = [mkAssert ifaceName e] <> pres
       }
 
 {-
@@ -347,7 +282,7 @@ runQuery solver query@(Inv (Invariant _ _ _ predicate) (ctor, ctorSMT) behvs) = 
 -- provided `modelFn` to extract a model if the solver returns `sat`
 checkSat :: SolverInstance -> (SolverInstance -> IO Model) -> SMTExp -> IO SMTResult
 checkSat solver modelFn smt = do
-  -- render (pretty smt)
+  -- traceM $ "Entailment SMT Query:\n" <> renderString (prettyAnsi smt)
   err <- sendLines solver ("(reset)" : (lines . show . prettyAnsi $ smt))
   case err of
     Nothing -> do
@@ -419,7 +354,7 @@ sendCommand (SolverInstance _ stdin stdout _ _) cmd =
   if null cmd || ";" `isPrefixOf` cmd then pure "success" -- blank lines and comments do not produce any output from the solver
   else do
     hPutStr stdin (cmd <> "\n")
-    --traceM cmd
+    -- traceM cmd
     hFlush stdin
     hGetLine stdout
 
@@ -517,7 +452,7 @@ collectArrayExps tl = case tl of
 getArrayExp :: SolverInstance -> TValueType a -> Id -> NonEmpty Int -> [Int] -> IO (TypedExp)
 getArrayExp solver typ name (h:|[]) idcs = collectArrayExps <$> typedExps
   where
-    typedExps = mapM getArrayElement (map ((++) idcs . singleton)  [0..(h-1)])
+    typedExps = mapM (getArrayElement . (++) idcs . singleton) [0 .. (h - 1)]
 
     getArrayElement :: [Int] -> IO TypedExp
     getArrayElement idcs' =
@@ -587,7 +522,7 @@ parseModel = \case
   (TArray _ _) -> error "TODO array parse model"
   (TMapping _ _) -> error "TODO array parse model"
   (TStruct _) -> error "TODO struct parse model"
-  (TContract _) -> error "TODO contract parse model"
+  (TContract _) -> \ _ ->  TExp TBoolean (LitBool nowhere False) -- TODO change
   where
     readBool "true" = True
     readBool "false" = False
@@ -616,6 +551,7 @@ parseSMTModel s
 
 --- ** SMT2 Generation ** ---
 
+{-
 stateName :: Id -> SMT2
 stateName cid = cid <> "_state"
 
@@ -644,6 +580,7 @@ tValueTypeToSMT2 (TMapping key t) =
 tValueTypeToSMT2 (TArray _ t) =
   "(Array Int " <> tValueTypeToSMT2 t <> ")"
 tValueTypeToSMT2 (TStruct _) = error "TODO struct not supported"
+-}
 
 mkEqualityAssertion :: TypedRef -> TypedRef -> Exp ABoolean
 mkEqualityAssertion l1 l2 = foldr mkAnd (LitBool nowhere True) (zipWith eqIdx ix1 ix2)
@@ -659,6 +596,7 @@ mkEqualityAssertion l1 l2 = foldr mkAnd (LitBool nowhere True) (zipWith eqIdx ix
 
     mkAnd r c = And nowhere c r
 
+{-
 mkConstantAssertion :: Id -> [TypedRef] -> TypedRef -> SMT2
 mkConstantAssertion name updates tref@(TRef _ _ ref) = constancy
   where
@@ -668,7 +606,7 @@ mkConstantAssertion name updates tref@(TRef _ _ ref) = constancy
     aliasedAssertions = mkEqualityAssertion tref <$> relevantUpdates
     isConstantAssertion = foldl mkAnd (LitBool nowhere True) aliasedAssertions
 
-    locSMTRep whn = if isIndexed tref
+    locSMTRep _ = if isIndexed tref
       then withInterface name $ select ref (NonEmpty.fromList $ ixsFromRef ref)
       else nameFromTRef tref
 
@@ -684,12 +622,6 @@ mkConstantAssertion name updates tref@(TRef _ _ ref) = constancy
 encodeConstant :: Id -> [TypedRef] -> [TypedRef] -> [SMT2]
 encodeConstant name updated locs = fmap (mkConstantAssertion name updated) locs
 
-refToRHS :: Ref k -> Ref RHS
-refToRHS (SVar p t i ci) = SVar p t i ci
-refToRHS (CVar p t i) = CVar p t i
-refToRHS (RMapIdx p r i) = RMapIdx p r i
-refToRHS (RArrIdx p r i n) = RArrIdx p (refToRHS r) i n
-refToRHS (RField p r i n) = RField p (refToRHS r) i n
 
 -- | encodes a storage update rewrite as an smt assertion
 encodeUpdate :: Id -> StorageUpdate -> SMT2
@@ -698,6 +630,7 @@ encodeUpdate ifaceName (Update typ item expr) =
     postentry  = withInterface ifaceName $ expToSMT2 (toSType typ) (VarRef nowhere typ (refToRHS item))
     expression = withInterface ifaceName $ expToSMT2 (toSType typ) expr
   in "(assert (= " <> postentry <> " " <> expression <> "))"
+    -}
 
 declareTRef :: TypedRef -> SMT2
 declareTRef (TRef typ _ ref) = declareRef typ name ref
@@ -705,25 +638,16 @@ declareTRef (TRef typ _ ref) = declareRef typ name ref
     name = nameFromRef ref -- case rk of
       --SRHS -> flip nameFromItem item <$> times -- TODO: this is most definitely wrong
       --SLHS -> [nameFromRef ref]
+    -- This is kind of dumb, recursion over the reference is used to reconstruct the type.
+    -- In the future we should probably make declarations from StorageTyping.
     declareRef :: TValueType a -> Id -> Ref k -> SMT2
     declareRef t@VType n (RMapIdx _ (TRef _ _ r) (TExp et _)) = declareRef (TMapping (ValueType et) (ValueType t)) n r
     declareRef t n (RArrIdx _ r _ b) = declareRef (TArray b t) n r
     declareRef t n (CVar _ _ _) = constant n t
     declareRef t n (SVar _ _ _ _) = constant n t
-    declareRef _ _ (RField _ ref' cid _) = declareRef (TContract cid) cid ref'
+    declareRef t n (RField _ _ _ _) = constant n t
 
-
----- | declares a storage location that is created by the constructor, these
-----   locations have no prestate, so we declare a post var only
---declareInitialLocation :: Id -> TypedRef -> [SMT2]
---declareInitialLocation ifaceName item = declareLoc ifaceName [Post] item
---
----- | declares a storage location that exists both in the pre state and the post
-----   state (i.e. anything except a loc created by a constructor claim)
---declareLocation :: Id -> TypedRef -> [SMT2]
---declareLocation ifaceName item = declareLoc ifaceName [Pre, Post] item
---
----- | produces an SMT2 expression declaring the given decl as a symbolic constant
+-- | produces an SMT2 expression declaring the given decl as a symbolic constant
 declareArg :: Id -> Arg -> SMT2
 declareArg ifaceName d@(Arg atyp@((fromAbiType . argToAbiType) -> ValueType typ) _) =
   case flattenArrayAbiType (argToAbiType atyp) of
@@ -743,6 +667,13 @@ typedExpToSMT2 (TExp typ e) = expToSMT2 (toSType typ) e
 -- | encodes the given Exp as an smt2 expression
 expToSMT2 :: forall (a :: ActType). SType a -> Exp a -> Ctx SMT2
 expToSMT2 typ expr = case expr of
+  -- calls to create can never return the same result
+  -- temproary workaround for lack of contract creation in SMT encoding
+  (Eq _ _ (Address _ _ (Create _ _ _ _)) _) -> pure "false"
+  (Eq _ _ _ (Address _ _ (Create _ _ _ _))) -> pure "false"
+  (NEq _ _ (Address _ _ (Create _ _ _ _)) _) -> pure "true"
+  (NEq _ _ _ (Address _ _(Create _ _ _ _))) -> pure "true"
+  (InRange _ TAddress (Address _ _ (Create _ _ _ _))) -> pure "true"
   -- booleans
   And _ a b -> binop "and" SBoolean SBoolean a b
   Or _ a b -> binop "or" SBoolean SBoolean a b
@@ -771,7 +702,7 @@ expToSMT2 typ expr = case expr of
   IntMax _ a -> pure . show $ intmax a
   UIntMin _ a -> pure . show $ uintmin a
   UIntMax _ a -> pure . show $ uintmax a
-  InRange _ t e -> expToSMT2 typ (bound t e)
+  InRange _ t e -> expToSMT2 typ (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
   -- bytestrings
   Cat _ a b -> binop "str.++" SByteStr SByteStr a b
@@ -792,10 +723,10 @@ expToSMT2 typ expr = case expr of
           defaultConst SByteStr = error "TODO"
           defaultConst SContract = error "TODO"
           defaultConst SStruct = error "TODO"
+          defaultConst SMapping = error "TODO"
 
   -- contracts
-  Create _ _ _ _ -> pure "0" -- TODO just a dummy address for now
-
+  Create _ _ _ _ -> error "Internal Error: unexpected create call in the SMT expression"
   -- polymorphic
   --  For array comparisons, expands both arrays to their elements and compares elementwise,
   --  as SMT's default array equality requires equality for all possible Int values,
@@ -819,7 +750,7 @@ expToSMT2 typ expr = case expr of
   NEq p s a b -> unop "not" SBoolean (Eq p s a b)
 
   ITE _ a b c -> triop "ite" SBoolean typ typ a b c
-  VarRef _ t item -> entry item
+  VarRef _ _ item -> entry item
   Address _ _ e -> expToSMT2 SContract e -- TODO: get contract, maybe?
 
   Mapping _ _ _ _ -> expToSMT2 SContract undefined -- TODO
@@ -867,6 +798,7 @@ array name argNum ret = "(declare-const " <> name <> " " <> valueDecl argNum <> 
     valueDecl n | n <= 0 = vType ret
     valueDecl n = "(Array " <> aType AInteger <> " " <> valueDecl (n-1) <> ")"
 
+{-
 -- | declare a (potentially nested) array representing a mapping in smt2
 mappingArray :: Id -> [ValueType] -> TValueType a -> SMT2
 mappingArray name args ret = "(declare-const " <> name <> valueDecl args <> ")"
@@ -874,6 +806,7 @@ mappingArray name args ret = "(declare-const " <> name <> valueDecl args <> ")"
     valueDecl :: [ValueType] -> SMT2
     valueDecl [] = vType ret
     valueDecl ((ValueType h) : t) = "(Array " <> vType h <> " " <> valueDecl t <> ")"
+    -}
 
 -- | encode an array lookup with Integer indices in smt2
 selectIntIdx :: String -> NonEmpty Int -> SMT2
@@ -919,8 +852,8 @@ vType (TMapping (ValueType k) (ValueType a)) = "(Array " <> vType k <> " " <> vT
 
 
 -- | act -> smt2 type translation
-sType' :: TypedExp -> SMT2
-sType' (TExp t _) = vType t
+-- sType' :: TypedExp -> SMT2
+-- sType' (TExp t _) = vType t
 
 --- ** Variable Names ** ---
 

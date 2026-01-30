@@ -2,35 +2,31 @@ contract Token
 
 constructor(uint _totalSupply)
 
-iff CALLVALUE == 0
-
 creates
   mapping(address => uint) balanceOf := [CALLER => _totalSupply]
 
 transition balanceOf(address x) : uint256
 
-iff CALLVALUE == 0
+updates
+returns balanceOf[x]
 
-returns
-  pre(balanceOf[x])
-
-transition transfer(uint256 value, address to) : uint256
+transition transfer(uint256 val, address to) : uint256
 
 iff
 
-  CALLVALUE == 0
-  CALLER != to ==> inRange(uint256, balanceOf[to] + value)
-  inRange(uint256,balanceOf[CALLER] - value)
+  CALLER != to ==> inRange(uint256, balanceOf[to] + val)
+  inRange(uint256,balanceOf[CALLER] - val)
 
 case CALLER != to:
   
-  storage
+  updates
 
-    balanceOf[CALLER]  := balanceOf[CALLER] - value
-    balanceOf[to]      := balanceOf[to] + value
+    balanceOf := balanceOf[CALLER => balanceOf[CALLER] - val
+                          , to => balanceOf[to] + val]
 
   returns 1
 
 case CALLER == to:
 
+  updates
   returns 1

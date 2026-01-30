@@ -36,7 +36,7 @@ tokens :-
   creates                               { mk CREATES }
   case                                  { mk CASE }
   returns                               { mk RETURNS }
-  storage                               { mk STORAGE }
+  updates                               { mk UPDATES }
   noop                                  { mk NOOP }
 
   iff $white+ in $white+ range          { mk IFFINRANGE }
@@ -71,7 +71,7 @@ tokens :-
   address                               { mk ADDRESS }
   bool                                  { mk BOOL }
   string                                { mk STRING }
-
+  address(0)                            { mk ADDR0 }
   -- builtin functions
   newAddr                               { mk NEWADDR }
 
@@ -104,6 +104,8 @@ tokens :-
   ")"                                   { mk RPAREN }
   "["                                   { mk LBRACK }
   "]"                                   { mk RBRACK }
+  "{"                                   { mk LBRACE }
+  "}"                                   { mk RBRACE }
   "="                                   { mk Act.Lex.EQ }
   ">"                                   { mk Act.Lex.GT }
   "<"                                   { mk Act.Lex.LT }
@@ -136,7 +138,7 @@ data LEX =
   | CREATES
   | CASE
   | RETURNS
-  | STORAGE
+  | UPDATES
   | NOOP
   | IFFINRANGE
   | INRANGE
@@ -163,6 +165,7 @@ data LEX =
   | VALUE
   | NEW
   | WITH
+  | ADDR0
   -- builtin types
   | UINT  Int
   | INT   Int
@@ -202,6 +205,8 @@ data LEX =
   | RPAREN
   | LBRACK
   | RBRACK
+  | LBRACE
+  | RBRACE
   | EQ
   | GT
   | LT

@@ -1,0 +1,51 @@
+// Contract A
+contract A
+
+constructor()
+
+creates
+   uint x := 0
+   mapping(address => uint) f := []
+
+//Contract B
+contract B
+
+constructor(uint u)
+
+creates
+   uint x := u
+   A a := new A()
+
+transition setx(uint z)
+
+updates
+
+  a.x := z
+
+transition setf(address i)
+
+updates
+
+  a.f := a.f[i => 1]
+
+//Contract C
+contract C
+
+constructor()
+
+creates
+   uint w := 0
+   B b := new B(42)
+
+transition setf(address i)
+
+updates
+
+  b.a.f := b.a.f[i => 2]
+
+transition setxw(address i)
+
+updates
+
+  b.a.x := 1
+  w := 1

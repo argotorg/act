@@ -22,7 +22,7 @@ transition f()
 
 iff x == 0
 
-    storage
+    updates
 
         x := 1
 
@@ -30,7 +30,7 @@ transition g()
 
 iff x == 1
 
-    storage
+    updates
 
         x := 2
 
@@ -38,6 +38,6 @@ transition j()
 
 iff x == 7
 
-    storage
+    updates
 
         x := 100

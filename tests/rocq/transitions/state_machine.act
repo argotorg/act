@@ -1,0 +1,30 @@
+contract StateMachine
+
+constructor()
+
+creates
+  uint256 x := 0
+
+invariants
+    x <= 2
+
+transition f()
+
+iff x == 0
+
+updates
+  x := 1
+
+transition g()
+
+iff x == 1
+
+updates
+  x := 2
+
+transition h()
+
+iff x == 2
+
+updates
+  x := 0

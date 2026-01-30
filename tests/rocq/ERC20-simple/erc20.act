@@ -1,0 +1,73 @@
+contract Token
+
+constructor(uint _totalSupply)
+
+creates
+
+  uint256 totalSupply := _totalSupply
+  mapping(address => uint) balanceOf :=  [CALLER => _totalSupply]
+  mapping(address=>mapping(address=>uint)) allowance := []
+
+
+transition transfer(uint256 _value, address to) : uint256
+
+iff
+
+  _value <= balanceOf[CALLER]
+  CALLER != to ==> balanceOf[to] + _value <= 2^256 - 1
+
+case CALLER != to:
+
+  updates
+
+     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
+                       , to => balanceOf[to] + _value ]
+
+  returns 1
+
+case CALLER == to:
+
+  updates
+  returns 1
+
+
+transition transferFrom(address src, address dst, uint amount) : uint256
+
+iff
+
+  amount <= balanceOf[src]
+  src    != dst ==> balanceOf[dst] + amount <= 2^256 - 1
+  CALLER != src ==> 0 <= allowance[src][CALLER] - amount
+
+case src != dst and CALLER == src:
+
+  updates
+
+     balanceOf := balanceOf[ src => balanceOf[src] - amount
+                           , dst => balanceOf[dst] + amount ]
+
+  returns 1
+
+case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+
+  updates
+
+     balanceOf := balanceOf[ src => balanceOf[src] - amount
+                           , dst => balanceOf[dst] + amount ]
+
+  returns 1
+
+case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+
+  updates
+
+    allowance := allowance[src => allowance[src][CALLER => allowance[src][CALLER] - amount ]]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                      , dst => balanceOf[dst] + amount ]
+
+  returns 1
+
+case src == dst:
+
+  updates
+  returns 1

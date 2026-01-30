@@ -33,7 +33,7 @@ invariants
 
 transition break()
 
-storage
+updates
 
     this := 1
     value := 1

@@ -2,23 +2,15 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   mapping (uint=>uint) x := []
 
 transition f() : uint256
 
-iff
+updates
 
-  CALLVALUE == 0
-
-storage
-
-  x[0] := 1
+  x := x[0 => 1]
 
 returns
 

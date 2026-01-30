@@ -1,0 +1,12 @@
+contract A
+
+constructor(int x)
+creates
+
+
+contract B
+
+constructor()
+
+creates
+  A a := new A([[1,2,3],[4,5]])

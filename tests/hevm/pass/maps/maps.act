@@ -2,39 +2,29 @@ contract Map
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
   uint256 val := 0
   mapping(uint => uint) f := [0 => 42]
 
 transition val() : uint256
 
-iff
-
-  CALLVALUE == 0
-
-returns pre(val)
+updates
+returns val
 
 transition f(uint x) : uint256
 
-iff
-
-  CALLVALUE == 0
-
-returns pre(f[x])
+updates
+returns f[x]
 
 
-transition set(uint value, uint key) : uint256
+transition set(uint val, uint key) : uint256
 
 iff
 
   CALLVALUE == 0
 
-storage
+updates
 
-  f[key] := value
+  f := f[key => val]
 
 returns 1

@@ -1,0 +1,1095 @@
+{
+  "contracts": [
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "w",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "abitype": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "x"
+                      }
+                    },
+                    {
+                      "literal": "2",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "*"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "v",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "abitype": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "y"
+                      }
+                    },
+                    {
+                      "literal": "2",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "*"
+                }
+              }
+            ],
+            "caseCondition": {
+              "args": [
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "y"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            }
+          },
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "w",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "v",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "y"
+                  }
+                }
+              }
+            ],
+            "caseCondition": {
+              "args": [
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "y"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "=/="
+            }
+          }
+        ],
+        "contract": "A",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "abitype": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"x\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "abitype": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"y\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 23 3 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "x"
+                    }
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "y"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "+"
+              },
+              {
+                "literal": "42",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "x"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "inrange"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "y"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
+                  },
+                  {
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "args": [
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "x"
+                            }
+                          },
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "y"
+                            }
+                          }
+                        ],
+                        "arity": 2,
+                        "symbol": "+"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "and"
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "x"
+                }
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "y"
+                }
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "z",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "q"
+                  }
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "B",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "kind": "ContractArgument",
+                "name": "A"
+              },
+              "id": "\"x\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "abitype": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"q\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 222 18 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "q"
+                }
+              },
+              {
+                "literal": "10",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": ">"
+          },
+          {
+            "args": [
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "contract": "A",
+                  "field": "w",
+                  "kind": "Field",
+                  "reference": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                }
+              },
+              {
+                "literal": "42",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": ">"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "q"
+                }
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "contract": "A",
+                  "field": "w",
+                  "kind": "Field",
+                  "reference": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                }
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "C",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "C",
+                  "kind": "SVar",
+                  "svar": "b",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "fun": "B"
+                    },
+                    [
+                      {
+                        "expression": {
+                          "args": [
+                            {
+                              "fun": "A"
+                            },
+                            [
+                              {
+                                "expression": {
+                                  "timing": "TInteger 256 Unsigned",
+                                  "var": {
+                                    "abitype": {
+                                      "abitype": {
+                                        "size": "256",
+                                        "type": "UInt"
+                                      },
+                                      "kind": "AbiArgument"
+                                    },
+                                    "kind": "Var",
+                                    "var": "alpha"
+                                  }
+                                },
+                                "kind": "TypedExpr",
+                                "type": "TInteger 256 Unsigned"
+                              },
+                              {
+                                "expression": {
+                                  "timing": "TInteger 256 Unsigned",
+                                  "var": {
+                                    "abitype": {
+                                      "abitype": {
+                                        "size": "256",
+                                        "type": "UInt"
+                                      },
+                                      "kind": "AbiArgument"
+                                    },
+                                    "kind": "Var",
+                                    "var": "alpha"
+                                  }
+                                },
+                                "kind": "TypedExpr",
+                                "type": "TInteger 256 Unsigned"
+                              }
+                            ]
+                          ],
+                          "arity": 2,
+                          "symbol": "create",
+                          "value": null
+                        },
+                        "kind": "TypedExpr",
+                        "type": "TContract \"A\""
+                      },
+                      {
+                        "expression": {
+                          "timing": "TInteger 256 Unsigned",
+                          "var": {
+                            "abitype": {
+                              "abitype": {
+                                "size": "256",
+                                "type": "UInt"
+                              },
+                              "kind": "AbiArgument"
+                            },
+                            "kind": "Var",
+                            "var": "alpha"
+                          }
+                        },
+                        "kind": "TypedExpr",
+                        "type": "TInteger 256 Unsigned"
+                      }
+                    ]
+                  ],
+                  "arity": 2,
+                  "symbol": "create",
+                  "value": null
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "C",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "abitype": {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                "kind": "AbiArgument"
+              },
+              "id": "\"alpha\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 335 29 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "alpha"
+                }
+              },
+              {
+                "literal": "21",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  {
+                    "timing": "TInteger 256 Unsigned",
+                    "var": {
+                      "abitype": {
+                        "abitype": {
+                          "size": "256",
+                          "type": "UInt"
+                        },
+                        "kind": "AbiArgument"
+                      },
+                      "kind": "Var",
+                      "var": "alpha"
+                    }
+                  }
+                ],
+                "arity": 2,
+                "symbol": "inrange"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "timing": "TInteger 256 Unsigned",
+                        "var": {
+                          "abitype": {
+                            "abitype": {
+                              "size": "256",
+                              "type": "UInt"
+                            },
+                            "kind": "AbiArgument"
+                          },
+                          "kind": "Var",
+                          "var": "alpha"
+                        }
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
+                  },
+                  {
+                    "args": [
+                      {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      {
+                        "args": [
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "alpha"
+                            }
+                          },
+                          {
+                            "timing": "TInteger 256 Unsigned",
+                            "var": {
+                              "abitype": {
+                                "abitype": {
+                                  "size": "256",
+                                  "type": "UInt"
+                                },
+                                "kind": "AbiArgument"
+                              },
+                              "kind": "Var",
+                              "var": "alpha"
+                            }
+                          }
+                        ],
+                        "arity": 2,
+                        "symbol": "+"
+                      }
+                    ],
+                    "arity": 2,
+                    "symbol": "inrange"
+                  }
+                ],
+                "arity": 2,
+                "symbol": "and"
+              }
+            ],
+            "arity": 2,
+            "symbol": "and"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "timing": "TInteger 256 Unsigned",
+                "var": {
+                  "abitype": {
+                    "abitype": {
+                      "size": "256",
+                      "type": "UInt"
+                    },
+                    "kind": "AbiArgument"
+                  },
+                  "kind": "Var",
+                  "var": "alpha"
+                }
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "v": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          1
+        ],
+        "w": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          0
+        ]
+      },
+      "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "a": [
+          {
+            "name": "A",
+            "type": "Contract"
+          },
+          0
+        ],
+        "z": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          1
+        ]
+      },
+      "C": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "b": [
+          {
+            "name": "B",
+            "type": "Contract"
+          },
+          0
+        ]
+      }
+    }
+  }
+}

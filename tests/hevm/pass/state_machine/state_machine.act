@@ -2,10 +2,6 @@ contract StateMachine
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
   uint256 x := 0
 
@@ -17,26 +13,23 @@ transition f()
 iff
 
   x == 0
-  CALLVALUE == 0
 
-storage
+updates
     x := 1
 
 transition g()
 
 iff
 
-  CALLVALUE == 0
   x == 1
 
-  storage
+  updates
     x := 2
 
 transition h()
 
 iff
-  CALLVALUE == 0
   x == 2
 
-  storage
+  updates
     x := 0

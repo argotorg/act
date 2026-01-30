@@ -1,0 +1,31 @@
+contract A
+
+constructor(uint x, uint y)
+iff
+    x + y > 42
+case y < 17:
+creates
+    uint w := x
+    uint v := y
+case y >= 17:
+creates
+    uint w := 7
+    uint v := y
+
+contract B
+
+constructor(address<A> x, uint q)
+iff
+    x.w > 11
+creates
+    A a := x
+    uint z := q
+
+
+contract C
+
+constructor(uint alpha, uint beta)
+iff
+    alpha > 42
+creates
+    B b := new B(new A(alpha, beta), alpha)

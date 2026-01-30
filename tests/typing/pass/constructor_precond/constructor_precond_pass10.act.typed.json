@@ -1,0 +1,472 @@
+{
+  "contracts": [
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "x",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "A",
+        "interface": {
+          "args": [],
+          "id": "AlexPn 23 3 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a1",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "pa1"
+                  }
+                }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a2",
+                  "time": "Pre"
+                },
+                "value": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "pa3"
+                  }
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "B",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "kind": "ContractArgument",
+                "name": "A"
+              },
+              "id": "\"pa1\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "kind": "ContractArgument",
+                "name": "A"
+              },
+              "id": "\"pa3\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 74 11 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "arg": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "pa1"
+                  }
+                },
+                "arity": 1,
+                "symbol": "addr"
+              },
+              {
+                "arg": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "pa3"
+                  }
+                },
+                "arity": 1,
+                "symbol": "addr"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=/="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "C",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "C",
+                  "kind": "SVar",
+                  "svar": "b1",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "fun": "B"
+                    },
+                    [
+                      {
+                        "expression": {
+                          "timing": "TContract \"A\"",
+                          "var": {
+                            "abitype": {
+                              "kind": "ContractArgument",
+                              "name": "A"
+                            },
+                            "kind": "Var",
+                            "var": "pa1"
+                          }
+                        },
+                        "kind": "TypedExpr",
+                        "type": "TContract \"A\""
+                      },
+                      {
+                        "expression": {
+                          "timing": "TContract \"A\"",
+                          "var": {
+                            "abitype": {
+                              "kind": "ContractArgument",
+                              "name": "A"
+                            },
+                            "kind": "Var",
+                            "var": "pa2"
+                          }
+                        },
+                        "kind": "TypedExpr",
+                        "type": "TContract \"A\""
+                      }
+                    ]
+                  ],
+                  "arity": 2,
+                  "symbol": "create",
+                  "value": null
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "C",
+        "interface": {
+          "args": [
+            {
+              "abitype": {
+                "kind": "ContractArgument",
+                "name": "A"
+              },
+              "id": "\"pa1\"",
+              "kind": "Declaration"
+            },
+            {
+              "abitype": {
+                "kind": "ContractArgument",
+                "name": "A"
+              },
+              "id": "\"pa2\"",
+              "kind": "Declaration"
+            }
+          ],
+          "id": "AlexPn 204 22 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "arg": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "pa1"
+                  }
+                },
+                "arity": 1,
+                "symbol": "addr"
+              },
+              {
+                "arg": {
+                  "timing": "TContract \"A\"",
+                  "var": {
+                    "abitype": {
+                      "kind": "ContractArgument",
+                      "name": "A"
+                    },
+                    "kind": "Var",
+                    "var": "pa2"
+                  }
+                },
+                "arity": 1,
+                "symbol": "addr"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=/="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "x": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          0
+        ]
+      },
+      "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "a1": [
+          {
+            "name": "A",
+            "type": "Contract"
+          },
+          0
+        ],
+        "a2": [
+          {
+            "name": "A",
+            "type": "Contract"
+          },
+          1
+        ]
+      },
+      "C": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "b1": [
+          {
+            "name": "B",
+            "type": "Contract"
+          },
+          0
+        ]
+      }
+    }
+  }
+}

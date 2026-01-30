@@ -8,6 +8,7 @@ import Prelude hiding (GT, LT)
 import Data.ByteString.UTF8 (toString)
 import Prettyprinter hiding (brackets)
 import qualified Prettyprinter.Render.Terminal as Term
+import qualified Prettyprinter.Render.String as Str
 import qualified Data.Text as Text
 
 import System.IO (stdout)
@@ -25,10 +26,10 @@ prettyAct (Act _ contracts)
   = unlines (fmap prettyContract contracts)
 
 prettyContract :: Contract t -> String
-prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
+prettyContract (Contract _ ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
-prettyCtor (Constructor name interface _ pres cases posts invs)
+prettyCtor (Constructor _ name interface _ pres cases posts invs)
   =   "constructor of " <> name
   >-< "interface " <> show interface
   <> prettyPre pres
@@ -37,7 +38,7 @@ prettyCtor (Constructor name interface _ pres cases posts invs)
   <> prettyInvs invs
   where
     prettyCreates [] = ""
-    prettyCreates cs = header "creates" >-< block (concatMap (\(cond, updates) -> prettyExp cond : map prettyUpdate' updates) cs)
+    prettyCreates cs = header "creates" >-< block (concatMap (\(Case _ cond updates) -> prettyExp cond : map prettyUpdate' updates) cs)
 
     prettyInvs [] = ""
     prettyInvs _ = error "TODO: pretty print invariants"
@@ -47,7 +48,7 @@ prettyCtor (Constructor name interface _ pres cases posts invs)
     
 prettyTValueType :: TValueType a -> String
 prettyTValueType (TContract n) = n
-prettyTValueType TUnboundedInt = "Unbounded"
+prettyTValueType TUnboundedInt = "integer"
 prettyTValueType (TMapping keytype maptype) =
   "mapping(" ++ prettyValueType keytype ++ " => " ++ prettyValueType maptype ++ ")"
 prettyTValueType t = T.unpack (abiTypeSolidity (toAbiType t))
@@ -56,7 +57,7 @@ prettyValueType :: ValueType -> String
 prettyValueType (ValueType t) = prettyTValueType t
 
 prettyBehaviour :: Behaviour t -> String
-prettyBehaviour (Behaviour name contract interface _ preconditions cases postconditions)
+prettyBehaviour (Behaviour _ name contract interface _ preconditions cases postconditions)
   =   "behaviour " <> name <> " of " <> contract
   >-< "interface " <> (show interface)
   <> prettyPre preconditions
@@ -66,7 +67,7 @@ prettyBehaviour (Behaviour name contract interface _ preconditions cases postcon
     prettyCases' [] = ""
     prettyCases' cs = header "cases" >-< block (concatMap prettyCase cs)
     
-    prettyCase (cond, (updates, mret)) = 
+    prettyCase (Case _ cond (updates, mret)) = 
       [prettyExp cond <> ":"] 
       ++ map (("  " <>) . prettyUpdate) updates
       ++ maybe [] (\ret -> ["  returns " <> prettyTypedExp ret]) mret
@@ -239,6 +240,10 @@ render :: DocAnsi -> IO ()
 render doc =
   let opts = LayoutOptions { layoutPageWidth = AvailablePerLine 120 0.9 } in
   Term.renderIO stdout (layoutPretty opts doc)
+
+renderString :: DocAnsi -> String
+renderString =
+    Str.renderString . layoutPretty defaultLayoutOptions
 
 underline :: DocAnsi -> DocAnsi
 underline = annotate Term.underlined

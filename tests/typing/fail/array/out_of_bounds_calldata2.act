@@ -1,0 +1,22 @@
+contract B
+
+constructor()
+
+creates
+
+  uint x := 0
+  int[3] y := [0,0,0]
+
+
+transition f(uint[3][2][2] c)
+
+updates
+
+  x := c[4][3][2]
+
+
+transition g(uint[3][2][2] c)
+
+updates
+
+  y[c[0][0][0]] := 1

@@ -1,0 +1,24 @@
+contract A
+
+constructor(uint x) payable
+iff 
+    CALLVALUE > 5
+creates
+    uint w := x
+    uint BALANCE := CALLVALUE
+
+contract B
+
+constructor(address<A> x, address<A> y)
+iff
+    address(x) != address(y)
+creates
+    A a1 := x
+    A a2 := y
+
+
+contract C
+
+constructor()
+creates
+    B b := new B(new A{value : 1}(11), new A{value : 12}(42))

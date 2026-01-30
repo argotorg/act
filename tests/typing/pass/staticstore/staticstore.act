@@ -1,0 +1,12 @@
+contract C
+
+constructor()
+creates
+
+transition f() : uint256
+
+iff inRange(uint256, x + y)
+
+updates
+
+returns x + y

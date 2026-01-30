@@ -1,0 +1,28 @@
+contract A
+
+constructor(uint w1)
+
+creates
+    uint w := w1
+
+contract B
+
+constructor(uint z1)
+
+creates
+    uint z := z1
+
+contract C
+
+constructor(address<A> a1, address<B> a2)
+
+creates
+    A a := a1
+    B b := a2
+
+contract D
+
+constructor(address<A> a1, address a2)
+
+creates
+    C c1 := new C(a1, a2)

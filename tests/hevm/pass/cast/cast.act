@@ -2,29 +2,19 @@ contract A
 
 constructor(uint x0)
 
-iff
-    CALLVALUE == 0
-
 creates
     uint x := x0
 
 
 transition getx() : uint256
 
-iff
-
-  CALLVALUE == 0
-
-returns pre(x)
+updates
+returns x
 
 
 transition setx(uint x1)
 
-iff
-
-  CALLVALUE == 0
-
-storage
+updates
   x := x1
 
 
@@ -33,8 +23,7 @@ contract B
 constructor(address<A> x, address<A> y)
 
 iff
-    CALLVALUE == 0
-    x != y
+    address(x) != address(y)
 
 creates
     A a1 := x
@@ -43,10 +32,6 @@ creates
 
 transition upd()
 
-iff
-
-  CALLVALUE == 0
-
-storage
+updates
   a1.x := 42
   a2.x := 11

@@ -2,10 +2,6 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   uint128 x := 11
@@ -17,11 +13,7 @@ creates
 
 transition foo() : uint256
 
-iff
-
-  CALLVALUE == 0
-
-storage
+updates
 
   x := y
   y := x
@@ -32,11 +24,7 @@ returns 1
 
 transition set_flag(bool b)
 
-iff
-
-  CALLVALUE == 0
-
-storage
+updates
 
   flag := b
 
@@ -47,9 +35,10 @@ iff
 
   CALLVALUE == 0
 
+updates
 returns
 
-  pre(flag)
+  flag
 
 
 transition set_y_if_flag(uint128 v) : uint256
@@ -60,11 +49,12 @@ iff
 
 case flag:
 
-storage
+updates
   y := v
 
 returns 1
 
 case (not flag):
+updates
 returns 1
 

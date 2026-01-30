@@ -16,5 +16,5 @@ transition setX(uint256 _x)
 iff
 	not lock
 
-storage
+updates
 	x := _x

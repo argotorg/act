@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Act.Traversals (TraversableTerm(..)) where
+module Act.Traversals (TraversableTerm(..), mapExp) where
 
 import Data.Functor.Identity
 import Act.Syntax.Typed
@@ -158,6 +158,9 @@ mapExpM f = \case
       v' <- mapExpM f v
       pure (k', v')) kvs
     f (MappingUpd p r' kt vt kvs')
+
+mapExp :: (forall a . Exp a t -> Exp a t) -> Exp b t -> Exp b t
+mapExp f e = runIdentity (mapExpM (Identity . f) e)
 
 mapTypedExpM :: Monad m => (forall a . Exp a t -> m (Exp a t)) -> TypedExp t -> m (TypedExp t)
 mapTypedExpM f (TExp t e) = do

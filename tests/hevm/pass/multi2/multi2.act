@@ -3,7 +3,6 @@ contract A
 constructor(uint z)
 
 iff
-   CALLVALUE == 0
    inRange(uint256, z + 1)
 
 creates
@@ -12,18 +11,13 @@ creates
 
 transition x() : uint256
 
-iff
-   CALLVALUE == 0
-
+updates
 returns
-   pre(x)
+   x
 
 transition set_x(uint z)
 
-iff
-   CALLVALUE == 0
-
-storage
+updates
   x := z
 
 contract B
@@ -31,7 +25,6 @@ contract B
 constructor(uint u)
 
 iff
-   CALLVALUE == 0
    inRange(uint256, u + 1)
 
 creates

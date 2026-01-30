@@ -1,0 +1,17 @@
+contract B
+
+constructor()
+
+creates
+
+  int[3] a := [1,2,3]
+
+
+transition f() : uint256
+
+iff
+
+  a[15] > 4
+
+updates
+returns 1

@@ -1,0 +1,65 @@
+contract A
+
+constructor()
+
+creates
+  uint x := 0
+
+
+contract B
+
+constructor(address<A> pa1, address p2, address<A> pa3, address p4)
+
+iff
+  address(pa1) != address(pa3)
+
+creates
+  A a := pa1
+  uint y := 0
+  address bu1 := p2
+  address bu2 := p4
+
+
+transition f(address<A> pa1)
+
+iff
+  address(pa1) != address(a)
+
+updates
+  a := new A()
+
+
+contract C
+
+constructor(address<A> pa1, address<A> pa2)
+
+iff
+  address(pa1) != address(pa2)
+
+creates
+  B b1 := new B(pa1, address(pa2), pa2, address(new A()))
+  A a1 := new A()
+  address cu1 := address(new A())
+  address cu2 := address(new A())
+
+
+transition f(address<A> pa1, address<A> pa2)
+
+iff
+  address(pa1) != address(pa2)
+  address(pa1) != address(a1)
+  address(pa2) != address(a1)
+  address(pa1) != address(b1)
+  address(pa2) != address(b1)
+  address(pa1) != address(b1.a)
+  address(pa2) != address(b1.a)
+
+updates
+  b1 := new B(pa1, address(pa2), pa2, address(new A()))
+  b1.y := 42
+  b1.a := new A()
+  b1.a.x := 17
+
+
+
+

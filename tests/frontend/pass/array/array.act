@@ -1,5 +1,0 @@
-contract A
-
-transition f(address[2] xs) : address
-
-returns xs[1]

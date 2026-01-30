@@ -1,0 +1,15 @@
+contract A
+
+constructor()
+
+creates
+  int192 x := 0
+  int192 y := 0
+
+transition f() : int192
+
+iff
+  inRange(int192, x % y)
+
+updates
+returns x % y

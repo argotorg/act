@@ -2,10 +2,6 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   mapping (uint=>uint) x := []
@@ -14,6 +10,7 @@ transition f() : uint256
 
 // fails to mention the state update
 
+updates
 returns
 
   1

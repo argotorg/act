@@ -17,7 +17,7 @@ iff in range uint256
 	x * scalar
 	z * scalar
 
-storage
+updates
 	x := x * scalar
 	z := z * scalar
 
@@ -28,6 +28,6 @@ iff in range uint256
 	y * scalar
 	z * scalar
 
-storage
+updates
 	y := y * scalar
 	z := z * scalar

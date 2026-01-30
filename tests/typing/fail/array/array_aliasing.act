@@ -1,0 +1,13 @@
+contract A
+
+constructor()
+
+creates
+  uint[2][2] x := [[0,0],[0,0]]
+
+transition f()
+
+updates
+
+  x := [[1,2],[3,4]]
+  x[0] := [10,20]

@@ -1,0 +1,27 @@
+contract C
+
+constructor()
+
+creates
+   uint x := 0
+	
+transition bar(uint z)
+
+iff
+   inRange(int256, z + 1)
+   inRange(int256, z + 2)
+
+case z == 0:
+
+updates
+  x := z
+
+case z == 1:
+
+updates
+  x := z + 1
+
+case z > 1:
+
+updates
+  x := z + 2

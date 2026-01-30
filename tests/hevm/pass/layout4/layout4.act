@@ -2,10 +2,6 @@ contract Map
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
   uint128 val := 11
   mapping(uint => uint128) f := [11 => 42, 42 => 1]
@@ -14,52 +10,39 @@ creates
 
 transition val() : uint128
 
-iff
-
-  CALLVALUE == 0
-
-returns pre(val)
+updates
+returns val
 
 transition f(uint x) : uint128
 
-iff
-
-  CALLVALUE == 0
-
-returns pre(f[x])
+updates
+returns f[x]
 
 
 transition g(uint128 x) : bool
 
-iff
-
-  CALLVALUE == 0
-
-returns pre(g[x])
+updates
+returns g[x]
 
 
 
-transition setf(uint128 value, uint key) : uint256
+transition setf(uint128 val, uint key) : uint256
 
-iff
+updates
 
-  CALLVALUE == 0
-
-storage
-
-  f[key] := value
+  f := f[key => val]
 
 returns 1
 
 
-transition setg(bool value,  uint128 key) : uint256
+transition setg(bool val,  uint128 key) : uint256
 
 iff
 
   CALLVALUE == 0
 
-storage
+updates
 
-  g[key] := value
+  g := g[key => val]
 
 returns 1

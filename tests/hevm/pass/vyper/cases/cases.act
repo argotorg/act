@@ -2,9 +2,6 @@ contract A
 
 constructor()
 
-iff
-  CALLVALUE == 0
-
 creates
   uint128 x := 0
   mapping(uint128 => uint128) m := []
@@ -12,23 +9,20 @@ creates
 
 transition f()
 
-iff
-  CALLVALUE == 0
-
 case x > 2:
 
-  storage
+  updates
 
     x := m[2]
 
 case 1 <= x and x <= 2:
 
-  storage
+  updates
 
     x := m[3]
 
 case x < 1:
 
-  storage
+  updates
 
     x := m[x]

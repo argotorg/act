@@ -1,0 +1,31 @@
+// This is wrong because we have two behviours with the same name
+contract C
+
+constructor(uint24 _x)
+
+creates
+
+  uint24 x := _x
+
+transition increase(uint24 new_x) : uint24
+
+  updates
+    x
+
+  returns pre(x)
+
+ensures
+
+  post(x) >= pre(x)
+
+transition increase(uint24 new_x) : uint24
+
+updates
+    x
+
+  returns new_x
+
+ensures
+
+  post(x) >= pre(x)
+

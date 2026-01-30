@@ -1,5 +1,0 @@
-contract A
-
-transition f(uint x) : uint256
-
-returns 1

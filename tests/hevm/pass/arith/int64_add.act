@@ -1,0 +1,15 @@
+contract A
+
+constructor()
+
+creates
+  int64 x := 0
+  int64 y := 0
+
+transition f() : int64
+
+iff
+  inRange(int64, x + y)
+
+updates
+returns x + y

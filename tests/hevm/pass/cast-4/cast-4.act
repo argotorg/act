@@ -2,18 +2,12 @@ contract C
 
 constructor(uint z1)
 
-iff
-    CALLVALUE == 0
-
 creates
     uint z := z1
 
 contract A
 
 constructor(uint x1)
-
-iff
-    CALLVALUE == 0
 
 creates
     uint x := x1
@@ -25,8 +19,8 @@ contract B
 constructor(address<A> x, address<A> y)
 
 iff
-    CALLVALUE == 0
-    x != y
+    address(x) != address(y)
+    address(x.c) != address(y.c)
 
 creates
     A a1 := x
@@ -34,10 +28,7 @@ creates
 
 transition upd()
 
-iff
-    CALLVALUE == 0
-
-storage
+updates
 
     a1 := new A(42)
     a2 := new A(43)

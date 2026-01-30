@@ -2,15 +2,10 @@ contract A
 
 constructor()
 
-iff
-  CALLVALUE == 0
-
 creates
   uint128 x := 0
 
 transition f() : uint128
 
-iff
-  CALLVALUE == 0
-
-returns post(x)
+updates
+returns x

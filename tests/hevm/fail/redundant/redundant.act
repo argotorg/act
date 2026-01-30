@@ -2,10 +2,6 @@ contract A
 
 constructor()
 
-iff
-
-  CALLVALUE == 0
-
 creates
 
   uint x := 0
@@ -14,9 +10,8 @@ transition f()
 
 iff
 
-  CALLVALUE == 0
   x == 1
 
-storage
+updates
 
   x := 2

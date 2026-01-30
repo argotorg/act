@@ -2,17 +2,10 @@ contract Token
 
 constructor(uint _supply)
 
-iff
-    CALLVALUE == 0
-
 creates
     mapping(address => uint) balanceOf :=  [CALLER => _supply]
 
 transition balanceOf(address a) : uint256
-
-iff
-
-  CALLVALUE == 0
 
 returns pre(balanceOf[a])
 
@@ -21,13 +14,12 @@ transition transferFrom(uint256 value, address from, address to) : uint256
 
 iff
 
-  CALLVALUE == 0
   from != to ==> inRange(uint256, balanceOf[to] + value)
   inRange(uint256,balanceOf[from] - value)
 
 case from != to:
 
-  storage
+  updates
 
     balanceOf[from]  := balanceOf[from] - value
     balanceOf[to]    := balanceOf[to] + value
@@ -42,11 +34,6 @@ case from == to:
 contract Amm
 
 constructor(uint256 amt1, uint256 amt2)
-
-iff
-
-    CALLVALUE == 0
-
 
 creates
 
@@ -67,7 +54,7 @@ iff
 
 case CALLER != THIS:
 
-storage
+updates
 
     token0.balanceOf[CALLER] := token0.balanceOf[CALLER] - amt
     token0.balanceOf[THIS]   := token0.balanceOf[THIS] + amt
@@ -102,7 +89,7 @@ iff
 
 case CALLER != THIS:
 
-storage
+updates
 
     token1.balanceOf[CALLER] := token1.balanceOf[CALLER] - amt
     token1.balanceOf[THIS]   := token1.balanceOf[THIS] + amt

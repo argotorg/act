@@ -3,27 +3,20 @@ contract A
 
 constructor(uint z)
 
-iff
-   CALLVALUE == 0
-
 creates
    uint x := z
 
 
 transition x() : uint256
 
-iff
-   CALLVALUE == 0
+updates
 
-returns
-   pre(x)
+returns x
 
 // contract C
 contract C
 
 constructor()
-iff
-   CALLVALUE == 0
 
 creates
    A a1 := new A(42)
@@ -31,9 +24,5 @@ creates
 
 transition change()
 
-iff
-
-  CALLVALUE == 0
-  
-storage
+updates
   a1 := a2
