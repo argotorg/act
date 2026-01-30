@@ -8,7 +8,7 @@ The general shape of a constructor in act is:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│         constructor ?payable (<parameters>)                  │
+│         constructor (<parameters>) ?payable                  │
 └─────────────────────────┬────────────────────────────────────┘
                           │
                           ▼
@@ -40,9 +40,9 @@ The general shape of a constructor in act is:
 
 **Components:**
 
-1. **Constructor Head**: `constructor ?payable (<parameters>)`
-   - Optional `payable` keyword for accepting Ether during deployment.
+1. **Constructor Head**: `constructor (<parameters>) ?payable`
    - Parameter list with types and names separated by commas.
+   - Optional `payable` keyword for accepting Ether during deployment.
 
 2. **Precondition Block**: `iff <condition>`
    - Specifies the necessary and sufficient condition for successful constructor execution.
@@ -88,7 +88,7 @@ creates
 An artificial example of a *payable* constructor would be:
 
 ```act
-constructor payable ()
+constructor () payable
 
 iff true
 
@@ -103,7 +103,7 @@ creates
     uint256 BALANCE := 0
 ```
 
-act interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. Although this `BALANCE` variable is not part of the contract storage per se, it can be affected by the behavior of the constructor or the transitions and is therefore initialized and updated the same way as storage slots. 
+`act` interally tracks the balance (in Ether) of each contract, including during construction. This is required to correctly reason about payable constructors. Although this `BALANCE` variable is not part of the contract storage per se, it can be affected by the behavior of the constructor or the transitions and is therefore initialized and updated the same way as storage slots. 
 
 Further, the user can write conditions on the callvalue sent during construction using the special variable `CALLVALUE`. See e.g. the payable constructor example above.
 Additionally to `BALANCE`, there are 4 such special variables (called environment variables) related to the call environment that the user can access as explained in [Variable References](./store_type.md#variable-references).
@@ -124,7 +124,7 @@ creates
     Token token0 := t0
     Token token1 := t1
 ```
-It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in arithmetic), it has to be cast to a regular `address` type using `address(expr)`.
+It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in comparisons), it has to be cast to a regular `address` type using `address(expr)`.
 
 The `iff` clause specifies the **necessary and sufficient condition** under which the constructor succeeds. If this condition does not hold, the constructor reverts.
 In this example, the precondition `address(t0) != address(t1)` ensures that the two token addresses are distinct. If a user attempts to deploy the AMM contract with identical token addresses, the constructor will revert, preventing the creation of an invalid AMM instance.

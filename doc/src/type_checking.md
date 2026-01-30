@@ -56,7 +56,7 @@ No arithmetic overflow or underflow occurs in any (sub-)expression anywhere in t
 
 If an `inRange` condition (as any other precondition) fails, the transition reverts and no storage updates occur. This aligns with Solidity's execution model and allows act to precisely characterize the contract's input space.
 
-### Technical Background
+### Technical Limitation
 
 The reason for not only checking the **top-level expressions** but also all **intermediate expressions** comes from act's equivalence checker, which is imported from hevm (see [hevm backend: Equivalence to EVM bytecode](./equiv.md)).
  The equivalence checker uses hevm's internal representation, which does not have unbounded integers, and therefore all expressions must be representable in the EVM's 256-bit integer space.
@@ -114,10 +114,12 @@ However, since act's equivalence checker is imported from hevm, using its Expr r
  - while in act `b` may be any number in `uint256` (and does not need to appear in the preconditions since `x*b/b` it will simplify to `x` for any non-zero `b`), 
  - there will always be value of `b`  in `uint256`  sufficiently large to cause `x*b` overflow out of the 256-bit range. And this leads to the the equivalence checker concluding that `x == x*b/b` is false.
 
-To address this, act implements its **additional overflow pass**. It checks that given the preconditions, all the **intermediate expressions** have values within the range representable by hevm. Note that it checks this on the act level, i.e. using SMT passes on unbounded integer theory. This guarantees that we operate under an input space in which the semantics of act's `*` and the EVM's `MUL` opcode are identical. So in the above example, it will return an error that says that the specification cannot be equivalence checked because it contains expressions that are not computable by the EVM.
+To address this, act implements its **additional overflow pass**. It checks that given the preconditions, all the **intermediate expressions** have values within the range representable by hevm. Note that it checks this on the act level, i.e. using SMT passes on unbounded integer theory. This guarantees that we operate under an input space in which the semantics of act's `*` and the EVM's `MUL` opcode are identical. So in the above example, the pass will return an error, saying that the specification cannot be equivalence checked because it contains expressions that are not computable by the EVM.
 <!-- The idea is not that you will add a precondition to cover this (as that would lead to a mismatch in the input space, if the new one is not present in the bytecode as well), but that you will have to express things in a computable way. -->
 
-This is not really a limitation on the number of contract's we can specify, as any realizable contract's behaviour must be expressible through computable expressions.
+This is not a limitation on the number of contract's we can specify, as any realizable contract's behaviour must be expressible through computable expressions.
+
+Still, we aim to remove this constraint in the future versions.
 
 
 This **output error** for the above example looks as follows:
@@ -195,9 +197,9 @@ counterexample:
 ```
 
 
-**Expressing Overflow/Underflow in act**
+** Subsequent Limitation: Expressing Overflow/Underflow in act**
 
-To express overflow/underflow in act, the ideal way would be to write `(a+b)%n`, which is what overflow is mathematically. This works for all ranges, except the 256-bit one, where the additional overflow pass will catch `a+b`. There is currently no way to express 256-bit-overflow in act without triggering the overflow pass.
+To express overflow/underflow in act, the ideal way would be to use the mathematical formulation `(a+b)%max`. This works for all ranges, except the 256-bit one, where the additional overflow pass will catch `a+b`. There is currently no way to express 256-bit-overflow in act without triggering the overflow pass. We aim to cover this in future versions.
 
 <!-- So what would need is something like primitives, i.e. addOverflow(a,b), which in act semantics will be the same thing, but will not trip up the overflow pass. Or maybe a simple informed filtering would do, to allow (a op b)%n to pass the overflow checker direclty since we know we can actually translate it. -->
 

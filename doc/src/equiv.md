@@ -8,7 +8,7 @@
   - [Running the ERC20 Example](#running-the-erc20-example)
   - [Expected Output for Successful Verification](#expected-output-for-successful-verification)
   - [When Verification Fails: Example with Broken ERC20](#when-verification-fails-example-with-broken-erc20)
-  - [Verifying Multiple Contracts with --sources](#verifying-multiple-contracts-with---sources)
+  - [Verifying Multiple Contracts with --json](#verifying-multiple-contracts-with---json)
   - [Additional Options](#additional-options)
 - [How it works](#how-it-works)
   - [Success nodes](#success-nodes)
@@ -43,15 +43,15 @@ act equiv --spec <PATH_TO_SPEC> --sol <PATH_TO_SOL>
 act equiv --spec <PATH_TO_SPEC> --vy <PATH_TO_VY>
 ```
 
-**3. Multi-contract projects:** (more info in [Multi-Contract Projects](#verifying-multiple-contracts-with---sources))
+**3. Multi-contract projects:** (more info in [Multi-Contract Projects](#verifying-multiple-contracts-with---json))
 ```sh
-act equiv --sources <PATH_TO_CONFIG_JSON>
+act equiv --json <PATH_TO_CONFIG_JSON>
 ```
 
-<!-- **4. Direct bytecode verification:**
+**4. Direct bytecode verification:**
 ```sh
-act equiv --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYTECODE>
-``` -->
+act equiv --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYTECODE> --layout Solidity
+```
 
 ### Command-Line Flags
 
@@ -60,7 +60,7 @@ act equiv --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYT
 | `--spec` | Path | - | Path to the act specification file (.act) |
 | `--sol` | Path | - | Path to Solidity source file (.sol) |
 | `--vy` | Path | - | Path to Vyper source file (.vy) |
-| `--sources` | Path | - | Path to JSON configuration file for multi-contract projects |
+| `--json` | Path | - | Path to JSON configuration file for multi-contract projects |
 | `--solver` | `cvc5\|z3\|bitwuzla` | `cvc5` | SMT solver to use for verification |
 | `--smttimeout` | Integer (ms) | `20000` | Timeout for each SMT query in milliseconds |
 | `--debug` | Boolean | `false` | Print verbose output including raw SMT queries |
@@ -98,30 +98,41 @@ When the ERC20 implementation matches its specification, you should see output s
 
 ```
 Checking contract Token
-No discrepancies found. 
+Constructing the initial state.
+Success. 
 Checking if constructor results are equivalent.
 Found 1 total pairs of endstates
 Asking the SMT solver for 1 pairs
-No discrepancies found. 
+Success. 
 Checking if constructor input spaces are the same.
-No discrepancies found. 
-Checking transition transfer of act
+Success. 
+Checking if the resulting state can contain aliasing.
+Success. 
+Checking behavior transfer of Token
+Constructing the initial state.
+Success. 
 Checking if behaviour is matched by EVM
 Found 2 total pairs of endstates
 Asking the SMT solver for 2 pairs
-No discrepancies found. 
+Success. 
 Checking if the input spaces are the same
-No discrepancies found. 
+Success. 
+Checking if the resulting state can contain aliasing.
+Success. 
 ...
-Checking transition allowance of act
+Checking behavior allowance of Token
+Constructing the initial state.
+Success. 
 Checking if behaviour is matched by EVM
 Found 1 total pairs of endstates
 Asking the SMT solver for 1 pairs
-No discrepancies found. 
+Success. 
 Checking if the input spaces are the same
-No discrepancies found. 
+Success. 
+Checking if the resulting state can contain aliasing.
+Success. 
 Checking if the ABI of the contract matches the specification
-No discrepancies found. 
+Success. 
 ```
 
 **Understanding the output:**
@@ -133,6 +144,7 @@ Consult the [how it works](#how-it-works) section for more details.
 - **Asking the SMT solver for X pairs**: How many queries are sent to the SMT solver to verify equivalence between corresponding endstates
 - **No discrepancies found**: The SMT solver confirmed that for all inputs satisfying the path conditions, the results and storage are identical between specification and implementation
 - **Checking if the input spaces are the same**: Verifies that both the act spec and EVM implementation accept and reject the same set of inputs (no missing cases), see [here](#input-space-equivalence)
+- **Checking if the resulting state can contain aliasing**: Verifies that the state after a constructor or a transition cannot contain aliasing.
 - **Checking if the ABI of the contract matches the specification**: Ensures all function signatures match between the specification and implementation
 
 **What each transition check involves:**
@@ -219,13 +231,18 @@ For complex projects with multiple interacting contracts, use a JSON configurati
     "Contract1": { "source": "<path-to-source1>/source1.sol" },
     "Contract2": { "source": "<path-to-source2>/source2.vy" },
     "Contract3": { "source": "<path-to-source3>/source3.vy" },
-    "Contract4": { "source": "<path-to-source3>/source3.vy" }
+    "Contract4": { "source": "<path-to-source3>/source3.vy" },
+    "Contract5": {
+      "code" : "<path-to-bytecode-runtime>/bytecode.bin-runtime",
+      "initcode" : "<path-to-bytecode-init>/bytecode.bin",
+      "layout" : "Solidity"
+    }
   }
 }
 ```
 
 **Fields explained:**
-- `specifications`: Array of act specification files
+- `specifications`: Array of act specification files. Note that the order matters. Any specification may only have dependencies on specifications that exists earlier in the list.
 - `sources`: Map of source files to their language (Solidity or Vyper)
 - `contracts`: Map of contract names to their source files
 
@@ -242,7 +259,7 @@ The act repository includes an example with mixed languages in `tests/hevm/pass/
 
 ```json
 {
-  "specifications" : ["amm.act", "../erc20/erc20.act"],
+  "specifications" : ["../erc20/erc20.act", "amm.act"],
   "sources" : {
     "../erc20/erc20.vy" : { "language" : "Vyper" },
     "amm.sol" : { "language" : "Solidity" }
@@ -261,9 +278,9 @@ This allows verification of specifications against implementations in different 
 **Choosing SMT solvers:**
 
 Different solvers have different strengths:
-- **CVC5** (default): Good all-around performance, handles most common contracts
+- **Bitwuzla**: Specialized for bitvector reasoning; excellent for bitwise operations. Recommended for equivalence checking.
+- **CVC5** (default): Good all-around performance, handles most common contracts. May fail at some contracts due to errors.
 - **Z3**: Alternative when CVC5 times out; sometimes faster on arithmetic-heavy specs
-- **Bitwuzla**: Specialized for bitvector reasoning; excellent for bitwise operations
 
 ```sh
 act equiv --spec contract.act --sol contract.sol --solver z3

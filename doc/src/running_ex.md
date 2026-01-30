@@ -90,9 +90,9 @@ Even without understanding the details, several aspects are already visible:
 - Lastly all smart contract functions are listed as transitions `transition <fct_name>(<input_vars>)`
 - Within the constructor and the transitions:
   - The list of preconditions (the `iff` block) comes first and lists the necessary and sufficient conditions on when this operation succeeds. If the `iff` block is not satisfied, the corresponding function in Solidity/Vyper would revert.
-  - In the constructor the `creates` block is next. It lists all the storage a contract has and initializes it. As expected, it mirrors the Solidity/Vyper code closely. The `creates` block is the last in the constructor.
-  - Similar to `creates` for constructors works the `storage` block for transitions. It updates all the changes to the storage. Thereby, summarizing the effects a transition has on the storage.
-  - If there are any branches in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a `case`. In the ERC20 example, that happens in line 14 and line 17: depending on whether the function caller `CALLER` is the same address as the one where the money is supposed to be transfered to `to` the storage is updated differently.
+  - In the constructor the `creates` block is next. It lists all the storage a contract has and initializes it. As expected, it mirrors the Solidity/Vyper code closely. The `creates` block is the last block of the constructor.
+  - Similar to `creates` for constructors works the `updates` block for transitions. It updates all the changes to the storage. Thereby, summarizing the effects a transition has on the storage.
+  - If there are any branches in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a `case`. In the ERC20 example, that happens in line 14 and line 17: depending on whether the function caller `CALLER` is the same address as the one where the money is supposed to be transfered to, `to`, the storage is updated differently.
 - act is aware of some Ethereum environment variables such as the caller of a function `CALLER` or the amount that was "paid" to a contract upon a function call `CALLVALUE`.
 
 In the next sections, we will build up the meaning of these pieces by incrementally refining the ERC20 specification.

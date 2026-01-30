@@ -8,7 +8,7 @@ The general shape of a transition that returns a value in act is:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  transition <name> ?payable (<parameters>) : <return_type>   │
+│  transition <name> (<parameters>) ?payable : <return_type>   │
 └─────────────────────────┬────────────────────────────────────┘
                           │
                           ▼
@@ -52,7 +52,7 @@ The general shape of a transition that does **not return** a value in act is:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│     transition <name> ?payable (<parameters>)                │
+│     transition <name> (<parameters>) ?payable                │
 └─────────────────────────┬────────────────────────────────────┘
                           │
                           ▼
@@ -86,7 +86,7 @@ The general shape of a transition that does **not return** a value in act is:
 
 **Components:**
 
-1. **Transition Head**: `transition <name> ?payable (<parameters>)  ?(: <return_type>)`
+1. **Transition Head**: `transition <name> (<parameters>) ?payable  ?(: <return_type>)`
    - Function name `<name>` and parameter list `<parameters>` with types and names.
    - Optional `payable` keyword to mark transitions that accept Ether.
    - Optional return type specification (e.g., `: uint256`). If a return type is specified, the transition must include a `returns <value>` statement after each `updates` block.

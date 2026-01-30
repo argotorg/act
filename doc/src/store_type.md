@@ -93,7 +93,7 @@ The following types are used for function parameters and return values, mirrorin
     transition foo(address<Token> token_addr)
     iff true
     updates
-        erc_token := token_addr as Token
+        erc_token := address(token_addr)
     ```
     The parameter `token_addr` has type `address<Token>`, which indicates that the address points to a deployed contract of type `Token` (e.g. in our example an ERC20 token).
     
@@ -167,11 +167,12 @@ In a transfer transition of the ERC20 contract the storage is updated as:
 ```act
   updates
 
-     balanceOf[CALLER] := balanceOf[CALLER] - value
-     balanceOf[to]     := balanceOf[to] + value
+    balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
+                          , to     => balanceOf[to] + _value]
+
 ```
 
-Here we see two base expressions, including variable references (`balanceOf[CALLER]` and `balanceOf[to]`), a parameter `value`, subtraction and addition.
+Here we see a base expression, variable references (`CALLER` and `to`), a parameter `_value`, subtraction and addition.
 
 
 

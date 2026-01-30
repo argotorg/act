@@ -14,12 +14,10 @@ updates
 
 transition admin1() : address
 iff true
-updates
 returns admin1
 
 transition admin2() : address
 iff true
-updates
 returns admin2
 
 
@@ -53,7 +51,6 @@ returns true
 
 case THIS == to:
 
-updates
 returns true
 
 
@@ -70,15 +67,12 @@ updates
 
 case not (CALLER == admins.admin1 or CALLER == admins.admin2):
 
-updates
 
 
 transition Value() : uint256
 iff true
-updates
 returns Value
 
 transition balanceOf(address idx) : uint256
 iff true
-updates
 returns balanceOf[idx]
