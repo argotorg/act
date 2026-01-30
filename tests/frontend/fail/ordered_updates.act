@@ -14,10 +14,12 @@ updates
 
 transition admin1() : address
 iff true
+updates
 returns admin1
 
 transition admin2() : address
 iff true
+updates
 returns admin2
 
 
@@ -26,12 +28,12 @@ returns admin2
 
 contract Asset
 
-constructor(uint256 _value)
+constructor(uint256 __value)
 iff true
 creates
-    uint256 value := _value
-    Admins admins := Admins(CALLER)
-    mapping(address => uint256) balanceOf := [THIS => _value]
+    uint256 _value := __value
+    Admins admins := new Admins(CALLER)
+    mapping(address => uint256) balanceOf := [THIS => __value]
 
 
 transition assetTransfer(uint256 amt, address to) 
@@ -40,35 +42,40 @@ iff CALLER == admins.admin1 or CALLER == admins.admin2
     inRange(uint256, balanceOf[THIS] - amt)
     THIS != to ==> inRange(uint256, balanceOf[to] + amt)
 
-case THIS != to
+case THIS != to:
 
 updates
    balanceOf := balanceOf[
                   THIS => balanceOf[THIS] - amt,
                   to   => balanceOf[to]   + amt ]
 
-case THIS == to
+case THIS == to:
 
+updates
 
 
 transition setAdmins(address new_admin1, address new_admin2)
 
 iff true
 
-case CALLER == admins.admin1 or CALLER == admins.admin2
+case CALLER == admins.admin1 or CALLER == admins.admin2:
 
 updates
    admins.admin2 := new_admin2
-   admins := Admins(new_admin1)
+   admins := new Admins(new_admin1)
    
 
-case !(CALLER == admins.admin1 or CALLER == admins.admin2)
+case not (CALLER == admins.admin1 or CALLER == admins.admin2):
+
+updates
 
 
-transition value() : uint256
+transition _value() : uint256
 iff true
-returns value
+updates
+returns _value
 
 transition balanceOf(address idx) : uint256
 iff true
+updates
 returns balanceOf[idx]

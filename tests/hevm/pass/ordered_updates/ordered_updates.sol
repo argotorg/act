@@ -16,13 +16,13 @@ contract Admins {
 }
 
 contract Asset {
-    uint256 public value;
+    uint256 public Value;
     Admins admins;
     mapping (address => uint256) public balanceOf;
 
     constructor(uint256 _value) {
-        value = _value;
-        admins = Admins(msg.sender);
+        Value = _value;
+        admins = new Admins(msg.sender);
         balanceOf[address(this)] = _value;
     }
 
@@ -37,7 +37,7 @@ contract Asset {
 
     function setAdmins(address new_admin1, address new_admin2) public {
         if (msg.sender == admins.admin1() || msg.sender == admins.admin2()) {
-            admins = Admins(new_admin1);
+            admins = new Admins(new_admin1);
             admins.set_admin2(new_admin2);
         }
     }
