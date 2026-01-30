@@ -271,11 +271,14 @@ The generated Rocq output will contain: <!-- <span style="color:red">talk about 
 - **Transition system with a step relation** (and then generalised to multistep)
 - Predicate characterising a **reachable state** *from any initial state*.
 - Predicate characterising a **reachable state** *from the initial state produced by given constructor parameters*.
-- Definition schema for **invariants**: 
+- Definition schema for **invariants***: 
   * Parametrized by the invariant property `IP : Env -> {argument-types} -> address -> State -> Prop`, where `{argument-types}` represents the types of the constructor's arguments. The property's arguments of types `Env`, `{argument-types}` and `address` refer to the environment, the arguments and the next address at the time of construction.
   * Invariant predicate definition for the Initial State.
   * Invariant predicate definition for the Step.
   * Proof of the invariant holding in all reachable states if `IP` holds in the initial state and for every step.
+
+*) Invariants are properties that hold in all reachable states of the state transition system, and can be used to prove properties about the contract.
+
 
 Let us explore the generated Rocq output for the ERC20 Token contract from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act).
 
