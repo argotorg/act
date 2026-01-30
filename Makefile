@@ -133,5 +133,5 @@ tests/hevm/pass/%.act.hevm.pass.fast:
 	$(eval CONTRACT := $(shell awk '/contract/{ print $$2 }' tests/hevm/pass/$*.sol))
 	./bin/act equiv --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
-test-ci: test-parse test-type test-rocq test-equiv-fast
+test-ci: test-parse test-type test-rocq test-equiv
 test: test-ci test-cabal
