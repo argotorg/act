@@ -19,4 +19,4 @@ updates
   y[1][0] := [7,8,9]
 
 ensures
-  post(y[ if pre(y[1][1]) != post(y[1][1]) then 0 else 100 ][0][0]) >= 0
+  post(y)[ if pre(y)[1][1] != post(y)[1][1] then 0 else 100 ][0][0] >= 0

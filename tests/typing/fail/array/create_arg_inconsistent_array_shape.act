@@ -1,6 +1,7 @@
 contract A
 
 constructor(int32[3][2] n2)
+creates
 
 
 contract B

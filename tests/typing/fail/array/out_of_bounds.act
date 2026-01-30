@@ -24,8 +24,9 @@ case x[5][4][3] < 0:
     a[-1] := x[10][0][2]
     x[2][3][5] := 4
 
-returns post(x[pre(a[2])][0][0])
+returns post(x)[pre(a)[2]][0][0]
 
 case x[5][4][3] >= 0:
 
+updates
 returns 1

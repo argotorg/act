@@ -1,6 +1,7 @@
 contract A
 
 constructor(int x)
+creates
 
 
 contract B

@@ -11,4 +11,5 @@ transition f() : int
 
 case a[0] < 0:
 
-returns post(a[100])
+updates
+returns a[100]

@@ -23,4 +23,4 @@ updates
 
 ensures
 
-  post(y[ if pre(y[1][0][0]) == post(y[1][0][0]) then 0 else 100 ][0][0]) >= 0
+  post(y)[ if pre(y)[1][0][0] == post(y)[1][0][0] then 0 else 100 ][0][0]) >= 0

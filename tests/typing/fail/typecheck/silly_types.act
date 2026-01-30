@@ -11,9 +11,9 @@ creates
 
 transition g()
 
-iff in range uint256
+iff // in range uint256
 
-    x + y
+    inRange(uint256, x + y)
 
 updates
 
@@ -21,4 +21,3 @@ updates
     x := x
     y := (x + p) == (q > y)
     p := (x + p) and (q > y)
-    q

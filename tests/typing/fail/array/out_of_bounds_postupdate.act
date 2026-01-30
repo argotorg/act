@@ -14,5 +14,5 @@ updates
   ar[1] := 5
 
 ensures
-  post(ar[post(x)]) == 5
+  post(ar)[post(x)] == 5
 

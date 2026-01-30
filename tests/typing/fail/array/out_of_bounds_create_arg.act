@@ -1,6 +1,7 @@
 contract A
 
 constructor(int x, uint[2][3] y)
+creates
 
 
 contract B

@@ -1,0 +1,4 @@
+{
+  "specifications" : ["../ERC20/erc20.act", "amm.act"]
+}
+

@@ -10,4 +10,5 @@ transition f() : uint256
 
 case a[-1] < 0:
 
+updates
 returns 1

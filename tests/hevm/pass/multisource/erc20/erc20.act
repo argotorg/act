@@ -9,7 +9,7 @@ creates
   mapping(address => mapping(address => uint)) allowance := []
 
 
-transition transfer(uint256 _value, address to) : uint256
+transition transfer(uint256 _value, address to) : bool
 
 iff
 
@@ -23,15 +23,15 @@ case CALLER != to:
     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
                           , to     => balanceOf[to] + _value]
 
-  returns 1
+  returns true
 
 case CALLER == to:
 
   updates
-  returns 1
+  returns true
 
 
-transition transferFrom(address src, address dst, uint amount) : uint256
+transition transferFrom(address src, address dst, uint amount) : bool
 
 iff
 
@@ -46,7 +46,7 @@ case src != dst and CALLER == src:
     balanceOf := balanceOf[ src => balanceOf[src] - amount
                           , dst => balanceOf[dst] + amount]
 
-  returns 1
+  returns true
 
 case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
 
@@ -55,7 +55,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
     balanceOf := balanceOf[ src => balanceOf[src] - amount
                           , dst => balanceOf[dst] + amount]
 
-  returns 1
+  returns true
 
 case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
@@ -65,7 +65,7 @@ case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
     balanceOf := balanceOf[ src => balanceOf[src] - amount
                           , dst => balanceOf[dst] + amount]
 
-  returns 1
+  returns true
 
 case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
@@ -73,15 +73,15 @@ case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
     allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
 
-  returns 1
+  returns true
 
 case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
 
   updates
-  returns 1
+  returns true
 
 
-transition approve(address spender, uint amount) : uint256
+transition approve(address spender, uint amount) : bool
 
 iff
 
@@ -94,15 +94,15 @@ case CALLER != spender:
 
     allowance := allowance[ CALLER => [ spender => amount ] ]
 
-  returns 1
+  returns true
 
 case CALLER == spender:
 
   updates
-  returns 1
+  returns true
 
 
-transition burn(uint256 amount) : uint256
+transition burn(uint256 amount) : bool
 
 iff
 
@@ -115,10 +115,10 @@ updates
   totalSupply := totalSupply - amount
   balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - amount ]
 
-returns 1
+returns true
 
 
-transition burnFrom(address src, uint256 amount) : uint256
+transition burnFrom(address src, uint256 amount) : bool
 
 iff
   amount <= totalSupply
@@ -133,7 +133,7 @@ case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
     totalSupply := totalSupply - amount
     balanceOf := balanceOf[ src =>  balanceOf[src] - amount ]
 
-  returns 1
+  returns true
 
 case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
 
@@ -143,7 +143,7 @@ case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
     allowance := allowance[ src => [ CALLER => allowance[src][CALLER] - amount] ]
     balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
-  returns 1
+  returns true
 
 case CALLER == src:
 
@@ -152,14 +152,14 @@ case CALLER == src:
     totalSupply := totalSupply - amount
     balanceOf := balanceOf[ src => balanceOf[src] - amount ]
 
-  returns 1
+  returns true
 
 ensures
 
   pre(balanceOf)[src] - post(balanceOf)[src] == pre(totalSupply) - post(totalSupply)
 
 
-transition mint(address dst, uint256 amount) : uint256
+transition mint(address dst, uint256 amount) : bool
 
 iff
   CALLVALUE == 0
@@ -171,7 +171,7 @@ updates
   totalSupply := totalSupply + amount
     balanceOf := balanceOf[ dst => balanceOf[dst] + amount ]
 
-returns 1
+returns true
 
 
 // View functions:

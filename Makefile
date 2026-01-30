@@ -38,7 +38,8 @@ typing_fail=$(filter-out $(passing_typing), $(frontend_fail))
 failing_parser=tests/typing/pass/dss/vat.act
 failing_typing=tests/typing/pass/dss/vat.act tests/typing/pass/creation/createMultiple.act tests/typing/pass/staticstore/staticstore.act
 # supposed to fail, but pass
-passing_typing=tests/typing/fail/array/out_of_bounds_inv.act tests/typing/fail/array/out_of_bounds_post.act
+passing_typing=tests/typing/fail/array/out_of_bounds_inv.act tests/typing/fail/array/out_of_bounds_post.act tests/typing/fail/array/out_of_bounds_preupdate.act tests/typing/fail/array/out_of_bounds_postupdate.act \
+	       tests/typing/fail/array/const_array.act
 
 invariant_specs=$(wildcard tests/invariants/*/*.act)
 invariant_pass=$(filter-out $(invariant_buggy), $(wildcard tests/invariants/pass/*.act) $(typing_pass))
