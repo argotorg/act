@@ -1,37 +1,29 @@
-behaviour add of SafeAdd
-interface add(uint256 x, uint256 y)
+contract SafeAdd
 
-iff in range uint256
+constructor ()
+creates
 
-    x + y
+transition add(uint256 x, uint256 y) : uint256
 
 iff
-    CALLVALUE == 0
+    inRange(uint256, x+y)
 
+updates
 returns x + y
 
-behaviour mul of SafeAdd
-interface mul(uint256 x, uint256 y)
-
-iff in range uint256
-
-    x * y
+transition mul(uint256 x, uint256 y) : uint256
 
 iff
+    inRange(uint256, x*y)
 
-    CALLVALUE == 0
-
+updates
 returns x * y
 
-behaviour double of SafeAdd
-interface double(uint256 x)
-
-iff in range uint256
-
-    2 * x
+transition double(uint256 x) : uint256
 
 iff
-
+    inRange(uint256, 2*x)
     CALLVALUE == 0
 
+updates
 returns 2 * x

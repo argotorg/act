@@ -1,0 +1,63 @@
+struct Ilk {
+  uint256 Art;
+  uint256 rate;
+  uint256 spot;
+  uint256 line;
+  uint256 dust;
+}
+
+struct Urn {
+  uint256 ink;
+  uint256 art;
+}
+
+contract Vat
+
+constructor()
+
+creates
+
+  mapping(bytes32 => Ilk) ilks
+  mapping(bytes32 => mapping(address => Urn)) urns
+  uint256 Line
+  uint256 live
+  mapping(address => mapping(address => uint256)) can
+  mapping(bytes32 => mapping(address => uint256)) gem
+  uint256 debt
+  mapping(address => uint256) dai
+
+transition frob(bytes32 i, address u, address v, address w, int dink, int dart)
+
+iff in range uint256
+
+    urns[i][u].ink + dink
+    urns[i][u].art + dart
+    ilks[i].Art    + dart
+    (ilks[i].Art + dart) * ilks[i].rate
+    dai[w] + (ilks[i].rate * dart)
+    debt + (ilks[i].rate * dart)
+
+iff in range int256
+
+    ilks[i].rate
+    ilks[i].rate * dart
+
+iff
+    live == 1
+    ilks[i].rate != 0
+    dart <= 0 or ((ilks[i].art + dart) * ilks[i].rate <= ilks[i].line and debt + ilks[i].rate * dart <= line)
+    (dart <= 0) or (((ilks[i].Art + dart) * ilks[i].rate <= ilks[i].line) and ((debt + ilks[i].rate * dart) <= line))
+    (dart <= 0 and dink >= 0) or (((urns[i][u].art + dart) * ilks[i].rate) <= ((urns[i][u].ink + dink) * ilks[i].spot))
+    (dart <= 0 and dink >= 0) or (u == CALLER or can[u][CALLER] == 1)
+
+    (dink <= 0) or (v == CALLER or Can[v][CALLER] == 1)
+    (dart >= 0) or (w == CALLER or Can[w][CALLER] == 1)
+
+updates
+
+    urns[i][u].ink := urns[i][u].ink + dink
+    urns[i][u].art := urns[i][u].art + dart
+    ilks[i].Art    := ilks[i].Art + dart
+    gem[i][v]      := gem[i][v]   - dink
+    dai[w]         := dai[w] + ilks[i].rate * dart
+    debt           := debt   + ilks[i].rate * dart

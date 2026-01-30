@@ -1,42 +1,30 @@
-constructor of Map
-interface constructor()
+contract Map
 
-iff
-
-  CALLVALUE == 0
+constructor()
 
 creates
   uint256 val := 0
-  mapping(uint => uint) f := [0 := 42]
+  mapping(uint => uint) f := [0 => 42]
 
-behaviour val of Map
-interface val()
+transition val() : uint256
 
-iff
+updates
+returns val
 
-  CALLVALUE == 0
+transition f(uint x) : uint256
 
-returns pre(val)
-
-behaviour f of Map
-interface f(uint x)
-
-iff
-
-  CALLVALUE == 0
-
-returns pre(f[x])
+updates
+returns f[x]
 
 
-behaviour set of Map
-interface set(uint value, uint key)
+transition set(uint val, uint key) : uint256
 
 iff
 
   CALLVALUE == 0
 
-storage
+updates
 
-  f[key] => value
+  f := f[key => val]
 
 returns 1

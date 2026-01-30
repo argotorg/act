@@ -1,39 +1,28 @@
 // contract A
-constructor of A
-interface constructor(uint z)
+contract A
 
-iff
-   CALLVALUE == 0
+constructor(uint z)
 
 creates
    uint x := z
 
 
-behaviour x of A
-interface x()
+transition x() : uint256
 
-iff
-   CALLVALUE == 0
+updates
 
-returns
-   pre(x)
+returns x
 
 // contract C
-constructor of C
-interface constructor()
-iff
-   CALLVALUE == 0
+contract C
+
+constructor()
 
 creates
-   A a1 := create A(42)
-   A a2 := create A(17)
+   A a1 := new A(42)
+   A a2 := new A(17)
 
-behaviour change of C
-interface change()
+transition change()
 
-iff
-
-  CALLVALUE == 0
-  
-storage
-  a1 => a2
+updates
+  a1 := a2

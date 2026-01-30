@@ -1,0 +1,183 @@
+{
+  "contracts": [
+    {
+      "behaviours": [
+        {
+          "cases": [
+            {
+              "body": [
+                [],
+                {
+                  "expression": {
+                    "literal": "1",
+                    "type": "int"
+                  },
+                  "kind": "TypedExpr",
+                  "type": "TInteger 256 Unsigned"
+                }
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "A",
+          "interface": {
+            "args": [
+              {
+                "abitype": {
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
+                },
+                "id": "\"x\"",
+                "kind": "Declaration"
+              }
+            ],
+            "id": "AlexPn 47 6 13",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "f",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "x"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "A",
+        "interface": {
+          "args": [],
+          "id": "AlexPn 23 3 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ]
+      }
+    }
+  }
+}

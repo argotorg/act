@@ -1,49 +1,34 @@
-constructor of A
-interface constructor()
+contract A
 
-iff
-   CALLVALUE == 0
+constructor()
 
 creates
    uint x := 0
 
-behaviour set_x of A
-interface set_x(uint z)
+transition set_x(uint z)
 
-iff
-   CALLVALUE == 0
-
-storage
-   x => z
+updates
+   x := z
 
 
-constructor of B
-interface constructor()
+contract B
 
-iff
-   CALLVALUE == 0
+constructor()
 
 creates
    uint y := 0
-   A a := create A()
+   A a := new A()
 
-behaviour remote of B
-interface remote(uint z)
+transition remote(uint z) : uint256
 
-iff
-   CALLVALUE == 0
-
-storage
-   a.x => z
+updates
+   a.x := z
 
 returns 0
 
 
-behaviour multi of B
-interface multi(uint z)
+transition multi(uint z)
 
-iff
-   CALLVALUE == 0
-storage
-   y => z
-   a.x => 42
+updates
+   y := z
+   a.x := 42

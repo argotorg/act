@@ -1,0 +1,17 @@
+contract A
+
+constructor()
+
+creates
+
+  uint[3] ar := [1,2,3]
+
+
+
+contract B
+
+constructor(address<A> a)
+
+creates
+
+  int y := a.ar[3]

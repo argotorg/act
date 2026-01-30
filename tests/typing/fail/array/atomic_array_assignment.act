@@ -1,0 +1,7 @@
+contract B
+
+constructor()
+
+creates
+
+  uint x := [1]

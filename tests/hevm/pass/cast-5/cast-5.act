@@ -1,44 +1,28 @@
-constructor of A
-interface constructor(uint w1)
+contract A
 
-iff
-    CALLVALUE == 0
+constructor(uint w1)
 
 creates
     uint w := w1
 
-constructor of B
-interface constructor(uint z1)
+contract B
 
-iff
-    CALLVALUE == 0
+constructor(uint z1)
 
 creates
     uint z := z1
 
-constructor of C
-interface constructor(address a1, address a2)
+contract C
 
-pointers
-  a1 |-> A
-  a2 |-> B
-  
-iff
-    CALLVALUE == 0
+constructor(address<A> a1, address<B> a2)
 
 creates
     A a := a1
     B b := a2
 
-constructor of D
-interface constructor(address a1, address a2)
+contract D
 
-pointers
-  a1 |-> A
-  a2 |-> B
-
-iff
-    CALLVALUE == 0    
+constructor(address<A> a1, address<B> a2)
 
 creates
-    C c1 := create C(a1, a2)
+    C c1 := new C(a1, a2)

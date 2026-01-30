@@ -3,6 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {-|
 Module      : Syntax
@@ -13,12 +14,13 @@ module Act.Syntax where
 import Prelude hiding (LT, GT)
 
 import Data.List hiding (singleton)
+import Data.Maybe (mapMaybe)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map (Map,empty,insertWith,unionsWith,unionWith,singleton)
 
 import Act.Syntax.Typed as Typed
 import qualified Act.Syntax.TypedExplicit as TypedExplicit
-import           Act.Syntax.Untyped hiding (Contract, Constructor, Post, Update)
+import           Act.Syntax.Untyped hiding (Contract, Constructor, Update, Ref(..), StorageUpdate)
 import qualified Act.Syntax.Untyped as Untyped
 
 -----------------------------------------
@@ -30,88 +32,106 @@ import qualified Act.Syntax.Untyped as Untyped
 invExp :: TypedExplicit.InvariantPred -> TypedExplicit.Exp ABoolean
 invExp (PredTimed pre post) = pre <> post
 
-locsFromBehaviour :: TypedExplicit.Behaviour -> [TypedExplicit.Location]
-locsFromBehaviour (Behaviour _ _ _ _ preconds cases postconds rewrites returns) = nub $
+locsFromBehaviour :: Typed.Behaviour t -> [Typed.TypedRef t]
+locsFromBehaviour (Behaviour _ _ _ _ _ preconds cases _) = nub $
   concatMap locsFromExp preconds
-  <> concatMap locsFromExp cases
-  <> concatMap locsFromExp postconds
-  <> concatMap locsFromUpdate rewrites
-  <> maybe [] locsFromTypedExp returns
+  -- TODO: commenting out postconds for now as it causes issues with timing. 
+  -- We need to get rid of the umplicit timing to add this back
+  -- <> concatMap locsFromExp postconds
+  <> concatMap locsFromCase cases
 
-locsFromConstructor :: TypedExplicit.Constructor -> [TypedExplicit.Location]
-locsFromConstructor (TypedExplicit.Constructor _ _ _ pre post inv initialStorage) = nub $
+locsFromCase :: Bcase t -> [Typed.TypedRef t]
+locsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
+  locsFromExp cond <> concatMap locsFromUpdateRHS rewrites <> maybe [] locsFromTypedExp mret
+
+locsFromConstructor :: Typed.Constructor t -> [Typed.TypedRef t]
+locsFromConstructor (Typed.Constructor _ _ _ _ pre cases post inv) = nub $
   concatMap locsFromExp pre
   <> concatMap locsFromExp post
   <> concatMap locsFromConstrInvariant inv
-  <> concatMap locsFromUpdate initialStorage
+  <> concatMap locsFromConstrCase cases
 
-locsFromInvariant :: TypedExplicit.Invariant -> [TypedExplicit.Location]
+locsFromConstrCase :: Ccase t -> [Typed.TypedRef t]
+locsFromConstrCase (Typed.Case _ cond creates) = nub $
+  locsFromExp cond <> concatMap locsFromUpdateRHS creates
+
+locsFromInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromInvariant (Invariant _ pre bounds (PredTimed predpre predpost)) =
   concatMap locsFromExp pre <>  concatMap locsFromExp bounds
   <> locsFromExp predpre <> locsFromExp predpost
+locsFromInvariant (Invariant _ pre bounds (PredUntimed pred')) =
+  concatMap locsFromExp pre <>  concatMap locsFromExp bounds
+  <> locsFromExp pred'
 
-locsFromConstrInvariant :: TypedExplicit.Invariant -> [TypedExplicit.Location]
+locsFromConstrInvariant :: Typed.Invariant t -> [Typed.TypedRef t]
 locsFromConstrInvariant (Invariant _ pre _ (PredTimed _ predpost)) =
   concatMap locsFromExp pre <> locsFromExp predpost
+locsFromConstrInvariant (Invariant _ pre _ (PredUntimed pred')) =
+  concatMap locsFromExp pre <> locsFromExp pred'
 
 ------------------------------------
 -- * Extract from any typed AST * --
 ------------------------------------
 
 nameOfContract :: Contract t -> Id
-nameOfContract (Contract (Constructor cname _ _ _ _ _ _) _) = cname
+nameOfContract (Contract _ (Constructor _ cname _ _ _ _ _ _) _) = cname
 
 behvsFromAct :: Typed.Act t -> [Behaviour t]
 behvsFromAct (Act _ contracts) = behvsFromContracts contracts
 
 behvsFromContracts :: [Contract t] -> [Behaviour t]
-behvsFromContracts contracts = concatMap (\(Contract _ b) -> b) contracts
+behvsFromContracts contracts = concatMap (\(Contract _ _ b) -> b) contracts
 
 constrFromContracts :: [Contract t] -> [Constructor t]
-constrFromContracts contracts = fmap (\(Contract c _) -> c) contracts
+constrFromContracts contracts = fmap (\(Contract _ c _) -> c) contracts
 
-isLocalLoc :: Location t -> Bool
-isLocalLoc (Loc _ SStorage item) = isLocalItem item
-isLocalLoc (Loc _ SCalldata _) = False
-
-isLocalItem :: TItem a k t -> Bool
-isLocalItem (Item _ _ ref) = isLocalRef ref
+isStorageTRef :: TypedRef t -> Bool
+isStorageTRef (TRef _ _ ref) = isLocalRef ref
 
 isLocalRef :: Ref k t -> Bool
-isLocalRef (SVar _ _ _) = True
+isLocalRef (SVar _ _ _ _) = True
 isLocalRef (CVar _ _ _) = False
-isLocalRef (SArray _ ref _ _) = isLocalRef ref
-isLocalRef (SMapping _ ref _ _) = isLocalRef ref
-isLocalRef (SField _ _ _ _) = False
+isLocalRef (RArrIdx _ ref _ _) = isLocalRef ref
+isLocalRef (RMapIdx _ (TRef _ _ ref) _) = isLocalRef ref
+isLocalRef (RField _ _ _ _) = False
 
-partitionLocs :: [Location t] -> ([Location t], [Location t])
-partitionLocs locs = foldMap sepLoc locs
+isCalldata :: Ref k t -> Bool
+isCalldata (SVar _ _ _ _) = False
+isCalldata (CVar _ _ _) = True
+isCalldata (RArrIdx _ ref _ _) = isCalldata ref
+isCalldata (RMapIdx _ (TRef _ _ ref) _) = isCalldata ref
+isCalldata (RField _ r _ _) = isCalldata r
+
+-- Zoe: not sure what's the correct definition
+-- Lefteris: may not be necessary but works for now
+partitionLocs :: [TypedRef t] -> ([TypedRef t], [TypedRef t])
+partitionLocs locs = foldMap sepTRef locs
   where
-    sepLoc :: Location t -> ([Location t], [Location t])
-    sepLoc loc@(Loc _ SStorage _) = ([loc],[])
-    sepLoc loc@(Loc _ SCalldata _) = ([],[loc])
+    sepTRef :: TypedRef t -> ([TypedRef t], [TypedRef t])
+    sepTRef tref@(TRef _ _ r) | isCalldata r = ([],[tref])
+    sepTRef tref@(TRef _ _ _) = ([tref],[])
 
-locsFromUpdate :: StorageUpdate t -> [Location t]
+locsFromUpdate :: StorageUpdate t -> [TypedRef t]
 locsFromUpdate update = nub $ case update of
-  (Update _ item e) -> locsFromItem SStorage item <> locsFromExp e
+  (Update t ref e) -> locsFromTRef (TRef t SLHS ref) <> locsFromExp e
 
-locsFromUpdateRHS :: StorageUpdate t -> [Location t]
+locsFromUpdateRHS :: StorageUpdate t -> [TypedRef t]
 locsFromUpdateRHS update = nub $ case update of
   (Update _ _ e) -> locsFromExp e
 
-locFromUpdate :: StorageUpdate t -> Location t
-locFromUpdate (Update typ item _) = Loc typ SStorage item
+locFromUpdate :: StorageUpdate t -> Ref LHS t
+locFromUpdate (Update _ item _) = item
 
-locsFromItem :: SRefKind k -> TItem a k t -> [Location t]
-locsFromItem k item = _Loc k item : concatMap locsFromTypedExp (ixsFromItem item)
+locsFromTRef :: TypedRef t -> [TypedRef t]
+locsFromTRef ref@(TRef (toSType -> SType) _ _) = ref : concatMap locsFromTypedExp (ixsFromTRef ref)
 
-locsFromTypedExp :: TypedExp t -> [Location t]
-locsFromTypedExp (TExp _ _ e) = locsFromExp e
+locsFromTypedExp :: TypedExp t -> [TypedRef t]
+locsFromTypedExp (TExp _ e) = locsFromExp e
 
-locsFromExp :: Exp a t -> [Location t]
+locsFromExp :: Exp a t -> [TypedRef t]
 locsFromExp = nub . go
   where
-    go :: Exp a t -> [Location t]
+    go :: Exp a t -> [TypedRef t]
     go e = case e of
       And _ a b   -> go a <> go b
       Or _ a b    -> go a <> go b
@@ -143,9 +163,13 @@ locsFromExp = nub . go
       LitBool {} -> []
       IntEnv {} -> []
       ByEnv {} -> []
-      Create _ _ es -> concatMap locsFromTypedExp es
+      Create _ _ es _ -> concatMap locsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
-      VarRef _ _ k a -> locsFromItem k a
+      VarRef _ vt a -> locsFromTRef (TRef vt SRHS a)
+      Address _ _ e' -> locsFromExp e'
+      Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
+      Typed.MappingUpd _ r t1@VType t2@VType kvs -> 
+        locsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SRHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
 createsFromExp :: Exp a t -> [Id]
 createsFromExp = nub . go
@@ -182,26 +206,34 @@ createsFromExp = nub . go
       IntEnv {} -> []
       ByEnv {} -> []
       Array _ l  -> concatMap go l
-      Create _ f es -> [f] <> concatMap createsFromTypedExp es
+      Create _ f es _ -> [f] <> concatMap createsFromTypedExp es
       ITE _ x y z -> go x <> go y <> go z
-      VarRef _ _ _ a -> createsFromItem a
+      VarRef _ vt a -> createsFromTRef (TRef vt SRHS a)
+      Address _ _ e' -> createsFromExp e'
+      Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
+      Typed.MappingUpd _ r t1@VType t2@VType kvs ->
+        createsFromTRef (TRef (TMapping (ValueType t1) (ValueType t2)) SRHS r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
-createsFromItem :: TItem k a t -> [Id]
-createsFromItem item = concatMap createsFromTypedExp (ixsFromItem item)
+createsFromTRef :: TypedRef t -> [Id]
+createsFromTRef ref = concatMap createsFromTypedExp (ixsFromTRef ref)
 
 createsFromTypedExp :: TypedExp t -> [Id]
-createsFromTypedExp (TExp _ _ e) = createsFromExp e
+createsFromTypedExp (TExp _ e) = createsFromExp e
 
 createsFromContract :: Contract t -> [Id]
-createsFromContract (Contract constr behvs) =
+createsFromContract (Contract _ constr behvs) =
   createsFromConstructor constr <> concatMap createsFromBehaviour behvs
 
+createsFromConstrCase :: Ccase t -> [Id]
+createsFromConstrCase (Typed.Case _ cond rewrites) = nub $
+  createsFromExp cond <> concatMap createsFromUpdate rewrites
+
 createsFromConstructor :: Constructor t -> [Id]
-createsFromConstructor (Constructor _ _ _ pre post inv initialStorage) = nub $
+createsFromConstructor (Constructor _ _ _ _ pre cases post inv) = nub $
   concatMap createsFromExp pre
   <> concatMap createsFromExp post
   <> concatMap createsFromInvariant inv
-  <> concatMap createsFromUpdate initialStorage
+  <> concatMap createsFromConstrCase cases
 
 createsFromInvariant :: Invariant t -> [Id]
 createsFromInvariant (Invariant _ pre bounds ipred) =
@@ -213,44 +245,57 @@ createsFromInvariantPred (PredTimed pre post) = createsFromExp pre <> createsFro
 
 createsFromUpdate :: StorageUpdate t ->[Id]
 createsFromUpdate update = nub $ case update of
-  TypedExplicit.Update _ item e -> createsFromItem item <> createsFromExp e
+  TypedExplicit.Update t ref e -> createsFromTRef (TRef t SLHS ref) <> createsFromExp e
+
+createsFromCase :: Bcase t -> [Id]
+createsFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
+  createsFromExp cond <> concatMap createsFromUpdate rewrites <> maybe [] createsFromTypedExp mret
 
 createsFromBehaviour :: Behaviour t -> [Id]
-createsFromBehaviour (Behaviour _ _ _ _ _ preconds postconds rewrites returns) = nub $
+createsFromBehaviour (Behaviour _ _ _ _ _ preconds cases postconds) = nub $
   concatMap createsFromExp preconds
   <> concatMap createsFromExp postconds
-  <> concatMap createsFromUpdate rewrites
-  <> maybe [] createsFromTypedExp returns
+  <> concatMap createsFromCase cases
 
 
 pointersFromContract :: Contract t -> [Id]
-pointersFromContract (Contract constr behvs) =
+pointersFromContract (Contract _ constr behvs) =
   nub $ pointersFromConstructor constr <> concatMap pointersFromBehaviour behvs
 
 pointersFromConstructor :: Constructor t -> [Id]
-pointersFromConstructor (Constructor _ _ ptrs _ _ _ _) =
-  map (\(PointsTo _ _ c) -> c) ptrs
+pointersFromConstructor (Constructor _ _ (Interface _ decls) _ _ _ _ _) =
+  mapMaybe (fmap snd . pointerFromDecl) decls
 
 pointersFromBehaviour :: Behaviour t -> [Id]
-pointersFromBehaviour (Behaviour _ _ _ ptrs _ _ _ _ _) =
-  map (\(PointsTo _ _ c) -> c) ptrs
+pointersFromBehaviour (Behaviour _ _ _ (Interface _ decls) _ _ _ _) =
+  mapMaybe (fmap snd . pointerFromDecl) decls
+
+pointerFromDecl :: Arg -> Maybe (Id, Id)
+pointerFromDecl (Arg (ContractArg _ c) name) = Just (name,c)
+pointerFromDecl _ = Nothing
+
+ethEnvFromCase :: Bcase t -> [EthEnv]
+ethEnvFromCase (Typed.Case _ cond (rewrites, mret)) = nub $
+  ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites <> maybe [] ethEnvFromTypedExp mret
 
 ethEnvFromBehaviour :: Behaviour t -> [EthEnv]
-ethEnvFromBehaviour (Behaviour _ _ _ _ preconds cases postconds rewrites returns) = nub $
+ethEnvFromBehaviour (Behaviour _ _ _ _ _ preconds cases postconds) = nub $
   concatMap ethEnvFromExp preconds
-  <> concatMap ethEnvFromExp cases
+  <> concatMap ethEnvFromCase cases
   <> concatMap ethEnvFromExp postconds
-  <> concatMap ethEnvFromUpdate rewrites
-  <> maybe [] ethEnvFromTypedExp returns
 
-ethEnvFromConstructor :: TypedExplicit.Constructor -> [EthEnv]
-ethEnvFromConstructor (TypedExplicit.Constructor _ _ _ pre post inv initialStorage) = nub $
+ethEnvFromConstrCase :: Ccase t -> [EthEnv]
+ethEnvFromConstrCase (Typed.Case _ cond rewrites) = nub $
+  ethEnvFromExp cond <> concatMap ethEnvFromUpdate rewrites
+
+ethEnvFromConstructor :: Typed.Constructor t -> [EthEnv]
+ethEnvFromConstructor (Typed.Constructor _ _ _ _ pre cases post inv) = nub $
   concatMap ethEnvFromExp pre
   <> concatMap ethEnvFromExp post
   <> concatMap ethEnvFromInvariant inv
-  <> concatMap ethEnvFromUpdate initialStorage
+  <> concatMap ethEnvFromConstrCase cases
 
-ethEnvFromInvariant :: TypedExplicit.Invariant -> [EthEnv]
+ethEnvFromInvariant :: Typed.Invariant t -> [EthEnv]
 ethEnvFromInvariant (Invariant _ pre bounds invpred) =
   concatMap ethEnvFromExp pre <>  concatMap ethEnvFromExp bounds <> ethEnvFromInvariantPred invpred
 
@@ -260,13 +305,13 @@ ethEnvFromInvariantPred (PredTimed pre post) = ethEnvFromExp pre <> ethEnvFromEx
 
 ethEnvFromUpdate :: StorageUpdate t -> [EthEnv]
 ethEnvFromUpdate rewrite = case rewrite of
-  TypedExplicit.Update _ item e -> nub $ ethEnvFromItem item <> ethEnvFromExp e
+  TypedExplicit.Update t ref e -> nub $ ethEnvFromItem (TRef t SLHS ref) <> ethEnvFromExp e
 
-ethEnvFromItem :: TItem k a t -> [EthEnv]
-ethEnvFromItem = nub . concatMap ethEnvFromTypedExp . ixsFromItem
+ethEnvFromItem :: TypedRef t -> [EthEnv]
+ethEnvFromItem = nub . concatMap ethEnvFromTypedExp . ixsFromTRef
 
 ethEnvFromTypedExp :: TypedExp t -> [EthEnv]
-ethEnvFromTypedExp (TExp _ _ e) = ethEnvFromExp e
+ethEnvFromTypedExp (TExp _ e) = ethEnvFromExp e
 
 ethEnvFromExp :: Exp a t -> [EthEnv]
 ethEnvFromExp = nub . go
@@ -304,86 +349,74 @@ ethEnvFromExp = nub . go
       InRange _ _ a -> go a
       IntEnv _ a -> [a]
       ByEnv _ a -> [a]
-      Create _ _ ixs -> concatMap ethEnvFromTypedExp ixs
-      VarRef _ _ _ a -> ethEnvFromItem a
+      Create _ _ ixs _ -> concatMap ethEnvFromTypedExp ixs
+      VarRef _ _ a -> concatMap ethEnvFromTypedExp (ixsFromRef a)
+      Address _ _ e' -> ethEnvFromExp e'
+      Typed.Mapping _ _ _ kvs -> concatMap (\(k', v') -> go k' <> go v') kvs
+      Typed.MappingUpd _ r _ _ kvs -> concatMap ethEnvFromTypedExp (ixsFromRef r) <> concatMap (\(k', v') -> go k' <> go v') kvs
 
-idFromItem :: TItem a k t -> Id
-idFromItem (Item _ _ ref) = idFromRef ref
+idFromTRef :: TypedRef t -> Id
+idFromTRef (TRef _ _ ref) = idFromRef ref
 
 idFromRef :: Ref k t -> Id
-idFromRef (SVar _ _ x) = x
+idFromRef (SVar _ _ _ x) = x
 idFromRef (CVar _ _ x) = x
-idFromRef (SArray _ e _ _) = idFromRef e
-idFromRef (SMapping _ e _ _) = idFromRef e
-idFromRef (SField _ e _ _) = idFromRef e
+idFromRef (RArrIdx _ e _ _) = idFromRef e
+idFromRef (RMapIdx _ (TRef _ _ e) _) = idFromRef e
+idFromRef (RField _ e _ _) = idFromRef e
 
 idFromUpdate :: StorageUpdate t -> Id
-idFromUpdate (TypedExplicit.Update _ item _) = idFromItem item
-
-idFromLocation :: Location t -> Id
-idFromLocation (Loc _ _ item) = idFromItem item
+idFromUpdate (TypedExplicit.Update _ ref _) = idFromRef ref
 
 -- Used to compare all identifiers in a location access
-idsFromLocation :: Location t -> [String]
-idsFromLocation (Loc _ _ item) = idsFromItem item
-
-idsFromItem :: TItem a k t -> [String]
-idsFromItem (Item _ _ ref) = idsFromRef ref
+idsFromTRef :: TypedRef t -> [String]
+idsFromTRef (TRef _ _ ref) = idsFromRef ref
 
 idsFromRef :: Ref k t -> [String]
-idsFromRef (SVar _ _ x) = [x]
+idsFromRef (SVar _ _ _ x) = [x]
 idsFromRef (CVar _ _ x) = [x]
-idsFromRef (SArray _ e _ _) = idsFromRef e
-idsFromRef (SMapping _ e _ _) = idsFromRef e
-idsFromRef (SField _ e _ f) = f : idsFromRef e
+idsFromRef (RArrIdx _ e _ _) = idsFromRef e
+idsFromRef (RMapIdx _ (TRef _ _ e) _) = idsFromRef e
+idsFromRef (RField _ e _ f) = f : idsFromRef e
 
-ixsFromItem :: TItem a k t -> [TypedExp t]
-ixsFromItem (Item _ _ item) = ixsFromRef item
-
-ixsFromLocation :: Location t -> [TypedExp t]
-ixsFromLocation (Loc _ _ item) = ixsFromItem item
+ixsFromTRef :: TypedRef t -> [TypedExp t]
+ixsFromTRef (TRef _ _ item) = ixsFromRef item
 
 ixsFromRef :: Ref k t -> [TypedExp t]
-ixsFromRef (SVar _ _ _) = []
+ixsFromRef (SVar _ _ _ _) = []
 ixsFromRef (CVar _ _ _) = []
-ixsFromRef (SArray _ ref _ ixs) = (fst <$> ixs) ++ ixsFromRef ref
-ixsFromRef (SMapping _ ref _ ixs) = ixs ++ ixsFromRef ref
-ixsFromRef (SField _ ref _ _) = ixsFromRef ref
+ixsFromRef (RArrIdx _ ref ix _) = (TExp defaultUInteger ix) : ixsFromRef ref
+ixsFromRef (RMapIdx _ (TRef _ _ ref) ix) = ix : ixsFromRef ref
+ixsFromRef (RField _ ref _ _) = ixsFromRef ref
 
 ixsFromUpdate :: StorageUpdate t -> [TypedExp t]
-ixsFromUpdate (TypedExplicit.Update _ item _) = ixsFromItem item
+ixsFromUpdate (TypedExplicit.Update _ ref _) = ixsFromRef ref
 
-itemType :: TItem a k t -> ActType
-itemType (Item t _ _) = actType t
+--itemType :: TypedRef t -> TValueType a
+--itemType (TRef t _ _) = t -- fromAbiType $ toAbiType t -- TODO: cleanup, residue from STYPEs
 
-isIndexed :: TItem a k t -> Bool
-isIndexed item = isArrayItem item || isMappingItem item
+isIndexed :: TypedRef t -> Bool
+isIndexed ref = isArrayTRef ref || isMappingTRef ref
 
-isArrayLoc :: Location t -> Bool
-isArrayLoc (Loc _ _ item) = isArrayItem item
-
-isArrayItem :: TItem a k t -> Bool
-isArrayItem (Item _ _ ref) = isArrayRef ref
+isArrayTRef :: TypedRef t -> Bool
+isArrayTRef (TRef _ _ ref) = isArrayRef ref
 
 isArrayRef :: Ref k t -> Bool
-isArrayRef (SVar _ _ _) = False
+isArrayRef (SVar _ _ _ _) = False
 isArrayRef (CVar _ _ _) = False
-isArrayRef (SArray _ _ _ _) = True
-isArrayRef (SMapping _ _ _ _) = False  -- may change in the future
-isArrayRef (SField _ ref _ _) = isArrayRef ref
+isArrayRef (RArrIdx _ _ _ _) = True
+isArrayRef (RMapIdx _ _ _) = False  -- may change in the future
+isArrayRef (RField _ ref _ _) = isArrayRef ref
 
-isMappingLoc :: Location t -> Bool
-isMappingLoc (Loc _ _ item) = isMappingItem item
-
-isMappingItem :: TItem a k t -> Bool
-isMappingItem (Item _ _ ref) = isMappingRef ref
+isMappingTRef :: TypedRef t -> Bool
+isMappingTRef (TRef _ _ ref) = isMappingRef ref
 
 isMappingRef :: Ref k t -> Bool
-isMappingRef (SVar _ _ _) = False
+isMappingRef (SVar _ _ _ _) = False
 isMappingRef (CVar _ _ _) = False
-isMappingRef (SArray _ _ _ _) = False  -- may change in the future
-isMappingRef (SMapping _ _ _ _) = True
-isMappingRef (SField _ ref _ _) = isMappingRef ref
+isMappingRef (RArrIdx _ _ _ _) = False  -- may change in the future
+isMappingRef (RMapIdx _ _ _) = True
+isMappingRef (RField _ ref _ _) = isMappingRef ref
 
 posnFromExp :: Exp a t -> Pn
 posnFromExp e = case e of
@@ -421,23 +454,26 @@ posnFromExp e = case e of
   ByLit p _ -> p
   ByEnv p _ -> p
   -- contracts
-  Create p _ _ -> p
+  Create p _ _ _ -> p
 
   -- polymorphic
   Eq  p _ _ _ -> p
   NEq p _ _ _ -> p
   ITE p _ _ _ -> p
-  VarRef p _ _ _ -> p
+  VarRef p _ _ -> p
+  Address _ _ e' -> posnFromExp e'
+  Typed.Mapping p _ _ _ -> p
+  Typed.MappingUpd p _ _ _ _ -> p
 
-posnFromItem :: TItem a k t -> Pn
-posnFromItem (Item _ _ ref) = posnFromRef ref
+posnFromTRef :: TypedRef t -> Pn
+posnFromTRef (TRef _ _ ref) = posnFromRef ref
 
 posnFromRef :: Ref a k -> Pn
 posnFromRef (CVar p _ _) = p
-posnFromRef (SVar p _ _) = p
-posnFromRef (SArray p _ _ _) = p
-posnFromRef (SMapping p _ _ _) = p
-posnFromRef (SField p _ _ _) = p
+posnFromRef (SVar p _ _ _) = p
+posnFromRef (RArrIdx p _ _ _) = p
+posnFromRef (RMapIdx p _ _) = p
+posnFromRef (RField p _ _ _) = p
 
 -- | Given the shape of a nested array (outer to inner lengths)
 -- returns an array of all indices
@@ -453,29 +489,29 @@ arrayIdcs typ = map idx [0..(len - 1)]
 -- The returned elements follow increasing numerical order
 -- when interpreting the indices as digits of decreasing
 -- significance from outermost to innermost.
-expandItem :: TItem a k t -> [TItem (Base a) k t]
-expandItem (Item typ (PrimitiveType at) ref) = case flattenAbiType at of
-  (ba, Just shape) -> case ref of
-    SArray p r _ i -> (\i' -> Item btyp (PrimitiveType ba) $
-      SArray p r (PrimitiveType ba) (i ++ (zip ((TExp SInteger Atomic . LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape)) ) <$> arrayIdcs shape
-    r -> (\i' -> Item btyp (PrimitiveType ba) $
-      SArray nowhere r (PrimitiveType ba) (zip ((TExp SInteger Atomic . LitInt nowhere . fromIntegral) <$> i') $ NonEmpty.toList shape) ) <$> arrayIdcs shape
-
-  (_, Nothing) -> [Item btyp (PrimitiveType at) ref]
+expandTRef :: TValueType a -> Ref k t -> [Ref k t]
+expandTRef typ ref = go typ [ref]
   where
-    btyp = flattenSType typ
-expandItem (Item typ (ContractType at) ref) = [Item btyp (ContractType at) ref]
-  where
-    btyp = flattenSType typ
+  go :: TValueType a -> [Ref k t] -> [Ref k t]
+  go (TArray n t) rs = go t (concatMap (\r -> ((\i -> RArrIdx nowhere r (LitInt nowhere $ fromIntegral i) n) <$> [0..n])) rs)
+  go _ rs = rs
 
 -- | Expand an array expression to a list of expressions of its elements,
 -- The order of the returned elements is the same as 'expandItem's
-expandArrayExpr :: SType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)) t]
-expandArrayExpr (SSArray SInteger) (Array _ l) = l
-expandArrayExpr (SSArray SBoolean) (Array _ l) = l
-expandArrayExpr (SSArray SByteStr) (Array _ l) = l
-expandArrayExpr (SSArray s@(SSArray _)) (Array _ l) = concatMap (expandArrayExpr s) l
-expandArrayExpr _ (VarRef pn t k item) = VarRef pn t k <$> expandItem item
+expandArrayExpr :: TValueType (AArray a) -> Exp (AArray a) t -> [Exp (Base (AArray a)) t]
+expandArrayExpr (TArray _ (TInteger _ _)) (Array _ l) = l
+expandArrayExpr (TArray _ TUnboundedInt) (Array _ l) = l
+expandArrayExpr (TArray _ TAddress) (Array _ l) = l
+expandArrayExpr (TArray _ TBoolean) (Array _ l) = l
+expandArrayExpr (TArray _ TByteStr) (Array _ l) = l
+expandArrayExpr (TArray _ (TStruct _)) (Array _ l) = l
+expandArrayExpr (TArray _ (TContract _)) (Array _ l) = l
+expandArrayExpr (TArray _ (TMapping _ _)) (Array _ _) = error "expandArrayExpr: arrays of mappings not supported"
+expandArrayExpr (TArray _ s@(TArray _ _)) (Array _ l) = concatMap (expandArrayExpr s) l
+expandArrayExpr _ (VarRef pn vt ref) = 
+  case expandTRef vt ref of
+    expandedRefs -> (VarRef pn btyp) <$> expandedRefs
+  where btyp = fst $ flattenValueType vt
 expandArrayExpr typ (ITE pn tbool e1 e2) =
   (uncurry $ ITE pn tbool) <$> zip (expandArrayExpr typ e1) (expandArrayExpr typ e2)
 
@@ -483,127 +519,138 @@ expandArrayExpr typ (ITE pn tbool e1 e2) =
 -- * Extraction from untyped ASTs * --
 --------------------------------------
 
-nameFromStorage :: Untyped.Storage -> Id
+nameFromStorage :: Untyped.StorageUpdate -> Id
 nameFromStorage (Untyped.Update e _) = nameFromEntry e
 
-nameFromEntry :: Entry -> Id
-nameFromEntry (EVar _ x) = x
-nameFromEntry (EIndexed _ e _) = nameFromEntry e
-nameFromEntry (EField _ e _) = nameFromEntry e
+nameFromEntry :: Untyped.Ref -> Id
+nameFromEntry (Untyped.RVar _ _ x) = x
+nameFromEntry (Untyped.RIndex _ e _) = nameFromEntry e
+nameFromEntry (Untyped.RField _ e _) = nameFromEntry e
 
-nameFromBehv :: TypedExplicit.Behaviour -> Id
-nameFromBehv (Behaviour _ _ (Interface ifaceName _) _ _ _ _ _ _) = ifaceName
+getPosRef :: Untyped.Ref -> Pn
+getPosRef (Untyped.RVar pn _ _) = pn
+getPosRef (Untyped.RIndex pn _ _) = pn
+getPosRef (Untyped.RField pn _ _) = pn
 
-getPosEntry :: Entry -> Pn
-getPosEntry (EVar pn _) = pn
-getPosEntry (EIndexed pn _ _) = pn
-getPosEntry (EField pn _ _) = pn
-
-getPosn :: Expr -> Pn
+getPosn :: Untyped.Expr -> Pn
 getPosn expr = case expr of
-    EAnd pn  _ _ -> pn
-    EOr pn _ _ -> pn
-    ENot pn _ -> pn
-    EImpl pn _ _ -> pn
-    EEq pn _ _ -> pn
-    ENeq pn _ _ -> pn
-    ELEQ pn _ _ -> pn
-    ELT pn _ _ -> pn
-    EGEQ pn _ _ -> pn
-    EGT pn _ _ -> pn
-    EAdd pn _ _ -> pn
-    ESub pn _ _ -> pn
-    EITE pn _ _ _ -> pn
-    EMul pn _ _ -> pn
-    EDiv pn _ _ -> pn
-    EMod pn _ _ -> pn
-    EExp pn _ _ -> pn
-    ECreate pn _ _ -> pn
-    EUTEntry e -> getPosEntry e
-    EPreEntry e -> getPosEntry e
-    EPostEntry e -> getPosEntry e
-    EArray pn _ -> pn
-    ListConst e -> getPosn e
-    ECat pn _ _ -> pn
-    ESlice pn _ _ _ -> pn
-    ENewaddr pn _ _ -> pn
-    ENewaddr2 pn _ _ _ -> pn
-    BYHash pn _ -> pn
-    BYAbiE pn _ -> pn
-    StringLit pn _ -> pn
-    WildExp pn -> pn
-    EnvExp pn _ -> pn
-    IntLit pn _ -> pn
-    BoolLit pn _ -> pn
-    EInRange pn _ _ -> pn
+    Untyped.EAnd pn  _ _ -> pn
+    Untyped.EOr pn _ _ -> pn
+    Untyped.ENot pn _ -> pn
+    Untyped.EImpl pn _ _ -> pn
+    Untyped.EEq pn _ _ -> pn
+    Untyped.ENeq pn _ _ -> pn
+    Untyped.ELEQ pn _ _ -> pn
+    Untyped.ELT pn _ _ -> pn
+    Untyped.EGEQ pn _ _ -> pn
+    Untyped.EGT pn _ _ -> pn
+    Untyped.EAdd pn _ _ -> pn
+    Untyped.ESub pn _ _ -> pn
+    Untyped.EITE pn _ _ _ -> pn
+    Untyped.EMul pn _ _ -> pn
+    Untyped.EDiv pn _ _ -> pn
+    Untyped.EMod pn _ _ -> pn
+    Untyped.EExp pn _ _ -> pn
+    Untyped.ECreate pn _ _ _ -> pn
+    Untyped.AddrOf pn _ -> pn
+    Untyped.ERef e -> getPosRef e
+    Untyped.EArray pn _ -> pn
+    Untyped.ListConst e -> getPosn e
+    Untyped.ECat pn _ _ -> pn
+    Untyped.ESlice pn _ _ _ -> pn
+    Untyped.ENewaddr pn _ _ -> pn
+    Untyped.ENewaddr2 pn _ _ _ -> pn
+    Untyped.BYHash pn _ -> pn
+    Untyped.BYAbiE pn _ -> pn
+    Untyped.StringLit pn _ -> pn
+    Untyped.WildExp pn -> pn
+    Untyped.EnvExp pn _ -> pn
+    Untyped.IntLit pn _ -> pn
+    Untyped.BoolLit pn _ -> pn
+    Untyped.EInRange pn _ _ -> pn
+    Untyped.Mapping pn _ -> pn
+    Untyped.MappingUpd pn _ _ -> pn
 
-posFromDef :: Mapping -> Pn
-posFromDef (Mapping e _) = getPosn e
+--posFromDef :: Mapping -> Pn
+--posFromDef (Mapping e _) = getPosn e
 
 -- | Returns all the identifiers used in an expression,
 -- as well all of the positions they're used in.
-idFromRewrites :: Expr -> Map Id [Pn]
+idFromRewrites :: Untyped.Expr -> Map Id [Pn]
 idFromRewrites e = case e of
-  EAnd _ a b        -> idFromRewrites' [a,b]
-  EOr _ a b         -> idFromRewrites' [a,b]
-  ENot _ a          -> idFromRewrites a
-  EImpl _ a b       -> idFromRewrites' [a,b]
-  EEq _ a b         -> idFromRewrites' [a,b]
-  ENeq _ a b        -> idFromRewrites' [a,b]
-  ELEQ _ a b        -> idFromRewrites' [a,b]
-  ELT _ a b         -> idFromRewrites' [a,b]
-  EGEQ _ a b        -> idFromRewrites' [a,b]
-  EGT _ a b         -> idFromRewrites' [a,b]
-  EAdd _ a b        -> idFromRewrites' [a,b]
-  ESub _ a b        -> idFromRewrites' [a,b]
-  EITE _ a b c      -> idFromRewrites' [a,b,c]
-  EMul _ a b        -> idFromRewrites' [a,b]
-  EDiv _ a b        -> idFromRewrites' [a,b]
-  EMod _ a b        -> idFromRewrites' [a,b]
-  EExp _ a b        -> idFromRewrites' [a,b]
-  EUTEntry en       -> idFromEntry en
-  EPreEntry en      -> idFromEntry en
-  EPostEntry en     -> idFromEntry en
-  ECreate p x es    -> insertWith (<>) x [p] $ idFromRewrites' es
-  EArray _ l        -> idFromRewrites' l
-  ListConst a       -> idFromRewrites a
-  ECat _ a b        -> idFromRewrites' [a,b]
-  ESlice _ a b c    -> idFromRewrites' [a,b,c]
-  ENewaddr _ a b    -> idFromRewrites' [a,b]
-  ENewaddr2 _ a b c -> idFromRewrites' [a,b,c]
-  BYHash _ a        -> idFromRewrites a
-  BYAbiE _ a        -> idFromRewrites a
-  StringLit {}      -> empty
-  WildExp {}        -> empty
-  EnvExp {}         -> empty
-  IntLit {}         -> empty
-  BoolLit {}        -> empty
-  EInRange _ _ a    -> idFromRewrites a
+  Untyped.EAnd _ a b        -> idFromRewrites' [a,b]
+  Untyped.EOr _ a b         -> idFromRewrites' [a,b]
+  Untyped.ENot _ a          -> idFromRewrites a
+  Untyped.EImpl _ a b       -> idFromRewrites' [a,b]
+  Untyped.EEq _ a b         -> idFromRewrites' [a,b]
+  Untyped.ENeq _ a b        -> idFromRewrites' [a,b]
+  Untyped.ELEQ _ a b        -> idFromRewrites' [a,b]
+  Untyped.ELT _ a b         -> idFromRewrites' [a,b]
+  Untyped.EGEQ _ a b        -> idFromRewrites' [a,b]
+  Untyped.EGT _ a b         -> idFromRewrites' [a,b]
+  Untyped.EAdd _ a b        -> idFromRewrites' [a,b]
+  Untyped.ESub _ a b        -> idFromRewrites' [a,b]
+  Untyped.EITE _ a b c      -> idFromRewrites' [a,b,c]
+  Untyped.EMul _ a b        -> idFromRewrites' [a,b]
+  Untyped.EDiv _ a b        -> idFromRewrites' [a,b]
+  Untyped.EMod _ a b        -> idFromRewrites' [a,b]
+  Untyped.EExp _ a b        -> idFromRewrites' [a,b]
+  Untyped.ERef en           -> idFromRef' en
+  Untyped.EArray _ l        -> idFromRewrites' l
+  Untyped.ListConst a       -> idFromRewrites a
+  Untyped.ECat _ a b        -> idFromRewrites' [a,b]
+  Untyped.ESlice _ a b c    -> idFromRewrites' [a,b,c]
+  Untyped.ENewaddr _ a b    -> idFromRewrites' [a,b]
+  Untyped.ENewaddr2 _ a b c -> idFromRewrites' [a,b,c]
+  Untyped.BYHash _ a        -> idFromRewrites a
+  Untyped.BYAbiE _ a        -> idFromRewrites a
+  Untyped.StringLit {}      -> empty
+  Untyped.WildExp {}        -> empty
+  Untyped.EnvExp {}         -> empty
+  Untyped.IntLit {}         -> empty
+  Untyped.BoolLit {}        -> empty
+  Untyped.EInRange _ _ a    -> idFromRewrites a
+  Untyped.ECreate p x es (Just pm) -> insertWith (<>) x [p] $ idFromRewrites' (pm : es)
+  Untyped.ECreate p x es Nothing   -> insertWith (<>) x [p] $ idFromRewrites' es
+  Untyped.AddrOf _ a        -> idFromRewrites a
+  Untyped.Mapping _ a       -> idFromRewrites' $ concatMap (\(x,y) -> [x,y]) a
+  Untyped.MappingUpd _ r a  -> unionsWith (<>) [idFromRef' r, idFromRewrites' $ concatMap (\(x,y) -> [x,y]) a]
   where
     idFromRewrites' = unionsWith (<>) . fmap idFromRewrites
 
-    idFromEntry :: Entry -> Map Id [Pn]
-    idFromEntry (EVar p x) = singleton x [p]
-    idFromEntry (EIndexed _ en xs) = unionWith (<>) (idFromEntry en) (idFromRewrites' xs)
-    idFromEntry (EField _ en _) = idFromEntry en
+    idFromRef' :: Untyped.Ref -> Map Id [Pn]
+    idFromRef' (Untyped.RVar p _ x) = singleton x [p]
+    idFromRef' (Untyped.RIndex _ en x) = unionWith (<>) (idFromRef' en) (idFromRewrites x)
+    idFromRef' (Untyped.RField _ en _) = idFromRef' en
 
 -- | True iff the case is a wildcard.
-isWild :: Case -> Bool
-isWild (Case _ (WildExp _) _) = True
+isWild :: Untyped.Case t -> Bool
+isWild (Untyped.Case _ (WildExp _) _) = True
 isWild _                      = False
 
-bound :: AbiType -> Exp AInteger t -> Exp ABoolean t
-bound typ e = And nowhere (LEQ nowhere (lowerBound typ) e) $ LEQ nowhere e (upperBound typ)
+bound :: TValueType AInteger -> Exp AInteger t -> Exp ABoolean t
+bound typ e = InRange nowhere typ e
 
-lowerBound :: forall t. AbiType -> Exp AInteger t
-lowerBound (AbiIntType a) = IntMin nowhere a
--- todo: other negatives?
+lowerBound :: forall t. TValueType AInteger -> Exp AInteger t
+lowerBound (TInteger a Signed) = IntMin nowhere a
+-- TODO: other negatives?
 lowerBound _ = LitInt nowhere 0
 
--- todo, the rest
-upperBound :: forall t. AbiType -> Exp AInteger t
-upperBound (AbiUIntType  n) = UIntMax nowhere n
-upperBound (AbiIntType   n) = IntMax nowhere n
-upperBound AbiAddressType   = UIntMax nowhere 160
-upperBound (AbiBytesType n) = UIntMax nowhere (8 * n)
-upperBound typ = error $ "upperBound not implemented for " ++ show typ
+-- TODO, the rest
+upperBound :: forall t. TValueType AInteger -> Exp AInteger t
+upperBound (TInteger n Unsigned) = UIntMax nowhere n
+upperBound (TInteger n Signed) = IntMax nowhere n
+upperBound TAddress   = UIntMax nowhere 160
+upperBound t = error $ "upperBound: no upper bound defined for type" <> show t
+
+defaultInteger :: TValueType AInteger
+defaultInteger = TInteger 256 Signed
+
+defaultUInteger :: TValueType AInteger
+defaultUInteger = TInteger 256 Unsigned
+
+-- | Helper to create to create a conjunction out of a list of expressions
+andExps :: [Exp ABoolean t] -> Exp ABoolean t
+andExps [] = LitBool nowhere True
+andExps (c:cs) = foldr (And nowhere) c cs
+

@@ -1,0 +1,21 @@
+contract A
+
+constructor(uint x)
+creates
+    uint w := x
+
+contract B
+
+constructor(address<A> x, address<A> y)
+iff
+    address(x) != address(y)
+creates
+    A a1 := x
+    A a2 := y
+
+
+contract C
+
+constructor()
+creates
+    B b := new B(new A(11), new A(42))

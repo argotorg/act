@@ -1,0 +1,15 @@
+contract Fail
+
+constructor()
+
+creates
+
+	uint x := 0
+	uint y := 2
+
+// should fail to typecheck because y has not been declared in the storage block below...
+transition f()
+
+updates
+
+	x := y

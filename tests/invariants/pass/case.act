@@ -1,5 +1,6 @@
-constructor of C
-interface constructor()
+contract C
+
+constructor()
 
 creates
    uint x := 0
@@ -7,18 +8,14 @@ creates
 invariants
   x == 0
 	
-behaviour bar of C
-interface bar(uint z)
-
-iff
-   CALLVALUE == 0
+transition bar(uint z)
 
 case z == 0:
 
-storage
-  x => z
+updates
+  x := z
 
 case 0 < z:
 
-storage
-  x => 0
+updates
+  x := 0

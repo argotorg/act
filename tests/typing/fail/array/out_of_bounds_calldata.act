@@ -1,0 +1,11 @@
+contract B
+
+constructor(uint[3] c)
+
+iff
+
+  c[4] > 0
+
+creates
+
+  uint x := c[-1]

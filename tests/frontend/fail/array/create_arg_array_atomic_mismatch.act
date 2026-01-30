@@ -1,9 +1,0 @@
-constructor of A
-interface constructor(uint[2] y)
-
-
-constructor of B
-interface constructor()
-
-creates
-  A a := create A(3)

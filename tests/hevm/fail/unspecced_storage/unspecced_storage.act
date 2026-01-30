@@ -1,19 +1,16 @@
-constructor of A
-interface constructor()
+contract A
 
-iff
-
-  CALLVALUE == 0
+constructor()
 
 creates
 
   mapping (uint=>uint) x := []
 
-behaviour f of A
-interface f()
+transition f() : uint256
 
 // fails to mention the state update
 
+updates
 returns
 
   1

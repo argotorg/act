@@ -1,0 +1,24 @@
+contract A
+
+constructor()
+
+creates
+
+  uint x := 100
+
+
+contract B
+
+constructor(address<A> a)
+
+iff
+
+  a.x < 3
+
+creates
+
+  uint[3] arr := [1,2,3]
+
+invariants
+
+  arr[a.x] >= 0

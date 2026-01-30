@@ -1,0 +1,41 @@
+contract A
+
+constructor (uint z)
+
+creates
+    uint x := z
+
+
+transition x() : uint
+
+updates
+returns x
+
+transition set_x(uint z)
+updates
+    x := z
+
+
+contract B
+constructor (address<A> x)
+
+creates
+    A a := x
+
+
+transition upd()
+
+updates
+    a.x := 42
+
+
+contract C
+constructor (address<A> x)
+
+iff
+    CALLVALUE == 0
+
+creates
+    A a := new A(42)
+    B b1 := new B(x)
+    B b2 := new B(x)

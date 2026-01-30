@@ -1,0 +1,35 @@
+contract PayableVault
+
+constructor()
+
+creates
+  mapping(address => uint256) credit := [CALLER => 0]
+  uint256 totalCredit := 0
+
+transition deposit() payable : uint256
+
+iff
+  CALLVALUE > 0
+
+  inRange(uint256, credit[CALLER] + CALLVALUE)
+  inRange(uint256, totalCredit + CALLVALUE)
+  inRange(uint256, BALANCE + CALLVALUE)
+
+updates
+  credit := credit [ CALLER => credit[CALLER] + CALLVALUE ]
+  totalCredit := totalCredit + CALLVALUE
+  BALANCE := BALANCE + CALLVALUE
+
+returns credit[CALLER] + CALLVALUE
+
+transition solvency() : bool
+
+iff
+  true
+
+updates
+  // no state updates
+
+returns
+  // Contract is solvent if it holds at least what it owes (by internal accounting)
+  BALANCE >= totalCredit

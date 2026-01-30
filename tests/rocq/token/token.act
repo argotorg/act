@@ -1,0 +1,28 @@
+contract Token
+
+constructor(address a, uint256 amt)
+
+creates
+  mapping(address => uint256) balances := [a => amt]
+
+
+transition transfer(address to, uint256 amt) : uint256
+
+iff
+  inRange(uint256, balances[to] + amt)
+  amt <= balances[CALLER]
+
+case CALLER != to:
+
+  updates
+
+        balances := balances[ CALLER => balances[CALLER] - amt
+                            , to => balances[to] + amt ]
+
+  returns 1
+
+
+case CALLER == to:
+
+  updates
+  returns 1

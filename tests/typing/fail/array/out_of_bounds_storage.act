@@ -1,0 +1,14 @@
+contract B
+
+constructor()
+
+creates
+
+  int[2] a := [1,2]
+
+
+transition f(uint c)
+
+updates
+
+    a[c] := 4

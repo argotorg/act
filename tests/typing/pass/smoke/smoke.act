@@ -1,0 +1,9 @@
+contract A
+
+constructor()
+creates
+
+transition f(uint x) : uint256
+updates
+
+returns 1

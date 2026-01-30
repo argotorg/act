@@ -1,5 +1,6 @@
-constructor of C
-interface constructor(uint _a, uint _b, bool _c, bool _d, string _e, string _f)
+contract C
+
+constructor(uint _a, uint _b, bool _c, bool _d, string _e, string _f)
 
 creates
 

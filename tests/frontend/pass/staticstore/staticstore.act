@@ -1,8 +1,0 @@
-behaviour f of C
-interface f()
-
-iff in range uint256
-
-    x + y
-
-returns x + y

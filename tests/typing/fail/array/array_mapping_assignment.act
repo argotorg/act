@@ -1,0 +1,7 @@
+contract B
+
+constructor()
+
+creates
+
+  uint[2] a := [1 => 3, 2 => 10]

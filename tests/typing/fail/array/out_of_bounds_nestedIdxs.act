@@ -1,0 +1,15 @@
+contract B
+
+constructor()
+
+creates
+
+  int[3] a := [0,0,0]
+
+
+transition f()
+
+
+updates
+
+  a[1] := a[a[2]]

@@ -1,80 +1,49 @@
-// contract A
-constructor of A
-interface constructor(uint z)
+contract A
 
-iff
-   CALLVALUE == 0
+constructor(uint z)
 
 creates
    uint x := z
 
 
-behaviour x of A
-interface x()
+transition x() : uint256
 
-iff
-   CALLVALUE == 0
+updates
+returns x
 
-returns
-   pre(x)
+transition set_x(uint z)
 
-behaviour set_x of A
-interface set_x(uint z)
+updates
+  x := z
 
-iff 
-   CALLVALUE == 0
+contract B
 
-storage
-  x => z
-
-// contract B
-constructor of B
-interface constructor(uint z)
-iff
-   CALLVALUE == 0
+constructor(uint z)
 
 creates
    uint y := z
-   A a := create A(0)
+   A a := new A(0)
 
-behaviour y of B
-interface y()
+transition y() : uint256
 
-iff
-   CALLVALUE == 0
+updates
+returns y
 
-returns
-   pre(y)
+transition a() : address<A>
 
-behaviour a of B
-interface a()
-
-iff
-   CALLVALUE == 0
-
-returns
-   pre(a)
+updates
+returns a
 
 
-// contract C
-constructor of C
-interface constructor(address y)
-pointers
-   y |-> B
+contract C
 
-iff
-   CALLVALUE == 0
+constructor(address<B> y)
 
 creates
    A a := y.a
-   B b := y 
+   B b := new B(42) 
 
-behaviour change of C
-interface change()
+transition change()
 
-iff
-
-  CALLVALUE == 0
-  
-storage
-  b.a.x => 17
+updates
+  a.x := 17

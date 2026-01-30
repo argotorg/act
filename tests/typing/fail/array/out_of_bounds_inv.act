@@ -1,0 +1,20 @@
+contract A
+
+constructor()
+
+creates
+
+  uint x := 100
+
+
+contract B
+
+constructor(address<A> a)
+
+creates
+
+  int[3] arr := [1,2,3]
+
+invariants
+
+  arr[a.x] == 0

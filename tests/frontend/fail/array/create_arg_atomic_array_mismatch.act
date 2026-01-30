@@ -1,9 +1,0 @@
-constructor of A
-interface constructor(int x)
-
-
-constructor of B
-interface constructor()
-
-creates
-  A a := create A([[1,2,3],[4,5]])

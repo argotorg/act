@@ -1,0 +1,715 @@
+{
+  "contracts": [
+    {
+      "behaviours": [
+        {
+          "cases": [
+            {
+              "body": [
+                [
+                  {
+                    "location": {
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "contract": "A",
+                        "kind": "SVar",
+                        "svar": "y",
+                        "time": "Pre"
+                      }
+                    },
+                    "value": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "literal": "1",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "2",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "3",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        },
+                        {
+                          "args": [
+                            {
+                              "literal": "4",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "5",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "6",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "[]"
+                    }
+                  },
+                  {
+                    "location": {
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "A",
+                          "kind": "SVar",
+                          "svar": "y",
+                          "time": "Pre"
+                        }
+                      }
+                    },
+                    "value": {
+                      "args": [
+                        {
+                          "literal": "7",
+                          "type": "int"
+                        },
+                        {
+                          "literal": "8",
+                          "type": "int"
+                        },
+                        {
+                          "args": [
+                            {
+                              "timing": "TInteger 256 Signed",
+                              "var": {
+                                "indexes": {
+                                  "literal": "2",
+                                  "type": "int"
+                                },
+                                "kind": "Array",
+                                "reference": {
+                                  "indexes": {
+                                    "literal": "0",
+                                    "type": "int"
+                                  },
+                                  "kind": "Array",
+                                  "reference": {
+                                    "indexes": {
+                                      "literal": "1",
+                                      "type": "int"
+                                    },
+                                    "kind": "Array",
+                                    "reference": {
+                                      "contract": "A",
+                                      "kind": "SVar",
+                                      "svar": "y",
+                                      "time": "Pre"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "literal": "1",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "+"
+                        }
+                      ],
+                      "arity": 3,
+                      "symbol": "[]"
+                    }
+                  }
+                ],
+                null
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "A",
+          "interface": {
+            "args": [],
+            "id": "AlexPn 249 14 13",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "f",
+          "postConditions": [
+            {
+              "args": [
+                {
+                  "timing": "TInteger 256 Signed",
+                  "var": {
+                    "indexes": {
+                      "literal": "0",
+                      "type": "int"
+                    },
+                    "kind": "Array",
+                    "reference": {
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "indexes": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "timing": "TArray 2 (TArray 3 (TInteger 256 Signed))",
+                                  "var": {
+                                    "indexes": {
+                                      "literal": "1",
+                                      "type": "int"
+                                    },
+                                    "kind": "Array",
+                                    "reference": {
+                                      "contract": "A",
+                                      "kind": "SVar",
+                                      "svar": "y",
+                                      "time": "Pre"
+                                    }
+                                  }
+                                },
+                                {
+                                  "timing": "TArray 2 (TArray 3 (TInteger 256 Signed))",
+                                  "var": {
+                                    "indexes": {
+                                      "literal": "1",
+                                      "type": "int"
+                                    },
+                                    "kind": "Array",
+                                    "reference": {
+                                      "contract": "A",
+                                      "kind": "SVar",
+                                      "svar": "y",
+                                      "time": "Post"
+                                    }
+                                  }
+                                }
+                              ],
+                              "arity": 2,
+                              "symbol": "=/="
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "100",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "ite"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "A",
+                          "kind": "SVar",
+                          "svar": "y",
+                          "time": "Post"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": ">="
+            }
+          ],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "size": "256",
+                      "type": "Int"
+                    },
+                    {
+                      "timing": "TInteger 256 Signed",
+                      "var": {
+                        "indexes": {
+                          "literal": "2",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "indexes": {
+                            "literal": "0",
+                            "type": "int"
+                          },
+                          "kind": "Array",
+                          "reference": {
+                            "indexes": {
+                              "literal": "1",
+                              "type": "int"
+                            },
+                            "kind": "Array",
+                            "reference": {
+                              "contract": "A",
+                              "kind": "SVar",
+                              "svar": "y",
+                              "time": "Pre"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "inrange"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "Int"
+                        },
+                        {
+                          "literal": "1",
+                          "type": "int"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    },
+                    {
+                      "args": [
+                        {
+                          "size": "256",
+                          "type": "Int"
+                        },
+                        {
+                          "args": [
+                            {
+                              "timing": "TInteger 256 Signed",
+                              "var": {
+                                "indexes": {
+                                  "literal": "2",
+                                  "type": "int"
+                                },
+                                "kind": "Array",
+                                "reference": {
+                                  "indexes": {
+                                    "literal": "0",
+                                    "type": "int"
+                                  },
+                                  "kind": "Array",
+                                  "reference": {
+                                    "indexes": {
+                                      "literal": "1",
+                                      "type": "int"
+                                    },
+                                    "kind": "Array",
+                                    "reference": {
+                                      "contract": "A",
+                                      "kind": "SVar",
+                                      "svar": "y",
+                                      "time": "Pre"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "literal": "1",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 2,
+                          "symbol": "+"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "inrange"
+                    }
+                  ],
+                  "arity": 2,
+                  "symbol": "and"
+                }
+              ],
+              "arity": 2,
+              "symbol": "and"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "Int"
+                },
+                {
+                  "timing": "TInteger 256 Signed",
+                  "var": {
+                    "indexes": {
+                      "literal": "2",
+                      "type": "int"
+                    },
+                    "kind": "Array",
+                    "reference": {
+                      "indexes": {
+                        "literal": "0",
+                        "type": "int"
+                      },
+                      "kind": "Array",
+                      "reference": {
+                        "indexes": {
+                          "literal": "1",
+                          "type": "int"
+                        },
+                        "kind": "Array",
+                        "reference": {
+                          "contract": "A",
+                          "kind": "SVar",
+                          "svar": "y",
+                          "time": "Pre"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "x",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "literal": "1",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "2",
+                      "type": "int"
+                    },
+                    {
+                      "literal": "3",
+                      "type": "int"
+                    }
+                  ],
+                  "arity": 3,
+                  "symbol": "[]"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "y",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        },
+                        {
+                          "args": [
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "[]"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        },
+                        {
+                          "args": [
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "[]"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        },
+                        {
+                          "args": [
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            },
+                            {
+                              "literal": "0",
+                              "type": "int"
+                            }
+                          ],
+                          "arity": 3,
+                          "symbol": "[]"
+                        }
+                      ],
+                      "arity": 2,
+                      "symbol": "[]"
+                    }
+                  ],
+                  "arity": 3,
+                  "symbol": "[]"
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "A",
+        "interface": {
+          "args": [],
+          "id": "AlexPn 23 3 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "x": [
+          {
+            "arrayType": {
+              "size": "256",
+              "type": "UInt"
+            },
+            "size": "3",
+            "type": "Array"
+          },
+          0
+        ],
+        "y": [
+          {
+            "arrayType": {
+              "arrayType": {
+                "arrayType": {
+                  "size": "256",
+                  "type": "Int"
+                },
+                "size": "3",
+                "type": "Array"
+              },
+              "size": "2",
+              "type": "Array"
+            },
+            "size": "3",
+            "type": "Array"
+          },
+          1
+        ]
+      }
+    }
+  }
+}

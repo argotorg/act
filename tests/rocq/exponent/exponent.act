@@ -1,0 +1,26 @@
+contract Exponent
+
+constructor(uint _b, uint _e)
+
+iff
+
+    _e > 0
+
+creates
+
+    uint b := _b
+    uint e := _e
+    uint r := _b
+
+
+transition exp()
+
+iff
+    inRange(uint, r * b)
+    inRange(uint, e - 1)
+    e > 1
+
+updates
+
+    r := r * b
+    e := e - 1

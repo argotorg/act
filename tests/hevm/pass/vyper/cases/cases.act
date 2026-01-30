@@ -1,34 +1,28 @@
-constructor of A
-interface constructor()
+contract A
 
-iff
-  CALLVALUE == 0
+constructor()
 
 creates
   uint128 x := 0
   mapping(uint128 => uint128) m := []
 
 
-behaviour f of A
-interface f()
-
-iff
-  CALLVALUE == 0
+transition f()
 
 case x > 2:
 
-  storage
+  updates
 
-    x => m[2]
+    x := m[2]
 
 case 1 <= x and x <= 2:
 
-  storage
+  updates
 
-    x => m[3]
+    x := m[3]
 
 case x < 1:
 
-  storage
+  updates
 
-    x => m[x]
+    x := m[x]

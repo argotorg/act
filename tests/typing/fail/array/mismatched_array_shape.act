@@ -1,0 +1,7 @@
+contract B
+
+constructor()
+
+creates
+
+  int32[3][2] n2 := [[1,2],[3,4]]

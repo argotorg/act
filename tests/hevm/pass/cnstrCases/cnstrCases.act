@@ -1,0 +1,27 @@
+contract A
+constructor(uint x)
+
+iff CALLVALUE == 0
+    x > 4  ==> inRange(uint256, x+42)
+    x <= 4 ==> inRange(uint256, x+17)
+
+
+case x > 4:
+  creates
+    uint s := x+42
+
+case x <= 4:
+  creates
+    uint s := x+17
+
+
+
+contract B
+constructor(uint w)
+
+iff CALLVALUE == 0
+    w > 4  ==> inRange(uint256, w+42)
+    w <= 4 ==> inRange(uint256, w+17)
+
+creates
+  A a := new A(w)

@@ -1,0 +1,473 @@
+{
+  "contracts": [
+    {
+      "behaviours": [],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "A",
+                  "kind": "SVar",
+                  "svar": "x",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "A",
+        "interface": {
+          "args": [],
+          "id": "AlexPn 23 3 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    },
+    {
+      "behaviours": [
+        {
+          "cases": [
+            {
+              "body": [
+                [
+                  {
+                    "location": {
+                      "contract": "A",
+                      "field": "x",
+                      "kind": "Field",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
+                    },
+                    "value": {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "abitype": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "z"
+                      }
+                    }
+                  }
+                ],
+                null
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "B",
+          "interface": {
+            "args": [
+              {
+                "abitype": {
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
+                },
+                "id": "\"z\"",
+                "kind": "Declaration"
+              }
+            ],
+            "id": "AlexPn 137 16 18",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "remote",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "z"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            }
+          ]
+        },
+        {
+          "cases": [
+            {
+              "body": [
+                [
+                  {
+                    "location": {
+                      "contract": "B",
+                      "kind": "SVar",
+                      "svar": "y",
+                      "time": "Pre"
+                    },
+                    "value": {
+                      "literal": "1",
+                      "type": "int"
+                    }
+                  },
+                  {
+                    "location": {
+                      "contract": "A",
+                      "field": "x",
+                      "kind": "Field",
+                      "reference": {
+                        "contract": "B",
+                        "kind": "SVar",
+                        "svar": "a",
+                        "time": "Pre"
+                      }
+                    },
+                    "value": {
+                      "timing": "TInteger 256 Unsigned",
+                      "var": {
+                        "abitype": {
+                          "abitype": {
+                            "size": "256",
+                            "type": "UInt"
+                          },
+                          "kind": "AbiArgument"
+                        },
+                        "kind": "Var",
+                        "var": "z"
+                      }
+                    }
+                  }
+                ],
+                null
+              ],
+              "caseCondition": {
+                "literal": "True",
+                "type": "bool"
+              }
+            }
+          ],
+          "contract": "B",
+          "interface": {
+            "args": [
+              {
+                "abitype": {
+                  "abitype": {
+                    "size": "256",
+                    "type": "UInt"
+                  },
+                  "kind": "AbiArgument"
+                },
+                "id": "\"z\"",
+                "kind": "Declaration"
+              }
+            ],
+            "id": "AlexPn 184 21 17",
+            "kind": "Interface"
+          },
+          "kind": "Behaviour",
+          "name": "multi",
+          "postConditions": [],
+          "preConditions": [
+            {
+              "args": [
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                },
+                {
+                  "literal": "0",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "=="
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "timing": "TInteger 256 Unsigned",
+                  "var": {
+                    "abitype": {
+                      "abitype": {
+                        "size": "256",
+                        "type": "UInt"
+                      },
+                      "kind": "AbiArgument"
+                    },
+                    "kind": "Var",
+                    "var": "z"
+                  }
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            },
+            {
+              "args": [
+                {
+                  "size": "256",
+                  "type": "UInt"
+                },
+                {
+                  "ethEnv": "Callvalue",
+                  "type": "int"
+                }
+              ],
+              "arity": 2,
+              "symbol": "inrange"
+            }
+          ]
+        }
+      ],
+      "constructor": {
+        "cases": [
+          {
+            "body": [
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "BALANCE",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "y",
+                  "time": "Pre"
+                },
+                "value": {
+                  "literal": "0",
+                  "type": "int"
+                }
+              },
+              {
+                "location": {
+                  "contract": "B",
+                  "kind": "SVar",
+                  "svar": "a",
+                  "time": "Pre"
+                },
+                "value": {
+                  "args": [
+                    {
+                      "fun": "A"
+                    },
+                    []
+                  ],
+                  "arity": 0,
+                  "symbol": "create",
+                  "value": null
+                }
+              }
+            ],
+            "caseCondition": {
+              "literal": "True",
+              "type": "bool"
+            }
+          }
+        ],
+        "contract": "B",
+        "interface": {
+          "args": [],
+          "id": "AlexPn 74 10 12",
+          "kind": "Interface"
+        },
+        "invariants": [],
+        "kind": "Constructor",
+        "postConditions": [],
+        "preConditions": [
+          {
+            "args": [
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              },
+              {
+                "literal": "0",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "=="
+          },
+          {
+            "args": [
+              {
+                "size": "256",
+                "type": "UInt"
+              },
+              {
+                "ethEnv": "Callvalue",
+                "type": "int"
+              }
+            ],
+            "arity": 2,
+            "symbol": "inrange"
+          }
+        ]
+      },
+      "kind": "Contract"
+    }
+  ],
+  "kind": "Act",
+  "store": {
+    "kind": "Storages",
+    "storages": {
+      "A": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "x": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          0
+        ]
+      },
+      "B": {
+        "BALANCE": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          -1
+        ],
+        "a": [
+          {
+            "name": "A",
+            "type": "Contract"
+          },
+          1
+        ],
+        "y": [
+          {
+            "size": "256",
+            "type": "UInt"
+          },
+          0
+        ]
+      }
+    }
+  }
+}

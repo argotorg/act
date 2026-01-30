@@ -1,0 +1,44 @@
+contract B
+
+contract A
+
+//  Call graph:
+//
+//      A
+//     / \
+//    B   C
+//         \
+//          D
+//           \
+//            C
+
+
+constructor()
+
+creates
+   B b := new B()
+   C c := new C()
+
+
+contract B
+
+constructor()
+
+creates
+   D d := new D()
+
+
+contract C
+
+constructor()
+
+creates
+   D d := new D()
+
+
+contract D
+
+constructor()
+
+creates
+   C c := new C()

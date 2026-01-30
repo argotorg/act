@@ -1,9 +1,6 @@
-constructor of StateMachine
-interface constructor()
+contract StateMachine
 
-iff
-
-  CALLVALUE == 0
+constructor()
 
 creates
   uint256 x := 0
@@ -11,34 +8,28 @@ creates
 invariants
     x <= 2
 
-behaviour f of StateMachine
-interface f()
+transition f()
 
 iff
 
   x == 0
-  CALLVALUE == 0
 
-storage
-    x => 1
+updates
+    x := 1
 
-behaviour g of StateMachine
-interface g()
+transition g()
 
 iff
 
-  CALLVALUE == 0
   x == 1
 
-  storage
-    x => 2
+  updates
+    x := 2
 
-behaviour h of StateMachine
-interface h()
+transition h()
 
 iff
-  CALLVALUE == 0
   x == 2
 
-  storage
-    x => 0
+  updates
+    x := 0

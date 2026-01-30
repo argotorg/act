@@ -1,0 +1,35 @@
+contract A
+
+constructor()
+
+creates
+
+  uint y := 1
+  uint yn := 2
+  uint[3] z := [11,22,33]
+
+transition f(int[2] xs) : uint256
+
+iff
+
+  1 <= xs[1] and xs[1] < 4
+  inRange(uint256, y - 7)
+
+case y < 3:
+updates
+returns z[y]
+
+
+case y <= 10 and 3 <= y and yn < y - 7:
+updates
+returns z[yn]
+
+
+case y > 10:
+updates
+returns z[xs[1] - 1]
+
+
+case y <= 10 and 3 <= y and yn >= y - 7:
+updates
+returns z[xs[1] / 2]

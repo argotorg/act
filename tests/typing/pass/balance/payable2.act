@@ -1,0 +1,60 @@
+contract PayableVault
+
+constructor()
+
+creates
+  mapping(address => uint256) credit := [CALLER => 0]
+  uint256 totalCredit := 0
+  // BALANCE initialization can be also be explicit
+  uint256 BALANCE := 0
+
+transition deposit() payable : uint256
+
+iff
+  CALLVALUE > 0
+
+  // Prevent overflow in accounting
+  inRange(uint256, credit[CALLER] + CALLVALUE)
+  inRange(uint256, totalCredit + CALLVALUE)
+  inRange(uint256, BALANCE + CALLVALUE)
+
+updates
+  credit := credit [ CALLER => credit[CALLER] + CALLVALUE ]
+  totalCredit := totalCredit + CALLVALUE
+  BALANCE := BALANCE + CALLVALUE
+
+returns credit[CALLER]
+
+// A withdraw: sends ETH out; uses balance(this) and must be safe w.r.t. contract balance
+// to model withdrawals we need to support unknown code calls (because we have to make a call to the CALLER)
+// transition withdraw(uint256 amt) : uint256
+
+// iff
+  // Must have enough credited
+  // amt <= credit[CALLER]
+
+  // Must have enough *actual* ETH on-chain to pay
+  // amt <= balance[this]
+
+  // Keep arithmetic in range
+  // inRange(uint256, credit[CALLER] - amt)
+  // inRange(uint256, totalCredit - amt)
+
+// updates
+  // credit[CALLER] := credit[CALLER] - amt
+  // totalCredit := totalCredit - amt
+
+// returns amt
+
+// A read-only view that relates internal accounting to EVM balance
+transition solvency() : bool
+
+iff
+  true
+
+updates
+  // no state updates
+
+returns
+  // Contract is solvent if it holds at least what it owes (by internal accounting)
+  BALANCE >= totalCredit

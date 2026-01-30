@@ -1,0 +1,20 @@
+contract B
+
+constructor()
+
+creates
+
+  uint x := 0
+  int[3] a := [1,2,3]
+
+
+transition f() : uint256
+
+iff
+
+  x < 3
+  a[x] > 0
+
+updates
+
+returns 1

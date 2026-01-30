@@ -1,37 +1,23 @@
-constructor of A1
-interface constructor()
+contract A1
 
-iff
-  CALLVALUE == 0
+constructor()
 
 creates
   uint128 x := 0
 
-behaviour setx of A1
-interface setx(uint128 n)
+transition setx(uint128 n)
 
-iff
-  CALLVALUE == 0
+updates
+  x := n
 
-storage
-  x => n
+contract A2
 
-constructor of A2
-interface constructor(address c)
-pointers
-  c |-> A1
-
-iff
-  CALLVALUE == 0
+constructor(address<A1> c)
 
 creates
   A1 y := c
 
-behaviour setA1x of A2
-interface setA1x(uint128 n)
+transition setA1x(uint128 n)
 
-iff
-  CALLVALUE == 0
-
-storage
-  y.x => n
+updates
+  y.x := n

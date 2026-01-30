@@ -1,0 +1,17 @@
+contract A
+
+constructor(int x, uint[2][3] y, uint[2] z)
+creates
+
+contract B
+
+constructor()
+creates
+  A a := new A(-1, [ [1,2], [3,4], [5,6] ], [0,0])
+  uint[2][2] arr := [[0,0],[0,0]]
+  uint[2][1] y := [[0,0]]
+
+transition f()
+
+updates
+  a := new A(2, [ [1,2], [3,4], [5,6] ], y[0])

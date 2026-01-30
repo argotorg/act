@@ -1,0 +1,9 @@
+contract LValue
+
+constructor()
+
+creates
+
+    uint x := y
+    uint y := x
+    uint z := x

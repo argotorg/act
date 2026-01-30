@@ -1,18 +1,14 @@
-constructor of A
-interface constructor()
+contract A
 
-iff
-  CALLVALUE == 0
+constructor()
 
 creates
   uint128 x := 0
 
-behaviour f of A
-interface f()
+transition f()
 
 iff
-  CALLVALUE == 0
   inRange(uint128, x+1)
 
-storage
-  x => x+1
+updates
+  x := x+1

@@ -1,70 +1,80 @@
 # Act
 
-Act is a formal specification language, designed to allow for the construction of an exhaustive,
-mathematically rigorous description of evm programs. Act allows diverse toolchains to interoperate
-on a single specification, with each generating and exchanging different kinds of knowledge. It has
-a built-in analysis engine that can automatically prove properties about the specification itself,
-as well as an integrated symbolic execution engine (based on hevm) that can prove equivalence
-between a specification and a given bytecode object. Finally, specifications can be exported into
-higher level reasoning tools (e.g. theorem provers, economic analysis tooling), allowing for the
-verification of properties of almost arbitrary complexity, all with a proof chain right down to the
-bytecode level.
+Act is a formal specification language for constructing exhaustive, mathematically rigorous descriptions of EVM smart contracts.
 
-It extends on the previous [Act](https://github.com/dapphub/klab/blob/master/acts.md) project.
+Act specifications are written in a high-level, human-readable language that can be proved equivalent to EVM bytecode, currently via the [hevm](https://github.com/argotorg/hevm) symbolic execution engine.
 
-More in depth documentation can be found in [The Act Book](https://argotorg.github.io/act/).
+Specifications can be extracted to a proof assistant (currently Rocq), accurately modeling contract behavior as a state transition system and enabling verification of complex properties and invariants.
 
-# Building
+The core vision of Act is to provide a provably correct mapping from EVM bytecode to a high-level mathematical model that can be embedded into a variety of analysis and verification tools.
 
-You can build the project with nix. If you do not have nix installed yet, you can try using the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
+In-depth documentation is available in [The Act Book](https://ethereum.github.io/act/).
 
-Building with nix:
+Act builds on the previous [Act](https://github.com/dapphub/klab/blob/master/acts.md) project.
+
+
+## Building
+
+You can build the project with Nix. If you do not have Nix installed, try the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer).
+
+Build the `act` executable from the repository root:
 
 ```sh
 nix build
 ```
 
-# Developing
+This produces `bin/act`, which you can run as described in the Act Book.
 
-Enter a nix-shell to get the dependencies of the project:
+For a quick overview of available options:
+
+```sh
+bin/act --help
+```
+
+## Developing
+
+Enter a Nix shell with all dependencies installed:
 
 ```sh
 nix develop
 ```
 
-you can then use `cabal` as normal from the root directory of the project:
+Then use `cabal` from the project root:
 
 ```sh
-cabal build # build
-cabal repl  # enter a repl instance
+cabal build # build the project
+cabal repl  # enter a repl
 ```
 
-to execute the unit tests:
+To execute unit tests:
 
 ```sh
-make test # run all tests
-cabal v2-test # run haskell tests
+make test      # run all tests
+cabal v2-test  # run Haskell tests
 ```
 
-To update the project dependencies run:
+To update project dependencies:
 
 ```sh
 nix flake update
 ```
 
-# Usage
+## Usage
 
-Once you are in the nix shell, you can use act backends for `smt`, `hevm` and `rocq` as follows.
+Once you are in the Nix shell, you can use Act backends for `smt`, `hevm`, and `rocq` as follows:
 
 ```sh
 cabal run act -- <OPTIONS>
 ```
 
-Run the following command to get the info on how to use options and configuration flags.
+Run the following command to see options and configuration flags:
 
 ```sh
 cabal run act -- --help
 ```
 
-Alternatively, you can `make` first and then run the executable `act` as in  `act <OPTIONS>`.
-For more details on how to run each individual backend consult [The Act Book](https://argotorg.github.io/act/).
+
+## Getting Help
+
+If you have questions, open an issue or reach out on our [Matrix Channel](https://matrix.to/#/#actlang:matrix.org).
+The act development team is happy to help you use Act for smart contract verification.

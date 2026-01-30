@@ -1,0 +1,21 @@
+contract SafeMath
+
+constructor()
+
+creates
+
+transition add(uint256 x, uint256 y) : uint256
+
+iff inRange(uint256, x + y)
+
+updates
+
+returns x + y
+
+transition mul(uint256 x, uint256 y) : uint256
+
+iff inRange(uint256, x * y)
+
+updates 
+
+returns x * y

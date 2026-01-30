@@ -1,0 +1,45 @@
+//  Call graph:
+//
+//      C
+//     / \
+//    A   B
+//         \
+//          D
+//           \
+//            C
+
+contract A
+
+constructor()
+
+creates
+   uint x := 0
+
+contract B
+
+constructor(uint x)
+
+creates
+   uint y := x
+   D d := new D()
+
+transition remote(uint z)
+
+updates
+   d.x := z
+
+contract C
+
+constructor(uint u)
+
+creates
+   B b := new B(u)
+   A a := new A()
+
+contract D
+
+constructor()
+
+creates
+   C c := new C(0)
+   uint x := 0

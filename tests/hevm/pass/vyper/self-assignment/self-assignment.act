@@ -1,17 +1,11 @@
-constructor of A
-interface constructor()
+contract A
 
-iff
-  CALLVALUE == 0
+constructor()
 
 creates
   uint128 x := 0
 
-behaviour f of A
-interface f()
+transition f()
 
-iff
-  CALLVALUE == 0
-
-storage
-  x => x
+updates
+  x := x

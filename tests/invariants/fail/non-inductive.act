@@ -6,8 +6,9 @@
 
 // A stronger invariant (e.g. x < 3) can succesfully be proven
 
-constructor of C
-interface constructor()
+contract C
+
+constructor()
 
 creates
 
@@ -17,29 +18,26 @@ invariants
 
     x < 9
 
-behaviour f of C
-interface f()
+transition f()
 
 iff x == 0
 
-    storage
+    updates
 
-        x => 1
+        x := 1
 
-behaviour g of C
-interface g()
+transition g()
 
 iff x == 1
 
-    storage
+    updates
 
-        x => 2
+        x := 2
 
-behaviour j of C
-interface j()
+transition j()
 
 iff x == 7
 
-    storage
+    updates
 
-        x => 100
+        x := 100

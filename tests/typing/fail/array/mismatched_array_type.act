@@ -1,0 +1,7 @@
+contract B
+
+constructor()
+
+creates
+
+  uint[3] u := [true, false]

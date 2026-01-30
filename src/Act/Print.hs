@@ -8,6 +8,7 @@ import Prelude hiding (GT, LT)
 import Data.ByteString.UTF8 (toString)
 import Prettyprinter hiding (brackets)
 import qualified Prettyprinter.Render.Terminal as Term
+import qualified Prettyprinter.Render.String as Str
 import qualified Data.Text as Text
 
 import System.IO (stdout)
@@ -24,69 +25,58 @@ prettyAct :: Act t -> String
 prettyAct (Act _ contracts)
   = unlines (fmap prettyContract contracts)
 
-prettyStore :: Store -> String
-prettyStore = show
-
 prettyContract :: Contract t -> String
-prettyContract (Contract ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
+prettyContract (Contract _ ctor behvs) = unlines $ intersperse "\n" $ (prettyCtor ctor):(fmap prettyBehaviour behvs)
 
 prettyCtor :: Constructor t -> String
-prettyCtor (Constructor name interface ptrs pres posts invs initStore)
+prettyCtor (Constructor _ name interface _ pres cases posts invs)
   =   "constructor of " <> name
   >-< "interface " <> show interface
-  <> prettyPtrs ptrs
   <> prettyPre pres
-  <> prettyCreates initStore
+  <> prettyCreates cases
   <> prettyPost posts
   <> prettyInvs invs
   where
     prettyCreates [] = ""
-    prettyCreates s = header "creates" >-< block (prettyUpdate' <$> s)
+    prettyCreates cs = header "creates" >-< block (concatMap (\(Case _ cond updates) -> prettyExp cond : map prettyUpdate' updates) cs)
 
     prettyInvs [] = ""
     prettyInvs _ = error "TODO: pretty print invariants"
 
-    prettyUpdate' (Update _ (Item _ v r) e) = prettyValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
+    prettyUpdate' :: StorageUpdate t -> String
+    prettyUpdate' (Update v r e) = prettyTValueType v <> " " <> prettyRef r <> " := " <> prettyExp e
+    
+prettyTValueType :: TValueType a -> String
+prettyTValueType (TContract n) = n
+prettyTValueType TUnboundedInt = "integer"
+prettyTValueType (TMapping keytype maptype) =
+  "mapping(" ++ prettyValueType keytype ++ " => " ++ prettyValueType maptype ++ ")"
+prettyTValueType t = T.unpack (abiTypeSolidity (toAbiType t))
 
 prettyValueType :: ValueType -> String
-prettyValueType = \case
-  ContractType n -> n
-  PrimitiveType t -> T.unpack (abiTypeSolidity t)
-
+prettyValueType (ValueType t) = prettyTValueType t
 
 prettyBehaviour :: Behaviour t -> String
-prettyBehaviour (Behaviour name contract interface ptrs preconditions cases postconditions stateUpdates returns)
+prettyBehaviour (Behaviour _ name contract interface _ preconditions cases postconditions)
   =   "behaviour " <> name <> " of " <> contract
   >-< "interface " <> (show interface)
-  <> prettyPtrs ptrs
   <> prettyPre preconditions
-  <> prettyCases cases
-  <> prettyStorage stateUpdates
-  <> prettyRet returns
+  <> prettyCases' cases
   <> prettyPost postconditions
   where
-    prettyStorage [] = ""
-    prettyStorage s = header "storage" >-< block (prettyUpdate <$> s)
+    prettyCases' [] = ""
+    prettyCases' cs = header "cases" >-< block (concatMap prettyCase cs)
+    
+    prettyCase (Case _ cond (updates, mret)) = 
+      [prettyExp cond <> ":"] 
+      ++ map (("  " <>) . prettyUpdate) updates
+      ++ maybe [] (\ret -> ["  returns " <> prettyTypedExp ret]) mret
 
-    prettyRet (Just ret) = header "returns" >-< "  " <> prettyTypedExp ret
-    prettyRet Nothing = ""
 
-
-
-prettyPtrs :: [Pointer] -> String
-prettyPtrs [] = ""
-prettyPtrs ptrs = header "pointers" >-< block (prettyPtr <$> ptrs)
-  where
-    prettyPtr (PointsTo _ x c) = x <> " |-> " <> c
 
 prettyPre :: [Exp ABoolean t] -> String
 prettyPre [] = ""
 prettyPre p = header "iff" >-< block (prettyExp <$> p)
-
-prettyCases :: [Exp ABoolean t] -> String
-prettyCases [] = ""
-prettyCases [LitBool _ True] = ""
-prettyCases p = header "case" >-< block (prettyExp <$> p) <> ":"
 
 prettyPost :: [Exp ABoolean t] -> String
 prettyPost [] = ""
@@ -144,52 +134,41 @@ prettyExp e = case e of
     "[" <> (intercalate "," $ fmap prettyExp l) <> "]"
 
   -- contracts
-  Create _ f ixs -> f <> "(" <> (intercalate "," $ fmap prettyTypedExp ixs) <> ")"
+  Create _ f ixs _ -> f <> "(" <> (intercalate "," $ fmap prettyTypedExp ixs) <> ")"
 
   --polymorphic
   ITE _ a b c -> "(if " <> prettyExp a <> " then " <> prettyExp b <> " else " <> prettyExp c <> ")"
-  VarRef _ t SStorage a -> timeParens t $ prettyItem a
-  VarRef _ _ SCalldata a -> prettyItem a
+  VarRef _ _ r -> prettyRef r
+  Address _ _ c  -> prettyExp c
+  Mapping _ _ _ kvs -> "mapping(" <> intercalate ", " (map (\(k,v) -> prettyExp k <> " => " <> prettyExp v) kvs) <> ")"
+  MappingUpd _ r _ _ kvs -> prettyRef r <> "{" <> intercalate ", " (map (\(k,v) -> prettyExp k <> " => " <> prettyExp v) kvs) <> "}"
   where
     print2 sym a b = "(" <> prettyExp a <> " " <> sym <> " " <> prettyExp b <> ")"
-
+    
 prettyTypedExp :: TypedExp t -> String
-prettyTypedExp (TExp _ _ e) = prettyExp e
-
-prettyItem :: TItem k a t -> String
-prettyItem (Item _ _ r) = prettyRef r
+prettyTypedExp (TExp _ e) = prettyExp e
 
 prettyRef :: Ref k t -> String
 prettyRef = \case
   CVar _ _ n -> n
-  SVar _ _ n -> n
-  SArray _ r _ args -> prettyRef r <> concatMap (brackets . prettyTypedExp . fst) args
-  SMapping _ r _ args -> prettyRef r <> concatMap (brackets . prettyTypedExp) args
-  SField _ r _ n -> prettyRef r <> "." <> n
+  SVar _ t _ n -> timeParens t n
+  RArrIdx _ r arg _ -> prettyRef r <> brackets (prettyExp arg)
+  RMapIdx _ r arg -> prettyTypedRef r <> brackets (prettyTypedExp arg)
+  RField _ r _ n -> prettyRef r <> "." <> n
   where
     brackets str = "[" <> str <> "]"
 
-prettyLocation :: Location t -> String
-prettyLocation (Loc _ _ item) = prettyItem item
-
+prettyTypedRef :: TypedRef t -> String
+prettyTypedRef (TRef _ _ r) = prettyRef r
 prettyUpdate :: StorageUpdate t -> String
-prettyUpdate (Update _ item e) = prettyItem item <> " => " <> prettyExp e
+prettyUpdate (Update _ r e) = prettyRef r <> " => " <> prettyExp e
 
 prettyEnv :: EthEnv -> String
 prettyEnv e = case e of
   Caller -> "CALLER"
   Callvalue -> "CALLVALUE"
-  Calldepth -> "CALLDEPTH"
   Origin -> "ORIGIN"
-  Blockhash -> "BLOCKHASH"
-  Blocknumber -> "BLOCKNUMBER"
-  Difficulty -> "DIFFICULTY"
-  Chainid -> "CHAINID"
-  Gaslimit -> "GASLIMIT"
-  Coinbase -> "COINBASE"
-  Timestamp -> "TIMESTAMP"
   This -> "THIS"
-  Nonce -> "NONCE"
 
 -- | Invariant predicates are represented internally as a pair of timed
 -- expressions, one over the prestate and one over the poststate.  This is good
@@ -202,14 +181,17 @@ prettyInvPred :: InvariantPred Timed -> String
 prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
   where
     untimeTyped :: TypedExp t -> TypedExp Untimed
-    untimeTyped (TExp t s e) = TExp t s (untime e)
+    untimeTyped (TExp t e) = TExp t (untime e)
+
+    untimeTypedRef :: TypedRef t -> TypedRef Untimed
+    untimeTypedRef (TRef t k r) = TRef t k (untimeRef r)
 
     untimeRef:: Ref k t -> Ref k Untimed
-    untimeRef (SVar p c a) = SVar p c a
+    untimeRef (SVar p _ c a) = SVar p Neither c a
     untimeRef (CVar p c a) = CVar p c a
-    untimeRef (SArray p e ts xs) = SArray p (untimeRef e) ts (fmap (first untimeTyped) xs)
-    untimeRef (SMapping p e ts xs) = SMapping p (untimeRef e) ts (fmap untimeTyped xs)
-    untimeRef (SField p e c x) = SField p (untimeRef e) c x
+    untimeRef (RArrIdx p e x n) = RArrIdx p (untimeRef e) (untime x) n
+    untimeRef (RMapIdx p e x) = RMapIdx p (untimeTypedRef e) (untimeTyped x)
+    untimeRef (RField p e c x) = RField p (untimeRef e) c x
 
     untime :: Exp a t -> Exp a Untimed
     untime e = case e of
@@ -240,12 +222,15 @@ prettyInvPred = prettyExp . untime . (\(PredTimed e _) -> e)
       InRange p a b -> InRange p a (untime b)
       LitBool p a -> LitBool p a
       Array p l -> Array p (fmap untime l)
-      Create p f xs -> Create p f (fmap untimeTyped xs)
+      Create p f xs v -> Create p f (fmap untimeTyped xs) (fmap untime v)
       IntEnv p a  -> IntEnv p a
       ByEnv p a   -> ByEnv p a
       ITE p x y z -> ITE p (untime x) (untime y) (untime z)
       Slice p a b c -> Slice p (untime a) (untime b) (untime c)
-      VarRef p _  k (Item t vt a) -> VarRef p Neither k (Item t vt (untimeRef a))
+      VarRef p vt a -> VarRef p vt (untimeRef a)
+      Address p c a -> Address p c (untime a)
+      Mapping p kt vt kvs -> Mapping p kt vt (map (bimap untime untime) kvs)
+      MappingUpd p r kt vt kvs -> MappingUpd p (untimeRef r) kt vt (map (bimap untime untime) kvs)
 
 -- | Doc type for terminal output
 type DocAnsi = Doc Term.AnsiStyle
@@ -255,6 +240,10 @@ render :: DocAnsi -> IO ()
 render doc =
   let opts = LayoutOptions { layoutPageWidth = AvailablePerLine 120 0.9 } in
   Term.renderIO stdout (layoutPretty opts doc)
+
+renderString :: DocAnsi -> String
+renderString =
+    Str.renderString . layoutPretty defaultLayoutOptions
 
 underline :: DocAnsi -> DocAnsi
 underline = annotate Term.underlined

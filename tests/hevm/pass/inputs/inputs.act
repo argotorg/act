@@ -1,12 +1,14 @@
-behaviour test of Inputs
-interface test(uint128 x)
+contract Inputs
 
-iff in range uint128
-    (x+1)
+constructor ()
+creates
+
+transition test(uint128 x) : uint128
 
 iff
 
-  CALLVALUE == 0
   x > 0
+  inRange(uint128, x+1)
 
+updates
 returns (x+1)

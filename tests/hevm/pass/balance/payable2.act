@@ -1,0 +1,37 @@
+contract A
+
+constructor() payable
+
+creates
+  uint256 BALANCE := CALLVALUE
+
+transition deposit() payable
+
+iff
+  inRange(uint256, BALANCE + CALLVALUE)
+
+updates
+  BALANCE := BALANCE + CALLVALUE
+
+contract B
+
+constructor(address<A> a)
+creates
+  A av := a
+
+transition deposit() payable
+iff
+   inRange(uint256, BALANCE + CALLVALUE)
+
+updates
+  BALANCE := BALANCE + CALLVALUE
+
+transition transfer_to_A(uint256 amt)
+iff
+   amt <= BALANCE
+   amt > 0
+   inRange(uint256, BALANCE - amt)
+   inRange(uint256, av.BALANCE + amt)
+updates
+  BALANCE := BALANCE - amt
+  av.BALANCE := av.BALANCE + amt

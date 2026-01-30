@@ -1,16 +1,16 @@
-constructor of C
-interface constructor(uint24 _x)
+contract C
+
+constructor(uint24 _x)
 
 creates
 
   uint24 x := _x
 
-behaviour f of C
-interface f()
+transition f() : uint24
 
-storage
+updates
 
-  x => 2
+  x := 2
 
 returns
 

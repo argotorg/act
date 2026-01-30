@@ -1,0 +1,10 @@
+contract A
+
+constructor()
+
+creates
+
+  uint[2][2] x :=  [[0,0],[0,0]]
+
+ensures
+  x[1] == 2

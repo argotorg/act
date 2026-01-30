@@ -1,0 +1,25 @@
+contract A
+
+constructor()
+
+creates
+   uint x := 0
+
+contract B
+
+constructor()
+
+creates
+   uint y := 0
+   A a := new A()
+
+transition remote(uint z)
+
+updates
+   a.x := z
+
+transition multi(uint z)
+
+updates
+   y := 1
+   a.x := z

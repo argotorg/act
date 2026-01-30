@@ -1,9 +1,0 @@
-constructor of A
-interface constructor()
-
-creates
-
-  uint x :=  1
-
-ensures
-  x[1] == 2
