@@ -1199,7 +1199,7 @@ caseSuffix :: Int -> T.Text
 caseSuffix i = "_case" <> T.pack (show i)
 
 localStepType :: Id -> T.Text
-localStepType name = T.pack name <> "_Transition"
+localStepType name = T.pack name <> "_transition"
 
 stepType :: T.Text
 stepType = "step"
@@ -1208,7 +1208,7 @@ stepBeforeType :: T.Text
 stepBeforeType = "stepBefore"
 
 extStepType :: T.Text
-extStepType = "State_Transition"
+extStepType = "transition"
 
 addressInType :: T.Text
 addressInType = "addressIn"

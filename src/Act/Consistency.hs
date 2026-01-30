@@ -120,7 +120,7 @@ checkUpdateAliasing (Act _ contracts)  solver' smttimeout debug = do
     r' <- forM behvQs (\(name, updPairs, q, getModel) -> do
                           res <- checkSat solver getModel q
                           pure (name, updPairs, res))
-    mapM_ (checkRes "behaviour") r' )
+    mapM_ (checkRes "transition") r' )
   where
     checkRes :: String -> (Id, [(StorageUpdate, StorageUpdate)], SMT.SMTResult) -> IO ()
     checkRes transition (name, locs, res) =

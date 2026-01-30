@@ -105,8 +105,8 @@ prettyErrs sources errs = mapM_ prettyErr errs >> exitFailure
   prettyErr (AlexPn _ line' col, (src, msg)) = do
     contents <- maybe ((hPutStrLn stderr ("Internal error: Source file " <> src <> " not found")) >> exitFailure) (pure . fst) (find ((== src) . snd) sources)
     let cxt = safeDrop (line' - 1) (lines contents)
-    hPutStrLn stderr $ src <> ":"
     hPutStrLn stderr $ msg <> ":"
+    hPutStrLn stderr $ src <> ":"
     hPutStrLn stderr $ show line' <> " | " <> head cxt
     hPutStrLn stderr $ Text.unpack (Text.replicate (col + length (show line' <> " | ") - 1) " " <> "^")
     where

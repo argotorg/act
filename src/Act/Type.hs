@@ -244,6 +244,7 @@ checkConstrCases env cases = do
         consistentStorageTyping typing cases
         balanceConsistent assigns
         noDuplicates assigns
+        noReserved assigns
         pure $ Map.fromList typing
 
     -- check that there are no duplicate storage variables in a case
@@ -252,6 +253,15 @@ checkConstrCases env cases = do
     noDuplicates ((U.StorageVar p _ name, _):rest) =
         (assert (p, "Duplicate storage variable " <> show name) (not (any (\(U.StorageVar _ _ n, _) -> n == name) rest))) *>
         noDuplicates rest
+
+    -- check that the storage variables do not conflict with i.e. names in the Rocq backend
+    noReserved :: [U.Assign] -> Err ()
+    noReserved [] = pure ()
+    noReserved ((U.StorageVar p _ name, _):rest) =
+        (assert (p, "Identifier " <> show name <> "is reserved") (notElem name reservedIds)) *>
+        noReserved rest
+
+    reservedIds = ["This", "Caller", "Origin", "Callvalue", "Env", "State", "addr"]
 
     -- check that BALANCE is always declared with the right type
     balanceConsistent :: [U.Assign] -> Err ()
@@ -298,8 +308,8 @@ checkBehaviours env (b:bhs) = do
         checkBehvName :: U.Transition -> [U.Transition] -> Err ()
         checkBehvName (U.Transition pn name _ _ _ _ _ _) bhs' =
             case find (\(U.Transition _ n _ _ _ _ _ _) -> n == name) bhs' of
-                Just _ -> throw (pn, "Behaviour " <> name <> "for contract " <> contract env <> " is already defined")
-                Nothing -> pure ()
+                Just _ -> throw (pn, "Transition " <> name <> "for contract " <> contract env <> " is already defined")
+                Nothing -> if (name == contract env) then throw (pn, "Transition cannot have the same name as contract") else pure()
 
 -- | Type check a single transition
 checkBehaviour :: Env -> U.Transition -> Err (Behaviour, [Constraint Untimed])
@@ -342,8 +352,8 @@ checkBehvCase env rettype (U.Case p cond (updates, mret)) =
     res <- case (rettype, mret) of
         (Nothing, Nothing) -> pure Nothing
         (Just (ValueType t), Just e)  ->  Just . first (TExp t) <$> checkExpr env' U t e
-        (Nothing, Just _)  -> throw (p, "Behaviour does not return a value, but return expression provided")
-        (Just _, Nothing)  -> throw (p, "Behaviour must return a value, but no return expression provided")
+        (Nothing, Just _)  -> throw (p, "Transition does not return a value, but return expression provided")
+        (Just _, Nothing)  -> throw (p, "Transition must return a value, but no return expression provided")
 
     pure $ let (mret', cnstr3) = case res of
                   Just (e, cs) -> (Just e, cs)
