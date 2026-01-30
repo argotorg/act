@@ -325,7 +325,7 @@ Finally, a parameter of note is `NextAddr`, which is used in constructor and tra
 <!-- <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
 how the balance is handled.</span> -->
 
-Next, the output contains some **additional type definitions**, like `noAliasing` and `integerBounds. They are used in the conditions generated for constructors/transitions.
+Next, the output contains some **additional type definitions**, like `noAliasing` and `stateIntegerBounds`. They are used in the conditions generated for constructors/transitions.
 
 <!-- (see `amm.act` contract for examples on how to use it - <span style="color:red">The paper's version of the amm includes these in the proofs, no the one in the tests dir of the repo.</span>). Lefteris: will enable again once proof is cleaned up and included in the test suite -->
 ```Rocq
@@ -390,7 +390,7 @@ Inductive constructor (ENV : Env) (_totalSupply : Z) (NextAddr : address)
       _totalSupply)
       (NextAddr1)
 ```
-The constructor relates the environment, its input arguments and the address to be allocated next, with a new state for the token contract, and the new next allocated address . The contract will be stored in the next address `NextAddr` and initialize the `BALANCE` field to 0 (as the constructor is not payable). The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
+The constructor relates the environment, its input arguments and the address to be allocated next, to a new state for the token contract, and the new next allocated address. The contract will be stored in the next address `NextAddr` and initialize the `BALANCE` field to 0 (as the constructor is not payable). The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
 
 Similarly **preconditions** are generated **for every transition** in the contract specification. For instance for the `transfer` transition, the preconditions are the following
 
