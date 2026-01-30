@@ -401,7 +401,7 @@ writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
           Just newCid -> do
             fresh <- getFreshIncr
             let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
-            writeMap' <- localCaddr freshAddr newCid $ createCastedContract readMap writeMap callenv freshAddr e
+            writeMap' <- createCastedContract readMap writeMap callenv freshAddr newCid e
             let prevValue = readStorage addr contract
             let e' = storedValue (EVM.WAddr freshAddr) prevValue offset size signextend
             pure $ (M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr e') contract), cid)) writeMap'
@@ -415,7 +415,7 @@ writeToRef readMap writeMap callenv tref@(TRef _ _ ref) (TExp typ e) = do
           Just newCid -> do
             fresh <- getFreshIncr
             let freshAddr = EVM.SymAddr $ "freshSymAddr" <> (T.pack $ show fresh)
-            writeMap' <- localCaddr freshAddr newCid $ createContract readMap writeMap callenv freshAddr e
+            writeMap' <- createContract readMap writeMap callenv freshAddr newCid e
             let prevValue = readStorage addr contract
             let e' = storedValue (EVM.WAddr freshAddr) prevValue offset size signextend
             pure $ (M.insert caddr' (updateNonce (updateStorage (EVM.SStore addr e') contract), cid)) writeMap'
@@ -493,13 +493,13 @@ isBalanceRef RArrIdx{} = False
 isBalanceRef RMapIdx{} = False
 isBalanceRef (RField _ _ _ x) = x == "BALANCE"
 
-createCastedContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr EVM.EAddr -> Exp AInteger -> ActBTT m ContractMap
-createCastedContract readMap writeMap callenv freshAddr (Address _ _ (Create pn cid args b)) =
- createContract readMap writeMap callenv freshAddr (Create pn cid args b)
-createCastedContract _ _ _ _ _ = error "Internal error: constructor call expected"
+createCastedContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr EVM.EAddr -> Id -> Exp AInteger -> ActBTT m ContractMap
+createCastedContract readMap writeMap callenv freshAddr newCid (Address _ _ (Create pn cid args b)) =
+ createContract readMap writeMap callenv freshAddr newCid (Create pn cid args b)
+createCastedContract _ _ _ _ _ _ = error "Internal error: constructor call expected"
 
-createContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr EVM.EAddr -> Exp AContract -> ActBTT m ContractMap
-createContract readMap writeMap callenv freshAddr (Create _ cid args cv) = do
+createContract :: Monad m => ContractMap -> ContractMap -> CallEnv -> EVM.Expr EVM.EAddr -> Id -> Exp AContract -> ActBTT m ContractMap
+createContract readMap writeMap callenv freshAddr newCid (Create _ cid args cv) = do
   codemap <- getCodemap
   case M.lookup cid codemap of
     Just (Contract _ (Constructor _ _ _ _ _ [] _ _) _, _, _) ->
@@ -509,7 +509,7 @@ createContract readMap writeMap callenv freshAddr (Create _ cid args cv) = do
       callenv' <- makeCallEnv readMap callenv iface args cv
       tell $ callArgConstraints callenv' iface
       ccase <- lift . lift $ fromFoldable cases
-      applyCase callenv' ccase
+      localCaddr freshAddr newCid $ applyCase callenv' ccase
       where
         applyCase :: Monad m => CallEnv -> Ccase -> ActBTT m ContractMap
         applyCase callenv'' (Case _ caseCond upds) = do
@@ -524,7 +524,7 @@ createContract readMap writeMap callenv freshAddr (Create _ cid args cv) = do
                            , EVM.nonce = Just 1
                            }
     Nothing -> error "Internal error: constructor not found"
-createContract _ _ _ _ _ = error "Internal error: constructor call expected"
+createContract _ _ _ _ _ _ = error "Internal error: constructor call expected"
 
 type CallEnv = (M.Map Id (EVM.Expr EVM.EWord))
 
