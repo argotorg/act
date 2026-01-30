@@ -1,0 +1,825 @@
+# Rocq Backend: Proving Properties of Specifications
+
+**Table of Contents**
+
+- [Usage](#usage)
+- [A Brief Introduction to Proof in Rocq](#a-brief-introduction-to-proof-in-rocq)
+- [act Export](#act-export)
+- [Proving properties using the act Rocq export](#proving-properties-using-the-act-rocq-export)
+
+---
+
+In order to reason about the contracts and prove their properties, the Rocq backend of act shallowly 
+embeds the act specification into the logic of the Rocq proof assistant.
+
+For this embedding to be sound, we ensure that the storage of the
+contract (and the contracts reachable from it) satisfies the *unique ownership invariant* (see [aliasing section](./aliasing.md)), meaning that its storage may never contain any aliased references to other contracts.
+act checks this invariant automatically immediately after the type-checking phase.
+
+A proof assistant provides tools that help to construct proofs. Rocq, in particular, is highly
+interactive. The user typically builds proofs step by step, with the software giving feedback as the
+proof progresses.
+
+The requirements on proofs in a system like Rocq, Isabelle, or Lean are quite strict. These tools
+only accept proofs that are algorithmically verifiable to be valid series of applications of the
+system’s inference rules. This is generally stricter than what is typically expected of pen and
+paper proofs, which often omit tedious details in the interest of clarity and concision.
+
+The verification of these proofs is performed in a minimal and well-audited kernel. Although
+occasionally bugs have been found in Rocq’s and other systems’ kernels, a proof in these systems is
+generally quite strong evidence of correctness.
+
+## Usage
+
+**Generate Rocq formalization:**
+To generate the Rocq code run
+```sh
+act rocq --file <PATH_TO_SPEC>
+```
+against your spec, or
+```sh
+act rocq --json <PATH_TO_JSON>
+```
+where the JSON file has the following format
+```json
+{
+  "specifications" : ["<PATH_TO_SPEC>",..],
+}
+```
+
+Note: In the current implementation the specifications must be ordered, so that any specification only depends on others earlier in the list. 
+
+#### Rocq Command-Line Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--file` | Path | - | Path to the act specification file (.act) |
+| `--json` | Path | - | Path to the sources JSON file (.json) |
+| `--solver` | `cvc5\|z3` | `cvc5` | SMT solver used during type-checking and unique ownership verification |
+| `--smttimeout` | Integer (ms) | `20000` | Timeout for SMT queries |
+| `--debug` | Boolean | `false` | Print verbose output during generation |
+
+
+### Setting Up a Rocq Project
+
+To fully use this feature you should also set up a `Makefile` and `_RocqProject`. Following the example in `tests/rocq/ERC20/`, 
+the project structure should look something like this:
+```
+my-contract/
+├── mycontract.act       # Your act specification
+├── MyContract.v         # Generated (by act rocq)
+├── _RocqProject         # Rocq project configuration
+├── Makefile             # Build automation
+└── Theory.v             # Your custom proofs
+```
+
+act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts. It should be included in your Rocq project through the configuration files, as will be shown bellow.
+<!-- <span style="color:red">this is confusing: it says Actlib should be included, but in example above it is not.</span> -->
+
+### 1. Create a `_RocqProject` file:
+
+The `_RocqProject` file tells Rocq where to find dependencies and which files to compile:
+
+```rocq-project
+-Q . MyContractDir
+-Q /path/to/act/lib ActLib
+
+/path/to/act/lib/ActLib.v
+MyContract.v
+Theory.v
+```
+
+**Explanation:**
+- `-Q . MyContractDir` - Maps current directory to the logical name `MyContractDir`
+- `-Q /path/to/act/lib ActLib` - Makes ActLib available (adjust path to your act installation)
+- List all `.v` files that should be compiled
+
+**For the ERC20 example in the act repository:**
+<span style="color:red">Add link.</span>
+```rocq-project
+-Q . ERC20
+-Q ../../../lib ActLib
+
+../../../lib/ActLib.v
+ERC20.v
+Theory.v
+```
+
+### 2. Create a `Makefile`:
+
+This Makefile automates the entire workflow from act spec to verified proofs:
+
+```makefile
+.PHONY: verify
+verify: RocqMakefile MyContract.v
+	make -f RocqMakefile
+
+MyContract.v: mycontract.act
+	act coq --file mycontract.act > MyContract.v
+
+RocqMakefile: _RocqProject
+	rocq makefile -f _RocqProject -o RocqMakefile
+
+.PHONY: clean
+clean:
+	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
+	rm -f MyContract.v RocqMakefile RocqMakefile.conf
+	rm -f *.glob *.vo *.vok *.vos .*.aux
+
+.PHONY: regenerate
+regenerate: clean MyContract.v verify
+```
+
+**Makefile Targets Explained:**
+
+- **`make verify`** (or just `make`) - Full build pipeline:
+  1. Generates `MyContract.v` from your `.act` file if needed
+  2. Creates `RocqMakefile` from `_RocqProject`
+  3. Compiles all Rocq files and checks proofs
+
+- **`make clean`** - Removes all generated and compiled files:
+  - Generated `.v` file
+  - Compiled Rocq artifacts (`.vo`, `.vok`, `.vos`, `.glob`)
+  - Makefile artifacts
+
+- **`make regenerate`** - Clean rebuild from scratch
+
+
+### 3. Write custom proofs in `Theory.v`:
+
+Start with the basic structure:
+
+```coq
+Require Import MyContractDir.MyContract.
+Require Import ActLib.ActLib.
+
+(* Import generated definitions *)
+(* MyContractName is the name of a contract in the generated MyContract file *)
+Import MyContract.MyContractName
+
+(* Prove invariants and properties about the contract *)
+```
+
+This structure gives access to the `MyContractName` module that is generated by act, corresponding to the contract with name `MyContractName`, inside the `MyContract.v` file, located in the directory mapped to `MyContractDir` in `_RocqProject`.
+Writing your proofs in a file separate than the one generated by act is recommended, so that the latter can be regenerated if necessary, without affecting any manual work.
+
+### 4. Build and verify:
+
+After everything is set, you can use the following commands in your proof development workflow
+
+```sh
+# Initial build (generates .v file and compiles everything)
+make verify
+
+# After modifying Theory.v, just rebuild
+make -f RocqMakefile
+
+# After modifying the .act spec, regenerate
+make regenerate
+```
+
+#### Interactive Proof Development
+
+If you are using Rocq in your editor in an interactive mode, make sure your editor links to the Rocq executables (rocqtop) from the nix shell.
+Alternatively you can use a local Rocq executable, if present, and `make` outside of the nix shell, once the `act rocq` command has terminated.
+
+## A Brief Introduction to Proof in Rocq
+
+Rocq is a complex system with a steep learning curve, and while a full tutorial on programming in Rocq
+is out of the scope of this documentation, we can give a little taste of how things work. For a more
+thorough introduction, the books Software Foundations and Certified Programming With Dependent Types
+are both excellent. Software Foundations in particular is a great introduction for users with little
+experience in the fields of formal logic and proof theory.
+
+<!-- The Rocq system is composed of three languages: a minimal functional programming language (Gallina),
+a tactics language for proof construction (Ltac), and a “vernacular” for interaction with the
+kernel. Let’s start with the very basics: defining the natural numbers and proving something about
+addition. -->
+
+We start by defining the type of natural numbers. There are infinitely many natural numbers, so 
+they must be defined inductively. In fact, **all type definitions** are done with the `Inductive` <!--vernacular--> command, even if they are not in fact inductive. Rocq’s `Inductive` is analogous to
+Haskell’s `data` and OCaml’s `type` (with the added power of dependent types).
+
+We define two constructors: `O`, representing 0, and `S`, representing the successor function, which when applied to the natural number n
+produces the representation of the number `n + 1`. To give a concrete example, 3
+would be represented in this encoding as `S (S (S 0)))` i.e `1 + (1 + (1 + 0))`.
+
+```Rocq
+Inductive nat : Type :=
+  | O
+  | S (n : nat).
+```
+
+This is an example of a unary number representation. It can often be helpful to represent numbers
+this way, since the inductive nature of the definition lends itself to inductive proof techniques.
+
+Let’s continue by defining addition over our `nat` type:
+
+```Rocq
+Fixpoint plus (n : nat) (m : nat) : nat :=
+  match n with
+  | O ⇒ m
+  | S n' ⇒ S (plus n' m)
+  end.
+```
+
+Here we define a recursive function (a `Fixpoint`) that takes two numbers `n` and `m` and returns the
+sum of these two numbers. The implementation is defined recursively with pattern matching. You might
+think of this definition as “unwrapping” each application of `S` from the first argument until we
+reach its `O`. Then we start wrapping the second argument in the same number of `S`s.
+
+Now we’re ready to prove something! Let’s prove that `0 + n == n`:
+
+```Rocq
+Theorem plus_O_n :
+  forall n : nat, plus O n = n.
+Proof.
+  intros n. simpl. reflexivity.
+Qed.
+```
+
+We first define our `Theorem` and give it a name (`plus_O_n`). Then we define the proof goal, in the
+form of a dependent type. We claim that for all `n`, where `n` is an instance of our `nat` type, `0 + n` is
+equal to `n`. Finally, we construct a proof, in the form of a series of tactics. Tactics may implement
+either backwards inference (transforming the goal) or forwards inference (transforming evidence).
+
+The best way to understand the system is to run the software yourself, and play around with the
+various tactics. In this case the goal is simple enough; once we’ve specified that the proof will be
+on `n` (`intros n`), Rocq is able to simplify `plus O n` into `n` (`simpl`), leaving us the goal `n = n`. This turns out to be true
+by the definition of equality, and we invoke definitional equality by reflexivity (`reflexivity`).
+
+More complicated proofs do not typically require proving basic facts about arithmetic, because Rocq
+ships a substantial standard library of useful definitions and theorems. The above example hopefully
+serves to illustrate the formal nature of proof in these systems. In many cases it can be
+surprisingly hard to convince the kernel of the correctness of a statement that seems “obviously”
+true.
+
+## act Export
+
+Calling `act rocq ...` will generate a Rocq file that encodes the contract as a state transition system,
+following the formal value semantics, given and **proven sound** in the
+<span style="color:green">tech report (to be available shortly).</span>
+
+The generated Rocq output will contain: <!-- <span style="color:red">talk about postconditions and invariants</span> -->
+<!--Gallina-->
+- type definitions for contract **state**.
+- For every case of the constructor and every transition: 
+  * **State transition relation** (used for the step relation).
+  * **Precondition** predicates (additionally to the given preconditions, also requirements on integer bounds)
+  for every storage variable, where applicable. <!-- For transitions, postconditions need only hold for the reachable states (see below). -->
+  * **Return value** proposition (only for transitions).
+- **Transition system with a step relation** (and then generalised to multistep)
+- Predicate characterising a **reachable state** *from any initial state*.
+- Predicate characterising a **reachable state** *from the initial state produced by given constructor parameters*.
+- Definition schema for **invariants***: 
+  * Parametrized by the invariant property `IP : Env -> {argument-types} -> address -> State -> Prop`, where `{argument-types}` represents the types of the constructor's arguments. The property's arguments of types `Env`, `{argument-types}` and `address` refer to the environment, the arguments and the next address at the time of construction.
+  * Invariant predicate definition for the Initial State.
+  * Invariant predicate definition for the Step.
+  * Proof of the invariant holding in all reachable states if `IP` holds in the initial state and for every step.
+
+*) Invariants are properties that hold in all reachable states of the state transition system, and can be used to prove properties about the contract.
+
+
+Let us explore the generated Rocq output for the ERC20 Token contract from [erc20.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act).
+
+The output will begin with importing the necessary libraries:
+```Rocq
+(* --- GENERATED BY ACT --- *)
+
+Require Import Stdlib.ZArith.ZArith.
+Require Import ActLib.ActLib.
+Require Stdlib.Strings.String.
+
+Module Str := Stdlib.Strings.String.
+Open Scope Z_scope.
+```
+
+Then it will start a module for the token contract:
+
+```Rocq
+Module Token.
+
+Record State : Set := state
+{ addr : address
+; BALANCE : Z
+; allowance : address -> address -> Z
+; balanceOf : address -> Z
+; totalSupply : Z
+}.
+```
+The contract will be represented as a **record** with the fields corresponding to the storage variables, and two additional
+fields: the address of the contract `addr` and the balance of the contract (the number of wei sent to it) `BALANCE`.
+Note that we use the type `Z` for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type `address` for Ethereum addresses, which is also represented by `Z` in the `ActLib`.
+
+ The `Actlib` also defines an **environment** type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value (`Callvalue`), the caller address 
+ (`Caller`).
+The structure of the environment in Rocq is as follows:
+```rocq
+Record Env : Set :=
+  { Callvalue : Z;
+    Caller : address;
+    This : address;
+    Origin : address;}.
+```
+
+Finally, a parameter of note is `NextAddr`, which is used in constructor and transition relations. It represents the next address to be allocated by the EVM. There are 2 instances of it in each relation, corresponding to the next address prior to and after the constructor/transition. <!-- <span style="color:red">next addr has been removed.</span> -->
+<!-- Lefteris: nextAddr still exists, its just been removed from inside the ENV -->
+
+<!-- <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
+how the balance is handled.</span> -->
+
+Next, the output contains some **additional type definitions**, like `noAliasing` and `stateIntegerBounds`. They are used in the conditions generated for constructors/transitions.
+
+<!-- (see `amm.act` contract for examples on how to use it - <span style="color:red">The paper's version of the amm includes these in the proofs, no the one in the tests dir of the repo.</span>). Lefteris: will enable again once proof is cleaned up and included in the test suite -->
+```Rocq
+Inductive addressIn (STATE : State) : address -> Prop :=
+| addressOf_This :
+     addressIn STATE (addr STATE)
+.
+
+Inductive noAliasing (STATE : State) : Prop :=
+| noAliasingC : noAliasing STATE
+.
+
+Inductive stateIntegerBounds (STATE : State) : Prop :=
+| integerBoundsC :
+     0 <= Token.addr STATE <= UINT_MAX 160
+  -> 0 <= BALANCE STATE <= UINT_MAX 256
+  -> (forall i0 i1, 0 <= allowance STATE i0 i1 <= UINT_MAX 256)
+  -> (forall i0, 0 <= balanceOf STATE i0 <= UINT_MAX 256)
+  -> 0 <= totalSupply STATE <= UINT_MAX 256
+  -> stateIntegerBounds STATE
+.
+
+Definition nextAddrConstraint (NextAddr : address) (STATE : State) :=
+  forall (p : address), addressIn STATE p -> NextAddr > p
+.
+```
+
+Next the **preconditions for the constructor** are generated as follows:
+```
+Inductive constructor_conds (ENV : Env) (_totalSupply : Z) (NextAddr : address) : Prop :=
+| constructor_condsC : forall
+  ( H_iff0 : ((Callvalue ENV) = 0) )
+  ( H_argConstraints_intBounds__totalSupply : 0 <= _totalSupply <= UINT_MAX 256 )
+  ( H_CallerBound : 0 <= Caller ENV <= UINT_MAX 160 )
+  ( H_OriginBound : 0 <= Origin ENV <= UINT_MAX 160 )
+  ( H_ThisBound : 0 <= This ENV <= UINT_MAX 160 )
+  ( H_NextAddressBound : 0 <= NextAddr <= UINT_MAX 160 )
+  ( H_Caller_lt_NextAddr : Caller ENV < NextAddr )
+  ( H_Origin_lt_NextAddr : Origin ENV < NextAddr )
+  ( H_This_eq_NextAddr : This ENV = NextAddr ),
+  constructor_conds ENV _totalSupply NextAddr
+```
+
+The proposition holds, when the preconditions specified in the constructor's `iff` block are satisfied, the integer bounds are respected, the
+addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
+
+Next, the `Token` **constructor state transition**
+ of type `Env -> Z -> Env * State` is defined as follows: 
+
+```Rocq
+Inductive constructor (ENV : Env) (_totalSupply : Z) (NextAddr : address)
+                      : State -> address -> Prop :=
+| Token_case0 : forall NextAddr1
+  ( H_conds : constructor_conds ENV _totalSupply NextAddr )
+  ( H_case_cond : True )
+  ( H_bindings0 : NextAddr1 = NextAddr + 1 ),
+  constructor ENV _totalSupply NextAddr
+      (state NextAddr
+      0
+      (fun _binding_0 => (fun _ => 0))
+      (fun _binding_0 => if ((_binding_0) =? (Caller ENV))%bool then _totalSupply else 0)
+      _totalSupply)
+      (NextAddr1)
+```
+The constructor relates the environment, its input arguments and the address to be allocated next, to a new state for the token contract, and the new next allocated address. The contract will be stored in the next address `NextAddr` and initialize the `BALANCE` field to 0 (as the constructor is not payable). The `allowance` function will be initialized to return 0 for all pairs of addresses, the `balanceOf` function will return the total supply for the contract creator, and the `totalSupply` will be set to the initial total supply.
+
+Similarly **preconditions** are generated **for every transition** in the contract specification. For instance for the `transfer` transition, the preconditions are the following
+
+```rocq
+Inductive transfer_conds (ENV : Env) (_value : Z) (to : address)
+                         (STATE : State) (NextAddr : address) : Prop :=
+| transfer_condsC : forall
+  ( H_iff0 : ((Callvalue ENV) = 0) )
+  ( H_iff1 : (((0 <= ((Token.balanceOf STATE) (Caller ENV)))
+              /\ (((Token.balanceOf STATE) (Caller ENV)) <= (UINT_MAX 256)))
+              /\ (((0 <= _value)
+              /\ (_value <= (UINT_MAX 256)))
+              /\ ((0 <= (((Token.balanceOf STATE) (Caller ENV)) - _value))
+              /\ ((((Token.balanceOf STATE) (Caller ENV)) - _value) <= (UINT_MAX 256))))))
+  ( H_iff2 : (((Caller ENV) <> to) -> (((0 <= ((Token.balanceOf STATE) to))
+              /\ (((Token.balanceOf STATE) to) <= (UINT_MAX 256)))
+              /\ (((0 <= _value)
+              /\ (_value <= (UINT_MAX 256)))
+              /\ ((0 <= (((Token.balanceOf STATE) to) + _value))
+              /\ ((((Token.balanceOf STATE) to) + _value) <= (UINT_MAX 256)))))) )
+  ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
+  ( H_argConstraints_intBounds__value : 0 <= _value <= UINT_MAX 256 )
+  ( H_argConstraints_intBounds_to : 0 <= to <= UINT_MAX 160 )
+  ( H_CallerBound : 0 <= Caller ENV <= UINT_MAX 160 )
+  ( H_OriginBound : 0 <= Origin ENV <= UINT_MAX 160 )
+  ( H_ThisBound : 0 <= This ENV <= UINT_MAX 160 )
+  ( H_NextAddressBound : 0 <= NextAddr <= UINT_MAX 160 )
+  ( H_This_lt_NextAddr : This ENV < NextAddr )
+  ( H_Caller_lt_NextAddr : Caller ENV < NextAddr )
+  ( H_Origin_lt_NextAddr : Origin ENV < NextAddr )
+  ( H_no_self_call : (forall (p : address), addressIn STATE p -> Caller ENV <> p) )
+  ( H_no_self_origin : (forall (p : address), addressIn STATE p -> Origin ENV <> p) )
+  ( H_This_eq_addState : This ENV = addr STATE ),
+  transfer_conds ENV _value to STATE NextAddr
+```
+
+The hypotheses begin with the conditions specified in the transition's `iff` block.
+The first precondition requires that the call value is zero, as the transition is not payable.
+The second precondition ensures that the caller has a sufficient balance to cover the transfer amount, and the value being transferred is within the allowed range. Then the precondition ensures the case we are in. Next, the `to` address needs to not overflow and has to be a valid address. The environment before and after the transition must also be well-formed (for instance the next address is greater than all current addresses).
+
+Then, a state transition is generated for every transition in the contract specification.
+
+Additionally, for every transition, a **return value predicate** is generated as follows: 
+```rocq
+Inductive transfer_ret (ENV : Env) (_value : Z) (to : address)
+                       (STATE : State) (NextAddr : address) : bool -> Prop :=
+| transfer_case0_ret :
+     transfer_conds ENV _value to STATE NextAddr
+  -> ((Caller ENV) <> to)
+  -> transfer_ret ENV _value to STATE NextAddr true
+
+| transfer_case1_ret :
+     transfer_conds ENV _value to STATE NextAddr
+  -> ((Caller ENV) = to)
+  -> transfer_ret ENV _value to STATE NextAddr true
+
+.
+```
+The predicate holds if the preconditions hold, the case condition is satisfied, and the return value 
+is as expected (in this case true).
+
+<!-- Next, the **postconditions after the constructor** are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
+```rocq
+Definition Token_post0 :=
+  forall (ENV : Env) (_totalSupply : Z) (STATE' : State),
+     initPreconds ENV _totalSupply
+  -> STATE' = snd (Token ENV _totalSupply)
+  -> ((0 <= (Token.totalSupply STATE')) 
+     /\ ((Token.totalSupply STATE') <= (UINT_MAX 256))).
+```
+-->
+
+
+Finally the **state transition system** is defined by the `step` relation and the `reachable` proposition.
+The `Contract_transition` is a relation on pairs of states and next-addresses, given a starting environment, and it 
+includes one constructor for every transition of the contract. For the ERC20 Token example, the 
+`Token_transition` relation has the following form:
+```rocq
+Inductive Token_transition (ENV : Env) (STATE : State) (NextAddr : address)
+                           (STATE' : State) (NextAddr' : address) : Prop :=
+| transfer_Token_transition : forall (_value : Z) (to : address),
+   transfer_transition ENV _value to STATE NextAddr STATE' NextAddr'
+-> Token_transition ENV STATE NextAddr STATE' NextAddr'
+| transferFrom_Token_transition : forall (src : address) (dst : address) (amount : Z),
+   transferFrom_transition ENV src dst amount STATE NextAddr STATE' NextAddr'
+-> Token_transition ENV STATE NextAddr STATE' NextAddr'
+| transferFrom_Token_transition : forall (src : address) (dst : address) (amount : Z),
+...
+
+| allowance_Token_transition : forall (idx1 : address) (idx2 : address),
+   allowance_transition ENV idx1 idx2 STATE NextAddr STATE' NextAddr'
+-> Token_transition ENV STATE NextAddr STATE' NextAddr'
+```
+
+To define the **reachability relation**, we introduce the `transition` relation on pairs of states and next addreses, which includes all transitions of the system, by all of the included contracts. For the ERC20 Token contract example, 
+the `transition` relation has the following form:
+
+```rocq
+Inductive transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : State) (NextAddr' : address) : Prop :=
+| transition_Token :
+     Token_transition ENV STATE NextAddr STATE' NextAddr'
+  -> transition ENV STATE NextAddr STATE' NextAddr'
+```
+
+Since the Token contract does not refer to other contracts in its storage, the `transition` relation is essentially the same as the `Token_transition` relation. However, if a contract interacts with other contracts, the `transition` relation would need to account for those interactions as well. For instance, the Automated Market Maker contract [amm.act](https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.act) stores two ERC20 Tokens in its storage, `token0` and `token1`. The state transitions can 
+thus arise from calling the `Amm` contract's own transitions, or from calling transitions on either of the two stored Token contracts. The `transition` for `Amm` thus includes cases for the `Amm_Transition`, `Token_transition` for `token0`, and `Token_transition` for `token1` and has the following shape
+```rocq
+Inductive transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : State) (NextAddr' : address) : Prop :=
+| transition_Amm :
+     Amm_transition ENV STATE NextAddr STATE' NextAddr'
+  -> transition ENV STATE NextAddr STATE' NextAddr'
+
+| transition_token0 :
+     nextAddrConstraint NextAddr STATE
+  -> Token.transition ENV (token0 STATE) NextAddr (token0 STATE') NextAddr'
+  -> ...
+  -> transition ENV STATE NextAddr STATE' NextAddr'
+
+| transition_token1 :
+     nextAddrConstraint NextAddr STATE
+  -> Token.transition ENV (token1 STATE) NextAddr (token1 STATE') NextAddr'
+  -> ...
+  -> transition ENV STATE NextAddr STATE' NextAddr'
+```
+With the `transition` relation defined, we can now define the `step` relation on states, where 
+the environments are also bound by an `exists` quantifier
+```rocq
+Definition step (STATE : State) (STATE' : State) :=
+exists (ENV : Env) (NextAddr : address) (NextAddr' : address), transition ENV STATE NextAddr STATE' NextAddr'.
+```
+and the `reachable` proposition, which states that a state is reachable from another state through a series of steps.
+```rocq
+Definition reachable (STATE : State) :=
+exists STATE', init STATE' /\ multistep STATE' STATE.
+```
+
+<!-- For every transition the **postconditions are defined on reachable states**.
+For instance the ERC20 token transfer has the following postcondition:
+```rocq
+Definition transfer0_post0 :=
+  forall (ENV : Env) (STATE : State) (STATE' : State) (_value : Z) (to : address),
+     transfer_conds ENV _value to STATE
+  -> reachable STATE
+  -> transfer_transition ENV _value to STATE NextAddr STATE' NextAddr'
+  -> ((0 <= ((Token.balanceOf STATE') (Caller ENV))) 
+     /\ (((Token.balanceOf STATE') (Caller ENV)) <= (UINT_MAX 256))).
+```
+It states that if the preconditions for the transfer are met and the state is reachable,
+then the balance of the caller after the transfer is valid and within the expected range.
+A similar postcondition is generated for the balance of the recipient.
+-->
+
+Finally, a **schema for proving invariant properties on reachable states** is defined. Parametric to 
+the invariant property `IP : Env -> {argument-types} -> State -> Prop`, 
+if we know that invariant property holds at the initial state
+```rocq
+Definition invariantInit (IP : Env -> Z -> address -> State -> Prop) :=
+  forall(ENV : Env) (_totalSupply : Z) (NextAddr : address) (STATE : State) (NextAddr' : address),
+     constructor ENV _totalSupply NextAddr STATE NextAddr'
+  -> IP ENV _totalSupply NextAddr STATE
+```
+and the step 
+```rocq
+Definition invariantStep (IP : Env -> Z -> address -> State -> Prop) :=
+  forall(ENV : Env) (_totalSupply : Z) (NextAddr : address) (STATE : State) (STATE' : State),
+     constructor_conds ENV _totalSupply NextAddr
+  -> step STATE STATE'
+  -> IP ENV _totalSupply NextAddr STATE
+  -> IP ENV _totalSupply NextAddr STATE'
+```
+the generated output will contain a proof, that the invariant property holds at all reachable states:
+```rocq 
+Lemma invariantReachable :
+  forall (ENV : Env) 
+         (_totalSupply : Z) 
+         (STATE : State) 
+         (IP : Env -> Z -> State -> Prop) 
+         (HIPinvInit : invariantInit IP) 
+         (HIPinvStep : invariantStep IP),
+     reachableFromInit ENV _totalSupply (STATE : State)
+  -> IP ENV _totalSupply STATE.
+```
+You are then welcome to use this lemma in the proof of your properties.
+
+## Proving properties using the act Rocq export
+
+Now that the state transition system is exported automatically, 
+one can use it to prove properties about the contract. In the [Theory.v](https://github.com/argotorg/act/blob/rewrite/tests/coq/ERC20/Theory.v) you can find a proof of the *sum of balances invariant*, stating that at any possible reachable state the sum of balances is the same, and equal to the total supply: 
+```
+Theorem Token_sumOfBalances_eq_totalSupply : forall STATE,
+    reachable STATE ->
+    balanceOf_sum STATE = totalSupply STATE.
+```
+The `balanceOf_sum` function above calculates the sum of the `balanceOf STATE`
+function, for all 256 bit addresses by having maintained a `MaxAddress` field. 
+```rocq
+Definition MAX_ADDRESS := UINT_MAX 160.
+
+Fixpoint balanceOf_sum' (balanceOf : address -> Z) (n : nat) (acc : Z) : Z :=
+    match n with
+    | O => balanceOf 0 + acc
+    | S n => balanceOf_sum' balanceOf n (acc + balanceOf (Z.of_nat (S n)))
+    end.
+
+Definition balanceOf_sum (STATE : State) :=
+  balanceOf_sum' (balanceOf STATE) (Z.to_nat MAX_ADDRESS) 0.
+```
+
+The (manual) proof of the theorem then completes the pipeline.
+
+<!-- This will be reenabled when the proof is cleaned up and put inside the test suite
+
+An example of how to use the `invariantReachable` lemma can be found in the 
+proof of the solvency invariant for the Automated Marker Maker (AMM) contract 
+[amm.act](https://github.com/argotorg/act/tree/main/tests/coq/amm).
+
+For instance, one of the properties required is that
+the AMM reserves are non-negative:
+
+```rocq
+Definition Amm_reserve_nneg_Prop 
+  (ENV : Env) (T0 T1 : Token.State) 
+  (L : Z) (STATE : State) 
+  : Prop :=
+  0 <= reserve0 STATE /\ 0 <= reserve1 STATE.
+```
+And proving this as a lemma directly applies the `invariantReachable`.
+```
+Lemma Amm_reserve_nneg_reach : 
+  forall (ENV : Env) (t0 : Token.State) 
+  (t1 : Token.State) (liquidity : Z) (STATE : State),
+  reachableFromInit ENV t0 t1 liquidity (STATE : State)
+  -> Amm_reserve_nneg_Prop ENV t0 t1 liquidity STATE
+.
+Proof.
+  intros.
+  apply invariantReachable.
+  exact Amm_reserve_nneg_init.
+  exact Amm_reserve_nneg_step.
+  assumption.
+Qed.
+```
+-->
+
+
+<!-- Old Exponent contract -->
+<!-- The exponentiation contract -->
+<!-- The following defines a contract that implements exponentiation via repeated
+multiplication. The contract is initialized with a base (`b`) and an exponent (`e`). `exp()` can then be
+repeatedly called until `e` is 1, and the result can then be read from the storage variable `r`. While
+obviously artificial, this example does highlight a key shortcoming of the SMT based analysis:
+exponentiation with a symbolic exponent is simply inexpressible in the smt-lib language used by all
+major SMT solvers, and so any contract making use of exponentiation where the exponent is a variable
+of some kind (e.g. calldata, storage) will be impossible to verify using SMT. Rocq has no such
+restrictions, and we can export the spec below and prove correctness there.
+
+```act
+constructor of Exponent
+interface constructor(uint _b, uint _e)
+
+iff
+
+    _e > 0
+
+creates
+
+    uint b := _b
+    uint e := _e
+    uint r := _b
+```
+
+```act
+transition exp of Exponent
+interface exp()
+
+iff
+
+    e > 1
+
+iff in range uint
+
+    r * b
+    e - 1
+
+updates
+
+    r => r * b
+    e => e - 1
+    b
+```
+
+You can export the spec into Rocq by running `act Rocq --file Exponent.act`. This will create a file called Exponent.v which contains a model of the above act specification in Rocq:
+
+```Rocq
+(* --- GENERATED BY ACT --- *)
+
+Require Import Rocq.ZArith.ZArith.
+Require Import ActLib.ActLib.
+Require Rocq.Strings.String.
+
+Module Str := Rocq.Strings.String.
+Open Scope Z_scope.
+
+Record State : Set := state
+{ b : Z
+; e : Z
+; r : Z
+}.
+
+Definition exp0 (STATE : State)  :=
+state (b STATE) (((e STATE) - 1)) (((r STATE) * (b STATE))).
+
+Definition Exponent0 (_b : Z) (_e : Z) :=
+state (_b) (_e) (_b).
+
+Inductive reachable  : State -> State -> Prop :=
+| Exponent0_base : forall (_b : Z) (_e : Z),
+     (_e > 0)
+  -> ((0 <= _b) /\ (_b <= (UINT_MAX 256)))
+  -> ((0 <= _e) /\ (_e <= (UINT_MAX 256)))
+  -> reachable (Exponent0 _b _e) (Exponent0 _b _e)
+
+| exp0_step : forall (BASE STATE : State),
+     reachable BASE STATE
+  -> ((e STATE) > 1)
+  -> ((0 <= ((r STATE) * (b STATE))) /\ (((r STATE) * (b STATE)) <= (UINT_MAX 256)))
+  -> ((0 <= ((e STATE) - 1)) /\ (((e STATE) - 1) <= (UINT_MAX 256)))
+  -> ((0 <= (r STATE)) /\ ((r STATE) <= (UINT_MAX 256)))
+  -> ((0 <= (e STATE)) /\ ((e STATE) <= (UINT_MAX 256)))
+  -> ((0 <= (b STATE)) /\ ((b STATE) <= (UINT_MAX 256)))
+  -> reachable BASE (exp0 STATE )
+.
+```
+
+Let’s break this down a bit. We have a definition of contract storage State, which consists of three
+variables `b`, `e` and `r`, all of type `Z`. `Z` is an integer type using a binary encoding from the
+ZArith library bundled with Rocq.
+
+Next we have `exp0`, which defines how the state is updated by the exp transition, and `Exponent0` which
+defines how the state variables are initialized by the constructor arguments.
+
+Finally we have an Inductive Proposition reachable that defines the conditions under which a certain
+state is reachable from another. There are two parts to this definition:
+
+- `Exponent0_base`: states that given two integers `_b` and `_e`, the initial state is reachable
+- from the initial state if `_e` and `_b` are in the range of a `uint256` and `_e` is greater than
+- `0`. `exp0_step`: states that for a pair of states `BASE` and `STATE`, `exp0 STATE` (i.e. the
+- result of calling `exp()` against an arbitrary contract state) is reachable from `BASE` if `STATE`
+- is reachable from `BASE`, all the state variables in `STATE (e, b, r)` are within the range of a
+- `uint256`, the result of the calculations `r * b` and `e - 1` are within the range of a `uint256`,
+- and `e` is greater than 1.
+
+This gives us a pair of inference rules that we can use to prove facts about the set of reachable
+states defined by the specification for the Exponent contract.
+
+The core fact that we wish to prove is that when `e` is 1, `r` is equal to `b ^ e`. This can be
+expressed in Rocq as:
+
+`forall (base, s : State), reachable base s -> e s = 1 -> r s = (b base) ^ (e base)`. Expressed more
+verbosely: for all states `base` and `s`, if `s` is reachable from `base`, and the value of `e` in
+`s` is 1, then the result variable `r` in `s` is equal to `b` from base raised to the power of `e`
+from base.
+
+The full proof is reproduced below. While an explanation of each step is out of scope for this post
+(and is anyway best made with the proof loaded into an interactive instance of the Rocq prover like
+proof general or RocqIde), we can give a broad strokes overview.
+
+We must first define a helper fact `pow_pred` which simply states that given two integers `a` and
+`e`, if e is greater than 0 then `a * a ^ (e - 1)` is equal to `a ^ e`. This fact is needed in the
+later steps of the proof. The next step is to define a loop invariant for `exp()` (i.e. a fact that
+is true before and after each loop iteration). This is the Lemma `invariant`, which states that for
+every state `s` reachable from `base`, `r * b ^ (e - 1)` over `s` is equal to `b ^ e` over `base`.
+Intuitively, this states that the partial result calculated so far (`r`), multiplied by the
+remaining portion of the input calculation `b ^ (e - 1)` is equal to the final expected result.
+Finally, given these two intermediate facts, we can discharge a proof for the correctness of
+Exponent as defined above.
+
+```Rocq
+Require Import Exponent.Exponent.
+Require Import ActLib.ActLib.
+Require Import Rocq.ZArith.ZArith.
+Open Scope Z_scope.
+
+Lemma pow_pred : forall a e, 0 < e -> a * a ^ (Z.pred e) = a ^ e.
+Proof.
+  intros.
+  apply eq_sym.
+  replace (a ^ e) with (a ^ (Z.succ (Z.pred e))).
+  - apply Z.pow_succ_r.
+    apply Zlt_0_le_0_pred.
+    assumption.
+  - rewrite (Z.succ_pred e).
+    reflexivity.
+Qed.
+
+Lemma invariant : forall base s,
+  reachable base s -> (r s) * (b s) ^ ((e s) - 1) = (b base) ^ (e base).
+Proof.
+  intros base s H. induction H.
+  - simpl.
+    rewrite Z.sub_1_r.
+    apply pow_pred.
+    apply Z.gt_lt.
+    assumption.
+  - simpl.
+    rewrite <- IHreachable.
+    rewrite Z.sub_1_r.
+    rewrite <- (pow_pred (b STATE) (e STATE - 1)).
+    + rewrite Z.mul_assoc. reflexivity.
+    + apply Z.gt_lt in H0.
+      apply (proj1 (Z.sub_lt_mono_r 1 (e STATE) 1)).
+      assumption.
+Qed.
+
+Theorem exp_correct : forall base s,
+  reachable base s -> e s = 1 -> r s = (b base) ^ (e base).
+Proof.
+  intros base s H He.
+  apply invariant in H.
+  rewrite He in H. simpl in H.
+  rewrite (Z.mul_1_r (r s)) in H.
+  assumption.
+Qed. Check exp_correct.
+```
+
+While this may seem like quite a lot of work to prove what looks like a pretty simple and obvious fact it is worth noting two things:
+
+- A proof of this property is beyond the reach of any automated tool available today.
+- Our mind is full of hidden assumptions, and facts that may seem obvious are not always so. This is not the case for the Rocq proof kernel, and once we have convinced it that something is true, we can be very sure that it really is. -->

@@ -1,0 +1,12 @@
+/* Add logo to the top of the sidebar */
+.sidebar .sidebar-scrollbox::before {
+    content: "";
+    display: block;
+    background-image: url("/images/logo/logo_bg[trns]_fg[mustard]_v01.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 150px;
+    height: 150px;
+    margin: 20px auto 10px auto;
+}

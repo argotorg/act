@@ -8,7 +8,7 @@ Specifications can be extracted to a proof assistant (currently Rocq), accuratel
 
 The core vision of Act is to provide a provably correct mapping from EVM bytecode to a high-level mathematical model that can be embedded into a variety of analysis and verification tools.
 
-In-depth documentation is available in [The Act Book](https://ethereum.github.io/act/).
+In-depth documentation is available in [The Act Book](https://argotorg.github.io/act/).
 
 Act builds on the previous [Act](https://github.com/dapphub/klab/blob/master/acts.md) project.
 
@@ -61,7 +61,7 @@ nix flake update
 
 ## Usage
 
-Once you are in the Nix shell, you can use Act backends for `smt`, `hevm`, and `rocq` as follows:
+Once you are in the Nix shell, you can use Act backends for `equiv` and `rocq` as follows:
 
 ```sh
 cabal run act -- <OPTIONS>

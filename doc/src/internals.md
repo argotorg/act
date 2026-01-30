@@ -9,20 +9,20 @@ The top level datatype here is a `Claim`, and the output of the frontend states 
 (`Timed`) claims. A `Claim` is a sum type (enum) with four potential values:
 
 - `C`: constructor
-- `B`: behaviour
+- `B`: transition
 - `I`: invariant
 - `S`: typing information for storage variables
 
 ### Pass and Fail Claims
 
 Act specs are intended to be fully exhaustive, for this reason we generate two claims from each
-constructor / behaviour in the spec:
+constructor / transition in the spec:
 
 1. `Pass`: The Pass claim states that if all preconditions in the iff block are true, then all executions will succeed, storage will be updated according to the storage block, and the specified return value will, in fact, be returned.
 1. `Fail`: The Fail claim states that should any of the preconditions be false, all executions will revert.
 
 Taken together a succesfull proof of these claims ensures that a given bytecode object implements
-only the behaviour specified in act *and nothing else*.
+only the transition specified in act *and nothing else*.
 
 ### Timed vs Untimed Instances
 
@@ -50,7 +50,7 @@ flowchart LR;
     Type --> Annotate;
     Annotate --> Enrich;
     Enrich --> SMT;
-    Enrich --> Coq;
+    Enrich --> Rocq;
     Enrich --> Hevm;
     Enrich --> K;
 ```
@@ -85,7 +85,7 @@ The annotate stage makes any implicit timings explicit. This stage is implemente
 
 ### Enrichment
 
-The enrich stage adds preconditions to all behaviour / constructor / invariant instances based on
+The enrich stage adds preconditions to all transition / constructor / invariant instances based on
 the types of all variable references. This staged is implemented in
 [Enrich.hs](https://github.com/ethereum/act/blob/master/src/Enrich.hs).
 

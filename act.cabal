@@ -1,9 +1,9 @@
 cabal-version: 2.2
 
 name:       act
-version:    0.1.0.0
-author:     Martin Lundfall
-maintainer: martin.lundfall@protonmail.com
+version:    0.2.0
+authors:    Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, dxo, Martin Lundfall
+maintainer: zoe.paraskevopoulou@argot.org
 
 flag ci
     description: Sets flags for compilation in CI
