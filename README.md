@@ -76,5 +76,5 @@ cabal run act -- --help
 
 ## Getting Help
 
-If you have questions, open an issue or reach out on our [Matrix Channel](https://matrix.to/#/#actlang:matrix.org). 
+If you have questions, open an issue or reach out on our [Matrix Channel](https://matrix.to/#/#actlang:matrix.org).
 The act development team is happy to help you use Act for smart contract verification.
