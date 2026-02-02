@@ -1,0 +1,768 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>How to Write Your Own Spec - The act Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The act Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="how-to-write-your-own-spec"><a class="header" href="#how-to-write-your-own-spec">How to Write Your Own Spec</a></h1>
+<p><strong>Table of Contents</strong></p>
+<ul>
+<li><a href="#overview-from-implementation-to-act">Overview: From implementation to act</a></li>
+<li><a href="#step-1-understand-the-contract-structure">Step 1: Understand the Contract Structure</a></li>
+<li><a href="#step-2-establish-preconditions">Step 2: Establish Preconditions</a></li>
+<li><a href="#step-3-define-the-case-blocks">Step 3: Define the <code>case</code> Blocks</a></li>
+<li><a href="#step-4-initialize-storage-in-the-constructor">Step 4: Initialize Storage in the Constructor</a></li>
+<li><a href="#step-5-specify-storage-updates-and-return-values">Step 5: Specify Storage Updates and Return Values</a>
+<ul>
+<li><a href="#storage-updates">Storage Updates</a></li>
+<li><a href="#return-values">Return values</a></li>
+</ul>
+</li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#inline-function-calls">Inline Function Calls</a>
+<ul>
+<li><a href="#why-inlining-is-required">Why Inlining is Required</a></li>
+<li><a href="#how-to-inline-function-calls">How to Inline Function Calls</a></li>
+<li><a href="#example-simple-function-call">Example: Simple Function Call</a></li>
+<li><a href="#example-function-call-with-branching">Example: Function Call with Branching</a></li>
+<li><a href="#special-note-constructor-calls">Special Note: Constructor Calls</a></li>
+</ul>
+</li>
+</ul>
+<hr />
+<p>This section provides a step-by-step guide on writing your own act specification for an Ethereum smart contract. We will cover the essential components, best practices, and common patterns to help you get started quickly.</p>
+<!--  
+- inrange - > for every arithmetic operation that can overflow or underflow, add - an inrange check before it. See Arithmetic Safety for more details.
+- transitions -> also getter functions have to be considered
+- require -> precondition
+- inline function calls
+- overview of from general to specific in updates
+- initialize balance? -->
+<h2 id="overview-from-implementation-to-act"><a class="header" href="#overview-from-implementation-to-act">Overview: From implementation to act</a></h2>
+<p>For the purposes of this tutorial, we will refer to Solidity implementation, but the concepts apply equally to other Ethereum contract languages.</p>
+<p>The general process of writing an act specification involves:</p>
+<ol>
+<li><strong>Understand the Contract Structure</strong>: Identify contract name, constructor parameters, public state variables (storage), and all external/public functions (transitions including getters).</li>
+<li><strong>Establish Preconditions</strong>: Convert Solidity's <code>require</code> statements to act's <code>iff</code> preconditions and add <code>inRange</code> checks for arithmetic safety to prevent overflow/underflow.</li>
+<li><strong>Define the <code>case</code> Blocks</strong>: Use <code>case</code> blocks to handle different execution paths (from if-then-else, mapping updates with overlapping keys, or inlined function calls).</li>
+<li><strong>Initialize Storage in the Constructor</strong>: Initialize all storage variables with their initial values in the <code>creates</code> block.</li>
+<li><strong>Specify Storage Updates and Return Values</strong>: List all storage updates in the <code>updates</code> block (remembering they are simultaneous) and specify return values for functions with return types.</li>
+</ol>
+<p>We will use a running example, that was introduced in <a href="./transitions.html#storage-updates-are-partially-ordered">Storage Updates are Partially Ordered</a>, to illustrate the steps. Imagine we have the follwing solidity code declaring two contracts, which we want to specify in act:</p>
+<p><em>(code from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/ordered_updates/ordered_updates.sol">ordered_updates.sol</a>)</em></p>
+<pre><code class="language-solidity">pragma solidity &gt;=0.8.0;
+
+contract Admins {
+    address public admin1;
+    address public admin2;
+
+    constructor(address _admin1) {
+        admin1 = _admin1;
+        admin2 = tx.origin;
+    }
+
+    function set_admin2(address new_admin2) public {
+        admin2 = new_admin2;
+    }
+
+}
+
+contract Asset {
+    uint256 public Value;
+    Admins admins;
+    mapping (address =&gt; uint256) public balanceOf;
+
+    constructor(uint256 _value) {
+        Value = _value;
+        admins = new Admins(msg.sender);
+        balanceOf[address(this)] = _value;
+    }
+
+    function assetTransfer(uint256 amt, address to) public returns (bool) {
+        require (msg.sender == admins.admin1() || msg.sender == admins.admin2());
+
+        balanceOf[address(this)] = balanceOf[address(this)] - amt;
+        balanceOf[to] = balanceOf[to] + amt;
+
+        return true;
+    }
+
+    function setAdmins(address new_admin1, address new_admin2) public {
+        if (msg.sender == admins.admin1() || msg.sender == admins.admin2()) {
+            admins = new Admins(new_admin1);
+            admins.set_admin2(new_admin2);
+        }
+    }
+}
+</code></pre>
+<h2 id="step-1-understand-the-contract-structure"><a class="header" href="#step-1-understand-the-contract-structure">Step 1: Understand the Contract Structure</a></h2>
+<p>Begin by analyzing your Solidity contract:</p>
+<ul>
+<li>Identify the <strong>contract name</strong> and specify it in act using the <code>contract</code> keyword.</li>
+<li>Specify the <strong>constructor</strong>: Look for the constructor function and note its parameters. Specify it using the <code>constructor</code> keyword and copy the constructor parameters. If the parameter is <code>address</code> and is later cast to a contract type <code>&lt;ContractName&gt;</code>, use an annotated contract type <code>address&lt;ContractName&gt;</code>. If the constructor is payable in the source code, mark it as <code>payable</code> in act (<code>constructor (&lt;parameters&gt;) payable</code>). Leave the <code>iff</code> blank for now.</li>
+<li>Identify all <strong>state variables</strong>. These become storage in act and will be initialized in the constructor. In solidity they are listed at the top of the contract. List them in the constructor's <code>creates</code> block: Specify the <strong>type</strong> and <strong>name</strong> of each storage variable.</li>
+<li>List all <strong>external and public functions</strong>. These become transitions. Also the getter functions for public state variables which are automatically generated by Solidity have to be listed as transitions. You have to name these getter functions the same as corresponding storage variables. Specify the transitions after the constructor using the <code>transition</code> keyword (respectively <code>transition (&lt;parameters&gt;) payable</code> for payable ones), copy the parameters from the source code. If the parameter is <code>address</code> and is later cast to a contract type <code>&lt;ContractName&gt;</code>, use an annotated contract type <code>address&lt;ContractName&gt;</code>. If a function has a return value, specify its type after the parameter list using <code>: &lt;return_type&gt;</code>.</li>
+</ul>
+<p>What we would have at this point for our example:</p>
+<pre><code class="language-act">contract Admins
+ 
+constructor(address _admin1)
+iff &lt;todo&gt;
+
+creates
+    address admin1 := &lt;todo&gt;
+    address admin2 := &lt;todo&gt;
+
+transition set_admin2(address new_admin2)
+&lt;todo&gt;
+
+transition admin1() : address
+&lt;todo&gt;
+
+transition admin2() : address
+&lt;todo&gt;
+
+
+contract Asset
+
+constructor(uint256 _value)
+iff &lt;todo&gt;
+creates
+    uint256 Value := &lt;todo&gt;
+    Admins admins := &lt;todo&gt;
+    mapping(address =&gt; uint256) balanceOf := &lt;todo&gt;
+
+transition assetTransfer(uint256 amt, address to) : bool
+&lt;todo&gt;
+
+transition setAdmins(address new_admin1, address new_admin2)
+&lt;todo&gt;
+
+transition Value() : uint256
+&lt;todo&gt;
+
+transition balanceOf(address account) : uint256
+&lt;todo&gt;
+</code></pre>
+<h2 id="step-2-establish-preconditions"><a class="header" href="#step-2-establish-preconditions">Step 2: Establish Preconditions</a></h2>
+<p>The preconditions of a transition are specified in the <code>iff</code> block. They define the conditions that must hold for the transition to execute successfully. It combines explicit and implicit requirements:</p>
+<ul>
+<li><strong>Explicit requirements</strong>: These are conditions that are explicitly checked in the Solidity code using <code>require</code> statements. Each <code>require</code> statement translates to a line in the <code>iff</code> block.
+Some preconditions arise from the unique ownership requirement, i.e. storage of the contract does not contain any aliased reference to another contract, see <a href="./aliasing.html">aliasing</a> section. This would usually mean that if many contract addresses are taken as parameters to constructors or transitions, the ones stored in the storage have to be distinct. Note that these
+need to already be present in the Solidity implementation of the contract, not merely in the act specification.</li>
+<li><strong>Implicit requirements</strong>: These are conditions that are not explicitly listed in the code but are necessary for the correct execution of the transition: These are checks to prevent arithmetic overflow/underflow.  Arithmetic safety is addressed using the <code>inRange</code> expression. To ensure every arithmetic operation is safe, an <code>inRange</code> check has to be added for every occurring operation.</li>
+</ul>
+<p><strong>Guidelines:</strong></p>
+<ul>
+<li>Convert each <code>require(condition)</code> to a line in the <code>iff</code> block</li>
+<li>Multiple conditions are implicitly conjunctive (all must be true)</li>
+<li>Each arithmetic operation that can overflow/underflow must have a corresponding <code>inRange</code> check (Syntax <code>inRange(&lt;type&gt;, &lt;expression&gt;)</code>)</li>
+<li>Use logical operators (<code>and</code>, <code>or</code>, <code>==&gt;</code> (implication), etc.) as needed. Full list of operators can be found in <a href="./store_type.html#base-expressions">Base Expressions</a></li>
+<li>The syntax to access fields of a mapping is <code>mapping_name[key]</code>.</li>
+<li>When using annotated addresses as pure addresses (e.g., in comparisons), cast them to regular <code>address</code> type using <code>address(&lt;expression&gt;)</code>.</li>
+<li>When accessing fields of other contracts, use dot notation: <code>contract_instance.field_name</code></li>
+<li>Use the special variables to describe EVM environment:
+<ul>
+<li><code>CALLER</code> instead of <code>msg.sender</code></li>
+<li><code>CALLVALUE</code> for the amount of Ether sent</li>
+<li><code>THIS</code> for the contract's own address</li>
+<li><code>ORIGIN</code> for <code>tx.origin</code></li>
+</ul>
+</li>
+</ul>
+<p>Our example specification would look like this after adding the preconditions. In practice one would fill one transition at a time. But for clarity we follow each step for the whole spec. We also chose to explicitly fill all the <code>iff</code> blocks, even though most of them are trivial (<code>iff true</code>) in this example and could be omitted.</p>
+<pre><code class="language-act">contract Admins
+ 
+constructor(address _admin1)
+iff true
+
+creates
+    address admin1 := &lt;todo&gt;
+    address admin2 := &lt;todo&gt;
+
+transition set_admin2(address new_admin2)
+iff true
+&lt;todo&gt;
+
+transition admin1() : address
+iff true
+&lt;todo&gt;
+
+transition admin2() : address
+iff true
+&lt;todo&gt;
+
+contract Asset
+
+constructor(uint256 _value)
+iff true
+creates
+    uint256 Value := &lt;todo&gt;
+    Admins admins := &lt;todo&gt;
+    mapping(address =&gt; uint256) balanceOf := &lt;todo&gt;
+
+transition assetTransfer(uint256 amt, address to) : bool
+iff CALLER == admins.admin1 or CALLER == admins.admin2
+    inRange(uint256, balanceOf[THIS] - amt)
+    THIS != to ==&gt; inRange(uint256, balanceOf[to] + amt)
+&lt;todo&gt;
+
+transition setAdmins(address new_admin1, address new_admin2)
+iff true
+&lt;todo&gt;
+
+transition Value() : uint256
+iff true
+&lt;todo&gt;
+
+transition balanceOf(address account) : uint256
+iff true
+&lt;todo&gt;
+</code></pre>
+<p>The only interesting precondition is in the <code>assetTransfer</code> transition, which corresponds to the <code>require</code> statement in the Solidity code and two <code>inRange</code> checks.
+Let us look closer into the <code>inRange</code> checks:</p>
+<ul>
+<li>In the Solidity function <code>assetTransfer</code>, the line <code>balanceOf[address(this)] = balanceOf[address(this)] - amt;</code> performs a subtraction. To ensure that this subtraction does not underflow, we add the precondition <code>inRange(uint256, balanceOf[THIS] - amt)</code>.</li>
+<li>If the previous line did not revert, the code proceeds to the line <code>balanceOf[to] = balanceOf[to] + amt;</code>, where it performs an addition. If <code>to</code> is different from <code>this</code>, this addition could overflow, otherwise (if <code>to == this</code>) it will just go back to its original value.
+To ensure that this addition does not overflow, we add the precondition <code>THIS != to ==&gt; inRange(uint256, balanceOf[to] + amt)</code>.</li>
+</ul>
+<h2 id="step-3-define-the-case-blocks"><a class="header" href="#step-3-define-the-case-blocks">Step 3: Define the <code>case</code> Blocks</a></h2>
+<p>If the constructor or a transition has multiple paths either explicit, through e.g. an <code>if then else</code> or implicit where the transition's behavior changes depending on something (e.g. whether <code>THIS == to</code> in the step above), <code>case</code> blocks have to be used to separate these paths. Each <code>case</code> block has a condition and the corresponding storage initialization or updates.</p>
+<p>To paraphrase, within each <code>case</code> block the what happens to the storage of the contract can be defined through the same set of equations that hold after the execution of the function in this particular case. This set of equations is defined in the <code>creates</code> block for constructors and in the <code>updates</code> block for transitions.</p>
+<p>When there is just one single path in a constructor or transition, no <code>case</code> block is needed. Proceed to step 4 in this case.</p>
+<p><strong>Common Patterns for <code>case</code> Blocks</strong></p>
+<ul>
+<li><strong>If-then-else</strong>: When there are two or more paths (e.g., an <code>if-else</code>), use <code>case</code> blocks with complementary conditions.</li>
+<li><strong>Changing Values of Mappings</strong>: When two or more keys of a mapping are assigned new values, the end state of the mapping depend on if some of the keys were equal or not. Use <code>case</code> blocks to separate these scenarios.</li>
+<li><strong>Function Calls</strong>: As mentioned before: <code>act</code> describes the impact a function has on a contract's storage. Hence, if within a Solidity function, another function is called, this has to be <strong>"inlined"</strong> in the act specification. That means the called function's logic has to be flattened into the current one's. Which most likely leads to <code>case</code> blocks. Details below in section <a href="how_to.html#inline-function-calls">Inline Function Calls</a>. Note that this <strong>only</strong> applies to transitions, constructors <strong>can</strong> in fact be called in act without inlining.</li>
+</ul>
+<p><strong>Guidelines:</strong></p>
+<ul>
+<li>Conditions of the <code>case</code> blocks must be mutually exclusive and exhaustive</li>
+<li>Multiple conditions are implicitly conjunctive (all must be true)</li>
+<li>Use logical operators (<code>and</code>, <code>or</code>, <code>==&gt;</code> (implication), <code>==</code>, <code>!=</code>, etc.) as needed. Full list of operators can be found in <a href="./store_type.html#base-expressions">Base Expressions</a></li>
+<li>The syntax to access fields of a mapping is <code>mapping_name[key]</code>.</li>
+<li>When accessing fields of other contracts, use dot notation: <code>contract_instance.field_name</code></li>
+<li>Use the special variables to describe EVM environment:
+<ul>
+<li><code>CALLER</code> instead of <code>msg.sender</code></li>
+<li><code>CALLVALUE</code> for the amount of Ether sent</li>
+<li><code>THIS</code> for the contract's own address</li>
+<li><code>ORIGIN</code> for <code>tx.origin</code></li>
+</ul>
+</li>
+</ul>
+<p>After considering this step the specification of the running example only the transiitons <code>assetTransfer</code> and <code>setAdmins</code> changed, since all other transitions and constructors hve only one path. The transitions with <code>case</code> blocks look like this:</p>
+<pre><code class="language-act">
+transition assetTransfer(uint256 amt, address to) : bool
+iff CALLER == admins.admin1 or CALLER == admins.admin2
+    inRange(uint256, balanceOf[THIS] - amt)
+    THIS != to ==&gt; inRange(uint256, balanceOf[to] + amt)
+
+case THIS != to
+&lt;todo&gt;
+
+case THIS == to
+&lt;todo&gt;
+
+
+
+transition setAdmins(address new_admin1, address new_admin2)
+iff true
+
+case  CALLER == admins.admin1 or CALLER == admins.admin2
+&lt;todo&gt;
+
+case not (CALLER == admins.admin1 or CALLER == admins.admin2)
+&lt;todo&gt;
+
+</code></pre>
+<p>In the <code>assetTransfer</code> function, the values of <code>THIS</code> and <code>to</code> of the <code>balanceOf</code> mapping are changed. Which equations are true afterwards depend on whether <code>THIS</code> and <code>to</code> are identical.</p>
+<p>In <code>setAdmins</code>, there is a simple <code>if</code> that splits two paths, hence also in the act spec we have two paths accordingly.</p>
+<h2 id="step-4-initialize-storage-in-the-constructor"><a class="header" href="#step-4-initialize-storage-in-the-constructor">Step 4: Initialize Storage in the Constructor</a></h2>
+<p>The constructor initializes all storage variables. Every storage variable must be initialized in every execution path (i.e. in every <code>case</code> block).
+This has been mostly prepared already in step 1.
+What is left to do is</p>
+<ul>
+<li>
+<p>copy the behavior of Solidity's constructors while considering the following guidelines</p>
+</li>
+<li>
+<p>and for <strong>payable</strong> constructors: the contracts balance in Ether has to be initialized. This is done using the special variable <code>BALANCE</code> with type <code>uint256</code>:</p>
+<p>Most of the time this is just <code>uint256 BALANCE := CALLVALUE</code>, but if there are more complex behaviors in the Solidity constructor, such as forwarding some of the <code>CALLVALUE</code> to another contract's constructor, this has to be reflected here (e.g. <code>uint256BALANCE := CALLVALUE - &lt;forwardedAmount&gt;</code>).</p>
+</li>
+<li>
+<p>ensure that no two storage instances refer to the same contract (unique ownership invariant, see <a href="./aliasing.html">Aliasing</a> section). This has to already hold in the Solidity implementation.</p>
+</li>
+</ul>
+<p><strong>Guidelines:</strong></p>
+<ul>
+<li>Use <code>:=</code> to assign the initial value</li>
+<li>For <code>payable</code> constructors, initialize the contract's balance in Ether using the special variable <code>BALANCE</code></li>
+<li>For mappings, use <code>[]</code> for empty mappings or <code>[&lt;key&gt; =&gt; &lt;value&gt;, ...]</code> to initialize specific entries. Entries that are not specified are set to the type's default value.</li>
+<li>In every <code>case</code> block  <strong>all</strong> storage variables must be initialized.</li>
+<li>As in Solidity, <strong>constructors</strong> of other contracts can be called and assigned using the keyword <code>new</code>.</li>
+<li>Use the special variables to describe EVM environment:
+<ul>
+<li><code>CALLER</code> instead of <code>msg.sender</code></li>
+<li><code>CALLVALUE</code> for the amount of Ether sent</li>
+<li><code>THIS</code> for the contract's own address</li>
+<li><code>ORIGIN</code> for <code>tx.origin</code></li>
+<li><code>BALANCE</code> for the contract's balance in Ether</li>
+</ul>
+</li>
+</ul>
+<p>In our example the constructors of the two contracts have this final form:</p>
+<pre><code class="language-act">contract Admins
+
+constructor(address _admin1)
+iff true
+
+creates
+   address admin1 := _admin1
+   address admin2 := ORIGIN
+
+...
+
+contract Asset
+
+constructor(uint256 _value)
+iff true
+creates
+    uint256 Value := _value
+    Admins admins := new Admins(CALLER)
+    mapping(address =&gt; uint256) balanceOf := [THIS =&gt; _value]
+</code></pre>
+<h2 id="step-5-specify-storage-updates-and-return-values"><a class="header" href="#step-5-specify-storage-updates-and-return-values">Step 5: Specify Storage Updates and Return Values</a></h2>
+<p>What is left to do now, is to explicitly list all storage slots that were updated in each transition and each <code>case</code> block. As well as specify the return value if there is a return type in the transition signature.
+We start with the <strong>storage updates</strong>.</p>
+<h3 id="storage-updates"><a class="header" href="#storage-updates">Storage Updates</a></h3>
+<p>If for a transition and <code>case</code> no storage slot was changed, then the <code>updates</code> block is skipped. A common example for such a case are getter functions.</p>
+<p>For all other transitions and <code>case</code> blocks, there has to be an <code>updates</code> block. The updated storage slots are listed after the keyword; one update per line.
+The syntax to update a storage slot is <code>&lt;storage_slot&gt; := &lt;new_value&gt;</code>.</p>
+<p>Be aware that <strong>Storage updates are simultaneous!</strong> That means that all right-hand sides of the updates are evaluated in the pre-state (before the function call). This avoids order-dependence and makes transitions suitable for formal reasoning. As mentioned before,
+these update statements serve as a set of equations that hold after execution. They are not to be seen as assignments.</p>
+<p>Consequently, every storage slot can be mentioned within the same <code>case</code> block at most once (except for the <em>special case</em> explained below).  Further, mappings are updated as a whole in one single statement, not one update per mapping entry.</p>
+<p>If the <strong>contract's balance</strong> in Ether changes during its execution (e.g. by calling a payable constructor), this has to be reflected in the <code>updates</code> block by updating the special variable <code>BALANCE</code> accordingly.</p>
+<p>There is one  <strong>special case</strong> about updates. If a contract uses an instance of another contract in its storage, as the <code>Asset</code> contract contains an instance of the <code>Admins</code> contract in our example, which is called <code>admins</code>; and if now, within one transition and <code>case</code> block, the entire <code>admins</code> contract instance is updated and also one of <code>admins</code>'  fields is updated, the more general update has to be stated before the more specific one. For details see <a href="./transitions.html#storage-updates-are-partially-ordered">Storage Updates Ordering</a>.</p>
+<p><strong>Guidelines:</strong></p>
+<ul>
+<li>The syntax for updating a mapping is : <code>mapping_name := mapping_name[key1 =&gt; new_value1, key2 =&gt; new_value2]</code></li>
+<li>All right-hand sides use <strong>pre-state values</strong> (e.g., <code>balanceOf[CALLER] - _value</code> subtracts from the old balance)</li>
+<li>Right-hand-sides of updates <strong>cannot</strong> be transition calls. Transition calls have to be inlined as described in step 3 and section <a href="#inline-function-calls">Inline Function Calls</a></li>
+<li>If the contract's balance in Ether changes, update it using the special variable <code>BALANCE</code></li>
+<li>Every storage slot can be mentioned at most once per <code>case</code> block, except for the explained special case</li>
+<li>Consider the special case: state more general updates before more specific ones</li>
+<li>Ensure that no two storage instances refer to the same contract (unique ownership invariant, see <a href="./aliasing.html">Aliasing</a> section).</li>
+</ul>
+<h3 id="return-values"><a class="header" href="#return-values">Return values</a></h3>
+<p>For each transition where the signature specifies a return type,  <code>returns &lt;expression&gt;</code> has to be present for each <code>case</code> block. The returned expression can reference storage and parameters but always refers to the pre-state.</p>
+<p><strong>Guidelines:</strong></p>
+<ul>
+<li>Use <code>returns &lt;expression&gt;</code> to specify the return value</li>
+<li>The return value can reference storage and parameters but always refers to the pre-state</li>
+</ul>
+<p>The final act specification of the Solidity code at the beginning of this page is the following:</p>
+<p><em>(also available as <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/ordered_updates/ordered_updates.act">ordered_updates.act</a>)</em></p>
+<pre><code class="language-act">contract Admins
+
+constructor(address _admin1)
+iff true
+
+creates
+   address admin1 := _admin1
+   address admin2 := ORIGIN
+
+transition set_admin2(address new_admin2)
+iff true
+updates
+   admin2 := new_admin2
+
+transition admin1() : address
+iff true
+returns admin1
+
+transition admin2() : address
+iff true
+returns admin2
+
+
+
+
+
+contract Asset
+
+constructor(uint256 _value)
+iff true
+creates
+    uint256 Value := _value
+    Admins admins := Admins(CALLER)
+    mapping(address =&gt; uint256) balanceOf := [THIS =&gt; _value]
+
+
+
+transition assetTransfer(uint256 amt, address to) : bool
+
+iff CALLER == admins.admin1 or CALLER == admins.admin2
+    inRange(uint256, balanceOf[THIS] - amt)
+    THIS != to ==&gt; inRange(uint256, balanceOf[to] + amt)
+
+case THIS != to
+
+updates
+   balanceOf := balanceOf[
+                  THIS =&gt; balanceOf[THIS] - amt,
+                  to   =&gt; balanceOf[to]   + amt ]
+
+returns true
+
+case THIS == to
+
+returns true
+
+
+
+transition setAdmins(address new_admin1, address new_admin2)
+
+iff true
+
+case CALLER == admins.admin1 or CALLER == admins.admin2
+
+updates
+   admins := new Admins(new_admin1)
+   admins.admin2 := new_admin2
+
+case not (CALLER == admins.admin1 or CALLER == admins.admin2)
+
+
+transition Value() : uint256
+iff true
+returns Value
+
+transition balanceOf(address idx) : uint256
+iff true
+returns balanceOf[idx]
+
+</code></pre>
+<p>Note that in <code>setAdmins</code>, we are in this special case where a contract instance and one of its fields are updated in the same <code>updates</code> block. So the general update of <code>admins</code> comes first, and the update of <code>admins.admin2</code> comes second.</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<ol>
+<li><strong>Be explicit about control flow</strong>: Use <code>case</code> blocks liberally to avoid ambiguity</li>
+<li><strong>Use annotated address type</strong>: If an address is used as a contract instance in the source code, annotate it with the contract type (e.g., <code>address&lt;ContractName&gt;</code>). When an annotated address is used as a pure address, cast it to a regular <code>address</code> type using <code>address(&lt;expression&gt;)</code>.</li>
+<li><strong>Check arithmetic safety</strong>: Use <code>inRange</code> for every operation that could overflow/underflow and add it to <code>iff</code></li>
+<li><strong>Remember updates are simultaneous</strong>: All right-hand sides refer to the pre-state</li>
+<li><strong>Initialize all storage variables</strong>: Every storage variable must appear in every <code>creates</code> block (in the constructor).</li>
+<li><strong>Make conditions exhaustive</strong>: Each set of cases must cover all possibilities</li>
+<li><strong>Convert all requirements</strong>: Every Solidity <code>require</code> becomes an <code>iff</code> condition or implicit in a case</li>
+<li><strong>Specify getters</strong>: Even view functions need to be specified as transitions using the same name as storage variables.</li>
+<li><strong>Use meaningful variable names</strong>: Match your Solidity code for clarity</li>
+<li><strong>Inline transition calls</strong>: A storage update cannot be a transition call, it's logic and affects have to be embedded as case blocks.</li>
+<li><strong>Be aware of ordered updates</strong>: When storage updates a contract instance and a field of that contract instance, the contract instance itslef has to be listed first in the <code>updates</code> block</li>
+<li><strong>Reference the documentation</strong>: Consult the <a href="./store_type.html">Storage, Typing and Expressions</a>, <a href="./constructors.html">Constructors</a>, and <a href="./transitions.html">Transitions</a> sections for detailed explanations</li>
+</ol>
+<h2 id="inline-function-calls"><a class="header" href="#inline-function-calls">Inline Function Calls</a></h2>
+<p>When a function of a smart contract calls another function and uses its return value to update storage, act requires you to <strong>inline</strong> the called function's behavior (in the transition) rather than representing it as a function call. This design choice is crucial for formal reasoning: it makes the complete state transition explicit and avoids the need to reason about nested function calls.</p>
+<h3 id="why-inlining-is-required"><a class="header" href="#why-inlining-is-required">Why Inlining is Required</a></h3>
+<p>In act, storage updates must be explicit expressions that can be evaluated in the pre-state. Function calls are not allowed on the right-hand side of storage updates because:</p>
+<ol>
+<li><strong>Formal reasoning</strong>: act specifications describe state transitions as mathematical equations. Inlining makes these equations self-contained and verifiable.</li>
+<li><strong>Clarity</strong>: The complete behavior of each transition is visible in one place, without needing to trace through multiple function definitions.</li>
+<li><strong>Composability</strong>: Each transition can be analyzed independently without worrying about side effects from nested calls.</li>
+</ol>
+<h3 id="how-to-inline-function-calls"><a class="header" href="#how-to-inline-function-calls">How to Inline Function Calls</a></h3>
+<p>When you encounter a Solidity function that calls another function, follow these steps:</p>
+<ol>
+<li><strong>Identify the called function</strong>: Note what function is being called and what it does.</li>
+<li><strong>Expand the call</strong>: Replace the function call with the logic of the called function.</li>
+<li><strong>Add cases if needed</strong>: If the called function has multiple execution paths (cases), these must be reflected in the "calling" transition's cases.</li>
+<li><strong>Combine preconditions</strong>: The preconditions of the called function have to be considered in the calling transition. Possibly, by adding them as implications (<code>&lt;case condition where call occurs&gt; ==&gt; &lt;called transition's precondition&gt;</code>) to the preconditions.</li>
+</ol>
+<h3 id="example-simple-function-call"><a class="header" href="#example-simple-function-call">Example: Simple Function Call</a></h3>
+<p>Consider this Solidity code where <code>updateBalance</code> calls <code>computeNewBalance</code>:</p>
+<pre><code class="language-solidity">contract Example {
+    uint256 public balance;
+    
+    function computeNewBalance(uint256 amount) internal view returns (uint256) {
+        return balance + amount;
+    }
+    
+    function updateBalance(uint256 amount) public {
+        balance = computeNewBalance(amount);
+    }
+}
+</code></pre>
+<p><strong>Incorrect act specification</strong> (function call in update):</p>
+<pre><code class="language-act">// This is NOT valid act syntax
+transition updateBalance(uint256 amount)
+
+updates
+   balance := computeNewBalance(amount)  // ❌ Function calls not allowed here
+</code></pre>
+<p><strong>Correct act specification</strong> (inlined):</p>
+<pre><code class="language-act">transition updateBalance(uint256 amount)
+iff inRange(uint256, balance + amount) // ✓ Added the (implicit) precondition of computeNewBalance
+updates
+   balance := balance + amount  // ✓ Inlined the logic of computeNewBalance
+</code></pre>
+<h3 id="example-function-call-with-branching"><a class="header" href="#example-function-call-with-branching">Example: Function Call with Branching</a></h3>
+<p>Extending the previous example, consider what happens when the called function has multiple paths:</p>
+<pre><code class="language-solidity">contract BranchingExample {
+    uint256 public balance;
+    
+    function computeNewBalance(uint256 amount, bool addBonus) internal view returns (uint256) {
+        if (addBonus) {
+            return balance + amount + 1;
+        } else {
+            return balance + amount;
+        }
+    }
+    
+    function updateBalance(uint256 amount, bool addBonus) public {
+        balance = computeNewBalance(amount, addBonus);
+    }
+}
+</code></pre>
+<p><strong>Incorrect act specification</strong>:</p>
+<pre><code class="language-act">// This is NOT valid act syntax
+transition updateBalance(uint256 amount, bool addBonus)
+
+updates
+   balance := computeNewBalance(amount, addBonus)  // ❌ Function call
+</code></pre>
+<p><strong>Correct act specification</strong> (inlined with cases and preconditions):</p>
+<pre><code class="language-act">transition updateBalance(uint256 amount, bool addBonus)
+iff addBonus ==&gt; inRange(uint256, balance + amount + 1)
+    (not addBonus) ==&gt; inRange(uint256, balance + amount)
+
+case addBonus
+updates
+   balance := balance + amount + 1  // ✓ Inlined the bonus case
+
+case not addBonus
+updates
+   balance := balance + amount  // ✓ Inlined the no-bonus case
+</code></pre>
+<p>Note how:</p>
+<ul>
+<li>The branching logic from <code>computeNewBalance</code> becomes case conditions</li>
+<li>The arithmetic safety check (<code>inRange</code>) is added to the preconditions using implications</li>
+<li>Each case explicitly states what value <code>balance</code> takes after the transition</li>
+</ul>
+<h3 id="special-note-constructor-calls"><a class="header" href="#special-note-constructor-calls">Special Note: Constructor Calls</a></h3>
+<p>Unlike transition calls, <strong>constructor calls do not need to be inlined</strong>. You can write:</p>
+<pre><code class="language-act">creates
+   Admins admins := Admins(new_admin1)  // ✓ Constructor call is allowed
+</code></pre>
+<p>This is because constructors create new contract instances rather than modifying existing state, making them fundamentally different from transition calls in terms of formal reasoning.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="transitions.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="type_checking.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="transitions.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="type_checking.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

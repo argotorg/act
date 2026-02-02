@@ -1,0 +1,305 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>A First Look: ERC20 as Running Example - The act Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The act Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="a-first-look-erc20-as-running-example"><a class="header" href="#a-first-look-erc20-as-running-example">A First Look: ERC20 as Running Example</a></h1>
+<p>In this section, we present a first look at an act specification by walking through a simple example: an ERC20 token contract. The goal is to illustrate the overall structure of an act specification and how it relates to the underlying smart contract code.</p>
+<h2 id="from-evm-smart-contract-to-act"><a class="header" href="#from-evm-smart-contract-to-act">From EVM Smart Contract to act</a></h2>
+<p>We start from an ERC20-style contract written in Solidity respectively Vyper:</p>
+<p><em>(code snippets from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.sol">erc20.sol</a> and <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.vy">erc20.vy</a>; storage and function signatures only)</em></p>
+<pre><code class="language-solidity">contract Token {
+    uint256 public totalSupply;
+    mapping(address =&gt; uint256) public balanceOf;
+    mapping(address =&gt; mapping(address =&gt; uint256)) public allowance;
+
+    constructor(uint256 _totalSupply);
+    function transfer(address to, uint256 value) public;
+    function transferFrom(address from, address to, uint256 value) public;
+    ...
+}
+</code></pre>
+<pre><code class="language-vyper">  totalSupply: public(uint256)
+  balanceOf: public(HashMap[address, uint256])
+  allowance: public(HashMap[address, HashMap[address, uint256]])
+
+  @deploy
+  def __init__(_totalSupply: uint256)
+  @external
+  def transfer(value_: uint256, to: address) -&gt; bool
+  @external
+  def transferFrom(from_: address, to: address, value_: uint256) -&gt; bool
+  ...
+</code></pre>
+  <!-- function approve(address spender, uint256 value) public;
+  function burn(uint256 value) public;
+  function burnFrom(address account, uint256 value) public;
+  function mint(address account, uint256 value) public; -->
+<blockquote>
+<p>An <strong>ERC20 token</strong> is a standard type of smart contract on Ethereum that represents a fungible asset, meaning all units of the token are interchangeable (like dollars or euros, rather than NFTs). The contract maintains a ledger that records how many tokens each address owns and provides a small, fixed interface for moving tokens between addresses. The core piece of state is the <code>balanceOf</code> mapping, which assigns to every address its current token balance; the sum of all balances represents the total supply of the token.</p>
+<p>A token holder can move tokens directly using <code>transfer</code>, which subtracts a specified amount from the caller’s balance and adds it to the recipient’s balance, provided the caller has sufficient funds.</p>
+<p>In addition to direct transfers, ERC20 supports delegated transfers through the <code>allowance</code> mechanism: an address can authorize another address (a “spender”) to transfer up to a certain number of tokens on its behalf. These authorizations are recorded in the <code>allowance</code> mapping, which maps an owner and a spender to an approved amount. The <code>transferFrom</code> function uses this mechanism to move tokens from one address to another while decreasing both the owner’s balance and the remaining allowance of the spender. Together, <code>balanceOf</code>, <code>allowance</code>, <code>transfer</code>, and <code>transferFrom</code> define a simple but powerful accounting model that enables tokens to be held, transferred, and used by third-party contracts without giving them unrestricted control over a user’s funds.</p>
+</blockquote>
+<p>An <strong>act specification</strong> describes the <strong>externally observable behavior</strong> of this contract. At a high level, an act specification consists of one or more contracts, where each contract has:</p>
+<ul>
+<li>a <strong>constructor</strong>, describing what storage is created and how it is initialized</li>
+<li>a set of <strong>transitions</strong>, one for each callable function</li>
+<li>explicit <strong>preconditions</strong> under which function calls succeed</li>
+<li>explicit <strong>storage updates</strong> describing the resulting state</li>
+</ul>
+<h2 id="the-shape-of-an-act-contract"><a class="header" href="#the-shape-of-an-act-contract">The Shape of an act Contract</a></h2>
+<p>The translation of the code above into an act specification has the following top-level structure:</p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>, high-level structure only)</em></p>
+<pre><code class="language-act editable">contract Token:
+
+constructor(uint256 _totalSupply)
+creates
+  uint256 totalSupply := _totalSupply
+  mapping(address =&gt; uint) balanceOf :=  [CALLER =&gt; _totalSupply]
+  mapping(address =&gt; mapping(address =&gt; uint)) allowance := []
+
+transition transfer(uint256 value, address to)
+iff  ...
+case CALLER != to:
+  updates
+    ...
+case CALLER == to:
+  updates
+    ...
+
+transition transferFrom(address from, address to, uint256 value)
+iff ...
+</code></pre>
+<p>Even without understanding the details, several aspects are already visible:</p>
+<ul>
+<li>For each contract the act spec starts with <code>contract &lt;NAME&gt;:</code>.</li>
+<li>Afterwards the constructor <code>contructor(&lt;input_vars&gt;)</code> follows.</li>
+<li>Lastly all smart contract functions are listed as transitions <code>transition &lt;fct_name&gt;(&lt;input_vars&gt;)</code></li>
+<li>Within the constructor and the transitions:
+<ul>
+<li>The list of preconditions (the <code>iff</code> block) comes first and lists the necessary and sufficient conditions on when this operation succeeds. If the <code>iff</code> block is not satisfied, the corresponding function in Solidity/Vyper would revert. If there are no preconditions, the <code>iff</code> block is omitted.</li>
+<li>In the constructor the <code>creates</code> block is next. It lists all the storage a contract has and initializes it. As expected, it mirrors the Solidity/Vyper code closely. The <code>creates</code> block is the last block of the constructor.</li>
+<li>Similar to <code>creates</code> for constructors works the <code>updates</code> block for transitions. It updates all the changes to the storage. Thereby, summarizing the effects a transition has on the storage.</li>
+<li>If there are any branches in the underlying Solidity/Vyper code, then act distinguishes what happens to the storage relative to a <code>case</code>. In the ERC20 example, that happens in line 11 and line 14: depending on whether the function caller <code>CALLER</code> is the same address as the one where the money is supposed to be transfered to, <code>to</code>, the storage is updated differently.</li>
+</ul>
+</li>
+<li>act is aware of some Ethereum environment variables such as the caller of a function <code>CALLER</code> or the amount that was "paid" to a contract upon a function call <code>CALLVALUE</code>.</li>
+</ul>
+<p>In the next sections, we will build up the meaning of these pieces by incrementally refining the ERC20 specification.</p>
+<p>Jump to <a href="./equiv.html#running-the-erc20-example">Running the ERC20 Example</a> if you want to try out running the ERC20 example with the equivalence checking backend. To explore the Rocq extraction of the ERC20 example, go to <a href="./rocq.html#act-export">act Export</a>.</p>
+<!-- - act specifications are declarative: they describe what must hold, not how to execute.
+- Each transition explicitly states when it is defined (iff ...).
+- Storage updates are separated from control flow. -->
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="installation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="syntax.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="installation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="syntax.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

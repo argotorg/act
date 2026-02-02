@@ -1,0 +1,563 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>hevm backend: Equivalence to EVM bytecode - The act Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The act Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="hevm-backend-checking-equivalence-with-evm-bytecode"><a class="header" href="#hevm-backend-checking-equivalence-with-evm-bytecode">hevm Backend: Checking Equivalence with EVM Bytecode</a></h1>
+<p><strong>Table of Contents</strong></p>
+<ul>
+<li><a href="#usage">Usage</a>
+<ul>
+<li><a href="#basic-usage-patterns">Basic Usage Patterns</a></li>
+<li><a href="#command-line-flags">Command-Line Flags</a></li>
+<li><a href="#running-the-erc20-example">Running the ERC20 Example</a></li>
+<li><a href="#expected-output-for-successful-verification">Expected Output for Successful Verification</a></li>
+<li><a href="#when-verification-fails-example-with-broken-erc20">When Verification Fails: Example with Broken ERC20</a></li>
+<li><a href="#verifying-multiple-contracts-with---sources">Verifying Multiple Contracts with --sources</a></li>
+<li><a href="#additional-options">Additional Options</a></li>
+</ul>
+</li>
+<li><a href="#how-it-works">How it works</a>
+<ul>
+<li><a href="#success-nodes">Success nodes</a></li>
+<li><a href="#equivalence-check">Equivalence check</a></li>
+</ul>
+</li>
+</ul>
+<hr />
+<p>EVM bytecode can be formally verified to implement an act spec. This
+means that each successful behavior of the bytecode should be covered
+by the act spec and vice-versa.</p>
+<p>To check equivalence, act leverages the symbolic execution engine in hevm.
+The act spec is translated to
+Expr, the intermediate representation of hevm, and the EVM bytecode is
+symbolically executed to obtain its Expr representation. Then
+equivalence can be checked with the equivalence checker of hevm.</p>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<p>The hevm backend performs automated equivalence checking between act specifications and EVM bytecode implementations.
+It is language agnostic, currently (version 0.2.0) supporting verification of contracts written in both Solidity and Vyper.</p>
+<h3 id="basic-usage-patterns"><a class="header" href="#basic-usage-patterns">Basic Usage Patterns</a></h3>
+<p><strong>1. Single contract with Solidity:</strong></p>
+<pre><code class="language-sh">act equiv --spec &lt;PATH_TO_SPEC&gt; --sol &lt;PATH_TO_SOL&gt;
+</code></pre>
+<p><strong>2. Single contract with Vyper:</strong></p>
+<pre><code class="language-sh">act equiv --spec &lt;PATH_TO_SPEC&gt; --vy &lt;PATH_TO_VY&gt;
+</code></pre>
+<p><strong>3. Multi-contract projects:</strong> (more info in <a href="#verifying-multiple-contracts-with---sources">Multi-Contract Projects</a>)</p>
+<pre><code class="language-sh">act equiv --json &lt;PATH_TO_CONFIG_JSON&gt;
+</code></pre>
+<p><strong>4. Direct bytecode verification:</strong></p>
+<pre><code class="language-sh">act equiv --spec &lt;PATH_TO_SPEC&gt; --code &lt;RUNTIME_BYTECODE&gt; --initcode &lt;CONSTR_BYTECODE&gt; --layout Solidity
+</code></pre>
+<h3 id="command-line-flags"><a class="header" href="#command-line-flags">Command-Line Flags</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--spec</code></td><td>Path</td><td>-</td><td>Path to the act specification file (.act)</td></tr>
+<tr><td><code>--sol</code></td><td>Path</td><td>-</td><td>Path to Solidity source file (.sol)</td></tr>
+<tr><td><code>--vy</code></td><td>Path</td><td>-</td><td>Path to Vyper source file (.vy)</td></tr>
+<tr><td><code>--json</code></td><td>Path</td><td>-</td><td>Path to JSON configuration file for multi-contract projects</td></tr>
+<tr><td><code>--solver</code></td><td><code>cvc5|z3|bitwuzla</code></td><td><code>cvc5</code></td><td>SMT solver to use for verification</td></tr>
+<tr><td><code>--smttimeout</code></td><td>Integer (ms)</td><td><code>20000</code></td><td>Timeout for each SMT query in milliseconds</td></tr>
+<tr><td><code>--debug</code></td><td>Boolean</td><td><code>false</code></td><td>Print verbose output including raw SMT queries</td></tr>
+</tbody></table>
+</div><!-- | `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification | -->
+<!-- | `--initcode` | ByteString | - | Constructor bytecode (hexadecimal) | -->
+<h3 id="running-the-erc20-example"><a class="header" href="#running-the-erc20-example">Running the ERC20 Example</a></h3>
+<p>The act repository includes a complete ERC20 example demonstrating equivalence checking. The example files are located in <code>tests/hevm/pass/multisource/erc20/</code>.</p>
+<p><strong>Verify ERC20 against Solidity implementation:</strong></p>
+<pre><code class="language-sh">act equiv --spec tests/hevm/pass/multisource/erc20/erc20.act \
+         --sol tests/hevm/pass/multisource/erc20/erc20.sol
+</code></pre>
+<p><strong>Verify ERC20 against Vyper implementation:</strong></p>
+<pre><code class="language-sh">act equiv --spec tests/hevm/pass/multisource/erc20/erc20.act \
+         --vy tests/hevm/pass/multisource/erc20/erc20.vy
+</code></pre>
+<p>The hevm backend will:</p>
+<ol>
+<li>Compile the source code to EVM bytecode</li>
+<li>Symbolically execute the bytecode</li>
+<li>Check equivalence between the specification and implementation</li>
+<li>Report success or provide counterexamples if differences are found</li>
+</ol>
+<h3 id="expected-output-for-successful-verification"><a class="header" href="#expected-output-for-successful-verification">Expected Output for Successful Verification</a></h3>
+<p>When the ERC20 implementation matches its specification, you should see output similar to this:</p>
+<pre><code>Checking contract Token
+Constructing the initial state.
+Success. 
+Checking if constructor results are equivalent.
+Found 1 total pairs of endstates
+Asking the SMT solver for 1 pairs
+Success. 
+Checking if constructor input spaces are the same.
+Success. 
+Checking if the resulting state can contain aliasing.
+Success. 
+Checking behavior transfer of Token
+Constructing the initial state.
+Success. 
+Checking if behaviour is matched by EVM
+Found 2 total pairs of endstates
+Asking the SMT solver for 2 pairs
+Success. 
+Checking if the input spaces are the same
+Success. 
+Checking if the resulting state can contain aliasing.
+Success. 
+...
+Checking behavior allowance of Token
+Constructing the initial state.
+Success. 
+Checking if behaviour is matched by EVM
+Found 1 total pairs of endstates
+Asking the SMT solver for 1 pairs
+Success. 
+Checking if the input spaces are the same
+Success. 
+Checking if the resulting state can contain aliasing.
+Success. 
+Checking if the ABI of the contract matches the specification
+Success. 
+</code></pre>
+<p><strong>Understanding the output:</strong></p>
+<p>Consult the <a href="#how-it-works">how it works</a> section for more details.</p>
+<ul>
+<li><strong>Checking contract Token</strong>: Initial verification that the contract structure is valid</li>
+<li><strong>Checking if constructor results are equivalent</strong>: Verifies that the constructor in the implementation produces the same storage state as the act specification</li>
+<li><strong>Found X total pairs of endstates</strong>: The number of distinct execution paths (success nodes, see <a href="#success-nodes">here</a>) that were identified during symbolic execution</li>
+<li><strong>Asking the SMT solver for X pairs</strong>: How many queries are sent to the SMT solver to verify equivalence between corresponding endstates</li>
+<li><strong>No discrepancies found</strong>: The SMT solver confirmed that for all inputs satisfying the path conditions, the results and storage are identical between specification and implementation</li>
+<li><strong>Checking if the input spaces are the same</strong>: Verifies that both the act spec and EVM implementation accept and reject the same set of inputs (no missing cases), see <a href="#input-space-equivalence">here</a></li>
+<li><strong>Checking if the resulting state can contain aliasing</strong>: Verifies that the state after a constructor or a transition cannot contain aliasing.</li>
+<li><strong>Checking if the ABI of the contract matches the specification</strong>: Ensures all function signatures match between the specification and implementation</li>
+</ul>
+<p><strong>What each transition check involves:</strong></p>
+<ol>
+<li><strong>Checking transition X of act</strong>: Start verification of a specific function</li>
+<li><strong>Checking if transition is matched by EVM</strong>: Confirm the EVM implementation has corresponding behavior</li>
+<li><strong>Endstate equivalence</strong>: For each execution path, verify that when the same inputs are provided:
+<ul>
+<li>Storage updates are identical</li>
+<li>Return values are identical</li>
+<li>Both succeed or both revert</li>
+</ul>
+</li>
+<li><strong>Input space equivalence</strong>: Verify that the sets of inputs that succeed (or fail) are the same in both spec and implementation</li>
+</ol>
+<h3 id="when-verification-fails-example-with-broken-erc20"><a class="header" href="#when-verification-fails-example-with-broken-erc20">When Verification Fails: Example with Broken ERC20</a></h3>
+<p>If the implementation doesn't match the specification, act provides a detailed counterexample. Consider a faulty ERC20 implementation where <code>transfer</code> incorrectly updates balances:</p>
+<pre><code class="language-solidity">// Broken implementation
+    function transfer(uint256 value, address to) public returns (bool) {
+        require(balanceOf[msg.sender] &gt;= value);
+        if (to == address(0xdead)) {
+            balanceOf[msg.sender] = balanceOf[msg.sender] - value;
+            balanceOf[to] = balanceOf[to] + value + 1;  // Bug: adds extra token!
+        } else {
+            balanceOf[msg.sender] = balanceOf[msg.sender] - value;
+            balanceOf[to] = balanceOf[to] + value;
+        }
+        return true;
+    }
+</code></pre>
+<p>Running verification on this broken implementation produces:</p>
+<pre><code>Checking behavior transfer of act
+Checking if behaviour is matched by EVM
+Found 4 total pairs of endstates
+Asking the SMT solver for 4 pairs
+Not equivalent.
+
+-----
+
+The following input results in different behaviours
+Calldata:
+  transfer(0,0x000000000000000000000000000000000000dEaD)
+Storage:
+  Addr SymAddr "entrypoint": [(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01,0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe),(0x8000000000000000000000000000000000000000000000000000000000000001,0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)]
+Transaction Context:
+  TxValue: 0x0
+Addrs:
+  SymAddr "caller": 0xFF0000000000000000000000000000000000DEAD
+  SymAddr "to": 0x000000000000000000000000000000000000dEaD
+</code></pre>
+<p><strong>Interpreting the counterexample:</strong></p>
+<ul>
+<li><strong>Calldata</strong>: The specific function call that triggers the bug: <code>transfer(0, 0x000000000000000000000000000000000000dEaD)</code> - transferring 0 tokens to address <code>0xdead</code></li>
+<li><strong>Storage</strong>: The contract state where the discrepancy occurs. The storage shows:
+<ul>
+<li>Key-value pairs in hexadecimal representing storage slots</li>
+<li><code>0x7fff...f01 ↦ 0xfff...ffe</code>: Storage location and its value</li>
+<li><code>0x8000...001 ↦ 0xfff...fff</code>: Another storage location (likely total supply or balance)</li>
+</ul>
+</li>
+<li><strong>Transaction Context</strong>:
+<ul>
+<li><code>TxValue: 0x0</code> - No ETH sent with the call (0 wei)</li>
+</ul>
+</li>
+<li><strong>Addrs</strong>: The symbolic addresses involved:
+<ul>
+<li><code>SymAddr "caller": 0xFF...DEAD</code> - The address executing the transaction</li>
+<li><code>SymAddr "to": 0x000...dEaD</code> - The recipient address</li>
+</ul>
+</li>
+</ul>
+<p>This counterexample tells us that transferring 0 tokens to address <code>0xdead</code> produces different results in the implementation versus the specification, allowing developers to locate and fix the bug.</p>
+<h3 id="verifying-multiple-contracts-with---sources"><a class="header" href="#verifying-multiple-contracts-with---sources">Verifying Multiple Contracts with --sources</a></h3>
+<p>For complex projects with multiple interacting contracts, use a JSON configuration file, that might look like this:</p>
+<p><strong>JSON Structure (<code>project.json</code>):</strong></p>
+<pre><code class="language-json">{
+  "specifications": ["&lt;path-to-spec1&gt;/spec1.act", "&lt;path-to-spec2&gt;/spec2.act"],
+  "sources": {
+    "&lt;path-to-source1&gt;/source1.sol": { "language": "Solidity" },
+    "&lt;path-to-source2&gt;/source2.vy": { "language": "Vyper" },
+    "&lt;path-to-source3&gt;/source3.vy": { "language": "Vyper" }
+  },
+  "contracts": {
+    "Contract1": { "source": "&lt;path-to-source1&gt;/source1.sol" },
+    "Contract2": { "source": "&lt;path-to-source2&gt;/source2.vy" },
+    "Contract3": { "source": "&lt;path-to-source3&gt;/source3.vy" },
+    "Contract4": { "source": "&lt;path-to-source3&gt;/source3.vy" },
+    "Contract5": {
+      "code" : "&lt;path-to-bytecode-runtime&gt;/bytecode.bin-runtime",
+      "initcode" : "&lt;path-to-bytecode-init&gt;/bytecode.bin",
+      "layout" : "Solidity"
+    }
+  }
+}
+</code></pre>
+<p><strong>Fields explained:</strong></p>
+<ul>
+<li><code>specifications</code>: Array of act specification files. Note that the order matters. Any specification may only have dependencies on specifications that exists earlier in the list.</li>
+<li><code>sources</code>: Map of source files to their language (Solidity or Vyper)</li>
+<li><code>contracts</code>: Map of contract names to their source files</li>
+</ul>
+<p>Note that specifications and sources may contain multiple contracts.</p>
+<p><strong>Running verification:</strong></p>
+<pre><code class="language-sh">act equiv --sources project.json --solver bitwuzla --smttimeout 60000
+</code></pre>
+<p><strong>Example: Automatic Market Maker (AMM) with Solidity and Vyper:</strong></p>
+<p>The act repository includes an example with mixed languages in <code>tests/hevm/pass/multisource/amm/</code>:</p>
+<pre><code class="language-json">{
+  "specifications" : ["../erc20/erc20.act", "amm.act"],
+  "sources" : {
+    "../erc20/erc20.vy" : { "language" : "Vyper" },
+    "amm.sol" : { "language" : "Solidity" }
+  },
+  "contracts" : {
+    "Token" : { "source" : "../erc20/erc20.vy"},
+    "Amm" : { "source" : "amm.sol"}
+  }
+}
+</code></pre>
+<p>This allows verification of specifications against implementations in different languages, and verification of multiple contracts that interact with each other.</p>
+<h3 id="additional-options"><a class="header" href="#additional-options">Additional Options</a></h3>
+<p><strong>Choosing SMT solvers:</strong></p>
+<p>Different solvers have different strengths:</p>
+<ul>
+<li><strong>Bitwuzla</strong>: Specialized for bitvector reasoning; excellent for bitwise operations. Recommended for equivalence checking.</li>
+<li><strong>CVC5</strong> (default): Good all-around performance, handles most common contracts. May fail at some contracts due to errors.</li>
+<li><strong>Z3</strong>: Alternative when CVC5 times out; sometimes faster on arithmetic-heavy specs</li>
+</ul>
+<pre><code class="language-sh">act equiv --spec contract.act --sol contract.sol --solver z3
+</code></pre>
+<p><strong>Debugging failed proofs:</strong></p>
+<p>Use the <code>--debug</code> flag to see detailed SMT queries:</p>
+<pre><code class="language-sh">act equiv --spec contract.act --sol contract.sol --debug
+</code></pre>
+<p>This outputs:</p>
+<ul>
+<li>The symbolic execution trace</li>
+<li>Path conditions</li>
+<li>Storage constraints</li>
+<li>Raw SMT queries sent to the solver</li>
+<li>Detailed counterexamples when equivalence fails</li>
+</ul>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
+<h3 id="success-nodes"><a class="header" href="#success-nodes">Success nodes</a></h3>
+<p>The Expr representation of an act program is a list of <em>Success</em>
+nodes, that contain the possible successful results of the
+computation. The Expr representation of the EVM bytecode can also be
+flattened to a list of result nodes from which we only keep the
+successful executions, filtering out failed and partial execution
+paths. An informative warning will be thrown when partial executions
+are encountered.</p>
+<p>A success node in Expr, <code>Success cond res storage</code>, is a leaf in the
+Expr tree representation and contains the path conditions, <code>cond</code> that
+lead to the leaf, the result buffer <code>res</code>, and the end state
+<code>storage</code>.</p>
+<p>In order to compute the index in storage for each variable mentioned in the spec,
+act needs to have access to the
+storage layout metadata output by the compiler.</p>
+<!-- Therefore we need to pass a solc output json when trying to prove equivalence. -->
+<h3 id="equivalence-check"><a class="header" href="#equivalence-check">Equivalence check</a></h3>
+<p>To check equivalence between the two Expr representations the
+following checks are performed.</p>
+<h4 id="result-equivalence"><a class="header" href="#result-equivalence">Result equivalence</a></h4>
+<p>The two lists of <code>Success</code> nodes are checked for equivalence using
+the hevm equivalence checker. For each pair of nodes in the two lists,
+we check that for all inputs that satisfy the combined path conditions the
+result and final storage are the same.</p>
+<p>In act v0.2.0 the order of creating new contracts is relevant.
+Writing</p>
+<pre><code class="language-act">A a := new A()
+B b := new B()
+</code></pre>
+<p>is not equivalent to</p>
+<pre><code class="language-act">B b := new B()
+A a := new A()
+</code></pre>
+<p>as the pointers to the contract storage are not the same. The order of contract creation
+must match the one in the EVM bytecode for the equivalence checker to succeed.
+This restriction might be lifted in later releases of act.</p>
+<h4 id="input-space-equivalence"><a class="header" href="#input-space-equivalence">Input space equivalence</a></h4>
+<p>We also need to check that the EVM bytecode implementation and act specification
+revert at the same inputs.
+Since the input space of the two lists is not necessarily exhaustive,
+some inputs may lead to failed execution paths that are not
+present in the list. We therefore need to check that the input space of the two
+lists are the same. That is, there must not be inputs that satisfy
+some path condition in the first list but none the second and vice versa.</p>
+<p>Say that the act program has the Expr representation</p>
+<p><code>Success c1 r1 s1, ..., Success cn rn sn</code></p>
+<p>and the the EVM bytecode has the Expr representation</p>
+<p><code>Success c1' r1' s1', ..., Success cn' rn' sn'</code></p>
+<p>then we need to check that
+<code>c1 ∨ .. ∨ cn ⟺ c1' ∨ .. ∨ cn'</code> that
+is, we require that</p>
+<p><code>c1 ∨ .. ∨ cn ∧ ¬(c1' ∨ .. ∨ cn')</code> and
+<code>c1' ∨ .. ∨ cn' ∧ ¬(c1 ∨ .. ∨ cn)</code></p>
+<p>are both unsatisfiable.</p>
+<h4 id="exhaustiveness-checks-for-bytecode"><a class="header" href="#exhaustiveness-checks-for-bytecode">Exhaustiveness checks for bytecode</a></h4>
+<p>The hevm backend performs public interface matching between the EVM bytecode implementation and the act specification.
+It verifies that each contract defines the same constructor and the same set of transitions, with matching function signatures.</p>
+<!-- Old descritpion -->
+<!-- ## Description
+
+Two claims are generated for each transition, Pass and Fail. The Pass claim states that if all
+preconditions in the iff block are true, then all executions will succeed, storage will be updated
+according to the storage block, and the specified return value will, in fact, be returned. The Fail
+claim states that should any of the preconditions be false, all executions will revert.
+
+In both cases we begin the proof by constraining calldata to be of the form specified in the
+transitions’ interface blocks, as well as making the relevant assumptions depending on whether the
+claim is Pass or Fail, and then symbolically executing the bytecode object with storage held to be
+completely abstract.
+
+This produces a tree of potential executions where each node represents a potential branching point,
+and each leaf represents a possible final state of the contract after the execution of a single
+call.
+
+In the case of a Fail claim, we can then check that each leaf represents a state in which execution
+has reverted, while for a Pass claim we can check that storage has been updated as expected, and
+that the contents of the return buffer matches what was specified in the transition’s returns block. -->
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="aliasing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="rocq.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="aliasing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="rocq.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

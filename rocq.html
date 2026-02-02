@@ -1,0 +1,940 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rocq backend - The act Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The act Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="rocq-backend-proving-properties-of-specifications"><a class="header" href="#rocq-backend-proving-properties-of-specifications">Rocq Backend: Proving Properties of Specifications</a></h1>
+<p><strong>Table of Contents</strong></p>
+<ul>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#a-brief-introduction-to-proof-in-rocq">A Brief Introduction to Proof in Rocq</a></li>
+<li><a href="#act-export">act Export</a></li>
+<li><a href="#proving-properties-using-the-act-rocq-export">Proving properties using the act Rocq export</a></li>
+</ul>
+<hr />
+<p>In order to reason about the contracts and prove their properties, the Rocq backend of act shallowly
+embeds the act specification into the logic of the Rocq proof assistant.</p>
+<p>For this embedding to be sound, we ensure that the storage of the
+contract (and the contracts reachable from it) satisfies the <em>unique ownership invariant</em> (see <a href="./aliasing.html">aliasing section</a>), meaning that its storage may never contain any aliased references to other contracts.
+act checks this invariant automatically immediately after the type-checking phase.</p>
+<p>A proof assistant provides tools that help to construct proofs. Rocq, in particular, is highly
+interactive. The user typically builds proofs step by step, with the software giving feedback as the
+proof progresses.</p>
+<p>The requirements on proofs in a system like Rocq, Isabelle, or Lean are quite strict. These tools
+only accept proofs that are algorithmically verifiable to be valid series of applications of the
+system’s inference rules. This is generally stricter than what is typically expected of pen and
+paper proofs, which often omit tedious details in the interest of clarity and concision.</p>
+<p>The verification of these proofs is performed in a minimal and well-audited kernel. Although
+occasionally bugs have been found in Rocq’s and other systems’ kernels, a proof in these systems is
+generally quite strong evidence of correctness.</p>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<p><strong>Generate Rocq formalization:</strong>
+To generate the Rocq code run</p>
+<pre><code class="language-sh">act rocq --file &lt;PATH_TO_SPEC&gt;
+</code></pre>
+<p>against your spec, or</p>
+<pre><code class="language-sh">act rocq --json &lt;PATH_TO_JSON&gt;
+</code></pre>
+<p>where the JSON file has the following format</p>
+<pre><code class="language-json">{
+  "specifications" : ["&lt;PATH_TO_SPEC&gt;",..],
+}
+</code></pre>
+<p>Note: In the current implementation the specifications must be ordered, so that any specification only depends on others earlier in the list.</p>
+<h4 id="rocq-command-line-flags"><a class="header" href="#rocq-command-line-flags">Rocq Command-Line Flags</a></h4>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>--file</code></td><td>Path</td><td>-</td><td>Path to the act specification file (.act)</td></tr>
+<tr><td><code>--json</code></td><td>Path</td><td>-</td><td>Path to the sources JSON file (.json)</td></tr>
+<tr><td><code>--solver</code></td><td><code>cvc5|z3</code></td><td><code>cvc5</code></td><td>SMT solver used during type-checking and unique ownership verification</td></tr>
+<tr><td><code>--smttimeout</code></td><td>Integer (ms)</td><td><code>20000</code></td><td>Timeout for SMT queries</td></tr>
+<tr><td><code>--debug</code></td><td>Boolean</td><td><code>false</code></td><td>Print verbose output during generation</td></tr>
+</tbody></table>
+</div>
+<h3 id="setting-up-a-rocq-project"><a class="header" href="#setting-up-a-rocq-project">Setting Up a Rocq Project</a></h3>
+<p>To fully use this feature you should also set up a <code>Makefile</code> and <code>_RocqProject</code>. Following the example in <code>tests/rocq/ERC20/</code>,
+the project structure should look something like this:</p>
+<pre><code>my-contract/
+├── mycontract.act       # Your act specification
+├── MyContract.v         # Generated (by act rocq)
+├── _RocqProject         # Rocq project configuration
+├── Makefile             # Build automation
+└── Theory.v             # Your custom proofs
+</code></pre>
+<p>act's Rocq backend generates code that depends on the ActLib library, which provides foundational definitions for reasoning about EVM contracts. It should be included in your Rocq project through the configuration files, as will be shown bellow.</p>
+<!-- <span style="color:red">this is confusing: it says Actlib should be included, but in example above it is not.</span> -->
+<h3 id="1-create-a-_rocqproject-file"><a class="header" href="#1-create-a-_rocqproject-file">1. Create a <code>_RocqProject</code> file:</a></h3>
+<p>The <code>_RocqProject</code> file tells Rocq where to find dependencies and which files to compile:</p>
+<pre><code class="language-rocq-project">-Q . MyContractDir
+-Q /path/to/act/lib ActLib
+
+/path/to/act/lib/ActLib.v
+MyContract.v
+Theory.v
+</code></pre>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li><code>-Q . MyContractDir</code> - Maps current directory to the logical name <code>MyContractDir</code></li>
+<li><code>-Q /path/to/act/lib ActLib</code> - Makes ActLib available (adjust path to your act installation)</li>
+<li>List all <code>.v</code> files that should be compiled</li>
+</ul>
+<p><strong>For the <a href="https://github.com/argotorg/act/tree/main/tests/rocq/ERC20">ERC20 example</a> in the act repository:</strong></p>
+<pre><code class="language-rocq-project">-Q . ERC20
+-Q ../../../lib ActLib
+
+../../../lib/ActLib.v
+ERC20.v
+Theory.v
+</code></pre>
+<h3 id="2-create-a-makefile"><a class="header" href="#2-create-a-makefile">2. Create a <code>Makefile</code>:</a></h3>
+<p>This Makefile automates the entire workflow from act spec to verified proofs:</p>
+<pre><code class="language-makefile">.PHONY: verify
+verify: RocqMakefile MyContract.v
+	make -f RocqMakefile
+
+MyContract.v: mycontract.act
+	act rocq --file mycontract.act &gt; MyContract.v
+
+RocqMakefile: _RocqProject
+	rocq makefile -f _RocqProject -o RocqMakefile
+
+.PHONY: clean
+clean:
+	if [[ -f RocqMakefile ]]; then make -f RocqMakefile clean; fi
+	rm -f MyContract.v RocqMakefile RocqMakefile.conf
+	rm -f *.glob *.vo *.vok *.vos .*.aux
+
+.PHONY: regenerate
+regenerate: clean MyContract.v verify
+</code></pre>
+<p><strong>Makefile Targets Explained:</strong></p>
+<ul>
+<li>
+<p><strong><code>make verify</code></strong> (or just <code>make</code>) - Full build pipeline:</p>
+<ol>
+<li>Generates <code>MyContract.v</code> from your <code>.act</code> file if needed</li>
+<li>Creates <code>RocqMakefile</code> from <code>_RocqProject</code></li>
+<li>Compiles all Rocq files and checks proofs</li>
+</ol>
+</li>
+<li>
+<p><strong><code>make clean</code></strong> - Removes all generated and compiled files:</p>
+<ul>
+<li>Generated <code>.v</code> file</li>
+<li>Compiled Rocq artifacts (<code>.vo</code>, <code>.vok</code>, <code>.vos</code>, <code>.glob</code>)</li>
+<li>Makefile artifacts</li>
+</ul>
+</li>
+<li>
+<p><strong><code>make regenerate</code></strong> - Clean rebuild from scratch</p>
+</li>
+</ul>
+<h3 id="3-write-custom-proofs-in-theoryv"><a class="header" href="#3-write-custom-proofs-in-theoryv">3. Write custom proofs in <code>Theory.v</code>:</a></h3>
+<p>Start with the basic structure:</p>
+<pre><code class="language-rocq">Require Import MyContractDir.MyContract.
+Require Import ActLib.ActLib.
+
+(* Import generated definitions *)
+(* MyContractName is the name of a contract in the generated MyContract file *)
+Import MyContract.MyContractName
+
+(* Prove invariants and properties about the contract *)
+</code></pre>
+<p>This structure gives access to the <code>MyContractName</code> module that is generated by act, corresponding to the contract with name <code>MyContractName</code>, inside the <code>MyContract.v</code> file, located in the directory mapped to <code>MyContractDir</code> in <code>_RocqProject</code>.
+Writing your proofs in a file separate than the one generated by act is recommended, so that the latter can be regenerated if necessary, without affecting any manual work.</p>
+<h3 id="4-build-and-verify"><a class="header" href="#4-build-and-verify">4. Build and verify:</a></h3>
+<p>After everything is set, you can use the following commands in your proof development workflow</p>
+<pre><code class="language-sh"># Initial build (generates .v file and compiles everything)
+make verify
+
+# After modifying Theory.v, just rebuild
+make -f RocqMakefile
+
+# After modifying the .act spec, regenerate
+make regenerate
+</code></pre>
+<h4 id="interactive-proof-development"><a class="header" href="#interactive-proof-development">Interactive Proof Development</a></h4>
+<p>If you are using Rocq in your editor in an interactive mode, make sure your editor links to the Rocq executables (rocqtop) from the nix shell.
+Alternatively you can use a local Rocq executable, if present, and <code>make</code> outside of the nix shell, once the <code>act rocq</code> command has terminated.</p>
+<h2 id="a-brief-introduction-to-proof-in-rocq"><a class="header" href="#a-brief-introduction-to-proof-in-rocq">A Brief Introduction to Proof in Rocq</a></h2>
+<p>Rocq is a complex system with a steep learning curve, and while a full tutorial on programming in Rocq
+is out of the scope of this documentation, we can give a little taste of how things work. For a more
+thorough introduction, the books Software Foundations and Certified Programming With Dependent Types
+are both excellent. Software Foundations in particular is a great introduction for users with little
+experience in the fields of formal logic and proof theory.</p>
+<!-- The Rocq system is composed of three languages: a minimal functional programming language (Gallina),
+a tactics language for proof construction (Ltac), and a “vernacular” for interaction with the
+kernel. Let’s start with the very basics: defining the natural numbers and proving something about
+addition. -->
+<p>We start by defining the type of natural numbers. There are infinitely many natural numbers, so
+they must be defined inductively. In fact, <strong>all type definitions</strong> are done with the <code>Inductive</code> <!--vernacular--> command, even if they are not in fact inductive. Rocq’s <code>Inductive</code> is analogous to
+Haskell’s <code>data</code> and OCaml’s <code>type</code> (with the added power of dependent types).</p>
+<p>We define two constructors: <code>O</code>, representing 0, and <code>S</code>, representing the successor function, which when applied to the natural number n
+produces the representation of the number <code>n + 1</code>. To give a concrete example, 3
+would be represented in this encoding as <code>S (S (S 0)))</code> i.e <code>1 + (1 + (1 + 0))</code>.</p>
+<pre><code class="language-Rocq">Inductive nat : Type :=
+  | O
+  | S (n : nat).
+</code></pre>
+<p>This is an example of a unary number representation. It can often be helpful to represent numbers
+this way, since the inductive nature of the definition lends itself to inductive proof techniques.</p>
+<p>Let’s continue by defining addition over our <code>nat</code> type:</p>
+<pre><code class="language-Rocq">Fixpoint plus (n : nat) (m : nat) : nat :=
+  match n with
+  | O ⇒ m
+  | S n' ⇒ S (plus n' m)
+  end.
+</code></pre>
+<p>Here we define a recursive function (a <code>Fixpoint</code>) that takes two numbers <code>n</code> and <code>m</code> and returns the
+sum of these two numbers. The implementation is defined recursively with pattern matching. You might
+think of this definition as “unwrapping” each application of <code>S</code> from the first argument until we
+reach its <code>O</code>. Then we start wrapping the second argument in the same number of <code>S</code>s.</p>
+<p>Now we’re ready to prove something! Let’s prove that <code>0 + n == n</code>:</p>
+<pre><code class="language-Rocq">Theorem plus_O_n :
+  forall n : nat, plus O n = n.
+Proof.
+  intros n. simpl. reflexivity.
+Qed.
+</code></pre>
+<p>We first define our <code>Theorem</code> and give it a name (<code>plus_O_n</code>). Then we define the proof goal, in the
+form of a dependent type. We claim that for all <code>n</code>, where <code>n</code> is an instance of our <code>nat</code> type, <code>0 + n</code> is
+equal to <code>n</code>. Finally, we construct a proof, in the form of a series of tactics. Tactics may implement
+either backwards inference (transforming the goal) or forwards inference (transforming evidence).</p>
+<p>The best way to understand the system is to run the software yourself, and play around with the
+various tactics. In this case the goal is simple enough; once we’ve specified that the proof will be
+on <code>n</code> (<code>intros n</code>), Rocq is able to simplify <code>plus O n</code> into <code>n</code> (<code>simpl</code>), leaving us the goal <code>n = n</code>. This turns out to be true
+by the definition of equality, and we invoke definitional equality by reflexivity (<code>reflexivity</code>).</p>
+<p>More complicated proofs do not typically require proving basic facts about arithmetic, because Rocq
+ships a substantial standard library of useful definitions and theorems. The above example hopefully
+serves to illustrate the formal nature of proof in these systems. In many cases it can be
+surprisingly hard to convince the kernel of the correctness of a statement that seems “obviously”
+true.</p>
+<h2 id="act-export"><a class="header" href="#act-export">act Export</a></h2>
+<p>Calling <code>act rocq ...</code> will generate a Rocq file that encodes the contract as a state transition system,
+following the formal value semantics, given and <strong>proven sound</strong> in the
+<span style="color:green">tech report (to be available shortly).</span></p>
+<p>The generated Rocq output will contain: <!-- <span style="color:red">talk about postconditions and invariants</span> --></p>
+<!--Gallina-->
+<ul>
+<li>type definitions for contract <strong>state</strong>.</li>
+<li>For every case of the constructor and every transition:
+<ul>
+<li><strong>State transition relation</strong> (used for the step relation).</li>
+<li><strong>Precondition</strong> predicates (additionally to the given preconditions, also requirements on integer bounds)
+for every storage variable, where applicable. <!-- For transitions, postconditions need only hold for the reachable states (see below). --></li>
+<li><strong>Return value</strong> proposition (only for transitions).</li>
+</ul>
+</li>
+<li><strong>Transition system with a step relation</strong> (and then generalised to multistep)</li>
+<li>Predicate characterising a <strong>reachable state</strong> <em>from any initial state</em>.</li>
+<li>Predicate characterising a <strong>reachable state</strong> <em>from the initial state produced by given constructor parameters</em>.</li>
+<li>Definition schema for <strong>invariants</strong>*:
+<ul>
+<li>Parametrized by the invariant property <code>IP : Env -&gt; {argument-types} -&gt; address -&gt; State -&gt; Prop</code>, where <code>{argument-types}</code> represents the types of the constructor's arguments. The property's arguments of types <code>Env</code>, <code>{argument-types}</code> and <code>address</code> refer to the environment, the arguments and the next address at the time of construction.</li>
+<li>Invariant predicate definition for the Initial State.</li>
+<li>Invariant predicate definition for the Step.</li>
+<li>Proof of the invariant holding in all reachable states if <code>IP</code> holds in the initial state and for every step.</li>
+</ul>
+</li>
+</ul>
+<p>*) Invariants are properties that hold in all reachable states of the state transition system, and can be used to prove properties about the contract.</p>
+<p>Let us explore the generated Rocq output for the ERC20 Token contract from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>.</p>
+<p>The output will begin with importing the necessary libraries:</p>
+<pre><code class="language-Rocq">(* --- GENERATED BY ACT --- *)
+
+Require Import Stdlib.ZArith.ZArith.
+Require Import ActLib.ActLib.
+Require Stdlib.Strings.String.
+
+Module Str := Stdlib.Strings.String.
+Open Scope Z_scope.
+</code></pre>
+<p>Then it will start a module for the token contract:</p>
+<pre><code class="language-Rocq">Module Token.
+
+Record State : Set := state
+{ addr : address
+; BALANCE : Z
+; allowance : address -&gt; address -&gt; Z
+; balanceOf : address -&gt; Z
+; totalSupply : Z
+}.
+</code></pre>
+<p>The contract will be represented as a <strong>record</strong> with the fields corresponding to the storage variables, and two additional
+fields: the address of the contract <code>addr</code> and the balance of the contract (the number of wei sent to it) <code>BALANCE</code>.
+Note that we use the type <code>Z</code> for integers, which is the integer type from the ZArith library bundled with Rocq; and we also use the type <code>address</code> for Ethereum addresses, which is also represented by <code>Z</code> in the <code>ActLib</code>.</p>
+<p>The <code>Actlib</code> also defines an <strong>environment</strong> type, which is a record that represents the context in which the contract is executed. It also contains Ethereum environment variables, such as the call value (<code>Callvalue</code>), the caller address
+(<code>Caller</code>).
+The structure of the environment in Rocq is as follows:</p>
+<pre><code class="language-rocq">Record Env : Set :=
+  { Callvalue : Z;
+    Caller : address;
+    This : address;
+    Origin : address;}.
+</code></pre>
+<p>Finally, a parameter of note is <code>NextAddr</code>, which is used in constructor and transition relations. It represents the next address to be allocated by the EVM. There are 2 instances of it in each relation, corresponding to the next address prior to and after the constructor/transition. <!-- <span style="color:red">next addr has been removed.</span> --></p>
+<!-- Lefteris: nextAddr still exists, its just been removed from inside the ENV -->
+<!-- <span style="color:red">TODO: insert balance pre- and post-conditions everywhere for payable functions. Explain
+how the balance is handled.</span> -->
+<p>Next, the output contains some <strong>additional type definitions</strong>, like <code>noAliasing</code> and <code>stateIntegerBounds</code>. They are used in the conditions generated for constructors/transitions.</p>
+<!-- (see `amm.act` contract for examples on how to use it - <span style="color:red">The paper's version of the amm includes these in the proofs, no the one in the tests dir of the repo.</span>). Lefteris: will enable again once proof is cleaned up and included in the test suite -->
+<pre><code class="language-Rocq">Inductive addressIn (STATE : State) : address -&gt; Prop :=
+| addressOf_This :
+     addressIn STATE (addr STATE)
+.
+
+Inductive noAliasing (STATE : State) : Prop :=
+| noAliasingC : noAliasing STATE
+.
+
+Inductive stateIntegerBounds (STATE : State) : Prop :=
+| integerBoundsC :
+     0 &lt;= Token.addr STATE &lt;= UINT_MAX 160
+  -&gt; 0 &lt;= BALANCE STATE &lt;= UINT_MAX 256
+  -&gt; (forall i0 i1, 0 &lt;= allowance STATE i0 i1 &lt;= UINT_MAX 256)
+  -&gt; (forall i0, 0 &lt;= balanceOf STATE i0 &lt;= UINT_MAX 256)
+  -&gt; 0 &lt;= totalSupply STATE &lt;= UINT_MAX 256
+  -&gt; stateIntegerBounds STATE
+.
+
+Definition nextAddrConstraint (NextAddr : address) (STATE : State) :=
+  forall (p : address), addressIn STATE p -&gt; NextAddr &gt; p
+.
+</code></pre>
+<p>Next the <strong>preconditions for the constructor</strong> are generated as follows:</p>
+<pre><code>Inductive constructor_conds (ENV : Env) (_totalSupply : Z) (NextAddr : address) : Prop :=
+| constructor_condsC : forall
+  ( H_iff0 : ((Callvalue ENV) = 0) )
+  ( H_argConstraints_intBounds__totalSupply : 0 &lt;= _totalSupply &lt;= UINT_MAX 256 )
+  ( H_CallerBound : 0 &lt;= Caller ENV &lt;= UINT_MAX 160 )
+  ( H_OriginBound : 0 &lt;= Origin ENV &lt;= UINT_MAX 160 )
+  ( H_ThisBound : 0 &lt;= This ENV &lt;= UINT_MAX 160 )
+  ( H_NextAddressBound : 0 &lt;= NextAddr &lt;= UINT_MAX 160 )
+  ( H_Caller_lt_NextAddr : Caller ENV &lt; NextAddr )
+  ( H_Origin_lt_NextAddr : Origin ENV &lt; NextAddr )
+  ( H_This_eq_NextAddr : This ENV = NextAddr ),
+  constructor_conds ENV _totalSupply NextAddr
+</code></pre>
+<p>The proposition holds, when the preconditions specified in the constructor's <code>iff</code> block are satisfied, the integer bounds are respected, the
+addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).</p>
+<p>Next, the <code>Token</code> <strong>constructor state transition</strong>
+of type <code>Env -&gt; Z -&gt; Env * State</code> is defined as follows:</p>
+<pre><code class="language-Rocq">Inductive constructor (ENV : Env) (_totalSupply : Z) (NextAddr : address)
+                      : State -&gt; address -&gt; Prop :=
+| Token_case0 : forall NextAddr1
+  ( H_conds : constructor_conds ENV _totalSupply NextAddr )
+  ( H_case_cond : True )
+  ( H_bindings0 : NextAddr1 = NextAddr + 1 ),
+  constructor ENV _totalSupply NextAddr
+      (state NextAddr
+      0
+      (fun _binding_0 =&gt; (fun _ =&gt; 0))
+      (fun _binding_0 =&gt; if ((_binding_0) =? (Caller ENV))%bool then _totalSupply else 0)
+      _totalSupply)
+      (NextAddr1)
+</code></pre>
+<p>The constructor relates the environment, its input arguments and the address to be allocated next, to a new state for the token contract, and the new next allocated address. The contract will be stored in the next address <code>NextAddr</code> and initialize the <code>BALANCE</code> field to 0 (as the constructor is not payable). The <code>allowance</code> function will be initialized to return 0 for all pairs of addresses, the <code>balanceOf</code> function will return the total supply for the contract creator, and the <code>totalSupply</code> will be set to the initial total supply.</p>
+<p>Similarly <strong>preconditions</strong> are generated <strong>for every transition</strong> in the contract specification. For instance for the <code>transfer</code> transition, the preconditions are the following</p>
+<pre><code class="language-rocq">Inductive transfer_conds (ENV : Env) (_value : Z) (to : address)
+                         (STATE : State) (NextAddr : address) : Prop :=
+| transfer_condsC : forall
+  ( H_iff0 : ((Callvalue ENV) = 0) )
+  ( H_iff1 : (((0 &lt;= ((Token.balanceOf STATE) (Caller ENV)))
+              /\ (((Token.balanceOf STATE) (Caller ENV)) &lt;= (UINT_MAX 256)))
+              /\ (((0 &lt;= _value)
+              /\ (_value &lt;= (UINT_MAX 256)))
+              /\ ((0 &lt;= (((Token.balanceOf STATE) (Caller ENV)) - _value))
+              /\ ((((Token.balanceOf STATE) (Caller ENV)) - _value) &lt;= (UINT_MAX 256))))))
+  ( H_iff2 : (((Caller ENV) &lt;&gt; to) -&gt; (((0 &lt;= ((Token.balanceOf STATE) to))
+              /\ (((Token.balanceOf STATE) to) &lt;= (UINT_MAX 256)))
+              /\ (((0 &lt;= _value)
+              /\ (_value &lt;= (UINT_MAX 256)))
+              /\ ((0 &lt;= (((Token.balanceOf STATE) to) + _value))
+              /\ ((((Token.balanceOf STATE) to) + _value) &lt;= (UINT_MAX 256)))))) )
+  ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
+  ( H_argConstraints_intBounds__value : 0 &lt;= _value &lt;= UINT_MAX 256 )
+  ( H_argConstraints_intBounds_to : 0 &lt;= to &lt;= UINT_MAX 160 )
+  ( H_CallerBound : 0 &lt;= Caller ENV &lt;= UINT_MAX 160 )
+  ( H_OriginBound : 0 &lt;= Origin ENV &lt;= UINT_MAX 160 )
+  ( H_ThisBound : 0 &lt;= This ENV &lt;= UINT_MAX 160 )
+  ( H_NextAddressBound : 0 &lt;= NextAddr &lt;= UINT_MAX 160 )
+  ( H_This_lt_NextAddr : This ENV &lt; NextAddr )
+  ( H_Caller_lt_NextAddr : Caller ENV &lt; NextAddr )
+  ( H_Origin_lt_NextAddr : Origin ENV &lt; NextAddr )
+  ( H_no_self_call : (forall (p : address), addressIn STATE p -&gt; Caller ENV &lt;&gt; p) )
+  ( H_no_self_origin : (forall (p : address), addressIn STATE p -&gt; Origin ENV &lt;&gt; p) )
+  ( H_This_eq_addState : This ENV = addr STATE ),
+  transfer_conds ENV _value to STATE NextAddr
+</code></pre>
+<p>The hypotheses begin with the conditions specified in the transition's <code>iff</code> block.
+The first precondition requires that the call value is zero, as the transition is not payable.
+The second precondition ensures that the caller has a sufficient balance to cover the transfer amount, and the value being transferred is within the allowed range. Then the precondition ensures the case we are in. Next, the <code>to</code> address needs to not overflow and has to be a valid address. The environment before and after the transition must also be well-formed (for instance the next address is greater than all current addresses).</p>
+<p>Then, a state transition is generated for every transition in the contract specification.</p>
+<p>Additionally, for every transition, a <strong>return value predicate</strong> is generated as follows:</p>
+<pre><code class="language-rocq">Inductive transfer_ret (ENV : Env) (_value : Z) (to : address)
+                       (STATE : State) (NextAddr : address) : bool -&gt; Prop :=
+| transfer_case0_ret :
+     transfer_conds ENV _value to STATE NextAddr
+  -&gt; ((Caller ENV) &lt;&gt; to)
+  -&gt; transfer_ret ENV _value to STATE NextAddr true
+
+| transfer_case1_ret :
+     transfer_conds ENV _value to STATE NextAddr
+  -&gt; ((Caller ENV) = to)
+  -&gt; transfer_ret ENV _value to STATE NextAddr true
+
+.
+</code></pre>
+<p>The predicate holds if the preconditions hold, the case condition is satisfied, and the return value
+is as expected (in this case true).</p>
+<!-- Next, the **postconditions after the constructor** are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
+```rocq
+Definition Token_post0 :=
+  forall (ENV : Env) (_totalSupply : Z) (STATE' : State),
+     initPreconds ENV _totalSupply
+  -> STATE' = snd (Token ENV _totalSupply)
+  -> ((0 <= (Token.totalSupply STATE')) 
+     /\ ((Token.totalSupply STATE') <= (UINT_MAX 256))).
+```
+-->
+<p>Finally the <strong>state transition system</strong> is defined by the <code>step</code> relation and the <code>reachable</code> proposition.
+The <code>Contract_transition</code> is a relation on pairs of states and next-addresses, given a starting environment, and it
+includes one constructor for every transition of the contract. For the ERC20 Token example, the
+<code>Token_transition</code> relation has the following form:</p>
+<pre><code class="language-rocq">Inductive Token_transition (ENV : Env) (STATE : State) (NextAddr : address)
+                           (STATE' : State) (NextAddr' : address) : Prop :=
+| transfer_Token_transition : forall (_value : Z) (to : address),
+   transfer_transition ENV _value to STATE NextAddr STATE' NextAddr'
+-&gt; Token_transition ENV STATE NextAddr STATE' NextAddr'
+| transferFrom_Token_transition : forall (src : address) (dst : address) (amount : Z),
+   transferFrom_transition ENV src dst amount STATE NextAddr STATE' NextAddr'
+-&gt; Token_transition ENV STATE NextAddr STATE' NextAddr'
+| transferFrom_Token_transition : forall (src : address) (dst : address) (amount : Z),
+...
+
+| allowance_Token_transition : forall (idx1 : address) (idx2 : address),
+   allowance_transition ENV idx1 idx2 STATE NextAddr STATE' NextAddr'
+-&gt; Token_transition ENV STATE NextAddr STATE' NextAddr'
+</code></pre>
+<p>To define the <strong>reachability relation</strong>, we introduce the <code>transition</code> relation on pairs of states and next addreses, which includes all transitions of the system, by all of the included contracts. For the ERC20 Token contract example,
+the <code>transition</code> relation has the following form:</p>
+<pre><code class="language-rocq">Inductive transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : State) (NextAddr' : address) : Prop :=
+| transition_Token :
+     Token_transition ENV STATE NextAddr STATE' NextAddr'
+  -&gt; transition ENV STATE NextAddr STATE' NextAddr'
+</code></pre>
+<p>Since the Token contract does not refer to other contracts in its storage, the <code>transition</code> relation is essentially the same as the <code>Token_transition</code> relation. However, if a contract interacts with other contracts, the <code>transition</code> relation would need to account for those interactions as well. For instance, the Automated Market Maker contract <a href="https://github.com/argotorg/act/blob/main/tests/rocq/amm/amm.act">amm.act</a> stores two ERC20 Tokens in its storage, <code>token0</code> and <code>token1</code>. The state transitions can
+thus arise from calling the <code>Amm</code> contract's own transitions, or from calling transitions on either of the two stored Token contracts. The <code>transition</code> for <code>Amm</code> thus includes cases for the <code>Amm_Transition</code>, <code>Token_transition</code> for <code>token0</code>, and <code>Token_transition</code> for <code>token1</code> and has the following shape</p>
+<pre><code class="language-rocq">Inductive transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : State) (NextAddr' : address) : Prop :=
+| transition_Amm :
+     Amm_transition ENV STATE NextAddr STATE' NextAddr'
+  -&gt; transition ENV STATE NextAddr STATE' NextAddr'
+
+| transition_token0 :
+     nextAddrConstraint NextAddr STATE
+  -&gt; Token.transition ENV (token0 STATE) NextAddr (token0 STATE') NextAddr'
+  -&gt; ...
+  -&gt; transition ENV STATE NextAddr STATE' NextAddr'
+
+| transition_token1 :
+     nextAddrConstraint NextAddr STATE
+  -&gt; Token.transition ENV (token1 STATE) NextAddr (token1 STATE') NextAddr'
+  -&gt; ...
+  -&gt; transition ENV STATE NextAddr STATE' NextAddr'
+</code></pre>
+<p>With the <code>transition</code> relation defined, we can now define the <code>step</code> relation on states, where
+the environments are also bound by an <code>exists</code> quantifier</p>
+<pre><code class="language-rocq">Definition step (STATE : State) (STATE' : State) :=
+exists (ENV : Env) (NextAddr : address) (NextAddr' : address), transition ENV STATE NextAddr STATE' NextAddr'.
+</code></pre>
+<p>and the <code>reachable</code> proposition, which states that a state is reachable from another state through a series of steps.</p>
+<pre><code class="language-rocq">Definition reachable (STATE : State) :=
+exists STATE', init STATE' /\ multistep STATE' STATE.
+</code></pre>
+<!-- For every transition the **postconditions are defined on reachable states**.
+For instance the ERC20 token transfer has the following postcondition:
+```rocq
+Definition transfer0_post0 :=
+  forall (ENV : Env) (STATE : State) (STATE' : State) (_value : Z) (to : address),
+     transfer_conds ENV _value to STATE
+  -> reachable STATE
+  -> transfer_transition ENV _value to STATE NextAddr STATE' NextAddr'
+  -> ((0 <= ((Token.balanceOf STATE') (Caller ENV))) 
+     /\ (((Token.balanceOf STATE') (Caller ENV)) <= (UINT_MAX 256))).
+```
+It states that if the preconditions for the transfer are met and the state is reachable,
+then the balance of the caller after the transfer is valid and within the expected range.
+A similar postcondition is generated for the balance of the recipient.
+-->
+<p>Finally, a <strong>schema for proving invariant properties on reachable states</strong> is defined. Parametric to
+the invariant property <code>IP : Env -&gt; {argument-types} -&gt; State -&gt; Prop</code>,
+if we know that invariant property holds at the initial state</p>
+<pre><code class="language-rocq">Definition invariantInit (IP : Env -&gt; Z -&gt; address -&gt; State -&gt; Prop) :=
+  forall(ENV : Env) (_totalSupply : Z) (NextAddr : address) (STATE : State) (NextAddr' : address),
+     constructor ENV _totalSupply NextAddr STATE NextAddr'
+  -&gt; IP ENV _totalSupply NextAddr STATE
+</code></pre>
+<p>and the step</p>
+<pre><code class="language-rocq">Definition invariantStep (IP : Env -&gt; Z -&gt; address -&gt; State -&gt; Prop) :=
+  forall(ENV : Env) (_totalSupply : Z) (NextAddr : address) (STATE : State) (STATE' : State),
+     constructor_conds ENV _totalSupply NextAddr
+  -&gt; step STATE STATE'
+  -&gt; IP ENV _totalSupply NextAddr STATE
+  -&gt; IP ENV _totalSupply NextAddr STATE'
+</code></pre>
+<p>the generated output will contain a proof, that the invariant property holds at all reachable states:</p>
+<pre><code class="language-rocq">Lemma invariantReachable :
+  forall (ENV : Env) 
+         (_totalSupply : Z) 
+         (STATE : State) 
+         (IP : Env -&gt; Z -&gt; State -&gt; Prop) 
+         (HIPinvInit : invariantInit IP) 
+         (HIPinvStep : invariantStep IP),
+     reachableFromInit ENV _totalSupply (STATE : State)
+  -&gt; IP ENV _totalSupply STATE.
+</code></pre>
+<p>You are then welcome to use this lemma in the proof of your properties.</p>
+<h2 id="proving-properties-using-the-act-rocq-export"><a class="header" href="#proving-properties-using-the-act-rocq-export">Proving properties using the act Rocq export</a></h2>
+<p>Now that the state transition system is exported automatically,
+one can use it to prove properties about the contract. In the <a href="https://github.com/argotorg/act/blob/main/tests/rocq/ERC20/Theory.v">Theory.v</a> you can find a proof of the <em>sum of balances invariant</em>, stating that at any possible reachable state the sum of balances is the same, and equal to the total supply:</p>
+<pre><code>Theorem Token_sumOfBalances_eq_totalSupply : forall STATE,
+    reachable STATE -&gt;
+    balanceOf_sum STATE = totalSupply STATE.
+</code></pre>
+<p>The <code>balanceOf_sum</code> function above calculates the sum of the <code>balanceOf STATE</code>
+function, for all 256 bit addresses by having maintained a <code>MaxAddress</code> field.</p>
+<pre><code class="language-rocq">Definition MAX_ADDRESS := UINT_MAX 160.
+
+Fixpoint balanceOf_sum' (balanceOf : address -&gt; Z) (n : nat) (acc : Z) : Z :=
+    match n with
+    | O =&gt; balanceOf 0 + acc
+    | S n =&gt; balanceOf_sum' balanceOf n (acc + balanceOf (Z.of_nat (S n)))
+    end.
+
+Definition balanceOf_sum (STATE : State) :=
+  balanceOf_sum' (balanceOf STATE) (Z.to_nat MAX_ADDRESS) 0.
+</code></pre>
+<p>The (manual) proof of the theorem then completes the pipeline.</p>
+<!-- This will be reenabled when the proof is cleaned up and put inside the test suite
+
+An example of how to use the `invariantReachable` lemma can be found in the 
+proof of the solvency invariant for the Automated Marker Maker (AMM) contract 
+[amm.act](https://github.com/argotorg/act/tree/main/tests/coq/amm).
+
+For instance, one of the properties required is that
+the AMM reserves are non-negative:
+
+```rocq
+Definition Amm_reserve_nneg_Prop 
+  (ENV : Env) (T0 T1 : Token.State) 
+  (L : Z) (STATE : State) 
+  : Prop :=
+  0 <= reserve0 STATE /\ 0 <= reserve1 STATE.
+```
+And proving this as a lemma directly applies the `invariantReachable`.
+```
+Lemma Amm_reserve_nneg_reach : 
+  forall (ENV : Env) (t0 : Token.State) 
+  (t1 : Token.State) (liquidity : Z) (STATE : State),
+  reachableFromInit ENV t0 t1 liquidity (STATE : State)
+  -> Amm_reserve_nneg_Prop ENV t0 t1 liquidity STATE
+.
+Proof.
+  intros.
+  apply invariantReachable.
+  exact Amm_reserve_nneg_init.
+  exact Amm_reserve_nneg_step.
+  assumption.
+Qed.
+```
+-->
+<!-- Old Exponent contract -->
+<!-- The exponentiation contract -->
+<!-- The following defines a contract that implements exponentiation via repeated
+multiplication. The contract is initialized with a base (`b`) and an exponent (`e`). `exp()` can then be
+repeatedly called until `e` is 1, and the result can then be read from the storage variable `r`. While
+obviously artificial, this example does highlight a key shortcoming of the SMT based analysis:
+exponentiation with a symbolic exponent is simply inexpressible in the smt-lib language used by all
+major SMT solvers, and so any contract making use of exponentiation where the exponent is a variable
+of some kind (e.g. calldata, storage) will be impossible to verify using SMT. Rocq has no such
+restrictions, and we can export the spec below and prove correctness there.
+
+```act
+constructor of Exponent
+interface constructor(uint _b, uint _e)
+
+iff
+
+    _e > 0
+
+creates
+
+    uint b := _b
+    uint e := _e
+    uint r := _b
+```
+
+```act
+transition exp of Exponent
+interface exp()
+
+iff
+
+    e > 1
+
+iff in range uint
+
+    r * b
+    e - 1
+
+updates
+
+    r => r * b
+    e => e - 1
+    b
+```
+
+You can export the spec into Rocq by running `act Rocq --file Exponent.act`. This will create a file called Exponent.v which contains a model of the above act specification in Rocq:
+
+```Rocq
+(* --- GENERATED BY ACT --- *)
+
+Require Import Rocq.ZArith.ZArith.
+Require Import ActLib.ActLib.
+Require Rocq.Strings.String.
+
+Module Str := Rocq.Strings.String.
+Open Scope Z_scope.
+
+Record State : Set := state
+{ b : Z
+; e : Z
+; r : Z
+}.
+
+Definition exp0 (STATE : State)  :=
+state (b STATE) (((e STATE) - 1)) (((r STATE) * (b STATE))).
+
+Definition Exponent0 (_b : Z) (_e : Z) :=
+state (_b) (_e) (_b).
+
+Inductive reachable  : State -> State -> Prop :=
+| Exponent0_base : forall (_b : Z) (_e : Z),
+     (_e > 0)
+  -> ((0 <= _b) /\ (_b <= (UINT_MAX 256)))
+  -> ((0 <= _e) /\ (_e <= (UINT_MAX 256)))
+  -> reachable (Exponent0 _b _e) (Exponent0 _b _e)
+
+| exp0_step : forall (BASE STATE : State),
+     reachable BASE STATE
+  -> ((e STATE) > 1)
+  -> ((0 <= ((r STATE) * (b STATE))) /\ (((r STATE) * (b STATE)) <= (UINT_MAX 256)))
+  -> ((0 <= ((e STATE) - 1)) /\ (((e STATE) - 1) <= (UINT_MAX 256)))
+  -> ((0 <= (r STATE)) /\ ((r STATE) <= (UINT_MAX 256)))
+  -> ((0 <= (e STATE)) /\ ((e STATE) <= (UINT_MAX 256)))
+  -> ((0 <= (b STATE)) /\ ((b STATE) <= (UINT_MAX 256)))
+  -> reachable BASE (exp0 STATE )
+.
+```
+
+Let’s break this down a bit. We have a definition of contract storage State, which consists of three
+variables `b`, `e` and `r`, all of type `Z`. `Z` is an integer type using a binary encoding from the
+ZArith library bundled with Rocq.
+
+Next we have `exp0`, which defines how the state is updated by the exp transition, and `Exponent0` which
+defines how the state variables are initialized by the constructor arguments.
+
+Finally we have an Inductive Proposition reachable that defines the conditions under which a certain
+state is reachable from another. There are two parts to this definition:
+
+- `Exponent0_base`: states that given two integers `_b` and `_e`, the initial state is reachable
+- from the initial state if `_e` and `_b` are in the range of a `uint256` and `_e` is greater than
+- `0`. `exp0_step`: states that for a pair of states `BASE` and `STATE`, `exp0 STATE` (i.e. the
+- result of calling `exp()` against an arbitrary contract state) is reachable from `BASE` if `STATE`
+- is reachable from `BASE`, all the state variables in `STATE (e, b, r)` are within the range of a
+- `uint256`, the result of the calculations `r * b` and `e - 1` are within the range of a `uint256`,
+- and `e` is greater than 1.
+
+This gives us a pair of inference rules that we can use to prove facts about the set of reachable
+states defined by the specification for the Exponent contract.
+
+The core fact that we wish to prove is that when `e` is 1, `r` is equal to `b ^ e`. This can be
+expressed in Rocq as:
+
+`forall (base, s : State), reachable base s -> e s = 1 -> r s = (b base) ^ (e base)`. Expressed more
+verbosely: for all states `base` and `s`, if `s` is reachable from `base`, and the value of `e` in
+`s` is 1, then the result variable `r` in `s` is equal to `b` from base raised to the power of `e`
+from base.
+
+The full proof is reproduced below. While an explanation of each step is out of scope for this post
+(and is anyway best made with the proof loaded into an interactive instance of the Rocq prover like
+proof general or RocqIde), we can give a broad strokes overview.
+
+We must first define a helper fact `pow_pred` which simply states that given two integers `a` and
+`e`, if e is greater than 0 then `a * a ^ (e - 1)` is equal to `a ^ e`. This fact is needed in the
+later steps of the proof. The next step is to define a loop invariant for `exp()` (i.e. a fact that
+is true before and after each loop iteration). This is the Lemma `invariant`, which states that for
+every state `s` reachable from `base`, `r * b ^ (e - 1)` over `s` is equal to `b ^ e` over `base`.
+Intuitively, this states that the partial result calculated so far (`r`), multiplied by the
+remaining portion of the input calculation `b ^ (e - 1)` is equal to the final expected result.
+Finally, given these two intermediate facts, we can discharge a proof for the correctness of
+Exponent as defined above.
+
+```Rocq
+Require Import Exponent.Exponent.
+Require Import ActLib.ActLib.
+Require Import Rocq.ZArith.ZArith.
+Open Scope Z_scope.
+
+Lemma pow_pred : forall a e, 0 < e -> a * a ^ (Z.pred e) = a ^ e.
+Proof.
+  intros.
+  apply eq_sym.
+  replace (a ^ e) with (a ^ (Z.succ (Z.pred e))).
+  - apply Z.pow_succ_r.
+    apply Zlt_0_le_0_pred.
+    assumption.
+  - rewrite (Z.succ_pred e).
+    reflexivity.
+Qed.
+
+Lemma invariant : forall base s,
+  reachable base s -> (r s) * (b s) ^ ((e s) - 1) = (b base) ^ (e base).
+Proof.
+  intros base s H. induction H.
+  - simpl.
+    rewrite Z.sub_1_r.
+    apply pow_pred.
+    apply Z.gt_lt.
+    assumption.
+  - simpl.
+    rewrite <- IHreachable.
+    rewrite Z.sub_1_r.
+    rewrite <- (pow_pred (b STATE) (e STATE - 1)).
+    + rewrite Z.mul_assoc. reflexivity.
+    + apply Z.gt_lt in H0.
+      apply (proj1 (Z.sub_lt_mono_r 1 (e STATE) 1)).
+      assumption.
+Qed.
+
+Theorem exp_correct : forall base s,
+  reachable base s -> e s = 1 -> r s = (b base) ^ (e base).
+Proof.
+  intros base s H He.
+  apply invariant in H.
+  rewrite He in H. simpl in H.
+  rewrite (Z.mul_1_r (r s)) in H.
+  assumption.
+Qed. Check exp_correct.
+```
+
+While this may seem like quite a lot of work to prove what looks like a pretty simple and obvious fact it is worth noting two things:
+
+- A proof of this property is beyond the reach of any automated tool available today.
+- Our mind is full of hidden assumptions, and facts that may seem obvious are not always so. This is not the case for the Rocq proof kernel, and once we have convinced it that something is true, we can be very sure that it really is. -->
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="equiv.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="equiv.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

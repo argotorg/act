@@ -1,0 +1,449 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Type-Checking - The act Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The act Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="type-checking"><a class="header" href="#type-checking">Type-Checking</a></h1>
+<p>act's type-checking process ensures that specifications are both syntactically correct and semantically sound. It combines traditional static type-checking with semantic verification using SMT solvers. Type safety is proven in detail. <span style="color:green">  A full tech report will be available shortly. </span></p>
+<p>The type-checker implements the formal typing judgments defined in act's type system. It verifies that all expressions are well-typed according to typing rules, which take storage declarations, interface parameters, and local bindings into account.
+The type-checker proceeds systematically: it first type-checks each contract's constructor, memorizing the constructor's storage declarations, then type-checks each transition against the updated environment. This ensures type consistency across the entire specification and catches errors like type mismatches, undefined variables, and invalid operations before proceeding to the verification backends.</p>
+<p>Additionally, the type-checker performs <strong>semantic checks using SMT solvers</strong> to verify properties that go beyond static typing. These checks ensure logical soundness and completeness of specifications and include verifying that:</p>
+<ol>
+<li><strong>arithmetic expressions</strong> are within the required bounds of their types;</li>
+<li><strong>constructor preconditions</strong> hold when they are called;</li>
+<li><strong>case conditions</strong> are exhaustive and non-overlapping.</li>
+</ol>
+<h2 id="1-arithmetic-safety"><a class="header" href="#1-arithmetic-safety">1. Arithmetic Safety</a></h2>
+<p>act requires explicit <code>inRange</code> expressions to verify that arithmetic operations stay within the bounds of their declared types. An SMT solver is used to verify this property symbolically for all intermediate and final arithmetic evaluations.</p>
+<p><strong>Why it matters?</strong></p>
+<p>To formally verify smart contract specifications, it is crucial to ensure that arithmetic operations do not overflow or underflow their intended types.  In Solidity, for example, arithmetic operations are checked at runtime to prevent overflows and underflows, if one occurs, the transaction reverts.</p>
+<p>In act, a constructor/transition "reverts" if and only if the preconditions fail. Therefore, for an act specification to type-check, all arithmetic operations that could potentially overflow or underflow in the compiled bytecode must be guarded by <code>inRange</code> checks in the preconditions.
+(Note that if the contract code does not check for overflow, then act should not check for it either.)
+If the act spec does not express the possibility of overflow anywhere, then there will be no overflow (assuming the contract's behaviour is also <a href="./equiv.html">proven equivalent</a>).</p>
+<p><strong>How it works:</strong></p>
+<p>When you write <code>inRange(uint256, expression)</code> in a precondition, the type-checker generates an SMT query to verify that for all valid pre-states satisfying the preconditions (one of them being the <code>inRange</code> condition itself), no expression in the constructor/transition can evaluate to a value that falls outside the specified type's range (e.g., 0 to 2^256 - 1 for <code>uint256</code>).</p>
+<p><strong>Example:</strong></p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>, transfer transition)</em></p>
+<pre><code class="language-act">transition transfer(address to, uint256 _value)
+iff 
+  inRange(uint256, balanceOf[CALLER] - _value)
+  CALLER != to ==&gt; inRange(uint256, balanceOf[to] + _value)
+
+case CALLER != to:
+  updates
+    balanceOf := balanceOf[
+                    CALLER =&gt; balanceOf[CALLER] - _value,
+                    to =&gt; balanceOf[to] + _value]
+</code></pre>
+<p>The SMT solver verifies that given</p>
+<ul>
+<li><code>inRange(uint256, balanceOf[CALLER] - _value)</code> and</li>
+<li><code>CALLER != to ==&gt; inRange(uint256, balanceOf[to] + _value)</code></li>
+</ul>
+<p>No arithmetic overflow or underflow occurs in any (sub-)expression anywhere in this transition.</p>
+<p><strong>Failure behavior:</strong></p>
+<p>If an <code>inRange</code> condition (as any other precondition) fails, the transition reverts and no storage updates occur. This aligns with Solidity's execution model and allows act to precisely characterize the contract's input space.</p>
+<h3 id="technical-limitation"><a class="header" href="#technical-limitation">Technical Limitation</a></h3>
+<p>The reason for not only checking the <strong>top-level expressions</strong> but also all <strong>intermediate expressions</strong> comes from act's equivalence checker, which is imported from hevm (see <a href="./equiv.html">hevm backend: Equivalence to EVM bytecode</a>).
+The equivalence checker uses hevm's internal representation, which does not have unbounded integers, and therefore all expressions must be representable in the EVM's 256-bit integer space.</p>
+<p><em>Note: it is suggested to read section <a href="./equiv.html">hevm backend: Equivalence to EVM bytecode</a> before continuing.</em></p>
+<p><strong>EVM semantics vs. act semantics</strong></p>
+<p>The semantics of the EVM (and subsequently hevm) and act are slightly different when it comes to overflow.
+The former has modulo arithmetic while the latter has unbounded integers.
+So, for example, in the case of multiplication,</p>
+<ul>
+<li>the semantics of the EVM opcode is:
+<code>MUL opA opB = (opA * opB) % 256</code>, where * is the mathematical operation of multiplication</li>
+<li>whereas in act, the semantics are the actual mathematical ones.</li>
+</ul>
+<p><strong>Relevance for Equivalence Checking</strong></p>
+<p>Let's see how this difference leads to requiring overflow checks for intermediate expressions.
+Assume we want to <strong>check the equivalence</strong> of the following Solidity function with the following act transition:</p>
+<p><em>Solidity function <code>f</code></em></p>
+<pre><code class="language-Solidity">contract A {
+  uint256 a; uint256 b;
+
+  function f(uint256 x) returns(uint256) {
+    require(COND, "some desired precondition");
+    a = x;
+  }
+}
+</code></pre>
+<p><em>act transition <code>f</code></em></p>
+<pre><code class="language-act">contract A
+  ...
+  transition f(uint256 x) : uint256
+  iff
+    COND // the same as the solidity code
+
+  updates
+    a := x*b/b
+</code></pre>
+<p>In this example both formulations have identical preconditions. In other words the <a href="./equiv.html#input-space-equivalence">input space is equivalent</a>, and will be demonstrated to be so by hevm.</p>
+<p>Therefore let us study the <strong>storage updates</strong>:</p>
+<p>On the one side the final value of the storage variable <code>a</code> is <code>x</code>, while on the other it is <code>x*b/b</code>, where the operators follow act's semantics. Since act's semantics are those of <strong>unbounded integers</strong>, the spec is <strong>equivalent</strong> for this transition, and we would want the equivalence checker to confirm this.</p>
+<p>However, since act's equivalence checker is imported from hevm, using its Expr representation, which does not have unbounded integers, this will fail:
+It is not possible to translate act's pure, unbounded <code>*</code> and <code>/</code> to hevm's <code>MUL</code> and keep the same semantics, because</p>
+<ul>
+<li>while in act <code>b</code> may be any number in <code>uint256</code> (and does not need to appear in the preconditions since <code>x*b/b</code> it will simplify to <code>x</code> for any non-zero <code>b</code>),</li>
+<li>there will always be value of <code>b</code>  in <code>uint256</code>  sufficiently large to cause <code>x*b</code> overflow out of the 256-bit range. And this leads to the the equivalence checker concluding that <code>x == x*b/b</code> is false.</li>
+</ul>
+<p>To address this, act implements its <strong>additional overflow pass</strong>. It checks that given the preconditions, all the <strong>intermediate expressions</strong> have values within the range representable by hevm. Note that it checks this on the act level, i.e. using SMT passes on unbounded integer theory. This guarantees that we operate under an input space in which the semantics of act's <code>*</code> and the EVM's <code>MUL</code> opcode are identical. So in the above example, the pass will return an error, saying that the specification cannot be equivalence checked because it contains expressions that are not computable by the EVM.</p>
+<!-- The idea is not that you will add a precondition to cover this (as that would lead to a mismatch in the input space, if the new one is not present in the bytecode as well), but that you will have to express things in a computable way. -->
+<p>This is not a limitation on the number of contract's we can specify, as any realizable contract's behaviour must be expressible through computable expressions.</p>
+<p>Still, we aim to remove this constraint in the future versions.</p>
+<p>This <strong>output error</strong> for the above example looks as follows:</p>
+<pre><code class="language-sh">Operands of / must be both signed or both unsigned
+counterexample:
+
+  calldata:
+
+    (x = 2)
+
+  environment:
+
+    CALLVALUE = 0
+
+  storage:
+    
+    prestate:
+
+      x = 2
+      pre(b) = 57896044618658097711785492504343953926634992332820282019728792003956564819968
+
+
+:
+9 |       a := x*b/b
+                  ^
+Result of * must be in the range of int256 or uint256
+counterexample:
+
+  calldata:
+
+    (x = 2)
+
+  environment:
+
+    CALLVALUE = 0
+
+  storage:
+    
+    prestate:
+
+      x = 2
+      pre(b) = 57896044618658097711785492504343953926634992332820282019728792003956564819968
+
+
+:
+9 |       a := x*b/b
+                ^
+Integer expression of type integer is not guaranteed to fit in type uint256
+counterexample:
+
+  calldata:
+
+    (x = 0)
+
+  environment:
+
+    CALLVALUE = 0
+
+  storage:
+    
+    prestate:
+
+      x = 0
+      pre(b) = 0
+
+
+:
+9 |       a := x*b/b
+                  ^
+</code></pre>
+<p><strong>Subsequent Limitation: Expressing Overflow/Underflow in act</strong></p>
+<p>To express overflow/underflow in act, the ideal way would be to use the mathematical formulation <code>(a+b)%max</code>. This works for all ranges, except the 256-bit one, where the additional overflow pass will catch <code>a+b</code>. There is currently no way to express 256-bit-overflow in act without triggering the overflow pass. We aim to cover this in future versions.</p>
+<!-- So what would need is something like primitives, i.e. addOverflow(a,b), which in act semantics will be the same thing, but will not trip up the overflow pass. Or maybe a simple informed filtering would do, to allow (a op b)%n to pass the overflow checker direclty since we know we can actually translate it. -->
+<h2 id="2-constructor-precondition-verification"><a class="header" href="#2-constructor-precondition-verification">2. Constructor Precondition Verification</a></h2>
+<p>When a constructor is called to create a new contract instance (e.g., <code>new Token(100)</code> in a storage update), act verifies that the constructor's preconditions are satisfied at the call site.</p>
+<p><strong>Why this matters:</strong></p>
+<p>Contract creation is a crucial operation. If a constructor's preconditions aren't met, creation fails and the entire transaction reverts, which would therefore not actually initialize/update storage as specified. Therefore act has to ensure <strong>every constructor call in the specification is valid</strong>, for the entire act spec to be well-typed.</p>
+<p><strong>How it works:</strong></p>
+<p>The type-checker implements a semantic check to verify if the current state and environment satisfy the constructor's preconditions: For each constructor call (e.g. <code>AMM(t0,t1)</code>), the SMT solver verifies that given the current constraints (preconditions, case conditions and current state, in our example <code>t0</code>, <code>t1</code>) , the constructor's preconditions are entailed.</p>
+<p><strong>Example:</strong></p>
+<p>We revisit the constructor of an AMM contract.</p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/amm/amm.act">amm.act</a>)</em></p>
+<pre><code class="language-act">contract Amm
+
+constructor(address&lt;Token&gt; t0, address&lt;Token&gt; t1)
+iff   address(t0) != address(t1)
+creates
+    Token token0 := t0
+    Token token1 := t1
+...
+</code></pre>
+<p>When <code>Amm</code>'s constructor is called, e.g., in another contract's constructor:</p>
+<pre><code class="language-act">contract Wrapper
+constructor(address&lt;Token&gt; t0, address&lt;Token&gt; t1)
+
+creates
+    Amm amm := new Amm(t0, t1)
+</code></pre>
+<p>For the constructor call <code>Amm(t0, t1)</code>, the SMT solver verifies that given the current information:</p>
+<ul>
+<li>preconditions: none,</li>
+<li>case conditions: none</li>
+<li>information about the values <code>t0</code>, <code>t1</code>: they are of type <code>address&lt;Token&gt;</code></li>
+</ul>
+<p>the constructor precondition <code>address(t0) != address(t1)</code> holds. In this example, this is clearly not the case, since <code>t0</code> and <code>t1</code> could be equal addresses. Therefore, this semantic check would fail and therefore the  act specification does not type-check, reporting an error</p>
+<pre><code class="language-sh">Preconditions of constructor call to "Amm" are not guaranteed to hold
+</code></pre>
+<p>and listing a counterexample calldata.</p>
+<p>To fix the example, add the precondition <code>address(t0) != address(t1)</code> to the <code>Wrapper</code> constructor.</p>
+<h2 id="3-case-condition-verification"><a class="header" href="#3-case-condition-verification">3. Case Condition Verification</a></h2>
+<p>The last semantic check happening during type-checking is about the <code>case</code> conditions in transitions and constructors. As explained before, act
+uses <code>case</code> blocks to represent different execution paths in constructors and transitions. In this check, the SMT solver verifies two critical properties of case conditions:</p>
+<p><strong>a) Exhaustiveness</strong>: The case conditions must cover all possible scenarios given the preconditions. Formally, the type system requires:</p>
+<pre><code>preconditions ==&gt; (C₁ or C₂ or ... or Cₙ)
+</code></pre>
+<p>where <code>Cᵢ</code> are the case conditions.</p>
+<p><strong>b) Non-overlapping</strong>: The case conditions must be mutually exclusive. For any two distinct cases i and j, their conditions cannot both be true at the same time:</p>
+<pre><code>not (Cᵢ and Cⱼ)
+</code></pre>
+<p><strong>Why this matters:</strong></p>
+<p>If one of this two properties does not hold, the specification is ambiguous or incomplete and therefore unsound: If the case conditions are not exhaustive, there exist inputs for which no case applies, leading to undefined behavior. Similarly, if case conditions overlap, multiple cases apply simultaneously, causing ambiguity in the contract's behavior.</p>
+<p><strong>Example</strong></p>
+<p>We revisit the transfer transition of the ERC20 contract:</p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>, transfer transition)</em></p>
+<pre><code class="language-act">transition transfer(address to, uint256 _value) : bool
+iff
+    inRange(uint256, balanceOf[CALLER] - _value)
+    CALLER != to ==&gt; inRange(uint256, balanceOf[to] + _value)
+
+case CALLER != to:
+  storage
+    balanceOf := balanceOf[
+                    CALLER =&gt; balanceOf[CALLER] - _value,
+                     to    =&gt; balanceOf[to] + _value ]
+    returns true
+
+case CALLER == to:
+    returns true
+</code></pre>
+<p>✓ The SMT solver verifies:</p>
+<ul>
+<li><strong>Exhaustive</strong>: <code>(CALLER == to) or (CALLER != to)</code> is always true</li>
+<li><strong>Non-overlapping</strong>: <code>(CALLER == to) and (CALLER != to)</code> is always false</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="how_to.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="aliasing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="how_to.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="aliasing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

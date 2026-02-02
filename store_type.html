@@ -1,0 +1,494 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Storage, Typing and Expressions - The act Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The act Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="storage-typing-and-expressions"><a class="header" href="#storage-typing-and-expressions">Storage, Typing and Expressions</a></h1>
+<p>In act, each contract explicitly declares its storage in the constructor and initializes it. The types of storage variables are explicit and checked. This section explains the storage model of act, the types allowed in storage, and the different kinds of expressions used throughout act specifications.</p>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
+<p>In act, each contract explicitly declares its storage in the constructor and initializes it as defined in the source code. If the source code does not initialize a storage field, act uses defaults. For ERC20, the storage consists of two mappings and an integer:</p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.sol">erc20.sol</a>, updates block)</em></p>
+<pre><code class="language-solidity">    uint256 public totalSupply;
+    mapping (address =&gt; uint256) public balanceOf;
+    mapping (address =&gt; mapping (address =&gt; uint256)) public allowance;
+</code></pre>
+<p>The respective act declaration including initialization is:</p>
+<p><em>(corresponding snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>, constructor block)</em></p>
+<pre><code class="language-act  editable">creates
+  uint256 totalSupply := _totalSupply
+  mapping(address =&gt; uint256) balanceOf := [CALLER =&gt; _totalSupply]
+  mapping(address =&gt; mapping(address =&gt; uint256)) allowance := []
+</code></pre>
+<p>For each storage variable its initialization has the shape <code>&lt;type&gt; &lt;name&gt; := &lt;storage_expression&gt;</code>. The act storage corresponds directly to the EVM state variables, but with two important differences:</p>
+<ol>
+<li>All storage is immutable by default.
+Storage can only change through explicit updates inside transitions.</li>
+<li>Types are explicit and checked. Which types storage can have is detailed next.</li>
+</ol>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<p>act has a rich type system to describe both storage and function parameters/return values. There are three main categories of types in act:</p>
+<ul>
+<li><strong>Storage types</strong>,</li>
+<li><strong>Mapping types</strong>, and</li>
+<li><strong>ABI types</strong>.</li>
+</ul>
+<h3 id="storage-types-aka-slot-types"><a class="header" href="#storage-types-aka-slot-types">Storage Types (a.k.a. Slot Types)</a></h3>
+<p>Storage in act can have the following types:</p>
+<ul>
+<li><strong>base types</strong> e.g. line 2 in the snippet above: <code>uint256 totalSupply</code>
+<ul>
+<li>unsigned integers of various sizes: <code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code>, <code>uint128</code>, <code>uint256</code>,
+where <code>uint</code> is a shorthand for <code>uint256</code>.</li>
+<li>signed integers of various sizes: <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code>, <code>int128</code>, <code>int256</code>,
+also <code>int</code> is a shorthand for <code>int256</code>.</li>
+<li>booleans: <code>bool</code></li>
+<li>addresses:<code>address</code></li>
+</ul>
+</li>
+<li><strong>mapping types</strong>
+<ul>
+<li>mappings from one base type to another, e.g. from <code>address</code> to <code>uint256</code> in line 3 <code>mapping(address =&gt; uint256) balanceOf</code></li>
+<li>nested mappings: from a base type to another mapping, e.g. from <code>address</code> to <code>mapping(address =&gt; uint256)</code> in line 4 <code>mapping(address =&gt; mapping(address =&gt; uint256)) allowance</code></li>
+</ul>
+</li>
+<li><strong>contract types</strong>  referencing the storage of other contracts  (details in <a href="./aliasing.html">Alasing and Unique Ownership</a>)
+<ul>
+<li>A contract type <code>ContractType</code> can be used as a storage type to denote a reference to the storage of another contract of type <code>ContractType</code>.</li>
+<li>This allows act specifications to model interactions between multiple contracts.</li>
+<li>Artificial example: Another contract <code>OtherContract</code> uses in its storage a reference to an ERC20 <code>Token</code> contract: In <code>OtherContract</code>'s storage we would have a field of type <code>Token</code>, which can be initialized with (an address of) a specific deployed ERC20 contract instance. An example of this is shown in <a href="./constructors.html#constructor-preconditions">Constructor Preconditions</a>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="mapping-types-and-defaults"><a class="header" href="#mapping-types-and-defaults">Mapping Types and Defaults</a></h3>
+<p>A <strong>mapping</strong> in act behaves like a total function with a default value.
+For example, the type:</p>
+<pre><code class="language-act">mapping(address =&gt; uint256) balanceOf
+</code></pre>
+<p>denotes a function from addresses to integers, where all keys not explicitly written map to the default value of <code>uint256</code>, which is <code>0</code>. If it is initialized as in line 3 of the constructor snippet above:</p>
+<pre><code class="language-act">mapping(address =&gt; uint256) balanceOf := [CALLER =&gt; _totalSupply]
+</code></pre>
+<p>then the mapping behaves like this:</p>
+<ul>
+<li><code>balanceOf[CALLER]</code> evaluates to <code>_totalSupply</code></li>
+<li>For any other address <code>A</code>, <code>balanceOf[A]</code> evaluates to <code>0</code></li>
+</ul>
+<p>The <strong>defaults</strong> for the different mapping types are:</p>
+<ul>
+<li><code>uint*</code> and <code>int*</code>: <code>0</code></li>
+<li><code>bool</code>: <code>false</code></li>
+<li><code>address</code>: <code>0x00000000000000000000000000000000</code> which is the zero address.</li>
+<li><code>mapping(&lt;base type&gt; =&gt; &lt;mapping_type&gt;)</code>: a mapping where all keys map to the default value of <code>&lt;mapping_type&gt;</code>. <em>Note: mapping types here include base types but <strong>not</strong> contract types.</em></li>
+</ul>
+<p>This matches Solidity’s behavior but is <strong>made explicit</strong> in act, which is essential for reasoning about invariants.</p>
+<h3 id="abi-types"><a class="header" href="#abi-types">ABI Types</a></h3>
+<p>The following types are used for function parameters and return values, mirroring the Ethereum ABI specification:</p>
+<ul>
+<li>
+<p>All <strong>base types</strong> (<code>uint*</code>, <code>int*</code>, <code>bool</code>, <code>address</code>) are allowed here.</p>
+</li>
+<li>
+<p>Additionally, there is another ABI type:  specially <strong>annotated address types</strong>. These are addresses which point to contracts. Intuitively, an annotated address type <code>address&lt;ContractType&gt;</code> can be thought of as a regular address, for which we know that it points to the storage of a contract of type <code>ContractType</code>.</p>
+<p>Consider the following act snippet that declares a transition <code>foo</code> which takes an address of an ERC20 contract as parameter:</p>
+<pre><code class="language-act">transition foo(address&lt;Token&gt; token_addr)
+iff true
+updates
+    erc_token := address(token_addr)
+</code></pre>
+<p>The parameter <code>token_addr</code> has type <code>address&lt;Token&gt;</code>, which indicates that the address points to a deployed contract of type <code>Token</code> (e.g. in our example an ERC20 token).</p>
+<p>This special type exists to allow act to reason about calls to this contract now called <code>erc_token</code>, which <em>lives</em> at address <code>token_addr</code> inside the transition body. Ensuring that the spec which includes this annotated address types is equivalent to the implementation which only uses regular addresses is still possible and discussed in <a href="./equiv.html#input-space-equivalence">Input Space Equivalence</a>.</p>
+</li>
+</ul>
+<p><em>Note:</em> Not all types in act are allowed everywhere. There is a distinction between <strong>ABI types</strong> and <strong>Storage types</strong>:</p>
+<ol>
+<li><strong>ABI types</strong> include <strong>base types</strong> and <strong>annotated address types</strong>. They are used for function parameters and return values.</li>
+<li><strong>Storage types</strong> include <strong>base types</strong>, <strong>mapping types</strong>, and <strong>contract types</strong>. They are
+used for storage.</li>
+</ol>
+<p>That means in function parameters and return values, mapping types and contract types are not allowed. Whereas in storage, annotated address types are not allowed.</p>
+<h2 id="expressions"><a class="header" href="#expressions">Expressions</a></h2>
+<p>Expressions appear throughout constructor and transition declarations: in preconditions (<code>iff</code> blocks), case conditions, storage initialization and updates (in <code>creates</code> and <code>storage</code> blocks) as well as in <code>return</code> statements of transitions. act distinguishes between three kinds of expressions, each serving different purposes:</p>
+<h3 id="overview-of-expressions"><a class="header" href="#overview-of-expressions">Overview of Expressions</a></h3>
+<ol>
+<li>
+<p><strong>Storage Expressions (Slot Expressions)</strong>: Expressions that manipulate storage data. Used in the <code>creates</code> and <code>updates</code> block to initialize or update storage variables. Examples in the ERC20 constructor: <code>_totalSupply</code>, <code>[CALLER =&gt; _totalSupply]</code>, <code>[]</code>, <code>new Token(100)</code>.</p>
+</li>
+<li>
+<p><strong>References</strong>: Variable references that denote storage locations or calldata. Used in preconditions, case conditions, and to reference existing values (as it is done in storage updates). Examples in the ERC20: <code>totalSupply</code>, <code>balanceOf[CALLER]</code>, <code>CALLVALUE</code>, <code>allowance</code>.</p>
+</li>
+<li>
+<p><strong>Base Expressions</strong>: Composite expressions built from operators and literals. Include arithmetic, boolean logic, comparisons, and conditionals. Used in all contexts (preconditions, cases, storage, returns). Examples: <code>x + y</code>, <code>true</code>, <code>x == 5</code>, <code>if z &gt; 0 then a else b</code>.</p>
+</li>
+</ol>
+<h3 id="storage-expressions"><a class="header" href="#storage-expressions">Storage Expressions</a></h3>
+<p>Storage expressions describe the initial values assigned to storage variables in the <code>creates</code> block and the values they are updated to in the <code>updates</code> block. The syntax for initializing in the <code>creates</code> block is <code>&lt;type&gt; &lt;name&gt; := &lt;storage_expression&gt;</code>. For updating in the <code>updates</code> block, it is <code>&lt;name&gt; := &lt;storage_expression&gt;</code>.
+Storage expressions can be:</p>
+<ul>
+<li>
+<p><strong>Base Expressions</strong>: literals, composed expressions  or certain Variable References: <code>100</code>, <code>x + y</code>, <code>if condition then a else b</code>. See Base Expressions below for details.</p>
+</li>
+<li>
+<p><strong>Mappings</strong>: Expressions that have mapping typ. The syntax of <strong>defining new mappings</strong> is the following:</p>
+<ul>
+<li><code>[&lt;key1&gt; =&gt; &lt;value1&gt;, &lt;key2&gt; =&gt; &lt;value2&gt;, ...]</code> (a mapping with multiple entries)</li>
+<li><code>[]</code> (an empty mapping where all keys map to the default value)
+Every key not explicitly mentioned maps to the default value of the mapping's value type.
+Further, exists the syntax for <strong>adapting mappings</strong> (used in <code>updates</code> blocks of transitions):</li>
+<li><code>my_map[my_key =&gt; my_value]</code> (defines a mapping, where  <code>my_key</code> maps to <code>my_value</code> and every other key has value <code>my_map[key]</code>)</li>
+<li>similarly, multple entries can be changed at once: <code>my_map[key1 =&gt; value1, key2 =&gt; value2,...]</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Contract creation</strong>: An instance of another contract (an ERC20 <code>Token</code> for example) can be part of a contract's storage. The corresponding storage expression is <code>new Token(100)</code>. It creates a new ERC20 contract instance with total supply 100. The keyword <code>new</code> indicates that a new contract instance is created. The parentheses contain the arguments passed to the constructor of the other contract.</p>
+<p>Depending on whether this other contract's constructor is <code>payable</code> or not (see <a href="./constructors.html#payable-and-non-payable-constructors">Payable and Non-Payable Constructors</a>), the storage expression requires to specify the amount of Ether to send.</p>
+<ul>
+<li>For a non-payable constructor, no Ether is sent and therefore nothing extra has to be specified. Hence <code>new Token(100)</code> suffices.</li>
+<li>For a payable constructor, the amount of Ether to send must be specified. Assume there is a payable constructor <code>TokenPayable</code>, then the storage expression would be e.g. <code>new TokenPayable{value:10}(100)</code> to create a new instance of <code>TokenPayable</code> with initial supply <code>100</code> and send <code>10</code> wei during construction. The keyword to specify the amount of Ether (wei) to send is <code>value</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>references to existing contracts</strong>: <code>erc_token</code> (a reference to a deployed contract instance)</p>
+</li>
+<li>
+<p><strong>Addresses of existing contracts</strong>: <code>token_addr</code> (an address of a deployed contract instance)</p>
+</li>
+</ul>
+<p><strong>Example from the ERC20 contract:</strong></p>
+<p>In the ERC20 constructor, the storage is initialized as:</p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>, constructor block)</em></p>
+<pre><code class="language-act">creates
+  uint256 totalSupply := _totalSupply
+  mapping(address =&gt; uint) balanceOf := [CALLER =&gt; _totalSupply]
+  mapping(address =&gt; mapping(address =&gt; uint)) allowance := []
+</code></pre>
+<p>Here we see:</p>
+<ul>
+<li>A base expression: <code>_totalSupply</code></li>
+<li>A new mapping: <code>[CALLER =&gt; _totalSupply]</code> which assigns the entire supply to the caller and defaults to 0 for all other addresses</li>
+<li>An new empty mapping: <code>[]</code> where all addresses map to the default map from <code>address</code> to <code>uint</code>, which is <code>0</code>.</li>
+</ul>
+<p>In a transfer transition of the ERC20 contract the storage is updated as:</p>
+<p><em>(snippet from <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>, transfer transition)</em></p>
+<pre><code class="language-act">  updates
+
+    balanceOf := balanceOf[ CALLER =&gt; balanceOf[CALLER] - _value,
+                            to     =&gt; balanceOf[to] + _value]
+
+</code></pre>
+<p>Here we see a base expression, variable references (<code>CALLER</code> and <code>to</code>), a parameter <code>_value</code>, subtraction and addition.</p>
+<h3 id="variable-references"><a class="header" href="#variable-references">Variable References</a></h3>
+<p>References denote storage locations or parameters and are used as building blocks in:</p>
+<ul>
+<li><strong>Preconditions</strong> (<code>iff</code> blocks): e.g., <code>t0 != t1</code></li>
+<li><strong>Case conditions</strong>: e.g., <code>case CALLVALUE &gt; 0:</code></li>
+<li><strong>Storage updates in transitions</strong>: (covered in the Transitions section)</li>
+</ul>
+<p>Basic references include:</p>
+<ul>
+<li><strong>Storage Variable names</strong>: <code>totalSupply</code>, <code>balanceOf</code>, <code>allowance</code></li>
+<li><strong>Parameter names</strong>: <code>_totalSupply</code>, <code>to</code>, <code>value</code></li>
+<li><strong>Environment variables</strong>: <code>CALLER</code>, <code>CALLVALUE</code>, <code>ORIGIN</code>, <code>THIS</code>, <code>BALANCE</code>
+Environment variables represent special values provided by the EVM:
+<ul>
+<li><code>address CALLER</code>: the address of the entity (externally owned account or contract)
+that invoked the current function.</li>
+<li><code>uint256 CALLVALUE</code>: the amount of Ether (in wei) sent with the current call.</li>
+<li><code>addresss ORIGIN</code>: the address of the original external account that started the transaction.</li>
+<li><code>address THIS</code>: the address of the current contract.</li>
+<li><code>uint256 BALANCE</code>: the balance of the current contract in Ether.</li>
+</ul>
+</li>
+<li><strong>Mapping references</strong>: <code>balanceOf[CALLER]</code></li>
+<li><strong>Field references</strong>:  <code>t0.balanceOf</code> (if <code>t0</code> is a contract reference)</li>
+</ul>
+<p><strong>Example from ERC20 transfer transition:</strong></p>
+<p>The preconditions in the transfer transition use references:</p>
+<p><em>(snippet from transfer transition in <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>)</em></p>
+<pre><code class="language-act">iff
+  inRange(uint256, balanceOf[CALLER] - _value)
+  CALLER != to ==&gt; inRange(uint256, balanceOf[to] + _value)
+
+</code></pre>
+<p>The precondition uses the mapping references <code>balanceOf[CALLER]</code> and <code>balanceOf[to]</code>, the parameter names <code>_value</code>, and <code>to</code>, and the environment variable <code>CALLER</code>. The precondition ensures that the transfer does not cause an underflow or overflow in the balances.</p>
+<h3 id="base-expressions"><a class="header" href="#base-expressions">Base Expressions</a></h3>
+<p>Base expressions are composite expressions built using operators, literals and variable references of certain types. They are used wherever an expression is needed: in preconditions, case conditions, during storage initialization and updates, and in return statements.</p>
+<p><strong>Arithmetic operators</strong> (for integer types):</p>
+<ul>
+<li>Addition: <code>x + y</code></li>
+<li>Subtraction: <code>x - y</code></li>
+<li>Multiplication: <code>x * y</code></li>
+<li>Division: <code>x / y</code></li>
+<li>Modulo: <code>x % y</code></li>
+<li>Exponentiation: <code>x ^ y</code></li>
+</ul>
+<p><strong>Boolean operators</strong>:</p>
+<ul>
+<li>Conjunction: <code>condition1 and condition2</code></li>
+<li>Disjunction: <code>condition1 or condition2</code></li>
+<li>Negation: <code>not condition</code></li>
+<li>Implication: <code>condition1 ==&gt; condition2</code></li>
+</ul>
+<p><strong>Comparison operators</strong> (work on all types):</p>
+<ul>
+<li>Equality: <code>x == y</code></li>
+<li>Inequality: <code>x != y</code></li>
+<li>Less than: <code>x &lt; y</code></li>
+<li>Less than or equal: <code>x &lt;= y</code></li>
+<li>Greater than: <code>x &gt; y</code></li>
+<li>Greater than or equal: <code>x &gt;= y</code></li>
+</ul>
+<p><strong>Other operators</strong>:</p>
+<ul>
+<li>Conditionals: <code>if condition then expr1 else expr2</code></li>
+<li>Range checks: <code>inRange(uint256, x)</code> (checks if <code>x</code> fits in the given type) See <a href="./constructors.html#constructor-preconditions">Preconditions</a> and <a href="./type_checking.html#1-arithmetic-safety">Arithmetic Safety</a> for details.</li>
+</ul>
+<p><strong>Literals and Other Expressions</strong>:</p>
+<ul>
+<li>
+<p>Literals: <code>5</code>, <code>true</code>, <code>false</code></p>
+</li>
+<li>
+<p>Variable references of ABI types (integers, booleans, addresses, and annotated address type <code>address&lt;ContractType&gt;</code>), e.g. <code>totalSupply</code>, <code>CALLER</code>, <code>value</code></p>
+<p>Whenever an expression <code>expr</code> of annotated address type is seen as a regular address (e.g. when used in arithmetic), it has to be cast to a regular <code>address</code> type using <code>address(expr)</code>.</p>
+</li>
+<li>
+<p>Address conversion of deployed contracts: <code>addr(t0)</code> (if <code>t0</code> is a contract reference)</p>
+</li>
+</ul>
+<p><strong>Examples of Base Expressions</strong>:</p>
+<p>Consider the following <code>case</code> blocks from the <code>transferFrom</code> transition of the ERC20 contract:</p>
+<p><em>(snippet from transferFrom transition in <a href="https://github.com/argotorg/act/blob/main/tests/hevm/pass/multisource/erc20/erc20.act">erc20.act</a>)</em></p>
+<pre><code class="language-act">transition transferFrom(address src, address dst, uint amount) : uint256
+
+iff
+    ...
+
+case src != dst and CALLER == src:
+    ...
+
+case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+    ...
+
+case src != dst and CALLER != src and allowance[src][CALLER] &lt; 2^256 - 1:
+    ...
+
+case src == dst and CALLER != src and allowance[src][CALLER] &lt; 2^256 - 1:
+    ...
+
+case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
+    ...
+
+</code></pre>
+<p>Here, various base expressions with exponentiations, comparisons and boolean operators are used. Moreover, variable references like <code>allowance[src][CALLER]</code>, <code>src</code>, <code>dst</code>, and <code>CALLER</code> are used to build these expressions.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="syntax.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="constructors.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="syntax.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="constructors.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>
