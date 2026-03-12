@@ -1,0 +1,6 @@
+-Q . amm_coq
+-Q ../../../lib ActLib
+
+../../../lib/ActLib.v
+amm_coq.v
+Theory.v
