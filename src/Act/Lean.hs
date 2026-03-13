@@ -45,6 +45,7 @@ header = T.unlines
   , "import ActLib.ActLib"
   , ""
   , "open Int"
+  , "open ActLib"
   , ""
   ]
 
@@ -106,13 +107,13 @@ initPrecs i conds = inductive
       (namedHyps . concat $
       [ nameHypothesis "iff" $ leanprop <$> conds
       , interfaceConstraints i
-      , maybeToList (("CallerBound",) <$> leanbound ("Caller" <+> envVar) (ValueType TAddress))
-      , maybeToList (("OriginBound",) <$> leanbound ("Origin" <+> envVar) (ValueType TAddress))
-      , maybeToList (("ThisBound",) <$> leanbound ("This" <+> envVar) (ValueType TAddress))
+      , maybeToList (("CallerBound",) <$> leanbound (envVar <.> "Caller") (ValueType TAddress))
+      , maybeToList (("OriginBound",) <$> leanbound (envVar <.> "Origin") (ValueType TAddress))
+      , maybeToList (("ThisBound",) <$> leanbound (envVar <.> "This") (ValueType TAddress))
       , maybeToList (("NextAddressBound",) <$> leanbound ("NextAddr") (ValueType TAddress))
-      , [("Caller_lt_NextAddr", "Caller" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("Origin_lt_NextAddr", "Origin" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("This_eq_NextAddr", "This" <+> envVar <+> "=" <+> nextAddrVar)]
+      , [("Caller_lt_NextAddr", envVar <.> "Caller" <+> "<" <+> nextAddrVar)]
+      , [("Origin_lt_NextAddr", envVar <.> "Origin" <+> "<" <+> nextAddrVar)]
+      , [("This_eq_NextAddr", envVar <.> "This" <+> "=" <+> nextAddrVar)]
       ]) <> ",\n"
       <> (initPrecsType <+> envVar <+> arguments i <+> nextAddrVar))
 
@@ -194,16 +195,16 @@ behvConds name i conds = do
       [ nameHypothesis "iff" $ leanprop <$> conds
       , [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
       , interfaceConstraints i
-      , maybeToList (("CallerBound",) <$> leanbound ("Caller" <+> envVar) (ValueType TAddress))
-      , maybeToList (("OriginBound",) <$> leanbound ("Origin" <+> envVar) (ValueType TAddress))
-      , maybeToList (("ThisBound",) <$> leanbound ("This" <+> envVar) (ValueType TAddress))
+      , maybeToList (("CallerBound",) <$> leanbound (envVar <.> "Caller") (ValueType TAddress))
+      , maybeToList (("OriginBound",) <$> leanbound (envVar <.> "Origin") (ValueType TAddress))
+      , maybeToList (("ThisBound",) <$> leanbound (envVar <.> "This") (ValueType TAddress))
       , maybeToList (("NextAddressBound",) <$> leanbound ("NextAddr") (ValueType TAddress))
-      , [("This_lt_NextAddr", "This" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("Caller_lt_NextAddr", "Caller" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("Origin_lt_NextAddr", "Origin" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("no_self_call", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> "Caller" <+> envVar <+> "≠" <+> "p") ]
-      , [("no_self_origin", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> "Origin" <+> envVar <+> "≠" <+> "p") ]
-      , [("This_eq_addState", "This" <+> envVar <+> "=" <+> addrField <+> stateVar)]
+      , [("This_lt_NextAddr", envVar <.> "This" <+> "<" <+> nextAddrVar)]
+      , [("Caller_lt_NextAddr", envVar <.> "Caller" <+> "<" <+> nextAddrVar)]
+      , [("Origin_lt_NextAddr", envVar <.> "Origin" <+> "<" <+> nextAddrVar)]
+      , [("no_self_call", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Caller" <+> "≠" <+> "p") ]
+      , [("no_self_origin", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Origin" <+> "≠" <+> "p") ]
+      , [("This_eq_addState", envVar <.> "This" <+> "=" <+> stateVar <.> addrField)]
       ]) <> ",\n"
       <> (T.pack n <> "_conds") <+> envVar <+> arguments i <+> stateVar <+>nextAddrVar )
 
@@ -285,12 +286,12 @@ extStep main store = inductive
         varp = T.pack var
         body' = indent 2 . implication . concat $
           [ [ nextAddrConstraintType <+> nextAddrVar <+> stateVar ]
-          , [ parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> "Origin" <+> envVar <+> "≠" <+> "p" ]
-          , [ parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> "Caller" <+> envVar <+> "≠" <+> "p" ]
+          , [ parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Origin" <+> "≠" <+> "p" ]
+          , [ parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Caller" <+> "≠" <+> "p" ]
           , [ integerBoundsType <+> stateVar ]
-          , [ T.pack cid <.> extStepType <+> envVar <+> parens (varp <+> stateVar) <+> nextAddrVar <+> parens (varp <+> stateVar') <+> nextAddrVar' ]
-          , [ addrField <+> stateVar <+> "=" <+> addrField <+> stateVar' ]
-          , (\var' -> parens (T.pack var' <+> stateVar) <+> "=" <+> parens (T.pack var' <+> stateVar')) <$> (filter (var /=) $ M.keys localStore)
+          , [ T.pack cid <.> extStepType <+> envVar <+> parens (stateVar <.> varp) <+> nextAddrVar <+> parens (stateVar' <.> varp) <+> nextAddrVar' ]
+          , [ stateVar <.> addrField <+> "=" <+> stateVar' <.> addrField ]
+          , (\var' -> parens (stateVar <.> T.pack var') <+> "=" <+> parens (stateVar' <.> T.pack var')) <$> (filter (var /=) $ M.keys localStore)
           , [ extStepType <+> envVar <+> stateVar <+> nextAddrVar <+> stateVar' <+> nextAddrVar' ]
           ]
     substep _ _ = Nothing
@@ -321,7 +322,7 @@ contractAddressIn :: Id -> StorageTyping -> T.Text
 contractAddressIn name store = inductive
   contractAddressInType (argList [stateDecl]) (indicesList [addressType, "Prop"]) body
   where
-    body = ("addressOf_This", "", indent 5 $ contractAddressInType <+> stateVar <+> parens (addrField <+> stateVar))
+    body = ("addressOf_This", "", indent 5 $ contractAddressInType <+> stateVar <+> parens (stateVar <.> addrField))
            : M.elems (M.mapMaybeWithKey subCAddr localStore)
 
     localStore = contractStore name store
@@ -331,7 +332,7 @@ contractAddressIn name store = inductive
       where
         varp = T.pack var
         body' = indent 2 . implication $
-          [ T.pack cid <.> contractAddressInType <+> parens (varp <+> stateVar) <+> "p"
+          [ T.pack cid <.> contractAddressInType <+> parens (stateVar <.> varp) <+> "p"
           , contractAddressInType <+> stateVar <+> "p"
           ]
     subCAddr _ _ = Nothing
@@ -357,18 +358,18 @@ noAliasing name store = inductive
     addressSubContractAliasing :: (Id, Id) -> T.Text
     addressSubContractAliasing (cvar, cid) =
       parens $ forAll (parens ("p : address")) <+>
-        ( T.pack cid <.> contractAddressInType <+> parens (T.pack cvar <+> stateVar) <+> "p") <+> "→"
-        <+> (parens (addrField <+> stateVar) <+> "≠" <+> "p")
+        ( T.pack cid <.> contractAddressInType <+> parens (stateVar <.> T.pack cvar) <+> "p") <+> "→"
+        <+> (parens (stateVar <.> addrField) <+> "≠" <+> "p")
 
     contractPairAliasing :: ((Id, Id), (Id, Id)) -> T.Text
     contractPairAliasing ((cvar1, cid1), (cvar2, cid2)) =
       parens $ forAll (parens ("p p' : address")) <+>
-        ( T.pack cid1 <.> contractAddressInType <+> parens (T.pack cvar1 <+> stateVar) <+> "p") <+> "→"
-        <+> ( T.pack cid2 <.> contractAddressInType <+> parens (T.pack cvar2 <+> stateVar) <+> "p'") <+> "→"
+        ( T.pack cid1 <.> contractAddressInType <+> parens (stateVar <.> T.pack cvar1) <+> "p") <+> "→"
+        <+> ( T.pack cid2 <.> contractAddressInType <+> parens (stateVar <.> T.pack cvar2) <+> "p'") <+> "→"
         <+> ("p" <+> "≠" <+> "p'")
 
     subContractAliasing :: (Id, Id) -> T.Text
-    subContractAliasing (cvar, cid) = T.pack cid <.> noAliasingType <+> parens (T.pack cvar <+> stateVar)
+    subContractAliasing (cvar, cid) = T.pack cid <.> noAliasingType <+> parens (stateVar <.> T.pack cvar)
 
 
 leanbound :: T.Text -> ValueType -> Maybe T.Text
@@ -396,13 +397,13 @@ intBoundsRec :: Id -> StorageTyping -> T.Text
 intBoundsRec name store = inductive
   integerBoundsType stateDecl "Prop" [("integerBoundsC", "", body)]
   where
-    body = indent 2 . implication $ maybeToList (leanbound (T.pack name <.> addrField <+> stateVar) (ValueType TAddress))
+    body = indent 2 . implication $ maybeToList (leanbound (stateVar <.> addrField) (ValueType TAddress))
                                     <> ((M.elems $ M.mapMaybeWithKey go localStore) <> [integerBoundsType <+> stateVar])
 
     localStore = contractStore name store
 
     go :: Id -> (ValueType, Integer) -> Maybe T.Text
-    go v (t,_) = leanbound (T.pack v <+> stateVar) t
+    go v (t,_) = leanbound (stateVar <.> T.pack v) t
 
 interfaceConstraints :: Interface -> [(T.Text, T.Text)]
 interfaceConstraints i@(Interface _ decls) = concatMap go decls <> interfaceConsistency i
@@ -457,7 +458,7 @@ multistep = definition
   multistepType args value
   where
     args = parens $ stateVar <+> stateVar' <+> ":" <+> stateType
-    value = multistepType <+> stepType <+> stateVar <+> stateVar'
+    value = ("ActLib" <.> multistepType) <+> stepType <+> stateVar <+> stateVar'
 
 multistepBefore :: T.Text
 multistepBefore = definition
@@ -615,7 +616,7 @@ stateval ctor store contract handler updates =
   in
   (T.unwords $ stateConstructor : addr : vals, finalBindings, finalI)
   where
-    addr = if ctor then "NextAddr" else parens (T.pack contract <.> addrField <+> stateVar)
+    addr = if ctor then "NextAddr" else parens (stateVar <.> addrField)
     store' = contractStore contract store
 
 
@@ -651,14 +652,14 @@ updateExp (Create _ cid args payment) = do
   let paymentExp = maybe "0" leanexp payment
   (args', argBindings) <- unzip <$> mapM updateExpTyped args
   i <- getIncr
-  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens ("This ENV") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
+  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (envVar <.> "This") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
   pure (iState (i+1), bindings)
 updateExp (Address _ c (Create _ cid args payment)) = do
   let paymentExp = maybe "0" leanexp payment
   (args', argBindings) <- unzip <$> mapM updateExpTyped args
   i <- getIncr
-  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens ("This ENV") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
-  pure (parens $ T.pack c <.> addrField <+> iState (i+1), bindings)
+  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (envVar <.> "This") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
+  pure (parens $ iState (i+1) <.> addrField, bindings)
 updateExp e = pure (leanexp e, [])
 
 updateExpTyped :: TypedExp -> Fresh (T.Text, [([T.Text], T.Text)])
@@ -679,10 +680,10 @@ updateVar store updates handler focus t@(ValueType (TContract cid)) =
     Just (_, (firstU@(Update _ _ e) NE.:| nextUpdates)) | eqRef focus firstU-> do
       (newState, bindings) <- updateExp e
       (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store nextUpdates (\r _ -> refState newState $ unField focus r) (focus' n) t') (M.toList store')
-      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> newState) : t', bindings ++ concat bindings')
+      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (newState <.> addrField) : t', bindings ++ concat bindings')
     Just (_, fieldUpdates) -> do
       (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
-      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> refState stateVar focus) : t', concat bindings')
+      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (refState stateVar focus <.> addrField) : t', concat bindings')
   where
     focus' x = RField nowhere focus cid x
     store' = contractStore cid store
@@ -829,10 +830,10 @@ leanexp (ITE _ b e1 e2) = parens $ "if"
                              <+> leanexp e2
 
 -- environment values
-leanexp (IntEnv _ envVal) = parens $ T.pack (show envVal) <+> envVar
+leanexp (IntEnv _ envVal) = parens $ envVar <.> T.pack (show envVal)
 -- Contracts
 leanexp Create {} = error "Internal error: leanexp called for creation expression; call updateExp"
-leanexp (Address _ c e) = parens $ T.pack c <.> addrField <+> leanexp e
+leanexp (Address _ c e) = parens $ leanexp e <.> addrField
 
 leanexp me@(Mapping _ _ _ _) = mappingExp me 0
 leanexp me@(MappingUpd _ _ _ _ _) = mappingExp me 0
@@ -915,19 +916,19 @@ typedexp :: TypedExp -> T.Text
 typedexp (TExp _ e) = leanexp e
 
 ref :: Ref k -> T.Text
-ref (SVar _ Pre cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar
-ref (SVar _ Post cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar'
+ref (SVar _ Pre cid name) = parens $ stateVar <.> T.pack name
+ref (SVar _ Post cid name) = parens $ stateVar' <.> T.pack name
 ref (CVar _ _ name) = T.pack name
 ref (RArrIdx _ r ix _) = parens $ ref r <+> leanexp ix
 ref (RMapIdx _ (TRef _ _ r) ix) = parens $ ref r <+> typedexp ix
-ref (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> ref r
+ref (RField _ r cid name) = parens $ ref r <.> T.pack name
 
 refState :: T.Text -> Ref k -> T.Text
-refState s (SVar _ _ cid name) = parens $ T.pack cid <.> T.pack name <+> s
+refState s (SVar _ _ cid name) = parens $ s <.> T.pack name
 refState _ (CVar _ _ name) = T.pack name
 refState s (RArrIdx _ r ix _) = parens $ refState s r <+> leanexp ix
 refState s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState s r <+> typedexp ix
-refState s (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> refState s r
+refState s (RField _ r cid name) = parens $ refState s r <.> T.pack name
 
 -- | lean syntax for a list of arguments
 leanargs :: [TypedExp] -> T.Text
@@ -1031,7 +1032,7 @@ stateDecl' :: T.Text
 stateDecl' = parens $ stateVar' <+> ":" <+> stateType
 
 stateConstructor :: T.Text
-stateConstructor = "state"
+stateConstructor = stateType <.> "mk"
 
 addressType :: T.Text
 addressType = "address"
