@@ -374,7 +374,7 @@ noAliasing name store = inductive
 
 leanbound :: T.Text -> ValueType -> Maybe T.Text
 leanbound v (ValueType (TContract cid)) = pure $
-  "0 ≤" <+> T.pack cid <.> addrField <+> parens v <+> "∧" <+> T.pack cid <.> addrField <+> parens v <+> "≤ UINT_MAX 160"
+  "0 ≤" <+> parens v <.> addrField <+> "∧" <+> parens v <.> addrField <+> "≤ UINT_MAX 160"
 leanbound v (ValueType TAddress) = pure $
   "0 ≤" <+> v <+> "∧" <+> v <+> "≤ UINT_MAX 160"
 leanbound v (ValueType (TInteger n Unsigned)) = pure $
@@ -425,9 +425,9 @@ interfaceConsistency (Interface _ decls) = concatMap (uncurry consistency) contr
 
     consistency :: (Id, Id) -> (Id, Id) -> [(T.Text, T.Text)]
     consistency (c1, (T.pack -> a1)) (c2, (T.pack -> a2)) | c1 == c2 = 
-      [ ("consistency_" <> a1 <> "_eq_" <> a2 , T.pack c1 <.> addrField <+> a1 <+> "=" <+> T.pack c2 <.> addrField <+> a2
+      [ ("consistency_" <> a1 <> "_eq_" <> a2 , a1<.> addrField <+>"=" <+> a2 <.> addrField
         <+> "→" <+> a1 <+> "=" <+> a2)
-      , ("consistency_" <> a1 <> "_neq_" <> a2, T.pack c1 <.> addrField <+> a1 <+> "≠" <+> T.pack c2 <.> addrField <+> a2
+      , ("consistency_" <> a1 <> "_neq_" <> a2, a1 <.> addrField <+> "≠" <+> a2 <.> addrField
         <+> "→" <+> "∀" <+> parens("p p' : " <> addressType) <> ","
         <+> T.pack c1 <.> addressInType <+> a1 <+> "p" <+> "→" <+> T.pack c2 <.> addressInType <+> a2 <+> "p'"  <+> "→" <+> "p ≠ p'")]
     consistency (c1, (T.pack -> a1)) (c2, (T.pack -> a2)) =
@@ -852,7 +852,7 @@ mappingExp (Mapping _ keyType valType@VType es) level = parens $
   foldr (mappingElem level keyType) (defaultVal (ValueType valType)) es
 mappingExp (MappingUpd _ r keyType _ es) level = parens $
   "fun" <+> (anon <> (T.pack $ show level)) <+> "=>" <+>
-  foldr (mappingElem level keyType) (ref r <> (anon <> (T.pack $ show level))) es
+  foldr (mappingElem level keyType) (ref r <+> (anon <> (T.pack $ show level))) es
 mappingExp e _ = leanexp e
 
 mappingElem :: Int -> TValueType a -> (Exp a, Exp b) -> T.Text -> T.Text
