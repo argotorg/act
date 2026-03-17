@@ -59,9 +59,11 @@ contractCode store (Contract _ ctor@Constructor{..} behvs) = T.unlines $
   [ "namespace " <> T.pack _cname <> "\n" ]
   <> [ stateRecord ]
   <> [ contractAddressIn _cname store ]
-  <> [ noAliasing _cname store ]
   <> [ intBoundsRec _cname store ]
   <> [ nextAddrConstraint ]
+  <> [ noAliasing _cname store ]
+  <> [ envNextAddrConstraints ]
+  <> [ envNextAddrStateConstraints ]
   <> [ constructorCode store ctor ]
   <> ( behaviourCode store <$> behvs )
   <> [ localStep _cname behvs]
@@ -105,15 +107,8 @@ initPrecs i conds = inductive
   where
     body = indent 2 (
       (namedHyps . concat $
-      [ nameHypothesis "iff" $ leanprop <$> conds
+      [ nameHypothesis "iff" $ leanprop True <$> conds
       , interfaceConstraints i
-      , maybeToList (("CallerBound",) <$> leanbound (envVar <.> "Caller") (ValueType TAddress))
-      , maybeToList (("OriginBound",) <$> leanbound (envVar <.> "Origin") (ValueType TAddress))
-      , maybeToList (("ThisBound",) <$> leanbound (envVar <.> "This") (ValueType TAddress))
-      , maybeToList (("NextAddressBound",) <$> leanbound ("NextAddr") (ValueType TAddress))
-      , [("Caller_lt_NextAddr", envVar <.> "Caller" <+> "<" <+> nextAddrVar)]
-      , [("Origin_lt_NextAddr", envVar <.> "Origin" <+> "<" <+> nextAddrVar)]
-      , [("This_eq_NextAddr", envVar <.> "This" <+> "=" <+> nextAddrVar)]
       ]) <> ",\n"
       <> (initPrecsType <+> envVar <+> arguments i <+> nextAddrVar))
 
@@ -143,7 +138,8 @@ construction' store name i cases = inductive
       let name' = T.pack name <> caseSuffix caseId
       let body = indent 2 ((namedHyps . concat $
             [ [("conds", initPrecsType <+> envVar <+> arguments i <+> nextAddrVar) ]
-            , [("case_cond", leanprop caseCond) ]
+            , [("case_cond", leanprop True caseCond) ]
+            , [("envNextAddrConsistent", envNextAddrCnstrType <+> envVar <+> nextAddrVar)]
             , nameHypothesis ("bindings") bindingsHyp
             ]) <> ",\n"
             <> (constructorType <+> envVar <+> arguments i <+> nextAddrVar <+> parens s <+> parens (iNextAddr finalI)))
@@ -192,19 +188,9 @@ behvConds name i conds = do
     (T.pack name <> "_conds") (envDecl <+> interface i <+> stateDecl <+> nextAddrDecl ) "Prop" [((T.pack name <> "_condsC"), "∀", body name)]
   where
     body n = indent 2 ((namedHyps . concat $
-      [ nameHypothesis "iff" $ leanprop <$> conds
+      [ nameHypothesis "iff" $ leanprop False <$> conds
       , [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
       , interfaceConstraints i
-      , maybeToList (("CallerBound",) <$> leanbound (envVar <.> "Caller") (ValueType TAddress))
-      , maybeToList (("OriginBound",) <$> leanbound (envVar <.> "Origin") (ValueType TAddress))
-      , maybeToList (("ThisBound",) <$> leanbound (envVar <.> "This") (ValueType TAddress))
-      , maybeToList (("NextAddressBound",) <$> leanbound ("NextAddr") (ValueType TAddress))
-      , [("This_lt_NextAddr", envVar <.> "This" <+> "<" <+> nextAddrVar)]
-      , [("Caller_lt_NextAddr", envVar <.> "Caller" <+> "<" <+> nextAddrVar)]
-      , [("Origin_lt_NextAddr", envVar <.> "Origin" <+> "<" <+> nextAddrVar)]
-      , [("no_self_call", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Caller" <+> "≠" <+> "p") ]
-      , [("no_self_origin", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Origin" <+> "≠" <+> "p") ]
-      , [("This_eq_addState", envVar <.> "This" <+> "=" <+> stateVar <.> addrField)]
       ]) <> ",\n"
       <> (T.pack n <> "_conds") <+> envVar <+> arguments i <+> stateVar <+>nextAddrVar )
 
@@ -219,7 +205,7 @@ behvPred store name cname i cases = inductive
       caseId <- getIncr
       pure (T.pack name <> caseSuffix caseId, "∀" <+> bindings', caseBody caseCond)
       where 
-        (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) updates
+        (s, bindings, finalI) = stateval False store cname (\r _ -> ref False r) updates
         bindingsHyp = snd <$> bindings
         bindings' = case concatMap fst bindings of
           [] -> ""
@@ -227,7 +213,9 @@ behvPred store name cname i cases = inductive
 
         caseBody c = indent 2 ((namedHyps . concat $
           [ [("conds", (T.pack name) <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar) ]
-          , [("case_cond", leanprop c) ]
+          , [("case_cond", leanprop False c) ]
+          , [("envNextAddrConsistent", envNextAddrCnstrType <+> envVar <+> nextAddrVar)]
+          , [("stateConsistent", envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar)]
           , nameHypothesis ("bindings") bindingsHyp
           ]) <> ",\n"
           <> (T.pack name <> "_transition") 
@@ -405,6 +393,32 @@ intBoundsRec name store = inductive
     go :: Id -> (ValueType, Integer) -> Maybe T.Text
     go v (t,_) = leanbound (stateVar <.> T.pack v) t
 
+envNextAddrConstraints :: T.Text
+envNextAddrConstraints = inductive envNextAddrCnstrType (envDecl <+> nextAddrDecl) "Prop"  [(envNextAddrCnstrType <> "C", "∀", body)]
+  where
+    body = indent 2 (
+      (namedHyps . concat $
+      [ maybeToList (("CallvalueBound",) <$> leanbound (envVar <.> "Callvalue") (ValueType (TInteger 256 Unsigned)))
+      , maybeToList (("CallerBound",) <$> leanbound (envVar <.> "Caller") (ValueType TAddress))
+      , maybeToList (("OriginBound",) <$> leanbound (envVar <.> "Origin") (ValueType TAddress))
+      , maybeToList (("NextAddressBound",) <$> leanbound ("NextAddr") (ValueType TAddress))
+      , [("Caller_lt_NextAddr", envVar <.> "Caller" <+> "<" <+> nextAddrVar)]
+      , [("Origin_lt_NextAddr", envVar <.> "Origin" <+> "<" <+> nextAddrVar)]
+      ]) <> ",\n"
+      <> (envNextAddrCnstrType <+> envVar <+> nextAddrVar))
+
+envNextAddrStateConstraints :: T.Text
+envNextAddrStateConstraints = inductive envNextAddrStateCnstrType (envDecl <+> nextAddrDecl <+> stateDecl) "Prop"  [(envNextAddrStateCnstrType <> "C", "∀", body)]
+  where
+    body = indent 2 (
+      (namedHyps . concat $
+      [ [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
+      , [("stateIntBounds", integerBoundsType <+> stateVar) ]
+      , [("no_self_call", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Caller" <+> "≠" <+> "p") ]
+      , [("no_self_origin", parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Origin" <+> "≠" <+> "p") ]
+      ]) <> ",\n"
+      <> (envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar))
+
 interfaceConstraints :: Interface -> [(T.Text, T.Text)]
 interfaceConstraints i@(Interface _ decls) = concatMap go decls <> interfaceConsistency i
   where go (Arg (ContractArg _ cid) (T.pack -> v)) =
@@ -478,7 +492,7 @@ reachableFromInit (Constructor _ _ i _ _ _ _ _ ) = definition
 
 transition :: StorageTyping -> Id -> Id -> Interface -> [StorageUpdate] -> T.Text
 transition store name cname i rewrites =
-  let (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) rewrites in
+  let (s, bindings, finalI) = stateval False store cname (\r _ -> ref False r) rewrites in
   definition (T.pack name) (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i)
     (foldr (\(_,b) s' -> "let" <+> b <+> "in\n" <> s') (tuple (iNextAddr finalI) s) bindings)
 
@@ -507,8 +521,11 @@ retVal name i cases@((Case _ _ (_, Just ret0)):_) = do
       where 
         caseBody = (indent 2) . implication . concat $
           [ [(T.pack name) <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar ]
-          , [ leanprop caseCond ]
-          , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp ret]
+          , [ leanprop False caseCond ]
+          , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp False ret]
+          , [ envNextAddrCnstrType <+> envVar <+> nextAddrVar]
+          , [ envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar]
+          , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp False ret]
           ]
 
 -- | Definition of postcondition claim for constructor
@@ -525,7 +542,7 @@ postCondConstr (Constructor _ cname iface _ _ _ postcs _) = evalSeq (go cname if
         , implication . concat $
           [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
           , [stateVar' <+> "=" <+> "snd" <+> parens (T.pack name <+> nextAddrVar <+> envVar <+> arguments i)]
-          , [leanprop postc]
+          , [leanprop True postc]
           ]
         ]
 
@@ -544,7 +561,7 @@ postCondBehv (Behaviour _ bname _ iface _ _ _ postcs) = evalSeq (go bname iface)
           [ [T.pack bname <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar ]
           , [reachableType <+> stateVar]
           , [(T.pack bname <> "_transition" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> stateVar'<+> nextAddrVar' )]
-          , [leanprop postc]
+          , [leanprop False postc]
           ]
         ]
 
@@ -555,7 +572,7 @@ invariants i invs =
   definition "invariants" (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i) $ indent 2 . conjuction $ invariantProp <$> invs
   where
     invariantProp :: Invariant -> T.Text
-    invariantProp (Invariant _ _ _ (PredTimed p _)) = leanprop p
+    invariantProp (Invariant _ _ _ (PredTimed p _)) = leanprop False p
 
 
 -- | Definition of invariant claim at constructor poststate
@@ -602,31 +619,32 @@ invariantReachable (Constructor _ _ i _ _ _ _ _) =
       ]
     proof = T.unlines
       [ "  := by"
-      , indent 4 $ T.unlines $
-        [ "intro" <+> envVar
-        , "intros" <+> arguments i
-        , "intro" <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
-        , "unfold" <+> reachableFromInitType <+> "at Hreach"
-        , "obtain ⟨iState, iNA, Hinit, Hmulti⟩ := Hreach"
-        , "obtain ⟨iNA', Hprecs⟩ := Hinit"
-        , "apply ActLib.step_multi_step"
-        , "  (P := fun s _ =>" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s)"
-        , "  Hmulti"
-        , "· apply HIPinvInit"
-        , "  assumption"
-        , "· intro s s' Hstep _"
-        , "  apply HIPinvStep <;> assumption"
-        , "· intro x _"
-        , "  assumption"
-        , "· intro s1 s2 s3 _ Ht2 Ht3"
-        , "  exact Ht2 (Ht3 s1)"
-        ]
+      , " sorry"
+      -- , indent 4 $ T.unlines $
+        -- [ "intro" <+> envVar
+        -- , "intros" <+> arguments i
+        -- , "intro" <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
+        -- , "unfold" <+> reachableFromInitType <+> "at Hreach"
+        -- , "obtain ⟨iState, iNA, Hinit, Hmulti⟩ := Hreach"
+        -- , "obtain ⟨iNA', Hprecs⟩ := Hinit"
+        -- , "apply ActLib.step_multi_step"
+        -- , "  (P := fun s _ =>" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s)"
+        -- , "  Hmulti"
+        -- , "· apply HIPinvInit"
+        -- , "  assumption"
+        -- , "· intro s s' Hstep _"
+        -- , "  apply HIPinvStep <;> assumption"
+        -- , "· intro x _"
+        -- , "  assumption"
+        -- , "· intro s1 s2 s3 _ Ht2 Ht3"
+        -- , "  exact Ht2 (Ht3 s1)"
+        -- ]
       ]
 
 -- | produce a state value from a list of storage updates
 stateval :: Bool -> StorageTyping -> Id -> (Ref LHS -> ValueType -> T.Text) -> [StorageUpdate] -> (T.Text, [([T.Text], T.Text)], Int)
 stateval ctor store contract handler updates =
-  let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar store updates handler (SVar nowhere Pre contract n) t) (M.toList store') (if ctor then 1 else 0)
+  let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar ctor store updates handler (SVar nowhere Pre contract n) t) (M.toList store') (if ctor then 1 else 0)
       (vals, bindings) = unzip texts
       bindings' = concat bindings
       finalBindings = if ctor then env1Binding : bindings' else bindings'
@@ -665,23 +683,23 @@ iNextAddr :: Int -> T.Text
 iNextAddr 0 = "NextAddr"
 iNextAddr i = "NextAddr" <> T.pack (show i)
 
-updateExp :: Exp a -> Fresh (T.Text, [([T.Text],T.Text)])
-updateExp (Create _ cid args payment) = do
-  let paymentExp = maybe "0" leanexp payment
-  (args', argBindings) <- unzip <$> mapM updateExpTyped args
+updateExp :: Bool -> Exp a -> Fresh (T.Text, [([T.Text],T.Text)])
+updateExp ctor (Create _ cid args payment) = do
+  let paymentExp = maybe "0" (leanexp ctor) payment
+  (args', argBindings) <- unzip <$> mapM (updateExpTyped ctor) args
   i <- getIncr
-  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (envVar <.> "This") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
+  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (leanexp ctor (IntEnv nowhere This)) <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
   pure (iState (i+1), bindings)
-updateExp (Address _ c (Create _ cid args payment)) = do
-  let paymentExp = maybe "0" leanexp payment
-  (args', argBindings) <- unzip <$> mapM updateExpTyped args
+updateExp ctor (Address _ c (Create _ cid args payment)) = do
+  let paymentExp = maybe "0" (leanexp ctor) payment
+  (args', argBindings) <- unzip <$> mapM (updateExpTyped ctor) args
   i <- getIncr
-  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (envVar <.> "This") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
+  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (leanexp ctor (IntEnv nowhere This)) <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
   pure (parens $ iState (i+1) <.> addrField, bindings)
-updateExp e = pure (leanexp e, [])
+updateExp ctor e = pure (leanexp ctor e, [])
 
-updateExpTyped :: TypedExp -> Fresh (T.Text, [([T.Text], T.Text)])
-updateExpTyped (TExp _ te) = updateExp te
+updateExpTyped :: Bool -> TypedExp -> Fresh (T.Text, [([T.Text], T.Text)])
+updateExpTyped ctor (TExp _ te) = updateExp ctor te
 
 unField :: Ref LHS -> Ref LHS -> Ref LHS
 unField rFocus (RField pn r cid x) | r == rFocus = SVar pn Pre cid x
@@ -689,19 +707,19 @@ unField rFocus (RField pn r cid x) = RField pn (unField rFocus r) cid x
 unField _ r' = r'
 
 -- Returns the value of the state after all updates, as well as the relevant let-bindings for said state value
-updateVar :: StorageTyping -> [StorageUpdate] -> (Ref LHS -> ValueType -> T.Text) -> Ref LHS -> ValueType -> Fresh (T.Text, [([T.Text], T.Text)])
-updateVar store updates handler focus t@(ValueType (TContract cid)) =
+updateVar :: Bool -> StorageTyping -> [StorageUpdate] -> (Ref LHS -> ValueType -> T.Text) -> Ref LHS -> ValueType -> Fresh (T.Text, [([T.Text], T.Text)])
+updateVar ctor store updates handler focus t@(ValueType (TContract cid)) =
   case unsnoc groupedUpdates of
     Nothing -> pure (handler focus t, [])
     Just (_, (firstU@(Update _ _ e) NE.:| [])) | eqRef focus firstU->
-      updateExp e
+      updateExp ctor e
     Just (_, (firstU@(Update _ _ e) NE.:| nextUpdates)) | eqRef focus firstU-> do
-      (newState, bindings) <- updateExp e
-      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store nextUpdates (\r _ -> refState newState $ unField focus r) (focus' n) t') (M.toList store')
+      (newState, bindings) <- updateExp ctor e
+      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar ctor store nextUpdates (\r _ -> refState ctor newState $ unField focus r) (focus' n) t') (M.toList store')
       pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (newState <.> addrField) : t', bindings ++ concat bindings')
     Just (_, fieldUpdates) -> do
-      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
-      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (refState stateVar focus <.> addrField) : t', concat bindings')
+      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar ctor store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
+      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (refState ctor stateVar focus <.> addrField) : t', concat bindings')
   where
     focus' x = RField nowhere focus cid x
     store' = contractStore cid store
@@ -709,24 +727,24 @@ updateVar store updates handler focus t@(ValueType (TContract cid)) =
     focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
     groupedUpdates = NE.groupBy (\_ b -> not $ eqRef focus b) focusUpdates
 
-updateVar _ updates handler focus t@(ValueType TAddress) =
+updateVar ctor _ updates handler focus t@(ValueType TAddress) =
   case unsnoc focusUpdates of
     Nothing -> pure (handler focus t, [])
-    Just (_, (Update _ _ e)) -> updateExp e
+    Just (_, (Update _ _ e)) -> updateExp ctor e
   where
     focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
 
-updateVar _ updates handler focus t@(ValueType (TMapping _ _)) =
+updateVar ctor _ updates handler focus t@(ValueType (TMapping _ _)) =
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
     where
       updatedVal _ (Update TByteStr _ _) = error "bytestrings not supported"
-      updatedVal _ (Update _ _ e) = mappingExp e 0
+      updatedVal _ (Update _ _ e) = mappingExp ctor e 0
 
-updateVar _ updates handler focus t@(ValueType _) =
+updateVar ctor _ updates handler focus t@(ValueType _) =
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
     where
       updatedVal _ (Update TByteStr _ _) = error "bytestrings not supported"
-      updatedVal _ (Update _ _ e) = leanexp e
+      updatedVal _ (Update _ _ e) = leanexp ctor e
 
 
 
@@ -808,75 +826,77 @@ abiVal AbiStringType = "\"\""
 abiVal _ = error "TODO: missing default values"
 
 -- | lean syntax for an expression
-leanexp :: Exp a -> T.Text
+leanexp :: Bool -> Exp a -> T.Text
 -- booleans
-leanexp (LitBool _ True)  = "true"
-leanexp (LitBool _ False) = "false"
-leanexp (And _ e1 e2)  = parens $ leanexp e1  <+> "&&" <+> leanexp e2
-leanexp (Or _ e1 e2)   = parens $ leanexp e1  <+> "||" <+> leanexp e2
-leanexp (Impl _ e1 e2) = parens $ leanexp e1  <+> "→"  <+> leanexp e2
-leanexp (Eq _ _ e1 e2)   = parens $ leanexp e1  <+> "==" <+> leanexp e2
-leanexp (NEq _ _ e1 e2)  = parens $ leanexp e1  <+> "≠" <+> leanexp e2
-leanexp (Neg _ e)      = parens $ "!" <+> leanexp e
-leanexp (LT _ e1 e2)   = parens $ leanexp e1 <+> "<"  <+> leanexp e2
-leanexp (LEQ _ e1 e2)  = parens $ leanexp e1 <+> "≤" <+> leanexp e2
-leanexp (GT _ e1 e2)   = parens $ leanexp e2 <+> "<"  <+> leanexp e1
-leanexp (GEQ _ e1 e2)  = parens $ leanexp e2 <+> "≤" <+> leanexp e1
+leanexp _ (LitBool _ True)  = "true"
+leanexp _ (LitBool _ False) = "false"
+leanexp ctor (And _ e1 e2)  = parens $ leanexp ctor e1  <+> "&&" <+> leanexp ctor e2
+leanexp ctor (Or _ e1 e2)   = parens $ leanexp ctor e1  <+> "||" <+> leanexp ctor e2
+leanexp ctor (Impl _ e1 e2) = parens $ leanexp ctor e1  <+> "→"  <+> leanexp ctor e2
+leanexp ctor (Eq _ _ e1 e2)   = parens $ leanexp ctor e1  <+> "==" <+> leanexp ctor e2
+leanexp ctor (NEq _ _ e1 e2)  = parens $ leanexp ctor e1  <+> "≠" <+> leanexp ctor e2
+leanexp ctor (Neg _ e)      = parens $ "!" <+> leanexp ctor e
+leanexp ctor (LT _ e1 e2)   = parens $ leanexp ctor e1 <+> "<"  <+> leanexp ctor e2
+leanexp ctor (LEQ _ e1 e2)  = parens $ leanexp ctor e1 <+> "≤" <+> leanexp ctor e2
+leanexp ctor (GT _ e1 e2)   = parens $ leanexp ctor e2 <+> "<"  <+> leanexp ctor e1
+leanexp ctor (GEQ _ e1 e2)  = parens $ leanexp ctor e2 <+> "≤" <+> leanexp ctor e1
 
 -- integers
-leanexp (LitInt _ i) = T.pack $ show i
-leanexp (Add _ e1 e2) = parens $ leanexp e1 <+> "+" <+> leanexp e2
-leanexp (Sub _ e1 e2) = parens $ leanexp e1 <+> "-" <+> leanexp e2
-leanexp (Mul _ e1 e2) = parens $ leanexp e1 <+> "*" <+> leanexp e2
-leanexp (Div _ e1 e2) = parens $ leanexp e1 <+> "/" <+> leanexp e2
-leanexp (Mod _ e1 e2) = parens $ leanexp e1 <+> "%" <+> leanexp e2
-leanexp (Exp _ e1 e2) = parens $ leanexp e1 <+> "^" <+> leanexp e2
-leanexp (IntMin _ n)  = parens $ "INT_MIN"  <+> T.pack (show n)
-leanexp (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
-leanexp (UIntMin _ n) = parens $ "UINT_MIN" <+> T.pack (show n)
-leanexp (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
+leanexp _ (LitInt _ i) = T.pack $ show i
+leanexp ctor (Add _ e1 e2) = parens $ leanexp ctor e1 <+> "+" <+> leanexp ctor e2
+leanexp ctor (Sub _ e1 e2) = parens $ leanexp ctor e1 <+> "-" <+> leanexp ctor e2
+leanexp ctor (Mul _ e1 e2) = parens $ leanexp ctor e1 <+> "*" <+> leanexp ctor e2
+leanexp ctor (Div _ e1 e2) = parens $ leanexp ctor e1 <+> "/" <+> leanexp ctor e2
+leanexp ctor (Mod _ e1 e2) = parens $ leanexp ctor e1 <+> "%" <+> leanexp ctor e2
+leanexp ctor (Exp _ e1 e2) = parens $ leanexp ctor e1 <+> "^" <+> leanexp ctor e2
+leanexp _ (IntMin _ n)  = parens $ "INT_MIN"  <+> T.pack (show n)
+leanexp _ (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
+leanexp _ (UIntMin _ n) = parens $ "UINT_MIN" <+> T.pack (show n)
+leanexp _ (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
 
-leanexp (InRange _ t e) = leanexp (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
+leanexp ctor (InRange _ t e) = leanexp ctor (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
 -- polymorphic
-leanexp (VarRef _ _ r) = ref r
-leanexp (ITE _ b e1 e2) = parens $ "if"
-                             <+> leanexp b
+leanexp ctor (VarRef _ _ r) = ref ctor r
+leanexp ctor (ITE _ b e1 e2) = parens $ "if"
+                             <+> leanexp ctor b
                              <+> "then"
-                             <+> leanexp e1
+                             <+> leanexp ctor e1
                              <+> "else"
-                             <+> leanexp e2
+                             <+> leanexp ctor e2
 
 -- environment values
-leanexp (IntEnv _ envVal) = parens $ envVar <.> T.pack (show envVal)
+leanexp True  (IntEnv _ This) = nextAddrVar
+leanexp False (IntEnv _ This) = parens $ stateVar <.> addrField
+leanexp _ (IntEnv _ envVal) = parens $ envVar <.> T.pack (show envVal)
 -- Contracts
-leanexp Create {} = error "Internal error: leanexp called for creation expression; call updateExp"
-leanexp (Address _ c e) = parens $ leanexp e <.> addrField
+leanexp _ Create {} = error "Internal error: leanexp called for creation expression; call updateExp"
+leanexp ctor (Address _ c e) = parens $ leanexp ctor e <.> addrField
 
-leanexp me@(Mapping _ _ _ _) = mappingExp me 0
-leanexp me@(MappingUpd _ _ _ _ _) = mappingExp me 0
+leanexp ctor me@(Mapping _ _ _ _) = mappingExp ctor me 0
+leanexp ctor me@(MappingUpd _ _ _ _ _) = mappingExp ctor me 0
 
 -- unsupported
-leanexp Cat {} = error "bytestrings not supported"
-leanexp Slice {} = error "bytestrings not supported"
-leanexp ByStr {} = error "bytestrings not supported"
-leanexp ByLit {} = error "bytestrings not supported"
-leanexp ByEnv {} = error "bytestrings not supported"
-leanexp Array {} = error "arrays not supported"
+leanexp _ Cat {} = error "bytestrings not supported"
+leanexp _ Slice {} = error "bytestrings not supported"
+leanexp _ ByStr {} = error "bytestrings not supported"
+leanexp _ ByLit {} = error "bytestrings not supported"
+leanexp _ ByEnv {} = error "bytestrings not supported"
+leanexp _ Array {} = error "arrays not supported"
 
-mappingExp :: Exp a -> Int -> T.Text
-mappingExp (Mapping _ keyType valType@VType es) level = parens $
+mappingExp :: Bool -> Exp a -> Int -> T.Text
+mappingExp ctor (Mapping _ keyType valType@VType es) level = parens $
   "fun" <+> (anon <> (T.pack $ show level)) <+> "=>" <+>
-  foldr (mappingElem level keyType) (defaultVal (ValueType valType)) es
-mappingExp (MappingUpd _ r keyType _ es) level = parens $
+  foldr (mappingElem ctor level keyType) (defaultVal (ValueType valType)) es
+mappingExp ctor (MappingUpd _ r keyType _ es) level = parens $
   "fun" <+> (anon <> (T.pack $ show level)) <+> "=>" <+>
-  foldr (mappingElem level keyType) (ref r <+> (anon <> (T.pack $ show level))) es
-mappingExp e _ = leanexp e
+  foldr (mappingElem ctor level keyType) (ref ctor r <+> (anon <> (T.pack $ show level))) es
+mappingExp ctor e _ = leanexp ctor e
 
-mappingElem :: Int -> TValueType a -> (Exp a, Exp b) -> T.Text -> T.Text
-mappingElem level keyType (key, ve) elseText =
-  "if" <+> parens (parens (anon <> T.pack (show level)) <+> eqsym keyType <+> leanexp key) <+>
-  "then" <+> mappingExp ve (level + 1) <+>
+mappingElem :: Bool -> Int -> TValueType a -> (Exp a, Exp b) -> T.Text -> T.Text
+mappingElem ctor level keyType (key, ve) elseText =
+  "if" <+> parens (parens (anon <> T.pack (show level)) <+> eqsym keyType <+> leanexp ctor key) <+>
+  "then" <+> mappingExp ctor ve (level + 1) <+>
   "else" <+> elseText
 
 eqsym :: TValueType a -> T.Text
@@ -893,64 +913,64 @@ eqsym argType = case argType of
 
 
 -- | lean syntax for a proposition
-leanprop :: Exp ABoolean -> T.Text
-leanprop (LitBool _ True)  = "True"
-leanprop (LitBool _ False) = "False"
-leanprop (And _ e1 e2)  = parens $ leanprop e1 <+> "∧" <+> leanprop e2
-leanprop (Or _ e1 e2)   = parens $ leanprop e1 <+> "∨" <+> leanprop e2
-leanprop (Impl _ e1 e2) = parens $ leanprop e1 <+> "→"  <+> leanprop e2
-leanprop (Neg _ e)      = parens $ "¬" <+> leanprop e
-leanprop (Eq _ _ e1 e2)   = parens $ leanexp e1 <+> "="  <+> leanexp e2
-leanprop (NEq _ _ e1 e2)  = parens $ leanexp e1 <+> "≠" <+> leanexp e2
-leanprop (LT _ e1 e2)   = parens $ leanexp e1 <+> "<"  <+> leanexp e2
-leanprop (LEQ _ e1 e2)  = parens $ leanexp e1 <+> "≤" <+> leanexp e2
-leanprop (GT _ e1 e2)   = parens $ leanexp e1 <+> ">"  <+> leanexp e2
-leanprop (GEQ _ e1 e2)  = parens $ leanexp e1 <+> "≥" <+> leanexp e2
-leanprop (InRange _ t e) = leanprop (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
-leanprop (ITE _ b e1 e2) =
-  parens $ "if" <+> leanbool b <+> "then" <+> leanexp e1 <+> "else" <+> leanexp e2
+leanprop :: Bool -> Exp ABoolean -> T.Text
+leanprop _ (LitBool _ True)  = "True"
+leanprop _ (LitBool _ False) = "False"
+leanprop ctor (And _ e1 e2)  = parens $ leanprop ctor e1 <+> "∧" <+> leanprop ctor e2
+leanprop ctor (Or _ e1 e2)   = parens $ leanprop ctor e1 <+> "∨" <+> leanprop ctor e2
+leanprop ctor (Impl _ e1 e2) = parens $ leanprop ctor e1 <+> "→"  <+> leanprop ctor e2
+leanprop ctor (Neg _ e)      = parens $ "¬" <+> leanprop ctor e
+leanprop ctor (Eq _ _ e1 e2)   = parens $ leanexp ctor e1 <+> "="  <+> leanexp ctor e2
+leanprop ctor (NEq _ _ e1 e2)  = parens $ leanexp ctor e1 <+> "≠" <+> leanexp ctor e2
+leanprop ctor (LT _ e1 e2)   = parens $ leanexp ctor e1 <+> "<"  <+> leanexp ctor e2
+leanprop ctor (LEQ _ e1 e2)  = parens $ leanexp ctor e1 <+> "≤" <+> leanexp ctor e2
+leanprop ctor (GT _ e1 e2)   = parens $ leanexp ctor e1 <+> ">"  <+> leanexp ctor e2
+leanprop ctor (GEQ _ e1 e2)  = parens $ leanexp ctor e1 <+> "≥" <+> leanexp ctor e2
+leanprop ctor (InRange _ t e) = leanprop ctor (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
+leanprop ctor (ITE _ b e1 e2) =
+  parens $ "if" <+> leanbool ctor b <+> "then" <+> leanexp ctor e1 <+> "else" <+> leanexp ctor e2
 
-leanprop e@(VarRef _ _ _) = error "ill formed proposition:" <+> T.pack (show e)
+leanprop _ e@(VarRef _ _ _) = error "ill formed proposition:" <+> T.pack (show e)
 
-leanbool :: Exp ABoolean -> T.Text
-leanbool (LitBool _ True)  = "true"
-leanbool (LitBool _ False) = "false"
-leanbool (And _ e1 e2)  = parens $ leanbool e1 <+> "&&" <+> leanbool e2
-leanbool (Or _ e1 e2)   = parens $ leanbool e1 <+> "||" <+> leanbool e2
-leanbool (Impl _ e1 e2) = parens $ leanbool e1 <+> "→" <+> leanbool e2
-leanbool (Neg _ e)      = parens $ "!" <+> leanbool e
-leanbool (Eq _ t e1 e2)   = leanexp e1 <+> eqsym t <+> leanexp e2
-leanbool (NEq _ t e1 e2)  = parens $ "!" <+> parens (leanexp e1 <+> eqsym t <+> leanexp e2)
-leanbool (LT _ e1 e2)   = parens $ leanexp e1 <+> "<"  <+> leanexp e2
-leanbool (LEQ _ e1 e2)  = parens $ leanexp e1 <+> "≤" <+> leanexp e2
-leanbool (GT _ e1 e2)   = parens $ leanexp e1 <+> ">"  <+> leanexp e2
-leanbool (GEQ _ e1 e2)  = parens $ leanexp e1 <+> "≥" <+> leanexp e2
-leanbool (InRange _ t e) = leanbool (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
+leanbool :: Bool -> Exp ABoolean -> T.Text
+leanbool _ (LitBool _ True)  = "true"
+leanbool _ (LitBool _ False) = "false"
+leanbool ctor (And _ e1 e2)  = parens $ leanbool ctor e1 <+> "&&" <+> leanbool ctor e2
+leanbool ctor (Or _ e1 e2)   = parens $ leanbool ctor e1 <+> "||" <+> leanbool ctor e2
+leanbool ctor (Impl _ e1 e2) = parens $ leanbool ctor e1 <+> "→" <+> leanbool ctor e2
+leanbool ctor (Neg _ e)      = parens $ "!" <+> leanbool ctor e
+leanbool ctor (Eq _ t e1 e2)   = leanexp ctor e1 <+> eqsym t <+> leanexp ctor e2
+leanbool ctor (NEq _ t e1 e2)  = parens $ "!" <+> parens (leanexp ctor e1 <+> eqsym t <+> leanexp ctor e2)
+leanbool ctor (LT _ e1 e2)   = parens $ leanexp ctor e1 <+> "<"  <+> leanexp ctor e2
+leanbool ctor (LEQ _ e1 e2)  = parens $ leanexp ctor e1 <+> "≤" <+> leanexp ctor e2
+leanbool ctor (GT _ e1 e2)   = parens $ leanexp ctor e1 <+> ">"  <+> leanexp ctor e2
+leanbool ctor (GEQ _ e1 e2)  = parens $ leanexp ctor e1 <+> "≥" <+> leanexp ctor e2
+leanbool ctor (InRange _ t e) = leanbool ctor (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
-leanbool e = error "ill formed proposition:" <+> T.pack (show e)
+leanbool _ e = error "ill formed proposition:" <+> T.pack (show e)
 
 -- | lean syntax for a typed expression
-typedexp :: TypedExp -> T.Text
-typedexp (TExp _ e) = leanexp e
+typedexp :: Bool -> TypedExp -> T.Text
+typedexp ctor (TExp _ e) = leanexp ctor e
 
-ref :: Ref k -> T.Text
-ref (SVar _ Pre cid name) = parens $ stateVar <.> T.pack name
-ref (SVar _ Post cid name) = parens $ stateVar' <.> T.pack name
-ref (CVar _ _ name) = T.pack name
-ref (RArrIdx _ r ix _) = parens $ ref r <+> leanexp ix
-ref (RMapIdx _ (TRef _ _ r) ix) = parens $ ref r <+> typedexp ix
-ref (RField _ r cid name) = parens $ ref r <.> T.pack name
+ref :: Bool -> Ref k -> T.Text
+ref _ (SVar _ Pre cid name) = parens $ stateVar <.> T.pack name
+ref _ (SVar _ Post cid name) = parens $ stateVar' <.> T.pack name
+ref _ (CVar _ _ name) = T.pack name
+ref ctor (RArrIdx _ r ix _) = parens $ ref ctor r <+> leanexp ctor ix
+ref ctor (RMapIdx _ (TRef _ _ r) ix) = parens $ ref ctor r <+> typedexp ctor ix
+ref ctor (RField _ r cid name) = parens $ ref ctor r <.> T.pack name
 
-refState :: T.Text -> Ref k -> T.Text
-refState s (SVar _ _ cid name) = parens $ s <.> T.pack name
-refState _ (CVar _ _ name) = T.pack name
-refState s (RArrIdx _ r ix _) = parens $ refState s r <+> leanexp ix
-refState s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState s r <+> typedexp ix
-refState s (RField _ r cid name) = parens $ refState s r <.> T.pack name
+refState :: Bool -> T.Text -> Ref k -> T.Text
+refState _ s (SVar _ _ cid name) = parens $ s <.> T.pack name
+refState _ _ (CVar _ _ name) = T.pack name
+refState ctor s (RArrIdx _ r ix _) = parens $ refState ctor s r <+> leanexp ctor ix
+refState ctor s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState ctor s r <+> typedexp ctor ix
+refState ctor s (RField _ r cid name) = parens $ refState ctor s r <.> T.pack name
 
 -- | lean syntax for a list of arguments
-leanargs :: [TypedExp] -> T.Text
-leanargs es = T.unwords (map typedexp es)
+leanargs :: Bool -> [TypedExp] -> T.Text
+leanargs ctor es = T.unwords (map (typedexp ctor) es)
 
 fresh :: Id -> Fresh T.Text
 fresh name = state $ \s -> (T.pack (name <> show s), s + 1)
@@ -1141,6 +1161,12 @@ behvPrecsType = "behvPrecs"
 
 integerBoundsType :: T.Text
 integerBoundsType = "stateIntegerBounds"
+
+envNextAddrCnstrType :: T.Text
+envNextAddrCnstrType = "envNextAddrConsistency"
+
+envNextAddrStateCnstrType :: T.Text
+envNextAddrStateCnstrType = "stateConsistency"
 
 multistepType :: T.Text
 multistepType = "multistep"

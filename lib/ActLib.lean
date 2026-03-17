@@ -13,13 +13,11 @@ abbrev address : Type := ℤ
 structure Env where
   Callvalue : ℤ
   Caller : address
-  This : address
   Origin : address
 
 def CallEnv (value : ℤ) (caller : address) (ENV : Env) : Env :=
   { Callvalue := value
     Caller := caller
-    This := ENV.This
     Origin := ENV.Origin }
 
 -- * Integer bounds
