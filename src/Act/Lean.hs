@@ -602,7 +602,25 @@ invariantReachable (Constructor _ _ i _ _ _ _ _) =
       ]
     proof = T.unlines
       [ "  := by"
-      , indent 4 "sorry -- proof implementation needed"
+      , indent 4 $ T.unlines $
+        [ "intro" <+> envVar
+        , "intros" <+> arguments i
+        , "intro" <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
+        , "unfold" <+> reachableFromInitType <+> "at Hreach"
+        , "obtain ⟨iState, iNA, Hinit, Hmulti⟩ := Hreach"
+        , "obtain ⟨iNA', Hprecs⟩ := Hinit"
+        , "apply ActLib.step_multi_step"
+        , "  (P := fun s _ =>" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s)"
+        , "  Hmulti"
+        , "· apply HIPinvInit"
+        , "  assumption"
+        , "· intro s s' Hstep _"
+        , "  apply HIPinvStep <;> assumption"
+        , "· intro x _"
+        , "  assumption"
+        , "· intro s1 s2 s3 _ Ht2 Ht3"
+        , "  exact Ht2 (Ht3 s1)"
+        ]
       ]
 
 -- | produce a state value from a list of storage updates
