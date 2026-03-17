@@ -218,7 +218,6 @@ behvConds name i conds = do
   where
     body n = indent 2 ((namedHyps . concat $
       [ nameHypothesis "iff" $ coqprop False <$> conds
-      , [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
       , interfaceConstraints i
       ]) <> ",\n"
       <> (T.pack n <> "_conds") <+> envVar <+> arguments i <+> stateVar <+>nextAddrVar )
