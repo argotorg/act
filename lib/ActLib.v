@@ -11,13 +11,11 @@ Definition address := Z.
 Record Env : Set :=
   { Callvalue : Z;
     Caller : address;
-    This : address;
     Origin : address }.
 
 Definition CallEnv (value : Z) (caller : address) (ENV : Env) : Env :=
   {| Callvalue := value;
      Caller := caller;
-     This := This ENV;
      Origin := Origin ENV |}.
 
 

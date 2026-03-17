@@ -16,21 +16,24 @@ Proof.
 Qed.
 
 Theorem mul_correct : forall na e s x y,
+  envNextAddrConsistency e na ->
+  stateConsistency e na s ->
   mul_conds e x y s na ->
   range256 x /\ range256 y /\ range256 (x * y) <-> mul_ret e x y s na (x * y).
 Proof.
   intros.
   split. {
     intros.
-    destruct H.
-    destruct H0 as [Hx [Hy Hxy]].
+    (* destruct H. *)
+    destruct H2 as [Hx [Hy Hxy]].
     unfold range256 in *.
     apply mul_case0_ret.
-    - constructor;
-      repeat split; try lia; assumption.
+    - assumption.
     - trivial.
+    - assumption.
+    - assumption.
   } {
-    intros Hmul_ret. destruct Hmul_ret. destruct H0.
+    intros Hmul_ret. destruct Hmul_ret. destruct H1.
     split; unfold range256;  lia.
   }
 Qed.
