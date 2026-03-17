@@ -16,7 +16,7 @@ Proof.
 
   - destruct Hstep as [ENV [NA [NA' Hextstep]]].
     destruct Hextstep as [ HCstep
-                         | s s' _ _ HBstep].
+                         | _ HBstep].
     + destruct HCstep as [ i0 H| i H]; simpl.
       destruct H, H_conds; simpl.
       * destruct (p =? i0).
@@ -24,7 +24,7 @@ Proof.
         -- assumption.
       * destruct H; simpl. assumption.
     + destruct HBstep as [ HBstep
-                         |  _ _ _ _ HAextstep].
+                         |  _ HAextstep].
       * destruct HBstep; simpl.
         -- destruct H2; simpl. assumption.
         -- destruct H2; simpl. destruct (p =? i).
@@ -42,7 +42,7 @@ Proof.
   induction Hmulti as [ | S' S'' Hstep ]. 
   - destruct Hinit; destruct H; auto.
   - destruct Hstep as [NA [NA' [ENV Hextstep]]].
-    destruct Hextstep as [HCstep | s s' _ _ HBstep _ _ Hw_const].
+    destruct Hextstep as [HCstep |  _ HBstep _ _ Hw_const].
     + destruct HCstep, H; simpl.
       * assumption.
       * auto.

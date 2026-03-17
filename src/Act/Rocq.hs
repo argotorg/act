@@ -57,11 +57,11 @@ contractCode store (Contract _ ctor@Constructor{..} behvs) = T.unlines $
   [ "Module " <> T.pack _cname <> ".\n" ]
   <> [ stateRecord ]
   <> [ contractAddressIn _cname store ]
-  -- <> [ addressIn _cname store ]
-  <> [ noAliasing _cname store ]
-  -- <> [ intBounds _cname store ]
   <> [ intBoundsRec _cname store ]
   <> [ nextAddrConstraint ]
+  <> [ noAliasing _cname store ]
+  <> [ envNextAddrConstraints ]
+  <> [ envNextAddrStateConstraints ]
   <> [ constructorCode store ctor ]
   <> ( behaviourCode store <$> behvs )
   <> [ localStep _cname behvs]
@@ -108,15 +108,8 @@ initPrecs i conds = inductive
     -- body = indent 5 ( initPrecsType <+> envVar <+> arguments i <+> nextAddrVar)
     body = indent 2 (
       (namedHyps . concat $
-      [ nameHypothesis "iff" $ coqprop <$> conds
+      [ nameHypothesis "iff" $ coqprop True <$> conds
       , interfaceConstraints i
-      , maybeToList (("CallerBound",) <$> coqbound ("Caller" <+> envVar) (ValueType TAddress))
-      , maybeToList (("OriginBound",) <$> coqbound ("Origin" <+> envVar) (ValueType TAddress))
-      , maybeToList (("ThisBound",) <$> coqbound ("This" <+> envVar) (ValueType TAddress))
-      , maybeToList (("NextAddressBound",) <$> coqbound ("NextAddr") (ValueType TAddress))
-      , [("Caller_lt_NextAddr", "Caller" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("Origin_lt_NextAddr", "Origin" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("This_eq_NextAddr", "This" <+> envVar <+> "=" <+> nextAddrVar)]
       ]) <> ",\n"
       <> (initPrecsType <+> envVar <+> arguments i <+> nextAddrVar))
 
@@ -147,7 +140,8 @@ construction' store name i cases = inductive
       -- let createsName = name' <> "_creates"
       let body = indent 2 ((namedHyps . concat $
             [ [("conds", initPrecsType <+> envVar <+> arguments i <+> nextAddrVar) ]
-            , [("case_cond", coqprop caseCond) ]
+            , [("case_cond", coqprop True caseCond) ]
+            , [("envNextAddrConsistent", envNextAddrCnstrType <+> envVar <+> nextAddrVar)]
             , nameHypothesis ("bindings") bindingsHyp
             ]) <> ",\n"
             <> (constructorType <+> envVar <+> arguments i <+> nextAddrVar <+> parens s <+> parens (iNextAddr finalI)))
@@ -223,19 +217,9 @@ behvConds name i conds = do
     (T.pack name <> "_conds") (envDecl <+> interface i <+> stateDecl <+> nextAddrDecl ) "Prop" [((T.pack name <> "_condsC"), "forall", body name)]
   where
     body n = indent 2 ((namedHyps . concat $
-      [ nameHypothesis "iff" $ coqprop <$> conds
+      [ nameHypothesis "iff" $ coqprop False <$> conds
       , [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
       , interfaceConstraints i
-      , maybeToList (("CallerBound",) <$> coqbound ("Caller" <+> envVar) (ValueType TAddress))
-      , maybeToList (("OriginBound",) <$> coqbound ("Origin" <+> envVar) (ValueType TAddress))
-      , maybeToList (("ThisBound",) <$> coqbound ("This" <+> envVar) (ValueType TAddress))
-      , maybeToList (("NextAddressBound",) <$> coqbound ("NextAddr") (ValueType TAddress))
-      , [("This_lt_NextAddr", "This" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("Caller_lt_NextAddr", "Caller" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("Origin_lt_NextAddr", "Origin" <+> envVar <+> "<" <+> nextAddrVar)]
-      , [("no_self_call", parens $ "forall (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "->" <+> "Caller" <+> envVar <+> "<>" <+> "p") ]
-      , [("no_self_origin", parens $ "forall (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "->" <+> "Origin" <+> envVar <+> "<>" <+> "p") ]
-      , [("This_eq_addState", "This" <+> envVar <+> "=" <+> addrField <+> stateVar)]
       ]) <> ",\n"
       <> (T.pack n <> "_conds") <+> envVar <+> arguments i <+> stateVar <+>nextAddrVar )
 
@@ -257,7 +241,7 @@ behvCall name iface cases = case unsnoc (zip ([0..] :: [Int]) cases) of
 
     iteCase :: (Int, Bcase) -> T.Text -> T.Text
     iteCase (i, (Case _ casecond _)) elseText =
-      "if" <+> (coqbool casecond) <+>
+      "if" <+> (coqbool False casecond) <+>
       "then" <+> caseText i <+>
       "else" <+> elseText
 
@@ -273,7 +257,7 @@ behvPred store name cname i cases = inductive
       -- name' <- fresh name
       pure (T.pack name <> caseSuffix caseId, "forall" <+> bindings', caseBody caseCond)
       where 
-        (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) updates
+        (s, bindings, finalI) = stateval False store cname (\r _ -> ref False r) updates
         bindingsHyp = snd <$> bindings
         bindings' = case concatMap fst bindings of
           [] -> ""
@@ -281,7 +265,9 @@ behvPred store name cname i cases = inductive
 
         caseBody c = indent 2 ((namedHyps . concat $
           [ [("conds", (T.pack name) <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar) ]
-          , [("case_cond", coqprop c) ]
+          , [("case_cond", coqprop False c) ]
+          , [("envNextAddrConsistent", envNextAddrCnstrType <+> envVar <+> nextAddrVar)]
+          , [("stateConsistent", envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar)]
           , nameHypothesis ("bindings") bindingsHyp
           ]) <> ",\n"
           <> (T.pack name <> "_transition") 
@@ -339,10 +325,7 @@ extStep main store = inductive
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
-          [ [ nextAddrConstraintType <+> nextAddrVar <+> stateVar ]
-          , [ parens $ "forall (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "->" <+> "Origin" <+> envVar <+> "<>" <+> "p" ]
-          , [ parens $ "forall (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "->" <+> "Caller" <+> envVar <+> "<>" <+> "p" ]
-          , [ integerBoundsType <+> stateVar ]
+          [ [ envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar ]
           , [ T.pack cid <.> extStepType <+> envVar <+> parens (varp <+> stateVar) <+> nextAddrVar <+> parens (varp <+> stateVar') <+> nextAddrVar' ]
           , [ addrField <+> stateVar <+> "=" <+> addrField <+> stateVar' ]
           , (\var' -> parens (T.pack var' <+> stateVar) <+> "=" <+> parens (T.pack var' <+> stateVar')) <$> (filter (var /=) $ M.keys localStore)
@@ -467,6 +450,32 @@ intBoundsRec name store = inductive
     go :: Id -> (ValueType, Integer) -> Maybe T.Text
     go v (t,_) = coqbound (T.pack v <+> stateVar) t
 
+envNextAddrConstraints :: T.Text
+envNextAddrConstraints = inductive envNextAddrCnstrType (envDecl <+> nextAddrDecl) "Prop"  [(envNextAddrCnstrType <> "C", "forall", body)]
+  where
+    body = indent 2 (
+      (namedHyps . concat $
+      [ maybeToList (("CallvalBound",) <$> coqbound ("Callvalue" <+> envVar) (ValueType (TInteger 256 Unsigned)))
+      , maybeToList (("CallerBound",) <$> coqbound ("Caller" <+> envVar) (ValueType TAddress))
+      , maybeToList (("OriginBound",) <$> coqbound ("Origin" <+> envVar) (ValueType TAddress))
+      , maybeToList (("NextAddressBound",) <$> coqbound ("NextAddr") (ValueType TAddress))
+      , [("Caller_lt_NextAddr", "Caller" <+> envVar <+> "<" <+> nextAddrVar)]
+      , [("Origin_lt_NextAddr", "Origin" <+> envVar <+> "<" <+> nextAddrVar)]
+      ]) <> ",\n"
+      <> (envNextAddrCnstrType <+> envVar <+> nextAddrVar))
+
+envNextAddrStateConstraints :: T.Text
+envNextAddrStateConstraints = inductive envNextAddrStateCnstrType (envDecl <+> nextAddrDecl <+> stateDecl) "Prop"  [(envNextAddrStateCnstrType <> "C", "forall", body)]
+  where
+    body = indent 2 (
+      (namedHyps . concat $
+      [ [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
+      , [("stateIntBounds", integerBoundsType <+> stateVar) ]
+      , [("no_self_call", parens $ "forall (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "->" <+> "Caller" <+> envVar <+> "<>" <+> "p") ]
+      , [("no_self_origin", parens $ "forall (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "->" <+> "Origin" <+> envVar <+> "<>" <+> "p") ]
+      ]) <> ",\n"
+      <> (envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar))
+
 interfaceConstraints :: Interface -> [(T.Text, T.Text)]
 interfaceConstraints i@(Interface _ decls) = concatMap go decls <> interfaceConsistency i
   where go (Arg (ContractArg _ cid) (T.pack -> v)) =
@@ -553,7 +562,7 @@ base store name createsName i updates =
 
 transition :: StorageTyping -> Id -> Id -> Interface -> [StorageUpdate] -> T.Text
 transition store name cname i rewrites =
-  let (s, bindings, finalI) = stateval False store cname (\r _ -> ref r) rewrites in
+  let (s, bindings, finalI) = stateval False store cname (\r _ -> ref False r) rewrites in
   definition (T.pack name) (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i)
     (foldr (\(_,b) s' -> "let" <+> b <+> "in\n" <> s') (tuple (iNextAddr finalI) s) bindings)
 
@@ -583,8 +592,10 @@ retVal name i cases@((Case _ _ (_, Just ret0)):_) = do
       where 
         caseBody = (indent 2) . implication . concat $
           [ [(T.pack name) <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar ]
-          , [ coqprop caseCond ]
-          , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp ret]
+          , [ coqprop False caseCond ]
+          , [ envNextAddrCnstrType <+> envVar <+> nextAddrVar]
+          , [ envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar]
+          , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp False ret]
           ]
 
 -- | Definition of postcondition claim for constructor
@@ -601,7 +612,7 @@ postCondConstr (Constructor _ cname iface _ _ _ postcs _) = evalSeq (go cname if
         , implication . concat $
           [ [initPrecsType <+> nextAddrVar <+> envVar <+> arguments i]
           , [stateVar' <+> "=" <+> "snd" <+> parens (T.pack name <+> nextAddrVar <+> envVar <+> arguments i)]
-          , [coqprop postc]
+          , [coqprop True postc]
           ]
         ]
 
@@ -621,7 +632,7 @@ postCondBehv (Behaviour _ bname _ iface _ _ _ postcs) = evalSeq (go bname iface)
           [ [T.pack bname <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar ]
           , [reachableType <+> stateVar]
           , [(T.pack bname <> "_transition" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> stateVar'<+> nextAddrVar' )]
-          , [coqprop postc]
+          , [coqprop False postc]
           ]
         ]
 
@@ -632,7 +643,7 @@ invariants i invs =
   definition "invariants" (nextAddrDecl <+> envDecl <+> stateDecl <+> interface i) $ indent 2 . conjuction $ invariantProp <$> invs
   where
     invariantProp :: Invariant -> T.Text
-    invariantProp (Invariant _ _ _ (PredTimed p _)) = coqprop p
+    invariantProp (Invariant _ _ _ (PredTimed p _)) = coqprop False p
 
 
 -- | Definition of invariant claim at constructor poststate
@@ -708,7 +719,7 @@ invariantReachable (Constructor _ _ i _ _ _ _ _) =
 -- in which the the storage variables are defined. Not really important as addresses currently cannot be compared (right?), but fix at some point.
 stateval :: Bool -> StorageTyping -> Id -> (Ref LHS -> ValueType -> T.Text) -> [StorageUpdate] -> (T.Text, [([T.Text], T.Text)], Int)
 stateval ctor store contract handler updates =
-  let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar store updates handler (SVar nowhere Pre contract n) t) (M.toList store') (if ctor then 1 else 0)
+  let (texts, finalI) = runSeq (\(n, (t, _)) -> updateVar ctor store updates handler (SVar nowhere Pre contract n) t) (M.toList store') (if ctor then 1 else 0)
       (vals, bindings) = unzip texts
       bindings' = concat bindings
       finalBindings = if ctor then env1Binding : bindings' else bindings'
@@ -748,23 +759,23 @@ iNextAddr :: Int -> T.Text
 iNextAddr 0 = "NextAddr"
 iNextAddr i = "NextAddr" <> T.pack (show i)
 
-updateExp :: Exp a -> Fresh (T.Text, [([T.Text],T.Text)])
-updateExp (Create _ cid args payment) = do
-  let paymentExp = maybe "0" coqexp payment
-  (args', argBindings) <- unzip <$> mapM updateExpTyped args
+updateExp :: Bool -> Exp a -> Fresh (T.Text, [([T.Text],T.Text)])
+updateExp ctor (Create _ cid args payment) = do
+  let paymentExp = maybe "0" (coqexp ctor) payment
+  (args', argBindings) <- unzip <$> mapM (updateExpTyped ctor) args
   i <- getIncr
-  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens ("This ENV") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
+  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (coqexp ctor (IntEnv nowhere This)) <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
   pure (iState (i+1), bindings)
-updateExp (Address _ c (Create _ cid args payment)) = do
-  let paymentExp = maybe "0" coqexp payment
-  (args', argBindings) <- unzip <$> mapM updateExpTyped args
+updateExp ctor (Address _ c (Create _ cid args payment)) = do
+  let paymentExp = maybe "0" (coqexp ctor) payment
+  (args', argBindings) <- unzip <$> mapM (updateExpTyped ctor) args
   i <- getIncr
-  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens ("This ENV") <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
+  let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (coqexp ctor (IntEnv nowhere This)) <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
   pure (parens $ T.pack c <.> addrField <+> iState (i+1), bindings)
-updateExp e = pure (coqexp e, [])
+updateExp ctor e = pure (coqexp ctor e, [])
 
-updateExpTyped :: TypedExp -> Fresh (T.Text, [([T.Text], T.Text)])
-updateExpTyped (TExp _ te) = updateExp te
+updateExpTyped :: Bool -> TypedExp -> Fresh (T.Text, [([T.Text], T.Text)])
+updateExpTyped ctor (TExp _ te) = updateExp ctor te
 
 unField :: Ref LHS -> Ref LHS -> Ref LHS
 unField rFocus (RField pn r cid x) | r == rFocus = SVar pn Pre cid x --TODO: Think about timing here
@@ -772,53 +783,53 @@ unField rFocus (RField pn r cid x) = RField pn (unField rFocus r) cid x
 unField _ r' = r'
 
 -- Returns the value of the state after all updates, as well as the relevant let-bindings for said state value
-updateVar :: StorageTyping -> [StorageUpdate] -> (Ref LHS -> ValueType -> T.Text) -> Ref LHS -> ValueType -> Fresh (T.Text, [([T.Text], T.Text)])
-updateVar store updates handler focus t@(ValueType (TContract cid)) =
+updateVar :: Bool -> StorageTyping -> [StorageUpdate] -> (Ref LHS -> ValueType -> T.Text) -> Ref LHS -> ValueType -> Fresh (T.Text, [([T.Text], T.Text)])
+updateVar ctor store updates handler focus t@(ValueType (TContract cid)) =
   case unsnoc groupedUpdates of
     -- No update to relevant slot
     Nothing -> pure (handler focus t, [])
     -- Update of only the base slot, not any of the contract fields
     Just (_, (firstU@(Update _ _ e) NE.:| [])) | eqRef focus firstU->
-      updateExp e
+      updateExp ctor e
     -- Updates to the base slot and to the contracts fields
     Just (_, (firstU@(Update _ _ e) NE.:| nextUpdates)) | eqRef focus firstU-> do
-      (newState, bindings) <- updateExp e
-      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store nextUpdates (\r _ -> refState newState $ unField focus r) (focus' n) t') (M.toList store')
+      (newState, bindings) <- updateExp ctor e
+      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar ctor store nextUpdates (\r _ -> refState ctor newState $ unField focus r) (focus' n) t') (M.toList store')
       pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> newState) : t', bindings ++ concat bindings')
     -- Updates only to the files of the contract
     Just (_, fieldUpdates) -> do
-      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
-      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> refState stateVar focus) : t', concat bindings')
+      (t', bindings') <- unzip <$> traverse (\(n, (t', _)) -> updateVar ctor store (NE.toList fieldUpdates) handler (focus' n) t') (M.toList store')
+      pure (parens $ T.unwords $ (T.pack cid <.> stateConstructor) : parens (T.pack cid <.> addrField <+> refState ctor stateVar focus) : t', concat bindings')
   where
     focus' x = RField nowhere focus cid x
     store' = contractStore cid store
 
     focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
-    -- `groupedUpdates` groups all relevant updates by starting a new group 
+    -- `groupedUpdates` groups all relevant updates by starting a new group
     -- when an update to the base reference is encountered. Consequently
     -- all updates before the last group will be overwritten and so can be ignored
     groupedUpdates = NE.groupBy (\_ b -> not $ eqRef focus b) focusUpdates
 
-updateVar _ updates handler focus t@(ValueType TAddress) =
+updateVar ctor _ updates handler focus t@(ValueType TAddress) =
   case unsnoc focusUpdates of
     Nothing -> pure (handler focus t, [])
-    Just (_, (Update _ _ e)) -> updateExp e
+    Just (_, (Update _ _ e)) -> updateExp ctor e
   where
     focusUpdates = filter (\u -> eqRef focus u || baseRef focus u) updates
 
-updateVar _ updates handler focus t@(ValueType (TMapping _ _)) =
+updateVar ctor _ updates handler focus t@(ValueType (TMapping _ _)) =
   -- Note: If creates are allowed in indices then bindings should be collected from them.
   -- The result type cannot be a contract so no creates, and thus no bindings, are present there.
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
     where
       updatedVal _ (Update TByteStr _ _) = error "bytestrings not supported"
-      updatedVal _ (Update _ _ e) = mappingExp e 0
+      updatedVal _ (Update _ _ e) = mappingExp ctor e 0
 
-updateVar _ updates handler focus t@(ValueType _) =
+updateVar ctor _ updates handler focus t@(ValueType _) =
   pure (foldl updatedVal (handler focus t) (filter (eqRef focus) updates), [])
     where
       updatedVal _ (Update TByteStr _ _) = error "bytestrings not supported"
-      updatedVal _ (Update _ _ e) = coqexp e
+      updatedVal _ (Update _ _ e) = coqexp ctor e
 
 
 
@@ -901,78 +912,77 @@ abiVal AbiStringType = strMod <.> "EmptyString"
 abiVal _ = error "TODO: missing default values"
 
 -- | coq syntax for an expression
-coqexp :: Exp a -> T.Text
+coqexp :: Bool -> Exp a -> T.Text
 -- booleans
-coqexp (LitBool _ True)  = "true"
-coqexp (LitBool _ False) = "false"
-coqexp (And _ e1 e2)  = parens $ "andb"    <+> coqexp e1 <+> coqexp e2
-coqexp (Or _ e1 e2)   = parens $ "orb"     <+> coqexp e1 <+> coqexp e2
-coqexp (Impl _ e1 e2) = parens $ "implb"   <+> coqexp e1 <+> coqexp e2
-coqexp (Eq _ _ e1 e2)   = parens $ coqexp e1  <+> "=?" <+> coqexp e2
-coqexp (NEq _ _ e1 e2)  = parens $ "negb" <+> parens (coqexp e1  <+> "=?" <+> coqexp e2)
-coqexp (Neg _ e)      = parens $ "negb" <+> coqexp e
-coqexp (LT _ e1 e2)   = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
-coqexp (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
-coqexp (GT _ e1 e2)   = parens $ coqexp e2 <+> "<?"  <+> coqexp e1
-coqexp (GEQ _ e1 e2)  = parens $ coqexp e2 <+> "<=?" <+> coqexp e1
+coqexp _ (LitBool _ True)  = "true"
+coqexp _ (LitBool _ False) = "false"
+coqexp ctor (And _ e1 e2)  = parens $ "andb"    <+> coqexp ctor e1 <+> coqexp ctor e2
+coqexp ctor (Or _ e1 e2)   = parens $ "orb"     <+> coqexp ctor e1 <+> coqexp ctor e2
+coqexp ctor (Impl _ e1 e2) = parens $ "implb"   <+> coqexp ctor e1 <+> coqexp ctor e2
+coqexp ctor (Eq _ _ e1 e2)   = parens $ coqexp ctor e1  <+> "=?" <+> coqexp ctor e2
+coqexp ctor (NEq _ _ e1 e2)  = parens $ "negb" <+> parens (coqexp ctor e1  <+> "=?" <+> coqexp ctor e2)
+coqexp ctor (Neg _ e)      = parens $ "negb" <+> coqexp ctor e
+coqexp ctor (LT _ e1 e2)   = parens $ coqexp ctor e1 <+> "<?"  <+> coqexp ctor e2
+coqexp ctor (LEQ _ e1 e2)  = parens $ coqexp ctor e1 <+> "<=?" <+> coqexp ctor e2
+coqexp ctor (GT _ e1 e2)   = parens $ coqexp ctor e2 <+> "<?"  <+> coqexp ctor e1
+coqexp ctor (GEQ _ e1 e2)  = parens $ coqexp ctor e2 <+> "<=?" <+> coqexp ctor e1
 
 -- integers
-coqexp (LitInt _ i) = T.pack $ show i
-coqexp (Add _ e1 e2) = parens $ coqexp e1 <+> "+" <+> coqexp e2
-coqexp (Sub _ e1 e2) = parens $ coqexp e1 <+> "-" <+> coqexp e2
-coqexp (Mul _ e1 e2) = parens $ coqexp e1 <+> "*" <+> coqexp e2
-coqexp (Div _ e1 e2) = parens $ coqexp e1 <+> "/" <+> coqexp e2
-coqexp (Mod _ e1 e2) = parens $ "Z.modulo" <+> coqexp e1 <+> coqexp e2
-coqexp (Exp _ e1 e2) = parens $ coqexp e1 <+> "^" <+> coqexp e2
-coqexp (IntMin _ n)  = parens $ "INT_MIN"  <+> T.pack (show n)
-coqexp (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
-coqexp (UIntMin _ n) = parens $ "UINT_MIN" <+> T.pack (show n)
-coqexp (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
+coqexp _ (LitInt _ i) = T.pack $ show i
+coqexp ctor (Add _ e1 e2) = parens $ coqexp ctor e1 <+> "+" <+> coqexp ctor e2
+coqexp ctor (Sub _ e1 e2) = parens $ coqexp ctor e1 <+> "-" <+> coqexp ctor e2
+coqexp ctor (Mul _ e1 e2) = parens $ coqexp ctor e1 <+> "*" <+> coqexp ctor e2
+coqexp ctor (Div _ e1 e2) = parens $ coqexp ctor e1 <+> "/" <+> coqexp ctor e2
+coqexp ctor (Mod _ e1 e2) = parens $ "Z.modulo" <+> coqexp ctor e1 <+> coqexp ctor e2
+coqexp ctor (Exp _ e1 e2) = parens $ coqexp ctor e1 <+> "^" <+> coqexp ctor e2
+coqexp _ (IntMin _ n)  = parens $ "INT_MIN"  <+> T.pack (show n)
+coqexp _ (IntMax _ n)  = parens $ "INT_MAX"  <+> T.pack (show n)
+coqexp _ (UIntMin _ n) = parens $ "UINT_MIN" <+> T.pack (show n)
+coqexp _ (UIntMax _ n) = parens $ "UINT_MAX" <+> T.pack (show n)
 
-coqexp (InRange _ t e) = coqexp (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
+coqexp ctor (InRange _ t e) = coqexp ctor (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
 -- polymorphic
-coqexp (VarRef _ _ r) = ref r
-coqexp (ITE _ b e1 e2) = parens $ "if"
-                             <+> coqexp b
+coqexp ctor (VarRef _ _ r) = ref ctor r
+coqexp ctor (ITE _ b e1 e2) = parens $ "if"
+                             <+> coqexp ctor b
                              <+> "then"
-                             <+> coqexp e1
+                             <+> coqexp ctor e1
                              <+> "else"
-                             <+> coqexp e2
+                             <+> coqexp ctor e2
 
 -- environment values
--- Relies on the assumption that Coq record fields have the same name
--- as the corresponding Haskell constructor
--- coqexp (IntEnv _ This) = parens $ addrField <+> stateVar
-coqexp (IntEnv _ envVal) = parens $ T.pack (show envVal) <+> envVar
+coqexp True  (IntEnv _ This) = nextAddrVar
+coqexp False (IntEnv _ This) = parens $ addrField <+> stateVar
+coqexp _ (IntEnv _ envVal) = parens $ T.pack (show envVal) <+> envVar
 -- Contracts
-coqexp Create {} = error "Internal error: coqexp called for creation expression; call updateExp"
-coqexp (Address _ c e) = parens $ T.pack c <.> addrField <+> coqexp e
+coqexp _ Create {} = error "Internal error: coqexp called for creation expression; call updateExp"
+coqexp ctor (Address _ c e) = parens $ T.pack c <.> addrField <+> coqexp ctor e
 
-coqexp me@(Mapping _ _ _ _) = mappingExp me 0
-coqexp me@(MappingUpd _ _ _ _ _) = mappingExp me 0
+coqexp ctor me@(Mapping _ _ _ _) = mappingExp ctor me 0
+coqexp ctor me@(MappingUpd _ _ _ _ _) = mappingExp ctor me 0
 
 -- unsupported
-coqexp Cat {} = error "bytestrings not supported"
-coqexp Slice {} = error "bytestrings not supported"
-coqexp ByStr {} = error "bytestrings not supported"
-coqexp ByLit {} = error "bytestrings not supported"
-coqexp ByEnv {} = error "bytestrings not supported"
-coqexp Array {} = error "arrays not supported"
+coqexp _ Cat {} = error "bytestrings not supported"
+coqexp _ Slice {} = error "bytestrings not supported"
+coqexp _ ByStr {} = error "bytestrings not supported"
+coqexp _ ByLit {} = error "bytestrings not supported"
+coqexp _ ByEnv {} = error "bytestrings not supported"
+coqexp _ Array {} = error "arrays not supported"
 
-mappingExp :: Exp a -> Int -> T.Text
-mappingExp (Mapping _ keyType valType@VType es) level = parens $
+mappingExp :: Bool -> Exp a -> Int -> T.Text
+mappingExp ctor (Mapping _ keyType valType@VType es) level = parens $
   "fun" <+> (anon <> (T.pack $ show level)) <+> "=>" <+>
-  foldr (mappingElem level keyType) (defaultVal (ValueType valType)) es
-mappingExp (MappingUpd _ r keyType _ es) level = parens $
+  foldr (mappingElem ctor level keyType) (defaultVal (ValueType valType)) es
+mappingExp ctor (MappingUpd _ r keyType _ es) level = parens $
   "fun" <+> (anon <> (T.pack $ show level)) <+> "=>" <+>
-  foldr (mappingElem level keyType) (ref r <> (anon <> (T.pack $ show level))) es
-mappingExp e _ = coqexp e
+  foldr (mappingElem ctor level keyType) (ref ctor r <> (anon <> (T.pack $ show level))) es
+mappingExp ctor e _ = coqexp ctor e
 
-mappingElem :: Int -> TValueType a -> (Exp a, Exp b) -> T.Text -> T.Text
-mappingElem level keyType (key, ve) elseText =
-  "if" <+> boolScope (parens (anon <> T.pack (show level)) <+> eqsym keyType <+> coqexp key) <+>
-  "then" <+> mappingExp ve (level + 1) <+>
+mappingElem :: Bool -> Int -> TValueType a -> (Exp a, Exp b) -> T.Text -> T.Text
+mappingElem ctor level keyType (key, ve) elseText =
+  "if" <+> boolScope (parens (anon <> T.pack (show level)) <+> eqsym keyType <+> coqexp ctor key) <+>
+  "then" <+> mappingExp ctor ve (level + 1) <+>
   "else" <+> elseText
 
 eqsym :: TValueType a -> T.Text
@@ -989,64 +999,64 @@ eqsym argType = case argType of
 
 
 -- | coq syntax for a proposition
-coqprop :: Exp ABoolean -> T.Text
-coqprop (LitBool _ True)  = "True"
-coqprop (LitBool _ False) = "False"
-coqprop (And _ e1 e2)  = parens $ coqprop e1 <+> "/\\" <+> coqprop e2
-coqprop (Or _ e1 e2)   = parens $ coqprop e1 <+> "\\/" <+> coqprop e2
-coqprop (Impl _ e1 e2) = parens $ coqprop e1 <+> "->"  <+> coqprop e2
-coqprop (Neg _ e)      = parens $ "not" <+> coqprop e
-coqprop (Eq _ _ e1 e2)   = parens $ coqexp e1 <+> "="  <+> coqexp e2
-coqprop (NEq _ _ e1 e2)  = parens $ coqexp e1 <+> "<>" <+> coqexp e2
-coqprop (LT _ e1 e2)   = parens $ coqexp e1 <+> "<"  <+> coqexp e2
-coqprop (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=" <+> coqexp e2
-coqprop (GT _ e1 e2)   = parens $ coqexp e1 <+> ">"  <+> coqexp e2
-coqprop (GEQ _ e1 e2)  = parens $ coqexp e1 <+> ">=" <+> coqexp e2
-coqprop (InRange _ t e) = coqprop (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
-coqprop (ITE _ b e1 e2) =
-  parens $ "if" <+> coqbool b <+> "then" <+> coqexp e1 <+> "else" <+> coqexp e2
+coqprop :: Bool -> Exp ABoolean -> T.Text
+coqprop _ (LitBool _ True)  = "True"
+coqprop _ (LitBool _ False) = "False"
+coqprop ctor (And _ e1 e2)  = parens $ coqprop ctor e1 <+> "/\\" <+> coqprop ctor e2
+coqprop ctor (Or _ e1 e2)   = parens $ coqprop ctor e1 <+> "\\/" <+> coqprop ctor e2
+coqprop ctor (Impl _ e1 e2) = parens $ coqprop ctor e1 <+> "->"  <+> coqprop ctor e2
+coqprop ctor (Neg _ e)      = parens $ "not" <+> coqprop ctor e
+coqprop ctor (Eq _ _ e1 e2)   = parens $ coqexp ctor e1 <+> "="  <+> coqexp ctor e2
+coqprop ctor (NEq _ _ e1 e2)  = parens $ coqexp ctor e1 <+> "<>" <+> coqexp ctor e2
+coqprop ctor (LT _ e1 e2)   = parens $ coqexp ctor e1 <+> "<"  <+> coqexp ctor e2
+coqprop ctor (LEQ _ e1 e2)  = parens $ coqexp ctor e1 <+> "<=" <+> coqexp ctor e2
+coqprop ctor (GT _ e1 e2)   = parens $ coqexp ctor e1 <+> ">"  <+> coqexp ctor e2
+coqprop ctor (GEQ _ e1 e2)  = parens $ coqexp ctor e1 <+> ">=" <+> coqexp ctor e2
+coqprop ctor (InRange _ t e) = coqprop ctor (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
+coqprop ctor (ITE _ b e1 e2) =
+  parens $ "if" <+> coqbool ctor b <+> "then" <+> coqexp ctor e1 <+> "else" <+> coqexp ctor e2
 
-coqprop e@(VarRef _ _ _) = error "ill formed proposition:" <+> T.pack (show e) --TODO: is this necessary?
+coqprop _ e@(VarRef _ _ _) = error "ill formed proposition:" <+> T.pack (show e) --TODO: is this necessary?
 
-coqbool :: Exp ABoolean -> T.Text
-coqbool (LitBool _ True)  = "true"
-coqbool (LitBool _ False) = "false"
-coqbool (And _ e1 e2)  = parens $ "andb" <+> coqbool e1 <+> coqbool e2
-coqbool (Or _ e1 e2)   = parens $ "orb" <+> coqbool e1 <+> coqbool e2
-coqbool (Impl _ e1 e2) = parens $ "implb" <+> coqbool e1 <+> coqbool e2
-coqbool (Neg _ e)      = parens $ "neqb" <+> coqbool e
-coqbool (Eq _ t e1 e2)   = boolScope $ coqexp e1 <+> eqsym t <+> coqexp e2
-coqbool (NEq _ t e1 e2)  = boolScope $ "negb" <+> parens (coqexp e1 <+> eqsym t <+> coqexp e2)
-coqbool (LT _ e1 e2)   = parens $ coqexp e1 <+> "<?"  <+> coqexp e2
-coqbool (LEQ _ e1 e2)  = parens $ coqexp e1 <+> "<=?" <+> coqexp e2
-coqbool (GT _ e1 e2)   = parens $ coqexp e1 <+> ">?"  <+> coqexp e2
-coqbool (GEQ _ e1 e2)  = parens $ coqexp e1 <+> ">=?" <+> coqexp e2
-coqbool (InRange _ t e) = coqbool (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
+coqbool :: Bool -> Exp ABoolean -> T.Text
+coqbool _ (LitBool _ True)  = "true"
+coqbool _ (LitBool _ False) = "false"
+coqbool ctor (And _ e1 e2)  = parens $ "andb" <+> coqbool ctor e1 <+> coqbool ctor e2
+coqbool ctor (Or _ e1 e2)   = parens $ "orb" <+> coqbool ctor e1 <+> coqbool ctor e2
+coqbool ctor (Impl _ e1 e2) = parens $ "implb" <+> coqbool ctor e1 <+> coqbool ctor e2
+coqbool ctor (Neg _ e)      = parens $ "neqb" <+> coqbool ctor e
+coqbool ctor (Eq _ t e1 e2)   = boolScope $ coqexp ctor e1 <+> eqsym t <+> coqexp ctor e2
+coqbool ctor (NEq _ t e1 e2)  = boolScope $ "negb" <+> parens (coqexp ctor e1 <+> eqsym t <+> coqexp ctor e2)
+coqbool ctor (LT _ e1 e2)   = parens $ coqexp ctor e1 <+> "<?"  <+> coqexp ctor e2
+coqbool ctor (LEQ _ e1 e2)  = parens $ coqexp ctor e1 <+> "<=?" <+> coqexp ctor e2
+coqbool ctor (GT _ e1 e2)   = parens $ coqexp ctor e1 <+> ">?"  <+> coqexp ctor e2
+coqbool ctor (GEQ _ e1 e2)  = parens $ coqexp ctor e1 <+> ">=?" <+> coqexp ctor e2
+coqbool ctor (InRange _ t e) = coqbool ctor (And nowhere (LEQ nowhere (lowerBound t) e) $ LEQ nowhere e (upperBound t))
 
-coqbool e = error "ill formed proposition:" <+> T.pack (show e)
+coqbool _ e = error "ill formed proposition:" <+> T.pack (show e)
 
 -- | coq syntax for a typed expression
-typedexp :: TypedExp -> T.Text
-typedexp (TExp _ e) = coqexp e
+typedexp :: Bool -> TypedExp -> T.Text
+typedexp ctor (TExp _ e) = coqexp ctor e
 
-ref :: Ref k -> T.Text
-ref (SVar _ Pre cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar
-ref (SVar _ Post cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar'
-ref (CVar _ _ name) = T.pack name
-ref (RArrIdx _ r ix _) = parens $ ref r <+> coqexp ix
-ref (RMapIdx _ (TRef _ _ r) ix) = parens $ ref r <+> typedexp ix
-ref (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> ref r
+ref :: Bool -> Ref k -> T.Text
+ref _ (SVar _ Pre cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar
+ref _ (SVar _ Post cid name) = parens $ T.pack cid <.> T.pack name <+> stateVar'
+ref _ (CVar _ _ name) = T.pack name
+ref ctor (RArrIdx _ r ix _) = parens $ ref ctor r <+> coqexp ctor ix
+ref ctor (RMapIdx _ (TRef _ _ r) ix) = parens $ ref ctor r <+> typedexp ctor ix
+ref ctor (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> ref ctor r
 
-refState :: T.Text -> Ref k -> T.Text
-refState s (SVar _ _ cid name) = parens $ T.pack cid <.> T.pack name <+> s
-refState _ (CVar _ _ name) = T.pack name
-refState s (RArrIdx _ r ix _) = parens $ refState s r <+> coqexp ix
-refState s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState s r <+> typedexp ix
-refState s (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> refState s r
+refState :: Bool -> T.Text -> Ref k -> T.Text
+refState _ s (SVar _ _ cid name) = parens $ T.pack cid <.> T.pack name <+> s
+refState _ _ (CVar _ _ name) = T.pack name
+refState ctor s (RArrIdx _ r ix _) = parens $ refState ctor s r <+> coqexp ctor ix
+refState ctor s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState ctor s r <+> typedexp ctor ix
+refState ctor s (RField _ r cid name) = parens $ T.pack cid <.> T.pack name <+> refState ctor s r
 
 -- | coq syntax for a list of arguments
-coqargs :: [TypedExp] -> T.Text
-coqargs es = T.unwords (map typedexp es)
+coqargs :: Bool -> [TypedExp] -> T.Text
+coqargs ctor es = T.unwords (map (typedexp ctor) es)
 
 fresh :: Id -> Fresh T.Text
 fresh name = state $ \s -> (T.pack (name <> show s), s + 1)
@@ -1248,6 +1258,12 @@ behvPrecsType = "behvPrecs"
 
 integerBoundsType :: T.Text
 integerBoundsType = "stateIntegerBounds"
+
+envNextAddrCnstrType :: T.Text
+envNextAddrCnstrType = "envNextAddrConsistency"
+
+envNextAddrStateCnstrType :: T.Text
+envNextAddrStateCnstrType = "stateConsistency"
 
 multistepType :: T.Text
 multistepType = "multistep"

@@ -248,8 +248,8 @@ Base expressions are composite expressions built using operators, literals and v
 - Literals: `5`, `true`, `false`
 - Variable references of ABI types (integers, booleans, addresses, and annotated address type `address<ContractType>`), e.g. `totalSupply`, `CALLER`, `value`
 
-  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in arithmetic), it has to be cast to a regular `address` type using `address(expr)`.
-- Address conversion of deployed contracts: `addr(t0)` (if `t0` is a contract reference)
+  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in comparisons `==`,`!=`), it has to be cast to a regular `address` type using `address(expr)`.
+- Address conversion of deployed contracts: `address(t0)` (if `t0` is a contract reference)
 
 **Examples of Base Expressions**:
 

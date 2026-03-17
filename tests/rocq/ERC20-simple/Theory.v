@@ -237,7 +237,7 @@ Proof.
     remember STATE' eqn:Heqs0.
     destruct Hlocalstep;
     destruct H.
-    destruct H_conds.
+    destruct H_conds, H_envNextAddrConsistent.
     + eapply (balances_after_transfer) with (src := Caller ENV) (dst := to); try auto.
       { econstructor.
         assert (balanceOf STATE' = transfer' (balanceOf STATE) (Caller ENV) to _value).

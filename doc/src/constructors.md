@@ -120,7 +120,7 @@ creates
     Token token0 := t0
     Token token1 := t1
 ```
-It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in comparisons), it has to be cast to a regular `address` type using `address(expr)`.
+It is a non-payable constructor that takes two parameters, `t0` and `t1`, which are addresses of ERC20 token contracts. The data type `address<Token>`, is called *annotated address type* and indicates that these addresses point to deployed contracts of type `Token` (i.e., ERC20 tokens) and is explained in [ABI Types](./store_type.md#abi-types).  Whenever an expression `expr` of annotated address type is seen as a regular address (e.g. when used in comparisons `==`,`!=`), it has to be cast to a regular `address` type using `address(expr)`.
 
 The `iff` clause specifies the **necessary and sufficient condition** under which the constructor succeeds. If this condition does not hold, the constructor reverts.
 In this example, the precondition `address(t0) != address(t1)` ensures that the two token addresses are distinct. If a user attempts to deploy the AMM contract with identical token addresses, the constructor will revert, preventing the creation of an invalid AMM instance.

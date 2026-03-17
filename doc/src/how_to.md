@@ -161,7 +161,7 @@ need to already be present in the Solidity implementation of the contract, not m
 - Each arithmetic operation that can overflow/underflow must have a corresponding `inRange` check (Syntax `inRange(<type>, <expression>)`)
 - Use logical operators (`and`, `or`, `==>` (implication), etc.) as needed. Full list of operators can be found in [Base Expressions](./store_type.md#base-expressions)
 - The syntax to access fields of a mapping is `mapping_name[key]`.
-- When using annotated addresses as pure addresses (e.g., in comparisons), cast them to regular `address` type using `address(<expression>)`.
+- When using annotated addresses as pure addresses (e.g., in comparisons `==`,`!=`), cast them to regular `address` type using `address(<expression>)`.
 - When accessing fields of other contracts, use dot notation: `contract_instance.field_name`
 - Use the special variables to describe EVM environment:
     - `CALLER` instead of `msg.sender`
