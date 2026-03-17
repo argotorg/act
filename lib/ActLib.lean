@@ -74,9 +74,6 @@ theorem ite_dec {A : Type} : ∀ (b : Bool) (x y : A),
   let ite := if b then x else y
   ite = x ∨ ite = y := by
   intro b x y
-  unfold_let
   cases b <;> simp
-  · left; rfl
-  · right; rfl
 
 end ActLib
