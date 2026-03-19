@@ -5,12 +5,12 @@ constructor()
         mapping(address => uint256) hello :=  [CALLER => 42]
 
 
-transition setHello(uint256 value, address to) : uint256
+transition setHello(uint256 _value, address to) : uint256
     iff true
     updates 
         hello :=  hello[to => value]
     returns 1
 
-transition hello(address account)
+transition hello(address account) : uint256
     iff true
     returns hello[account]
