@@ -223,7 +223,7 @@ Proof.
   intros. lia.
 Qed.
 
-Theorem constant_balanceOf : forall STATE,
+Theorem sum_balanceOf_eq_totalSupply : forall STATE,
     reachable STATE ->
     balanceOf_sum STATE = totalSupply STATE.
 Proof.
