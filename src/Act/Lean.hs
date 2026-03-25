@@ -620,9 +620,7 @@ invariantReachable (Constructor _ _ i _ _ _ _ _) =
     proof = T.unlines
       [ "  := by"
       , indent 4 $ T.unlines $
-        [ "intro" <+> envVar
-        , "intros" <+> arguments i
-        , "intro" <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
+        [ "intros" <+> envVar <+> arguments i <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
         , "unfold" <+> reachableFromInitType <+> "at Hreach"
         , "obtain ⟨iState, iNA, Hinit, Hmulti⟩ := Hreach"
         , "have Hmulti' := @ActLib.step_multi_step State step (fun s s' =>" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s ->" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s') ?_ ?_ ?_"
