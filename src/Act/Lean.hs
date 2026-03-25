@@ -619,26 +619,28 @@ invariantReachable (Constructor _ _ i _ _ _ _ _) =
       ]
     proof = T.unlines
       [ "  := by"
-      , " sorry"
-      -- , indent 4 $ T.unlines $
-        -- [ "intro" <+> envVar
-        -- , "intros" <+> arguments i
-        -- , "intro" <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
-        -- , "unfold" <+> reachableFromInitType <+> "at Hreach"
-        -- , "obtain ⟨iState, iNA, Hinit, Hmulti⟩ := Hreach"
-        -- , "obtain ⟨iNA', Hprecs⟩ := Hinit"
-        -- , "apply ActLib.step_multi_step"
-        -- , "  (P := fun s _ =>" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s)"
-        -- , "  Hmulti"
-        -- , "· apply HIPinvInit"
-        -- , "  assumption"
-        -- , "· intro s s' Hstep _"
-        -- , "  apply HIPinvStep <;> assumption"
-        -- , "· intro x _"
-        -- , "  assumption"
-        -- , "· intro s1 s2 s3 _ Ht2 Ht3"
-        -- , "  exact Ht2 (Ht3 s1)"
-        -- ]
+      , indent 4 $ T.unlines $
+        [ "intro" <+> envVar
+        , "intros" <+> arguments i
+        , "intro" <+> nextAddrVar <+> stateVar <+> invPropVar <+> "HIPinvInit HIPinvStep Hreach"
+        , "unfold" <+> reachableFromInitType <+> "at Hreach"
+        , "obtain ⟨iState, iNA, Hinit, Hmulti⟩ := Hreach"
+        , "have Hmulti' := @ActLib.step_multi_step State step (fun s s' =>" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s ->" <+> invPropVar <+> envVar <+> arguments i <+> nextAddrVar <+> "s') ?_ ?_ ?_"
+        , "have Hmulti'':= Hmulti' iState STATE Hmulti"
+        ,"· apply Hmulti''"
+        ,"  eapply HIPinvInit; assumption"
+        ,"· intros s s' Hstep"
+        ,"  obtain ⟨iNA', Hprecs⟩ := Hinit"
+        ,"  eapply HIPinvStep"
+        ,"  assumption"
+        ,"  assumption"
+        ,"· unfold Reflexive; intro x y; assumption"
+        ,"· unfold Transitive"
+        ,"  intros s1 s2 s3 Ht1 Ht2 Ht3"
+        ,"  apply Ht2"
+        ,"  apply Ht1"
+        ,"  assumption"
+        ]
       ]
 
 -- | produce a state value from a list of storage updates
