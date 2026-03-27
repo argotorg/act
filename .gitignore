@@ -21,6 +21,9 @@ src/dist/
 **/RocqMakefile
 **/RocqMakefile.conf
 **/.RocqMakefile.d
+**/CoqMakefile
+**/CoqMakefile.conf
+**/.CoqMakefile.d
 **/.lia.cache
 *.aux
 **/.coqdeps.d
@@ -37,3 +40,5 @@ doc/book
 
 *~
 *#
+
+*.DS_Store
