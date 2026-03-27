@@ -257,7 +257,7 @@ true.
 ## act Export
 
 Calling `act rocq ...` will generate a Rocq file that encodes the contract as a state transition system,
-following the formal value semantics, given and **proven sound** in the
+following the formal value semantics, given in the
 <span style="color:green">tech report (to be available shortly).</span>
 
 The generated Rocq output will contain: <!-- <span style="color:red">talk about postconditions and invariants</span> -->
@@ -361,19 +361,12 @@ Next the **preconditions for the constructor** are generated as follows:
 Inductive constructor_conds (ENV : Env) (_totalSupply : Z) (NextAddr : address) : Prop :=
 | constructor_condsC : forall
   ( H_iff0 : ((Callvalue ENV) = 0) )
-  ( H_argConstraints_intBounds__totalSupply : 0 <= _totalSupply <= UINT_MAX 256 )
-  ( H_CallerBound : 0 <= Caller ENV <= UINT_MAX 160 )
-  ( H_OriginBound : 0 <= Origin ENV <= UINT_MAX 160 )
-  ( H_ThisBound : 0 <= This ENV <= UINT_MAX 160 )
-  ( H_NextAddressBound : 0 <= NextAddr <= UINT_MAX 160 )
-  ( H_Caller_lt_NextAddr : Caller ENV < NextAddr )
-  ( H_Origin_lt_NextAddr : Origin ENV < NextAddr )
-  ( H_This_eq_NextAddr : This ENV = NextAddr ),
+  ( H_argConstraints_intBounds__totalSupply : 0 <= _totalSupply <= UINT_MAX 256 ),
   constructor_conds ENV _totalSupply NextAddr
 ```
 
-The proposition holds, when the preconditions specified in the constructor's `iff` block are satisfied, the integer bounds are respected, the
-addresses are in range, and the environment is well-formed (for instance the next address is greater than all current addresses).
+The proposition holds when the preconditions specified in the constructor's `iff` block are satisfied
+and the integer bounds on arguments are respected.
 
 Next, the `Token` **constructor state transition**
  of type `Env -> Z -> Env * State` is defined as follows: 
@@ -384,6 +377,7 @@ Inductive constructor (ENV : Env) (_totalSupply : Z) (NextAddr : address)
 | Token_case0 : forall NextAddr1
   ( H_conds : constructor_conds ENV _totalSupply NextAddr )
   ( H_case_cond : True )
+  ( H_envNextAddrConsistent : envNextAddrConsistency ENV NextAddr )
   ( H_bindings0 : NextAddr1 = NextAddr + 1 ),
   constructor ENV _totalSupply NextAddr
       (state NextAddr
@@ -416,23 +410,19 @@ Inductive transfer_conds (ENV : Env) (_value : Z) (to : address)
               /\ ((((Token.balanceOf STATE) to) + _value) <= (UINT_MAX 256)))))) )
   ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
   ( H_argConstraints_intBounds__value : 0 <= _value <= UINT_MAX 256 )
-  ( H_argConstraints_intBounds_to : 0 <= to <= UINT_MAX 160 )
-  ( H_CallerBound : 0 <= Caller ENV <= UINT_MAX 160 )
-  ( H_OriginBound : 0 <= Origin ENV <= UINT_MAX 160 )
-  ( H_ThisBound : 0 <= This ENV <= UINT_MAX 160 )
-  ( H_NextAddressBound : 0 <= NextAddr <= UINT_MAX 160 )
-  ( H_This_lt_NextAddr : This ENV < NextAddr )
-  ( H_Caller_lt_NextAddr : Caller ENV < NextAddr )
-  ( H_Origin_lt_NextAddr : Origin ENV < NextAddr )
-  ( H_no_self_call : (forall (p : address), addressIn STATE p -> Caller ENV <> p) )
-  ( H_no_self_origin : (forall (p : address), addressIn STATE p -> Origin ENV <> p) )
-  ( H_This_eq_addState : This ENV = addr STATE ),
+  ( H_argConstraints_intBounds_to : 0 <= to <= UINT_MAX 160 ),
   transfer_conds ENV _value to STATE NextAddr
 ```
 
-The hypotheses begin with the conditions specified in the transition's `iff` block.
+The hypotheses correspond to the conditions specified in the transition's `iff` block.
 The first precondition requires that the call value is zero, as the transition is not payable.
-The second precondition ensures that the caller has a sufficient balance to cover the transfer amount, and the value being transferred is within the allowed range. Then the precondition ensures the case we are in. Next, the `to` address needs to not overflow and has to be a valid address. The environment before and after the transition must also be well-formed (for instance the next address is greater than all current addresses).
+The second precondition ensures that the caller has a sufficient balance to cover the transfer amount
+and that the value being transferred is within the allowed range. The `to` address must be a valid
+256-bit address.
+
+Environment and state well-formedness (address bounds, no-self-call, address ordering) are captured by the separate `envNextAddrConsistency` and
+`stateConsistency` predicates, which appear as hypotheses `H_envNextAddrConsistent` and
+`H_stateConsistent` directly in the transition relation constructors.
 
 Then, a state transition is generated for every transition in the contract specification.
 
@@ -443,17 +433,21 @@ Inductive transfer_ret (ENV : Env) (_value : Z) (to : address)
 | transfer_case0_ret :
      transfer_conds ENV _value to STATE NextAddr
   -> ((Caller ENV) <> to)
+  -> envNextAddrConsistency ENV NextAddr
+  -> stateConsistency ENV NextAddr STATE
   -> transfer_ret ENV _value to STATE NextAddr true
 
 | transfer_case1_ret :
      transfer_conds ENV _value to STATE NextAddr
   -> ((Caller ENV) = to)
+  -> envNextAddrConsistency ENV NextAddr
+  -> stateConsistency ENV NextAddr STATE
   -> transfer_ret ENV _value to STATE NextAddr true
 
 .
 ```
-The predicate holds if the preconditions hold, the case condition is satisfied, and the return value 
-is as expected (in this case true).
+The predicate holds if the preconditions hold, the case condition is satisfied, the environment and
+state are well-formed, and the return value is as expected (in this case true).
 
 <!-- Next, the **postconditions after the constructor** are listed, for every storage variable. For instance, for the `Token.totalSupply`  we need to ensure that it remains in range after the constructor is called (see `STATE'` below)
 ```rocq

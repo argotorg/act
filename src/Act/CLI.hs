@@ -46,6 +46,7 @@ import Act.Syntax.TypedExplicit
 import Act.Syntax.Timing 
 import Act.Type hiding (Env)
 import Act.Rocq hiding (indent, (<+>))
+import Act.Lean hiding (indent, (<+>))
 import Act.Equiv
 import Act.HEVM_utils
 import Act.Consistency
@@ -80,6 +81,13 @@ data Command w
                     }
 
   | Rocq            { file       :: w ::: Maybe String               <?> "Path to file"
+                    , json       :: w ::: Maybe String         <?> "Path to sources .json"
+                    , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
+                    , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
+                    , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
+                    }
+
+  | Lean            { file       :: w ::: Maybe String               <?> "Path to file"
                     , json       :: w ::: Maybe String         <?> "Path to sources .json"
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
@@ -121,6 +129,9 @@ main = do
       Rocq f jsn solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         rocq' f jsn solver'' smttimeout' debug'
+      Lean f jsn solver' smttimeout' debug' -> do
+        solver'' <- parseSolver solver'
+        lean' f jsn solver'' smttimeout' debug'
       Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug'
@@ -177,6 +188,15 @@ rocq' f jsn solver' smttimeout' debug' = do
     checkTypeConstraints contents solver' smttimeout' debug' cnstrs
     checkUpdateAliasing spec' solver' smttimeout' debug'
     TIO.putStr $ rocq spec'
+
+lean' :: Maybe FilePath -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
+lean' f jsn solver' smttimeout' debug' = do
+  fs <- processSources jsn f
+  contents <- flip zip fs <$> mapM readFile fs
+  proceed contents (compile contents) $ \(spec', cnstrs) -> do
+    checkTypeConstraints contents solver' smttimeout' debug' cnstrs
+    checkUpdateAliasing spec' solver' smttimeout' debug'
+    TIO.putStr $ lean spec'
 
 
 equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()

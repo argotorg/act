@@ -1,0 +1,188 @@
+contract Token
+
+constructor(uint256 _totalSupply)
+
+creates
+
+  uint256 totalSupply := _totalSupply
+  mapping(address => uint) balanceOf :=  [CALLER => _totalSupply]
+  mapping(address => mapping(address => uint)) allowance := []
+
+
+transition transfer(uint256 _value, address _to) : bool
+
+iff
+
+  inRange(uint256, balanceOf[CALLER] - _value)
+  CALLER != _to ==> inRange(uint256, balanceOf[_to] + _value)
+
+case CALLER != _to:
+
+  updates
+
+    balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
+                          , _to     => balanceOf[_to] + _value]
+
+  returns true
+
+case CALLER == _to:
+
+  updates
+  returns true
+
+
+transition transferFrom(address src, address dst, uint amount) : bool
+
+iff
+
+  amount <= balanceOf[src]
+  src    != dst ==> inRange(uint256, balanceOf[dst] + amount)
+  CALLER != src ==> inRange(uint256, allowance[src][CALLER] - amount)
+
+case src != dst and CALLER == src:
+
+  updates
+
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount]
+
+  returns true
+
+case src != dst and CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+
+  updates
+
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount]
+
+  returns true
+
+case src != dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+
+  updates
+
+    allowance := allowance[ src => allowance[src][ CALLER => allowance[src][CALLER] - amount] ]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount
+                          , dst => balanceOf[dst] + amount]
+
+  returns true
+
+case src == dst and CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+
+  updates
+
+    allowance := allowance[ src => allowance[src][ CALLER => allowance[src][CALLER] - amount] ]
+
+  returns true
+
+case src == dst and (CALLER == src or allowance[src][CALLER] == 2^256 - 1):
+
+  updates
+  returns true
+
+
+transition approve(address spender, uint amount) : bool
+
+iff
+
+  inRange(uint256, amount)
+
+case CALLER != spender:
+
+  updates
+
+    allowance := allowance[ CALLER => allowance[CALLER][ spender => amount ] ]
+
+  returns true
+
+case CALLER == spender:
+
+  updates
+  returns true
+
+
+transition burn(uint256 amount) : bool
+
+iff
+
+  inRange(uint256, totalSupply - amount)
+  inRange(uint256, balanceOf[CALLER] - amount)
+
+updates
+
+  totalSupply := totalSupply - amount
+  balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - amount ]
+
+returns true
+
+
+transition burnFrom(address src, uint256 amount) : bool
+
+iff
+  amount <= totalSupply
+  amount <= balanceOf[src]
+  CALLER != src ==> amount <= allowance[src][CALLER]
+
+case CALLER != src and allowance[src][CALLER] == 2^256 - 1:
+
+  updates
+
+    totalSupply := totalSupply - amount
+    balanceOf := balanceOf[ src =>  balanceOf[src] - amount ]
+
+  returns true
+
+case CALLER != src and allowance[src][CALLER] < 2^256 - 1:
+
+  updates
+
+    totalSupply := totalSupply - amount
+    allowance := allowance[ src => allowance[src][ CALLER => allowance[src][CALLER] - amount] ]
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
+
+  returns true
+
+case CALLER == src:
+
+  updates
+
+    totalSupply := totalSupply - amount
+    balanceOf := balanceOf[ src => balanceOf[src] - amount ]
+
+  returns true
+
+ensures
+
+  pre(balanceOf)[src] - post(balanceOf)[src] == pre(totalSupply) - post(totalSupply)
+
+
+transition mint(address dst, uint256 amount) : bool
+
+iff
+  inRange(uint256, totalSupply + amount)
+  inRange(uint256, balanceOf[dst] + amount)
+
+updates
+
+  totalSupply := totalSupply + amount
+    balanceOf := balanceOf[ dst => balanceOf[dst] + amount ]
+
+returns true
+
+
+// View functions:
+
+transition totalSupply() : uint256
+
+updates
+returns totalSupply
+
+transition balanceOf(address idx) : uint256
+
+updates
+returns balanceOf[idx]
+
+transition allowance(address idx1, address idx2) : uint256
+
+updates
+returns allowance[idx1][idx2]
