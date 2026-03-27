@@ -184,13 +184,54 @@ inductive transfer_conds (ENV : Env) (_value : ℤ) (_to : address)
     (STATE : State) (NextAddr : address) : Prop where
 | transfer_condsC : ∀
   ( H_iff0 : (ENV.Callvalue) = 0 )
-  ( H_iff1 : ... )  -- caller has sufficient balance and value is in range
-  ( H_iff2 : ... )  -- recipient balance does not overflow (when CALLER ≠ _to)
+  ( H_iff1 : (0 ≤ STATE.balanceOf ENV.Caller ∧ STATE.balanceOf ENV.Caller ≤ UINT_MAX 256)
+           ∧ (0 ≤ _value ∧ _value ≤ UINT_MAX 256)
+           ∧ (0 ≤ STATE.balanceOf ENV.Caller - _value
+           ∧ STATE.balanceOf ENV.Caller - _value ≤ UINT_MAX 256) )
+  ( H_iff2 : ENV.Caller ≠ _to →
+             (0 ≤ STATE.balanceOf _to ∧ STATE.balanceOf _to ≤ UINT_MAX 256)
+           ∧ (0 ≤ _value ∧ _value ≤ UINT_MAX 256)
+           ∧ (0 ≤ STATE.balanceOf _to + _value
+           ∧ STATE.balanceOf _to + _value ≤ UINT_MAX 256) )
   ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
   ( H_argConstraints_intBounds__value : 0 ≤ _value ∧ _value ≤ UINT_MAX 256 )
   ( H_argConstraints_intBounds__to : 0 ≤ _to ∧ _to ≤ UINT_MAX 160 ),
   transfer_conds ENV _value _to STATE NextAddr
 ```
+
+The `H_iff0`–`H_iff2` hypotheses reflect the `iff` block in the act specification. Additionally,
+`H_nextAddrCnstrnt_State` and the `H_argConstraints_intBounds_*` hypotheses are generated
+automatically to enforce integer bounds on the arguments and the next address pointer.
+
+The **state transition relation** for `transfer` has one constructor per case:
+
+```lean
+inductive transfer_transition (ENV : Env) (_value : ℤ) (_to : address)
+    (STATE : State) (NextAddr : address) : State → address → Prop where
+| transfer_case0 : ∀
+  ( H_conds : transfer_conds ENV _value _to STATE NextAddr )
+  ( H_case_cond : ENV.Caller ≠ _to )
+  ( H_envNextAddrConsistent : envNextAddrConsistency ENV NextAddr )
+  ( H_stateConsistent : stateConsistency ENV NextAddr STATE ),
+  transfer_transition ENV _value _to STATE NextAddr
+    (State.mk STATE.addr STATE.BALANCE STATE.allowance
+      (fun a => if a == ENV.Caller then STATE.balanceOf ENV.Caller - _value
+                else if a == _to    then STATE.balanceOf _to + _value
+                else STATE.balanceOf a)
+      STATE.totalSupply)
+    NextAddr
+| transfer_case1 : ∀
+  ( H_conds : transfer_conds ENV _value _to STATE NextAddr )
+  ( H_case_cond : ENV.Caller = _to )
+  ( H_envNextAddrConsistent : envNextAddrConsistency ENV NextAddr )
+  ( H_stateConsistent : stateConsistency ENV NextAddr STATE ),
+  transfer_transition ENV _value _to STATE NextAddr
+    (State.mk STATE.addr STATE.BALANCE STATE.allowance STATE.balanceOf STATE.totalSupply)
+    NextAddr
+```
+
+Each constructor corresponds to one `case` block in the act specification. The post-state is given
+explicitly as a `State.mk` term with the updated field values.
 
 The **return value predicate** for `transfer` is:
 
@@ -199,13 +240,79 @@ inductive transfer_ret (ENV : Env) (_value : ℤ) (_to : address)
     (STATE : State) (NextAddr : address) : Bool → Prop where
 | transfer_case0_ret :
      transfer_conds ENV _value _to STATE NextAddr
-  → (ENV.Caller) ≠ _to
+  → ENV.Caller ≠ _to
+  → transfer_ret ENV _value _to STATE NextAddr true
+  → envNextAddrConsistency ENV NextAddr
+  → stateConsistency ENV NextAddr STATE
   → transfer_ret ENV _value _to STATE NextAddr true
 | transfer_case1_ret :
      transfer_conds ENV _value _to STATE NextAddr
-  → (ENV.Caller) = _to
+  → ENV.Caller = _to
+  → transfer_ret ENV _value _to STATE NextAddr true
+  → envNextAddrConsistency ENV NextAddr
+  → stateConsistency ENV NextAddr STATE
   → transfer_ret ENV _value _to STATE NextAddr true
 ```
+
+The predicate holds if the preconditions hold, the case condition is satisfied, and the return value
+is as expected (in this case `true`).
+
+The **`Token_transition`** relation collects all individual transition relations of the contract
+into a single inductive type. It has one constructor per transition:
+
+```lean
+inductive Token_transition (ENV : Env) (STATE : State) (NextAddr : address)
+    (STATE' : State) (NextAddr' : address) : Prop where
+| transfer_Token_transition : ∀ (_value : ℤ) (_to : address),
+     transfer_transition ENV _value _to STATE NextAddr STATE' NextAddr'
+  → Token_transition ENV STATE NextAddr STATE' NextAddr'
+| transferFrom_Token_transition : ∀ (src dst : address) (amount : ℤ),
+     transferFrom_transition ENV src dst amount STATE NextAddr STATE' NextAddr'
+  → Token_transition ENV STATE NextAddr STATE' NextAddr'
+| approve_Token_transition : ∀ (spender : address) (amount : ℤ),
+     approve_transition ENV spender amount STATE NextAddr STATE' NextAddr'
+  → Token_transition ENV STATE NextAddr STATE' NextAddr'
+...
+```
+
+To define a full **reachability relation**, the `transition` relation on pairs of states accounts
+not only for transitions of the current contract type, but also for all transitions possible for
+contracts stored inside the state. The Token contract does not store sub-contracts, so `transition`
+here is essentially the same as `Token_transition`:
+
+```lean
+inductive transition (ENV : Env) (STATE : State) (NextAddr : address)
+    (STATE' : State) (NextAddr' : address) : Prop where
+| transition_Token :
+     Token_transition ENV STATE NextAddr STATE' NextAddr'
+  → transition ENV STATE NextAddr STATE' NextAddr'
+```
+
+However, if a contract stores other contracts in its state, the `transition` relation would include
+additional constructors. For instance, an Automated Market Maker contract that stores two ERC20
+tokens `token0` and `token1` would generate:
+
+```lean
+inductive transition (ENV : Env) (STATE : State) (NextAddr : address)
+    (STATE' : State) (NextAddr' : address) : Prop where
+| transition_Amm :
+     Amm_transition ENV STATE NextAddr STATE' NextAddr'
+  → transition ENV STATE NextAddr STATE' NextAddr'
+| transition_token0 :
+     nextAddrConstraint NextAddr STATE
+  → (∀ (p : address), addressIn STATE p → ENV.Origin ≠ p)
+  → (∀ (p : address), addressIn STATE p → ENV.Caller ≠ p)
+  → stateIntegerBounds STATE
+  → Token.transition ENV STATE.token0 NextAddr STATE'.token0 NextAddr'
+  → STATE.addr = STATE'.addr
+  → ...
+  → transition ENV STATE NextAddr STATE' NextAddr'
+| transition_token1 : ...
+```
+
+This expresses that a step of the full system can arise either from a direct call to the AMM
+contract, or from a call routed into one of the stored Token contracts. The side conditions
+(integer bounds, no self-call, address constraints) ensure the call is well-formed.
 
 The **step and reachability definitions** are:
 
@@ -229,6 +336,27 @@ def reachableFromInit (ENV : Env) (_totalSupply : ℤ) (NextAddr : address)
 
 `ActLib.multistep` is the reflexive transitive closure of a binary relation, defined in `ActLib`
 using `Relation.ReflTransGen` from Mathlib.
+
+The **bounded variants** `stepBefore`, `multistepBefore`, and `reachableBefore` restrict the
+address space to states whose next-allocation pointer stays at or below a given bound. These are
+used when reasoning about sub-contract reachability — a sub-contract's reachable states are those
+reachable while the address counter stays within the slice allocated to it:
+
+```lean
+def stepBefore (BOUND : address) (STATE STATE' : State) :=
+  ∃ (ENV : Env) (NextAddr NextAddr' : address),
+    transition ENV STATE NextAddr STATE' NextAddr' ∧ NextAddr' ≤ BOUND
+
+def multistepBefore (BOUND : address) (STATE STATE' : State) :=
+  ActLib.multistep (stepBefore BOUND) STATE STATE'
+
+def reachableBefore (BOUND : address) (STATE : State) :=
+  ∃ STATE', initBefore BOUND STATE' ∧ multistepBefore BOUND STATE' STATE
+```
+
+`initBefore` is generated alongside `init` and restricts the initial state to the same bound.
+
+
 
 Finally, the generated file contains a parametric **invariant schema**. Given an invariant property
 `IP : Env → ℤ → address → State → Prop`, the following are generated:
