@@ -361,7 +361,7 @@ noAliasing name store = inductive
 
 
 leanbound :: T.Text -> ValueType -> Maybe T.Text
-leanbound v (ValueType (TContract cid)) = pure $
+leanbound v (ValueType (TContract _)) = pure $
   "0 ≤" <+> parens v <.> addrField <+> "∧" <+> parens v <.> addrField <+> "≤ UINT_MAX 160"
 leanbound v (ValueType TAddress) = pure $
   "0 ≤" <+> v <+> "∧" <+> v <+> "≤ UINT_MAX 160"
@@ -690,7 +690,7 @@ updateExp ctor (Create _ cid args payment) = do
   i <- getIncr
   let bindings = snoc (concat argBindings) ([iState (i+1), iNextAddr (i+1)], T.pack cid <.> constructorType <+> parens ("CallEnv" <+> paymentExp <+> parens (leanexp ctor (IntEnv nowhere This)) <+> envVar) <+> T.unwords args' <+> iNextAddr i <+> iState (i+1) <+> iNextAddr (i+1))
   pure (iState (i+1), bindings)
-updateExp ctor (Address _ c (Create _ cid args payment)) = do
+updateExp ctor (Address _ _ (Create _ cid args payment)) = do
   let paymentExp = maybe "0" (leanexp ctor) payment
   (args', argBindings) <- unzip <$> mapM (updateExpTyped ctor) args
   i <- getIncr
@@ -871,7 +871,7 @@ leanexp False (IntEnv _ This) = parens $ stateVar <.> addrField
 leanexp _ (IntEnv _ envVal) = parens $ envVar <.> T.pack (show envVal)
 -- Contracts
 leanexp _ Create {} = error "Internal error: leanexp called for creation expression; call updateExp"
-leanexp ctor (Address _ c e) = parens $ leanexp ctor e <.> addrField
+leanexp ctor (Address _ _ e) = parens $ leanexp ctor e <.> addrField
 
 leanexp ctor me@(Mapping _ _ _ _) = mappingExp ctor me 0
 leanexp ctor me@(MappingUpd _ _ _ _ _) = mappingExp ctor me 0
@@ -954,19 +954,19 @@ typedexp :: Bool -> TypedExp -> T.Text
 typedexp ctor (TExp _ e) = leanexp ctor e
 
 ref :: Bool -> Ref k -> T.Text
-ref _ (SVar _ Pre cid name) = parens $ stateVar <.> T.pack name
-ref _ (SVar _ Post cid name) = parens $ stateVar' <.> T.pack name
+ref _ (SVar _ Pre _ name) = parens $ stateVar <.> T.pack name
+ref _ (SVar _ Post _ name) = parens $ stateVar' <.> T.pack name
 ref _ (CVar _ _ name) = T.pack name
 ref ctor (RArrIdx _ r ix _) = parens $ ref ctor r <+> leanexp ctor ix
 ref ctor (RMapIdx _ (TRef _ _ r) ix) = parens $ ref ctor r <+> typedexp ctor ix
-ref ctor (RField _ r cid name) = parens $ ref ctor r <.> T.pack name
+ref ctor (RField _ r _ name) = parens $ ref ctor r <.> T.pack name
 
 refState :: Bool -> T.Text -> Ref k -> T.Text
-refState _ s (SVar _ _ cid name) = parens $ s <.> T.pack name
+refState _ s (SVar _ _ _ name) = parens $ s <.> T.pack name
 refState _ _ (CVar _ _ name) = T.pack name
 refState ctor s (RArrIdx _ r ix _) = parens $ refState ctor s r <+> leanexp ctor ix
 refState ctor s (RMapIdx _ (TRef _ _ r) ix) = parens $ refState ctor s r <+> typedexp ctor ix
-refState ctor s (RField _ r cid name) = parens $ refState ctor s r <.> T.pack name
+refState ctor s (RField _ r _ name) = parens $ refState ctor s r <.> T.pack name
 
 -- | lean syntax for a list of arguments
 leanargs :: Bool -> [TypedExp] -> T.Text
