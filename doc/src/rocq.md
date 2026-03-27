@@ -257,7 +257,7 @@ true.
 ## act Export
 
 Calling `act rocq ...` will generate a Rocq file that encodes the contract as a state transition system,
-following the formal value semantics, given and **proven sound** in the
+following the formal value semantics, given in the
 <span style="color:green">tech report (to be available shortly).</span>
 
 The generated Rocq output will contain: <!-- <span style="color:red">talk about postconditions and invariants</span> -->

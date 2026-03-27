@@ -31,5 +31,9 @@ doc/book
 # direnv
 .direnv/
 
+# lean
+**/.lake/
+**/lake-manifest.json
+
 *~
 *#
