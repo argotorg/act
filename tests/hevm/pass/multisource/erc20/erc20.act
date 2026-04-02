@@ -9,23 +9,23 @@ creates
   mapping(address => mapping(address => uint)) allowance := []
 
 
-transition transfer(uint256 _value, address to) : bool
+transition transfer(uint256 _value, address _to) : bool
 
 iff
 
   inRange(uint256, balanceOf[CALLER] - _value)
-  CALLER != to ==> inRange(uint256, balanceOf[to] + _value)
+  CALLER != _to ==> inRange(uint256, balanceOf[_to] + _value)
 
-case CALLER != to:
+case CALLER != _to:
 
   updates
 
     balanceOf := balanceOf[ CALLER => balanceOf[CALLER] - _value
-                          , to     => balanceOf[to] + _value]
+                          , _to     => balanceOf[_to] + _value]
 
   returns true
 
-case CALLER == to:
+case CALLER == _to:
 
   updates
   returns true

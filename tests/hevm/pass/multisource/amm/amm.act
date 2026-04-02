@@ -22,16 +22,16 @@ creates
     uint256 reserve0 := t0.balanceOf[THIS]
     uint256 reserve1 := t1.balanceOf[THIS]
 
-transition swap0(uint256 amount1Out, address to)
+transition swap0(uint256 amount1Out, address _to)
 
 iff
   amount1Out > 0
   amount1Out < reserve1
-  to != address(token0)
-  to != address(token1)
+  _to != address(token0)
+  _to != address(token1)
   inRange(uint256, token1.balanceOf[THIS] - amount1Out)
   
-  THIS != to ==> inRange(uint256, token1.balanceOf[to] + amount1Out)
+  THIS != _to ==> inRange(uint256, token1.balanceOf[_to] + amount1Out)
 
   inRange(uint256, token0.balanceOf[THIS] - reserve0)
   token0.balanceOf[THIS] > reserve0
@@ -39,28 +39,28 @@ iff
   inRange(uint256, reserve1 * (token0.balanceOf[THIS] - reserve0) / (reserve0 + (token0.balanceOf[THIS] - reserve0)))
   amount1Out <=  reserve1 * (token0.balanceOf[THIS] - reserve0) / (reserve0 + (token0.balanceOf[THIS] - reserve0))
 
-case (THIS != to ):
+case (THIS != _to ):
   updates
     token1.balanceOf := token1.balanceOf[THIS => token1.balanceOf[THIS] - amount1Out
-                                        , to => token1.balanceOf[to] + amount1Out]
+                                        , _to => token1.balanceOf[_to] + amount1Out]
     reserve0 := token0.balanceOf[THIS]
     reserve1 := token1.balanceOf[THIS] - amount1Out
 
-case (THIS == to ):
+case (THIS == _to ):
   updates
     reserve0 := token0.balanceOf[THIS]
     reserve1 := token1.balanceOf[THIS]
 
-transition swap1(uint256 amount0Out, address to)
+transition swap1(uint256 amount0Out, address _to)
 
 iff
   amount0Out > 0
   amount0Out < reserve0
-  to != address(token0)
-  to != address(token1)
+  _to != address(token0)
+  _to != address(token1)
   inRange(uint256, token0.balanceOf[THIS] - amount0Out)
   
-  THIS != to ==> inRange(uint256, token0.balanceOf[to] + amount0Out)
+  THIS != _to ==> inRange(uint256, token0.balanceOf[_to] + amount0Out)
 
   inRange(uint256, token1.balanceOf[THIS] - reserve1)
   token1.balanceOf[THIS] > reserve1
@@ -68,20 +68,20 @@ iff
   inRange(uint256, reserve0 * (token1.balanceOf[THIS] - reserve1) / (reserve1 + (token1.balanceOf[THIS] - reserve1)))
   amount0Out <=  reserve0 * (token1.balanceOf[THIS] - reserve1) / (reserve1 + (token1.balanceOf[THIS] - reserve1))
 
-case (THIS != to ):
+case (THIS != _to ):
   updates
     token0.balanceOf := token0.balanceOf[THIS => token0.balanceOf[THIS] - amount0Out
-                                        , to => token0.balanceOf[to] + amount0Out]
+                                        , _to => token0.balanceOf[_to] + amount0Out]
     reserve0 := token0.balanceOf[THIS] - amount0Out
     reserve1 := token1.balanceOf[THIS]
 
-case (THIS == to ):
+case (THIS == _to ):
   updates
     reserve0 := token0.balanceOf[THIS]
     reserve1 := token1.balanceOf[THIS]
 
 
-transition mint(address to) : uint256
+transition mint(address _to) : uint256
 
 iff
   totalSupply > 0
@@ -91,18 +91,18 @@ iff
   inRange(uint256, (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1)
   ((token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0 <= (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1) ==>
      (inRange(uint256, totalSupply + (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0)
-    and inRange(uint256, balanceOf[to] + (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0)
+    and inRange(uint256, balanceOf[_to] + (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0)
     and ((token0.balanceOf[THIS] - reserve0)*totalSupply/reserve0 > 0))
   ((token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0 >  (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1) ==>
      (inRange(uint256, totalSupply + (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1)
-    and inRange(uint256, balanceOf[to] + (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1)
+    and inRange(uint256, balanceOf[_to] + (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1)
     and ((token1.balanceOf[THIS] - reserve1)*totalSupply/reserve1 > 0))
 
 case (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0 <= (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1 :
 
   updates
     totalSupply := totalSupply + (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0
-    balanceOf := balanceOf[to => balanceOf[to] + (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0]
+    balanceOf := balanceOf[_to => balanceOf[_to] + (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0]
     reserve0 := token0.balanceOf[THIS]
     reserve1 := token1.balanceOf[THIS]
 
@@ -112,14 +112,14 @@ case (token0.balanceOf[THIS] - reserve0) * totalSupply / reserve0 >  (token1.bal
 
   updates
     totalSupply := totalSupply + (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1
-    balanceOf := balanceOf[to => balanceOf[to] + (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1]
+    balanceOf := balanceOf[_to => balanceOf[_to] + (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1]
     reserve0 := token0.balanceOf[THIS]
     reserve1 := token1.balanceOf[THIS]
 
   returns (token1.balanceOf[THIS] - reserve1) * totalSupply / reserve1
 
 
-transition burn(uint256 liquidity, address to)
+transition burn(uint256 liquidity, address _to)
 
 iff
   totalSupply > 0
@@ -128,24 +128,24 @@ iff
   inRange(uint256, totalSupply - liquidity)
   inRange(uint256, balanceOf[CALLER] - liquidity)
   inRange(uint256, token0.balanceOf[THIS] - (liquidity * reserve0) / totalSupply)
-  THIS != to ==> inRange(uint256, token0.balanceOf[to] + (liquidity * reserve0) / totalSupply)
+  THIS != _to ==> inRange(uint256, token0.balanceOf[_to] + (liquidity * reserve0) / totalSupply)
   inRange(uint256, token1.balanceOf[THIS] - (liquidity * reserve1) / totalSupply)
-  THIS != to ==> inRange(uint256, token1.balanceOf[to] + (liquidity * reserve1) / totalSupply)
+  THIS != _to ==> inRange(uint256, token1.balanceOf[_to] + (liquidity * reserve1) / totalSupply)
 
-case THIS != to:
+case THIS != _to:
 
   updates
 
     totalSupply := totalSupply - liquidity
     balanceOf := balanceOf[CALLER => balanceOf[CALLER] - liquidity]
     token0.balanceOf := token0.balanceOf[THIS => token0.balanceOf[THIS] - liquidity * reserve0 / totalSupply
-                                        , to => token0.balanceOf[to] + liquidity * reserve0 / totalSupply]
+                                        , _to => token0.balanceOf[_to] + liquidity * reserve0 / totalSupply]
     token1.balanceOf := token1.balanceOf[THIS => token1.balanceOf[THIS] - liquidity * reserve1 / totalSupply
-                                        , to => token1.balanceOf[to] + liquidity * reserve1 / totalSupply]
+                                        , _to => token1.balanceOf[_to] + liquidity * reserve1 / totalSupply]
     reserve0 := token0.balanceOf[THIS] - liquidity * reserve0 / totalSupply
     reserve1 := token1.balanceOf[THIS] - liquidity * reserve1 / totalSupply
 
-case THIS == to:
+case THIS == _to:
 
   updates
 
@@ -155,23 +155,23 @@ case THIS == to:
     reserve1 := token1.balanceOf[THIS]
 
 
-transition transfer(uint256 val, address to) : uint256
+transition transfer(uint256 val, address _to) : uint256
 
 iff
 
   inRange(uint256, balanceOf[CALLER] - val)
-  CALLER != to ==> inRange(uint256, balanceOf[to] + val)
+  CALLER != _to ==> inRange(uint256, balanceOf[_to] + val)
 
-case CALLER != to:
+case CALLER != _to:
 
   updates
 
      balanceOf := balanceOf[CALLER => balanceOf[CALLER] - val
-                           , to => balanceOf[to] + val]
+                           , _to => balanceOf[_to] + val]
 
   returns 1
 
-case CALLER == to:
+case CALLER == _to:
 
   updates
   returns 1
