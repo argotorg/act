@@ -189,7 +189,6 @@ behvConds name i conds = do
   where
     body n = indent 2 ((namedHyps . concat $
       [ nameHypothesis "iff" $ leanprop False <$> conds
-      , [("nextAddrCnstrnt_State", nextAddrConstraintType <+> nextAddrVar <+> stateVar) ]
       , interfaceConstraints i
       ]) <> ",\n"
       <> (T.pack n <> "_conds") <+> envVar <+> arguments i <+> stateVar <+>nextAddrVar )
@@ -273,10 +272,7 @@ extStep main store = inductive
       where
         varp = T.pack var
         body' = indent 2 . implication . concat $
-          [ [ nextAddrConstraintType <+> nextAddrVar <+> stateVar ]
-          , [ parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Origin" <+> "≠" <+> "p" ]
-          , [ parens $ "∀ (p : address)," <+> addressInType <+> stateVar <+> "p" <+> "→" <+> envVar <.> "Caller" <+> "≠" <+> "p" ]
-          , [ integerBoundsType <+> stateVar ]
+          [ [ envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar ]
           , [ T.pack cid <.> extStepType <+> envVar <+> parens (stateVar <.> varp) <+> nextAddrVar <+> parens (stateVar' <.> varp) <+> nextAddrVar' ]
           , [ stateVar <.> addrField <+> "=" <+> stateVar' <.> addrField ]
           , (\var' -> parens (stateVar <.> T.pack var') <+> "=" <+> parens (stateVar' <.> T.pack var')) <$> (filter (var /=) $ M.keys localStore)
@@ -522,7 +518,6 @@ retVal name i cases@((Case _ _ (_, Just ret0)):_) = do
         caseBody = (indent 2) . implication . concat $
           [ [(T.pack name) <> "_conds" <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar ]
           , [ leanprop False caseCond ]
-          , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp False ret]
           , [ envNextAddrCnstrType <+> envVar <+> nextAddrVar]
           , [ envNextAddrStateCnstrType <+> envVar <+> nextAddrVar <+> stateVar]
           , [retname (T.pack name) <+> envVar <+> arguments i <+> stateVar <+> nextAddrVar <+> typedexp False ret]
