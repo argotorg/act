@@ -37,6 +37,7 @@ doc/book
 # lean
 **/.lake/
 **/lake-manifest.json
+**/lean-toolchain
 
 *~
 *#
