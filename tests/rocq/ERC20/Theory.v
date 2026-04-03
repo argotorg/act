@@ -251,7 +251,7 @@ Proof.
     + (* transfer *)
       apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [assumption|].
       unfold balanceOf_sum.
-      rewrite balanceOf_sum_transfer_thm with (x1 := Caller ENV) (x2 := to) (f' := balanceOf STATE').
+      rewrite balanceOf_sum_transfer_thm with (x1 := Caller ENV) (x2 := _to) (f' := balanceOf STATE').
       * destruct H; simpl; lia.
       * destruct H; simpl; intros; rewrite_eqbs; reflexivity.
       * destruct H; simpl; rewrite_eqbs; repeat rewrite Z.eqb_refl; lia.

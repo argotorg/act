@@ -73,6 +73,15 @@ $(rocq-examples):
 	make -C $@ clean
 	make -C $@
 
+
+lean-examples = tests/lean/amm tests/lean/ERC20
+
+.PHONY: test-lean $(lean-examples)
+test-lean: compiler $(lean-examples)
+$(lean-examples):
+	make -C $@ clean
+	make -C $@
+
 test-parse: parser compiler $(parser_pass:=.parse.pass) $(parser_fail:=.parse.fail)
 test-type: parser compiler $(typing_pass:=.type.pass) $(typing_fail:=.type.fail)
 test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_fail:=.invariant.fail)

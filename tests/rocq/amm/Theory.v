@@ -466,7 +466,7 @@ Proof.
     + (* transfer *)
       destruct H0; simpl; auto.
       * rewrite_eqbs.
-        destruct (addr STATE =? to) eqn:Hifcond0; simpl; auto.
+        destruct (addr STATE =? _to) eqn:Hifcond0; simpl; auto.
         -- eapply Z.le_trans. apply Hyp2. apply Z.eqb_eq in Hifcond0; rewrite Hifcond0. destruct H_conds; lia.
 
     +  (* transferFrom *)
@@ -576,7 +576,7 @@ Proof.
     + (* transfer *)
       destruct H0; simpl; auto.
       * rewrite_eqbs.
-        destruct (addr STATE =? to) eqn:Hifcond0; simpl; auto.
+        destruct (addr STATE =? _to) eqn:Hifcond0; simpl; auto.
         -- eapply Z.le_trans. apply Hyp2. apply Z.eqb_eq in Hifcond0; rewrite Hifcond0. destruct H_conds; lia.
 
     +  (* transferFrom *)
@@ -898,7 +898,7 @@ Proof.
     + (* mint *)
       apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [assumption|].
       unfold balanceOf_sum. simpl.
-      rewrite balanceOf_sum_thm' with (x := to) (f' := balanceOf STATE').
+      rewrite balanceOf_sum_thm' with (x := _to) (f' := balanceOf STATE').
       * destruct H; simpl; rewrite Z.eqb_refl; lia.
       * destruct H; simpl; intros; rewrite_eqbs; reflexivity.
       * destruct H; simpl; unfold MAX_ADDRESS; destruct H_conds; lia.
@@ -912,7 +912,7 @@ Proof.
     + (* transfer *)
       apply deltas with (x1 := balanceOf_sum STATE) (y1 := totalSupply STATE); [assumption|].
       unfold balanceOf_sum. simpl.
-      rewrite balanceOf_sum_transfer_thm with (x1 := Caller ENV) (x2 := to) (f' := balanceOf STATE').
+      rewrite balanceOf_sum_transfer_thm with (x1 := Caller ENV) (x2 := _to) (f' := balanceOf STATE').
       * destruct H; simpl; lia.
       * destruct H; simpl; intros; rewrite_eqbs; reflexivity.
       * destruct H; simpl; rewrite_eqbs; repeat rewrite Z.eqb_refl; lia.

@@ -22,7 +22,8 @@
 # Verification with act 
 
 - [hevm backend: Equivalence to EVM bytecode](./equiv.md)
-- [Rocq backend](./rocq.md) 
+- [Rocq backend](./rocq.md)
+- [Lean backend](./lean.md)
     
 
 

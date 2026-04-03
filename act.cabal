@@ -64,6 +64,7 @@ library
     Act.Lex
     Act.Parse
     Act.Rocq
+    Act.Lean
     Act.Syntax
     Act.Syntax.Untyped
     Act.Syntax.Typed
