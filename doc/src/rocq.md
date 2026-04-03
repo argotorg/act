@@ -408,7 +408,6 @@ Inductive transfer_conds (ENV : Env) (_value : Z) (to : address)
               /\ (_value <= (UINT_MAX 256)))
               /\ ((0 <= (((Token.balanceOf STATE) to) + _value))
               /\ ((((Token.balanceOf STATE) to) + _value) <= (UINT_MAX 256)))))) )
-  ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
   ( H_argConstraints_intBounds__value : 0 <= _value <= UINT_MAX 256 )
   ( H_argConstraints_intBounds_to : 0 <= to <= UINT_MAX 160 ),
   transfer_conds ENV _value to STATE NextAddr
@@ -501,13 +500,13 @@ Inductive transition (ENV : Env) (STATE : State) (NextAddr : address) (STATE' : 
   -> transition ENV STATE NextAddr STATE' NextAddr'
 
 | transition_token0 :
-     nextAddrConstraint NextAddr STATE
+     stateConsistency ENV NextAddr STATE
   -> Token.transition ENV (token0 STATE) NextAddr (token0 STATE') NextAddr'
   -> ...
   -> transition ENV STATE NextAddr STATE' NextAddr'
 
 | transition_token1 :
-     nextAddrConstraint NextAddr STATE
+     stateConsistency ENV NextAddr STATE
   -> Token.transition ENV (token1 STATE) NextAddr (token1 STATE') NextAddr'
   -> ...
   -> transition ENV STATE NextAddr STATE' NextAddr'

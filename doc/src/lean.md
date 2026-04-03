@@ -193,7 +193,6 @@ inductive transfer_conds (ENV : Env) (_value : ℤ) (_to : address)
            ∧ (0 ≤ _value ∧ _value ≤ UINT_MAX 256)
            ∧ (0 ≤ STATE.balanceOf _to + _value
            ∧ STATE.balanceOf _to + _value ≤ UINT_MAX 256) )
-  ( H_nextAddrCnstrnt_State : nextAddrConstraint NextAddr STATE )
   ( H_argConstraints_intBounds__value : 0 ≤ _value ∧ _value ≤ UINT_MAX 256 )
   ( H_argConstraints_intBounds__to : 0 ≤ _to ∧ _to ≤ UINT_MAX 160 ),
   transfer_conds ENV _value _to STATE NextAddr
@@ -241,14 +240,12 @@ inductive transfer_ret (ENV : Env) (_value : ℤ) (_to : address)
 | transfer_case0_ret :
      transfer_conds ENV _value _to STATE NextAddr
   → ENV.Caller ≠ _to
-  → transfer_ret ENV _value _to STATE NextAddr true
   → envNextAddrConsistency ENV NextAddr
   → stateConsistency ENV NextAddr STATE
   → transfer_ret ENV _value _to STATE NextAddr true
 | transfer_case1_ret :
      transfer_conds ENV _value _to STATE NextAddr
   → ENV.Caller = _to
-  → transfer_ret ENV _value _to STATE NextAddr true
   → envNextAddrConsistency ENV NextAddr
   → stateConsistency ENV NextAddr STATE
   → transfer_ret ENV _value _to STATE NextAddr true
@@ -299,10 +296,8 @@ inductive transition (ENV : Env) (STATE : State) (NextAddr : address)
      Amm_transition ENV STATE NextAddr STATE' NextAddr'
   → transition ENV STATE NextAddr STATE' NextAddr'
 | transition_token0 :
-     nextAddrConstraint NextAddr STATE
-  → (∀ (p : address), addressIn STATE p → ENV.Origin ≠ p)
-  → (∀ (p : address), addressIn STATE p → ENV.Caller ≠ p)
-  → stateIntegerBounds STATE
+     stateConsistency ENV NextAddr STATE
+  → Token.transition ENV (STATE.token0) NextAddr (STATE'.token0) NextAddr'
   → Token.transition ENV STATE.token0 NextAddr STATE'.token0 NextAddr'
   → STATE.addr = STATE'.addr
   → ...
