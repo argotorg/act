@@ -1,6 +1,6 @@
 # Type-Checking
 
-act's type-checking process ensures that specifications are both syntactically correct and semantically sound. It combines traditional static type-checking with semantic verification using SMT solvers. Type safety is proven in detail. <span style="color:green">  A full tech report will be available shortly. </span>
+act's type-checking process ensures that specifications are both syntactically correct and semantically sound. It combines traditional static type-checking with semantic verification using SMT solvers. Type safety is proven in detail. A full technical report with all definitions and proofs is available [here](https://arxiv.org/abs/2604.02955).
 
 The type-checker implements the formal typing judgments defined in act's type system. It verifies that all expressions are well-typed according to typing rules, which take storage declarations, interface parameters, and local bindings into account. 
  The type-checker proceeds systematically: it first type-checks each contract's constructor, memorizing the constructor's storage declarations, then type-checks each transition against the updated environment. This ensures type consistency across the entire specification and catches errors like type mismatches, undefined variables, and invalid operations before proceeding to the verification backends.

@@ -66,7 +66,7 @@ Make sure to run `lake update` in the `lib/` directory and also in your project 
 ## act Export
 
 Calling `act lean ...` will generate a Lean file that encodes the contract as a state transition
-system, following the formal value semantics given in the <span style="color:green">tech report (to be available shortly).</span>
+system.
 
 The generated file begins with imports and opens the relevant namespaces:
 
