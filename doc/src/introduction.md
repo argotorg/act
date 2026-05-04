@@ -86,8 +86,8 @@ act provides two main verification backends that work with the same specificatio
 <!-- have ERC20 example already here? -->
 
 Further key capabilities of act:
-<!-- mention formally defined semantics + type safety + soundness -->
-- **The semantics of act is fully formally defined.** Type safety and soundness are proven in detail. <span style="color:green">A full tech report will be available shortly.</span>
+<!-- mention formally defined semantics + type safety -->
+- **The semantics of act is fully formally defined.** Type safety is proven in detail. A full technical report with all definitions and proofs is available [here](https://arxiv.org/abs/2604.02955).
 <!-- talk about language agnostics -->
 - **act is language agnostic**: Conceptually, act could support conformity of spec and implementation written in all programming languages that compile to EVM bytecode. Currently (in v0.2.0), Solidity and Vyper are supported.
 <!-- loops  -->
