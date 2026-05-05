@@ -1,0 +1,15 @@
+name = "Admins"
+version = "0.1.0"
+defaultTargets = ["Admin"]
+
+[[require]]
+name = "ActLib"
+path = "../../../lib/"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+
+[[lean_lib]]
+name = "Admin"
+path = "admin.lean"
