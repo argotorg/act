@@ -8,21 +8,6 @@ open ActLib
 open Asset
 
 
-theorem no_admin_no_change :
-  ∀ (state : State) (state' : State),
-  reachable state ->
-  reachable state' ->
-  (∃ (ENV : Env) (NextAddr : address) (NextAddr' : address),
-  transition ENV state NextAddr state' NextAddr' ∧ ENV.Caller ≠ state.admins.admin1 ∧ ENV.Caller ≠ state.admins.admin2) ->
-  state = state'
-
-  := by
-  intro state state' h_reachable_state h_reachable_state' h_transition
-  obtain ⟨ENV, NextAddr, NextAddr', h_trans, h_caller_ne_1, h_caller_ne_2⟩ := h_transition
-  cases h_trans
-  · sorry
-  · sorry
-
 lemma admins_transition_same
   {env : Env} {state state' : Admins.State}
   {NextAddr NextAddr' : address}
@@ -62,15 +47,15 @@ theorem no_admin_no_change' :
         cases H_conds with
         | assetTransfer_condsC _ H_iff2 _ _ =>
           cases H_iff2 <;> contradiction
-    | setAdmins_Asset_transition _ _ h_setAdmins => 
+    | setAdmins_Asset_transition _ _ h_setAdmins =>
       cases h_setAdmins with
-      | setAdmins_case0 _ _ _ H_case_cond => 
+      | setAdmins_case0 _ _ _ H_case_cond =>
         cases H_case_cond <;> contradiction
       | setAdmins_case1 =>
         rfl
     | balanceOf_Asset_transition _ h_balanceOf =>
       cases h_balanceOf with
-      | balanceOf_case0 H_conds => rfl 
+      | balanceOf_case0 H_conds => rfl
   | transition_admins _ h_Admins_transition h_addr h_balance h_balanceOf =>
     have h_admins_eq : state.admins = state'.admins :=
       admins_transition_same h_Admins_transition
@@ -79,3 +64,16 @@ theorem no_admin_no_change' :
     simp at h_addr h_balance h_admins_eq h_balanceOf
     subst_vars
     rfl
+
+
+theorem no_admin_no_change :
+  ∀ (state : State) (state' : State),
+  reachable state ->
+  reachable state' ->
+  (∃ (ENV : Env) (NextAddr : address) (NextAddr' : address),
+  transition ENV state NextAddr state' NextAddr' ∧ ENV.Caller ≠ state.admins.admin1 ∧ ENV.Caller ≠ state.admins.admin2) ->
+  state = state'
+  := by
+  intro state state' h_reachable_state h_reachable_state' h_transition
+  obtain ⟨ENV, NextAddr, NextAddr', h_trans, h_caller_ne_1, h_caller_ne_2⟩ := h_transition
+  apply no_admin_no_change' state state' ENV NextAddr NextAddr' h_reachable_state h_caller_ne_1 h_caller_ne_2 h_trans
