@@ -1,0 +1,35 @@
+contract TwoPartyAgreement
+
+constructor(address _counterparty)
+
+creates
+  address proposer     := CALLER
+  address counterparty := _counterparty
+  uint256 state        := 0
+
+transition accept()
+
+iff
+  CALLER == counterparty
+  state == 0
+
+updates
+  state := 1
+
+transition execute()
+
+iff
+  CALLER == proposer
+  state == 1
+
+updates
+  state := 2
+
+transition cancel()
+
+iff
+  CALLER == proposer
+  state == 0
+
+updates
+  state := 3
