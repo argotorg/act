@@ -134,23 +134,26 @@ Definition semantic_entailment (Σ : contract_env) (iface : interface) (phi : li
     Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     Forall (fun e => eval_expr (TSUntimed s) rho e l (VBool true)) es.
 
-(** Σ; I; Φ ⊨_{⊥?A} (ses, pres) — ValidIffs *)
-Definition semantic_entailment_iffs (Σ : contract_env) (iface : interface) (phi : list expr)
-    (oid : opt_id) (ses : list slot_expr) (pres : list expr) : Prop :=
-  forall s0 rho l vs ss,
-    env_well_typed Σ rho s0 iface ->
+(** Σ; I; Φ ⊨_{⊥?A} (ses, se_val, pres) — ValidIffs.
+
+    [caller_iface] is the environment in which the argument slot expressions are
+    evaluated. [callee_iface] names the constructor parameters used to build the
+    environment for the callee preconditions. *)
+Definition semantic_entailment_ctor_call (Σ : contract_env)
+    (caller_iface callee_iface : interface) (phi : list expr)
+    (oid : opt_id) (ses : list slot_expr) (se_val : slot_expr)
+    (pres : list expr) : Prop :=
+  forall s0 rho l vals s_args sv s_final,
+    env_well_typed Σ rho s0 caller_iface ->
     loc_has_opt_type Σ l s0 oid ->
     Forall (fun p => eval_expr (TSUntimed s0) rho p l (VBool true)) phi ->
-    length vs = length ses ->
-    length ss = length ses ->
-    (forall i, i < length ses ->
-      eval_slotexpr (Σ_cnstr Σ) (nth i ss s0) rho (nth i ses (SEMap (MExp (EBool false)))) l
-        (nth i vs (VInt 0%Z)) (nth (S i) ss s0)) ->
-    let s_n := last ss s0 in
-    let rho' := fold_right (fun '(x, v) r => Maps.update r x v)
-                  empty
-                  (combine (map fst (firstn (length ses) (ctor_iface (mk_ctor iface false [] [] [])))) vs) in
-    Forall (fun e => eval_expr (TSUntimed s_n) rho' e dummy_loc (VBool true)) pres.
+    eval_slotexpr_list (Σ_cnstr Σ) s0 rho ses l vals s_args ->
+    eval_slotexpr (Σ_cnstr Σ) s_args rho se_val l sv s_final ->
+    Forall (fun pre =>
+      eval_expr (TSUntimed s_final)
+        (build_ctor_env callee_iface vals l (env_origin rho) sv)
+        pre dummy_loc (VBool true))
+      pres.
 
 (* ================================================================= *)
 (** ** Well-foundedness of contract dependency relation *)
@@ -322,14 +325,6 @@ Proof.
   apply IH. eapply contract_dep_incl; eauto.
 Qed.
 
-(* Well-formedness predicate for default value typing *)
-Fixpoint default_value_typable (mu : mapping_type) : Prop :=
-  match mu with
-  | MBase (TInt it) => in_range it 0%Z
-  | MBase _ => True
-  | MMapping _ mu' => default_value_typable mu'
-  end.
-
 (* ================================================================= *)
 (** ** Key Lemmas *)
 
@@ -347,24 +342,6 @@ Proof.
      H2 : has_abi_type _ _ _ (AContractAddr b) |- _] =>
     inv H1; inv H2; congruence
   end.
-Qed.
-
-(** default(μ) has mapping type (Lemma 5.3)
-    Note: requires well-formedness to ensure 0 is in range for all
-    integer base types appearing in μ. The paper assumes standard
-    Solidity types where this always holds. *)
-Lemma default_has_mapping_type :
-  forall mu, default_value_typable mu -> has_mapping_type (default_value mu) mu.
-Proof.
-  induction mu; simpl; intros Hwf.
-  - (* MBase *)
-    apply V_BaseValMu.
-    destruct b; try constructor; auto.
-  - (* MMapping *)
-    destruct b; simpl.
-    + (* TInt *) apply V_MappingZ. intros n _. apply IHmu. exact Hwf.
-    + (* TBool *) apply V_MappingB. intros b. apply IHmu. exact Hwf.
-    + (* TAddress *) apply V_MappingA. intros a. apply IHmu. exact Hwf.
 Qed.
 
 (** Weakening of Storage (Typing) — Lemma 5.4

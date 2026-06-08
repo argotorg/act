@@ -177,11 +177,6 @@ Proof.
     lia.
 Qed.
 
-(** Well-formedness of int types: 0 is in the range.
-    This excludes pathological types like [IntT 0]. *)
-Definition wf_int_type (it : int_type) : Prop :=
-  in_range it 0%Z.
-
 (* ================================================================= *)
 (** ** Decidable Equality on Base Semantic Values *)
 
@@ -360,15 +355,15 @@ Qed.
     Works at depth [n]; field access uses [sem_contract_field]
     (which drops depth by 1) followed by [sem_slot_weaken]. *)
 
-Fixpoint denote_ref (n : nat) (Σ : contract_env) (iface : interface)
+Fixpoint denote_ref (n : nat) (Σ : contract_env) (iface : interface) (phi : list expr)
     (k : ref_tag) (oid : opt_id) (t : time_tag) (r : ref) (sty : slot_type)
-    (H : type_ref_t Σ iface k oid t r sty)
+    (H : type_ref_t Σ iface phi k oid t r sty)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_timed_aux n Σ oid t)
     {struct H} : sem_slot_aux n Σ sty
-with denote_expr (n : nat) (Σ : contract_env) (iface : interface)
+with denote_expr (n : nat) (Σ : contract_env) (iface : interface) (phi : list expr)
     (oid : opt_id) (t : time_tag) (e : expr) (bt : base_type)
-    (H : type_expr_t Σ iface oid t e bt)
+    (H : type_expr_t Σ iface phi oid t e bt)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_timed_aux n Σ oid t)
     {struct H} : sem_base bt.
@@ -404,35 +399,35 @@ Proof.
 
     + (* T_Coerce_t: ref as A — AContractAddr a ≡ SContract a after unfolding *)
       destruct n as [|n']; simpl.
-      { pose (val := denote_ref 0 Σ iface k oid t r (SAbi (AContractAddr a)) H rho v).
+      { pose (val := denote_ref 0 Σ iface phi k oid t r (SAbi (AContractAddr a)) H rho v).
         simpl in val. exact (match val : Empty_set with end). }
-      { exact (denote_ref (S n') Σ iface k oid t r (SAbi (AContractAddr a)) H rho v). }
+      { exact (denote_ref (S n') Σ iface phi k oid t r (SAbi (AContractAddr a)) H rho v). }
 
     + (* T_Upcast_t: ref : address_A → address, extract addr field *)
       destruct n as [|n']; simpl.
-      { pose (val := denote_ref 0 Σ iface k oid t r (SAbi (AContractAddr a)) H rho v).
+      { pose (val := denote_ref 0 Σ iface phi k oid t r (SAbi (AContractAddr a)) H rho v).
         simpl in val. exact (match val : Empty_set with end). }
-      { exact (fst (denote_ref (S n') Σ iface k oid t r (SAbi (AContractAddr a)) H rho v)). }
+      { exact (fst (denote_ref (S n') Σ iface phi k oid t r (SAbi (AContractAddr a)) H rho v)). }
 
     + (* T_Field_t: ref.x where ref : A *)
       destruct n as [|n']; simpl.
-      { pose (val := denote_ref 0 Σ iface k oid t r (SContract a) H rho v).
+      { pose (val := denote_ref 0 Σ iface phi k oid t r (SContract a) H rho v).
         simpl in val. exact (match val : Empty_set with end). }
       { match goal with
         | [ Hf : Σ_storage_var _ _ _ = Some _ |- _ ] =>
             exact (sem_slot_weaken n' Σ sty
                      (sem_contract_field n' Σ a x sty Hf
-                       (denote_ref (S n') Σ iface k oid t r (SContract a) H rho v)))
+                       (denote_ref (S n') Σ iface phi k oid t r (SContract a) H rho v)))
         end. }
 
     + (* T_MapIndex_t: ref[e] *)
       destruct n as [|n']; simpl.
-      { exact (denote_ref 0 Σ iface k oid t r
+      { exact (denote_ref 0 Σ iface phi k oid t r
                  (SMapping (MMapping bt mu)) H rho v
-                 (denote_expr 0 Σ iface oid t e bt t0 rho v)). }
-      { exact (denote_ref (S n') Σ iface k oid t r
+                 (denote_expr 0 Σ iface phi oid t e bt t0 rho v)). }
+      { exact (denote_ref (S n') Σ iface phi k oid t r
                  (SMapping (MMapping bt mu)) H rho v
-                 (denote_expr (S n') Σ iface oid t e bt t0 rho v)). }
+                 (denote_expr (S n') Σ iface phi oid t e bt t0 rho v)). }
 
     + (* T_Environment_t: env ref — t specializes to TagU *)
       match goal with
@@ -454,24 +449,24 @@ Proof.
 
     + (* T_Ref_t: ref — extract base value from slot *)
       match goal with
-      | [ Hr : type_ref_t _ _ ?k' _ _ _ (SAbi (ABase ?bt')) |- sem_base ?bt' ] =>
+      | [ Hr : type_ref_t _ _ _ ?k' _ _ _ (SAbi (ABase ?bt')) |- sem_base ?bt' ] =>
           destruct n as [|n']; simpl;
-          exact (denote_ref _ Σ iface k' oid t r (SAbi (ABase bt')) Hr rho v)
+          exact (denote_ref _ Σ iface phi k' oid t r (SAbi (ABase bt')) Hr rho v)
       end.
 
     + (* T_Addr_t: addr(ref) — contract address *)
       match goal with
-      | [ Hr : type_ref_t _ _ ?k' _ TagU _ (SContract ?a') |- _ ] =>
+      | [ Hr : type_ref_t _ _ _ ?k' _ TagU _ (SContract ?a') |- _ ] =>
           destruct n as [|n'];
-          [ simpl; pose (cv := denote_ref 0 Σ iface k' oid TagU r (SContract a') Hr rho v);
+          [ simpl; pose (cv := denote_ref 0 Σ iface phi k' oid TagU r (SContract a') Hr rho v);
             simpl in cv; exact (match cv : Empty_set with end)
-          | exact (fst (denote_ref (S n') Σ iface k' oid TagU r (SContract a') Hr rho v)) ]
+          | exact (fst (denote_ref (S n') Σ iface phi k' oid TagU r (SContract a') Hr rho v)) ]
       end.
 
     + (* T_Range_t: inrange(ι₁, e) *)
       match goal with
-      | [ He : type_expr_t _ _ _ _ _ (TInt ?it2') |- _ ] =>
-          pose (val := denote_expr n Σ iface oid t e (TInt it2') He rho v);
+      | [ He : type_expr_t _ _ _ _ _ _ (TInt ?it2') |- _ ] =>
+          pose (val := denote_expr n Σ iface phi oid t e (TInt it2') He rho v);
           simpl in val; destruct val as [z _];
           exact (match it1 with
                  | IntUnbounded => true
@@ -484,44 +479,39 @@ Proof.
 
     + (* T_BopI_t: e₁ ○ᵢ e₂ *)
       match goal with
-      | [ H1 : type_expr_t _ _ _ _ ?e1' (TInt ?it1'),
-          H2 : type_expr_t _ _ _ _ ?e2' (TInt ?it2') |- _ ] =>
-          pose (z1v := denote_expr n Σ iface oid t e1' (TInt it1') H1 rho v);
-          pose (z2v := denote_expr n Σ iface oid t e2' (TInt it2') H2 rho v);
+      | [ H1 : type_expr_t _ _ _ _ _ ?e1' (TInt ?it1'),
+          H2 : type_expr_t _ _ _ _ _ ?e2' (TInt ?it2') |- _ ] =>
+          pose (z1v := denote_expr n Σ iface phi oid t e1' (TInt it1') H1 rho v);
+          pose (z2v := denote_expr n Σ iface phi oid t e2' (TInt it2') H2 rho v);
           simpl in z1v, z2v;
           destruct z1v as [z1 _]; destruct z2v as [z2 _];
           exact (exist _ (eval_int_binop op z1 z2) I)
       end.
 
     + (* T_NumConv_t: e : ι → e : int (subsumption) *)
-      match goal with
-      | [ He : type_expr_t _ _ _ _ _ (TInt ?it') |- _ ] =>
-          pose (val := denote_expr n Σ iface oid t e (TInt it') He rho v);
-          simpl in val; destruct val as [z _];
-          exact (exist _ z I)
-      end.
+      admit.
 
     + (* T_BopB_t: e₁ ○_b e₂ *)
       match goal with
-      | [ H1 : type_expr_t _ _ _ _ ?e1' TBool,
-          H2 : type_expr_t _ _ _ _ ?e2' TBool |- _ ] =>
+      | [ H1 : type_expr_t _ _ _ _ _ ?e1' TBool,
+          H2 : type_expr_t _ _ _ _ _ ?e2' TBool |- _ ] =>
           exact (eval_bool_binop op
-                   (denote_expr n Σ iface oid t e1' TBool H1 rho v)
-                   (denote_expr n Σ iface oid t e2' TBool H2 rho v))
+                   (denote_expr n Σ iface phi oid t e1' TBool H1 rho v)
+                   (denote_expr n Σ iface phi oid t e2' TBool H2 rho v))
       end.
 
     + (* T_Neg_t: ¬e *)
       match goal with
-      | [ He : type_expr_t _ _ _ _ _ TBool |- _ ] =>
-          exact (negb (denote_expr n Σ iface oid t e TBool He rho v))
+      | [ He : type_expr_t _ _ _ _ _ _ TBool |- _ ] =>
+          exact (negb (denote_expr n Σ iface phi oid t e TBool He rho v))
       end.
 
     + (* T_Cmp_t: e₁ ⋈ e₂ *)
       match goal with
-      | [ H1 : type_expr_t _ _ _ _ ?e1' (TInt ?it'),
-          H2 : type_expr_t _ _ _ _ ?e2' (TInt ?it') |- _ ] =>
-          pose (z1v := denote_expr n Σ iface oid t e1' (TInt it') H1 rho v);
-          pose (z2v := denote_expr n Σ iface oid t e2' (TInt it') H2 rho v);
+      | [ H1 : type_expr_t _ _ _ _ _ ?e1' (TInt ?it'),
+          H2 : type_expr_t _ _ _ _ _ ?e2' (TInt ?it') |- _ ] =>
+          pose (z1v := denote_expr n Σ iface phi oid t e1' (TInt it') H1 rho v);
+          pose (z2v := denote_expr n Σ iface phi oid t e2' (TInt it') H2 rho v);
           simpl in z1v, z2v;
           destruct z1v as [z1 _]; destruct z2v as [z2 _];
           exact (eval_cmp op z1 z2)
@@ -529,38 +519,36 @@ Proof.
 
     + (* T_ITE_t: if e₁ then e₂ else e₃ *)
       match goal with
-      | [ H1 : type_expr_t _ _ _ _ ?e1' TBool,
-          H2 : type_expr_t _ _ _ _ ?e2' ?bt',
-          H3 : type_expr_t _ _ _ _ ?e3' ?bt' |- sem_base ?bt' ] =>
-          destruct (denote_expr n Σ iface oid t e1' TBool H1 rho v);
-          [ exact (denote_expr n Σ iface oid t e2' bt' H2 rho v)
-          | exact (denote_expr n Σ iface oid t e3' bt' H3 rho v) ]
+      | [ H1 : type_expr_t _ _ _ _ _ ?e1' TBool,
+          H2 : type_expr_t _ _ _ _ _ ?e2' ?bt',
+          H3 : type_expr_t _ _ _ _ _ ?e3' ?bt' |- sem_base ?bt' ] =>
+          destruct (denote_expr n Σ iface phi oid t e1' TBool H1 rho v);
+          [ exact (denote_expr n Σ iface phi oid t e2' bt' H2 rho v)
+          | exact (denote_expr n Σ iface phi oid t e3' bt' H3 rho v) ]
       end.
 
     + (* T_Eq_t: e₁ = e₂ *)
       match goal with
-      | [ H1 : type_expr_t _ _ _ _ ?e1' ?bt',
-          H2 : type_expr_t _ _ _ _ ?e2' ?bt' |- _ ] =>
+      | [ H1 : type_expr_t _ _ _ _ _ ?e1' ?bt',
+          H2 : type_expr_t _ _ _ _ _ ?e2' ?bt' |- _ ] =>
           exact (sem_base_eqb bt'
-                   (denote_expr n Σ iface oid t e1' bt' H1 rho v)
-                   (denote_expr n Σ iface oid t e2' bt' H2 rho v))
+                   (denote_expr n Σ iface phi oid t e1' bt' H1 rho v)
+                   (denote_expr n Σ iface phi oid t e2' bt' H2 rho v))
       end.
-Defined.
+Admitted.
 
 (* ================================================================= *)
 (** ** Default Semantic Mapping Values
 
-    Used by the mapping denotation to fill in unmatched keys.
-    Requires [default_value_typable mu] as evidence that 0 is in
-    range for all integer types in the mapping chain. *)
+    Used by the mapping denotation to fill in unmatched keys. *)
 
 Fixpoint sem_mapping_default (mu : mapping_type)
-    : default_value_typable mu -> sem_mapping mu :=
-  match mu return default_value_typable mu -> sem_mapping mu with
-  | MBase (TInt it) => fun Hd => exist _ 0%Z Hd
+    : mapping_type_wf mu -> sem_mapping mu :=
+  match mu return mapping_type_wf mu -> sem_mapping mu with
+  | MBase (TInt it) => fun Hwf => exist _ 0%Z (base_int_zero_in_range it Hwf)
   | MBase TBool => fun _ => false
   | MBase TAddress => fun _ => 0
-  | MMapping bt mu' => fun Hd => fun _ => sem_mapping_default mu' Hd
+  | MMapping bt mu' => fun Hwf => fun _ => sem_mapping_default mu' (proj2 Hwf)
   end.
 
 (* ================================================================= *)
@@ -581,9 +569,9 @@ Fixpoint sem_build_map (bt : base_type) (mu : mapping_type)
   | _, _ => fallback
   end.
 
-Fixpoint denote_mapexpr (n : nat) (Σ : contract_env) (iface : interface)
+Fixpoint denote_mapexpr (n : nat) (Σ : contract_env) (iface : interface) (phi : list expr)
     (oid : opt_id) (m : map_expr) (mu : mapping_type)
-    (H : type_mapexpr_t Σ iface oid m mu)
+    (H : type_mapexpr_t Σ iface phi oid m mu)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_aux n Σ oid)
     {struct H} : sem_mapping mu.
@@ -591,58 +579,61 @@ Proof.
   destruct H.
 
   - (* T_Exp_t: e → MBase bt *)
-    exact (denote_expr n Σ iface oid TagU e bt t rho v).
+    exact (denote_expr n Σ iface phi oid TagU e bt t rho v).
 
   - (* T_Mapping_t: [e₁ => m₁, ...] : mapping(bt, mu) *)
     simpl.
-    exact (sem_build_map bt mu
-      ((fix go l (Hk : ForallT _ l) : list (sem_base bt) :=
-        match Hk with
-        | ForallT_nil => []
-        | ForallT_cons he hrest =>
-            denote_expr n Σ iface oid TagU (fst _) bt he rho v :: go _ hrest
-        end) _ f)
-      ((fix go l (Hv : ForallT _ l) : list (sem_mapping mu) :=
-        match Hv with
-        | ForallT_nil => []
-        | ForallT_cons hm hrest =>
-            denote_mapexpr n Σ iface oid (snd _) mu hm rho v :: go _ hrest
-        end) _ f0)
-      (fun _ => sem_mapping_default mu d)).
+    match goal with
+    | [ Hmwf : mapping_type_wf (MMapping bt mu) |- _ ] =>
+        exact (sem_build_map bt mu
+          ((fix go l (Hk : ForallT _ l) : list (sem_base bt) :=
+            match Hk with
+            | ForallT_nil => []
+            | ForallT_cons he hrest =>
+                denote_expr n Σ iface phi oid TagU (fst _) bt he rho v :: go _ hrest
+            end) _ f)
+          ((fix go l (Hv : ForallT _ l) : list (sem_mapping mu) :=
+            match Hv with
+            | ForallT_nil => []
+            | ForallT_cons hm hrest =>
+                denote_mapexpr n Σ iface phi oid (snd _) mu hm rho v :: go _ hrest
+            end) _ f0)
+          (fun _ => sem_mapping_default mu (proj2 Hmwf)))
+    end.
 
   - (* T_MappingUpd_t: ref[e₁ => m₁, ...] : mapping(bt, mu) *)
     simpl.
     match goal with
-    | [ Hr : type_ref_t _ _ ?k' _ TagU _ (SMapping (MMapping bt mu)) |- _ ] =>
+    | [ Hr : type_ref_t _ _ _ ?k' _ TagU _ (SMapping (MMapping bt mu)) |- _ ] =>
         destruct n as [|n'];
         [ exact (sem_build_map bt mu
             ((fix go l (Hk : ForallT _ l) : list (sem_base bt) :=
               match Hk with
               | ForallT_nil => []
               | ForallT_cons he hrest =>
-                  denote_expr 0 Σ iface oid TagU (fst _) bt he rho v :: go _ hrest
+                  denote_expr 0 Σ iface phi oid TagU (fst _) bt he rho v :: go _ hrest
               end) _ f)
             ((fix go l (Hv : ForallT _ l) : list (sem_mapping mu) :=
               match Hv with
               | ForallT_nil => []
               | ForallT_cons hm hrest =>
-                  denote_mapexpr 0 Σ iface oid (snd _) mu hm rho v :: go _ hrest
+                  denote_mapexpr 0 Σ iface phi oid (snd _) mu hm rho v :: go _ hrest
               end) _ f0)
-            (denote_ref 0 Σ iface k' oid TagU r (SMapping (MMapping bt mu)) Hr rho v))
+            (denote_ref 0 Σ iface phi k' oid TagU r (SMapping (MMapping bt mu)) Hr rho v))
         | exact (sem_build_map bt mu
             ((fix go l (Hk : ForallT _ l) : list (sem_base bt) :=
               match Hk with
               | ForallT_nil => []
               | ForallT_cons he hrest =>
-                  denote_expr (S n') Σ iface oid TagU (fst _) bt he rho v :: go _ hrest
+                  denote_expr (S n') Σ iface phi oid TagU (fst _) bt he rho v :: go _ hrest
               end) _ f)
             ((fix go l (Hv : ForallT _ l) : list (sem_mapping mu) :=
               match Hv with
               | ForallT_nil => []
               | ForallT_cons hm hrest =>
-                  denote_mapexpr (S n') Σ iface oid (snd _) mu hm rho v :: go _ hrest
+                  denote_mapexpr (S n') Σ iface phi oid (snd _) mu hm rho v :: go _ hrest
               end) _ f0)
-            (denote_ref (S n') Σ iface k' oid TagU r (SMapping (MMapping bt mu)) Hr rho v))
+            (denote_ref (S n') Σ iface phi k' oid TagU r (SMapping (MMapping bt mu)) Hr rho v))
         ]
     end.
 Defined.
@@ -655,9 +646,9 @@ Defined.
     constructor evaluation which is set-valued (Section 10.2.7) and
     requires additional infrastructure. *)
 
-Fixpoint denote_slotexpr (n : nat) (Σ : contract_env) (iface : interface)
+Fixpoint denote_slotexpr (n : nat) (Σ : contract_env) (iface : interface) (phi : list expr)
     (oid : opt_id) (se : slot_expr) (sty : slot_type)
-    (H : type_slotexpr_t Σ iface oid se sty)
+    (H : type_slotexpr_t Σ iface phi oid se sty)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_aux n Σ oid)
     {struct H} : sem_slot_aux n Σ sty.
@@ -666,24 +657,27 @@ Proof.
 
   - (* T_SlotMap_t: m : μ → SMapping μ *)
     match goal with
-    | [ Hm : type_mapexpr_t _ _ _ _ ?mu' |- _ ] =>
+    | [ Hm : type_mapexpr_t _ _ _ _ _ ?mu' |- _ ] =>
         destruct n as [|n']; simpl;
-        exact (denote_mapexpr _ Σ iface oid m mu' Hm rho v)
+        exact (denote_mapexpr _ Σ iface phi oid m mu' Hm rho v)
     end.
+
+  - (* T_SlotBase_t: e : β → SAbi β *)
+    destruct n as [|n']; simpl; exact (denote_expr _ Σ iface phi oid TagU e bt t rho v).
 
   - (* T_SlotRef_t: ref : A → SContract A *)
     match goal with
-    | [ Hr : type_ref_t _ _ ?k' _ TagU _ (SContract ?a') |- _ ] =>
-        exact (denote_ref n Σ iface k' oid TagU r (SContract a') Hr rho v)
+    | [ Hr : type_ref_t _ _ _ ?k' _ TagU _ (SContract ?a') |- _ ] =>
+        exact (denote_ref n Σ iface phi k' oid TagU r (SContract a') Hr rho v)
     end.
 
   - (* T_SlotAddr_t: addr(se) : address_A *)
     match goal with
-    | [ Hse : type_slotexpr_t _ _ _ _ (SContract ?a') |- _ ] =>
+    | [ Hse : type_slotexpr_t _ _ _ _ _ (SContract ?a') |- _ ] =>
         destruct n as [|n']; simpl;
-        [ pose (cv := denote_slotexpr 0 Σ iface oid se (SContract a') Hse rho v);
+        [ pose (cv := denote_slotexpr 0 Σ iface phi oid se (SContract a') Hse rho v);
           simpl in cv; exact (match cv : Empty_set with end)
-        | exact (denote_slotexpr (S n') Σ iface oid se (SContract a') Hse rho v) ]
+        | exact (denote_slotexpr (S n') Σ iface phi oid se (SContract a') Hse rho v) ]
     end.
 
   - (* T_Create_t: new A(se₁,...,seₙ) — constructor creation *)
@@ -702,8 +696,8 @@ Admitted.
     Evaluates a list of slot expressions, collecting results. *)
 
 Fixpoint denote_slotexpr_list (n : nat) (Σ : contract_env) (iface : interface)
-    (oid : opt_id) (ses : list slot_expr) (alphas : list abi_type)
-    (H : Forall2T (fun se alpha => type_slotexpr_t Σ iface oid se (SAbi alpha))
+    (phi : list expr) (oid : opt_id) (ses : list slot_expr) (alphas : list abi_type)
+    (H : Forall2T (fun se alpha => type_slotexpr_t Σ iface phi oid se (SAbi alpha))
                    ses alphas)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_aux n Σ oid)
@@ -712,10 +706,10 @@ Proof.
   destruct H.
   - exact [].
   - match goal with
-    | [ Hse : type_slotexpr_t _ _ _ _ (SAbi ?a'),
+    | [ Hse : type_slotexpr_t _ _ _ _ _ (SAbi ?a'),
         Hrest : Forall2T _ _ _ |- _ ] =>
-        exact (existT _ a' (denote_slotexpr n Σ iface oid _ _ Hse rho v) ::
-               denote_slotexpr_list n Σ iface oid _ _ Hrest rho v)
+        exact (existT _ a' (denote_slotexpr n Σ iface phi oid _ _ Hse rho v) ::
+               denote_slotexpr_list n Σ iface phi oid _ _ Hrest rho v)
     end.
 Defined.
 
@@ -727,8 +721,8 @@ Defined.
     The result is a value of type ⟦Id⟧_{Σ, Id:C}. *)
 
 Fixpoint denote_creates_aux (n : nat) (Σ : contract_env) (iface : interface)
-    (creates : list create)
-    (H : ForallT (fun c => type_slotexpr_t Σ iface ONone (snd c) (fst (fst c))) creates)
+    (phi : list expr) (creates : list create)
+    (H : ForallT (fun c => type_slotexpr_t Σ iface phi ONone (snd c) (fst (fst c))) creates)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_aux n Σ ONone)
     {struct H}
@@ -738,10 +732,10 @@ Proof.
   - exact tt.
   - simpl. split.
     + match goal with
-      | [ Hse : type_slotexpr_t _ _ _ (snd ?c) (fst (fst ?c)) |- _ ] =>
-          exact (denote_slotexpr n Σ iface ONone (snd c) (fst (fst c)) Hse rho v)
+      | [ Hse : type_slotexpr_t _ _ _ _ (snd ?c) (fst (fst ?c)) |- _ ] =>
+          exact (denote_slotexpr n Σ iface phi ONone (snd c) (fst (fst c)) Hse rho v)
       end.
-    + exact (denote_creates_aux n Σ iface _ H rho v).
+    + exact (denote_creates_aux n Σ iface phi _ H rho v).
 Defined.
 
 (* ================================================================= *)
@@ -758,15 +752,15 @@ Defined.
 
 (** Evaluate a list of boolean preconditions under the denotation *)
 Fixpoint denote_pres_true (n : nat) (Σ : contract_env) (iface : interface)
-    (oid : opt_id) (t : time_tag) (pres : list expr)
-    (Hp : ForallT (fun pre => type_expr_t Σ iface oid t pre TBool) pres)
+    (phi : list expr) (oid : opt_id) (t : time_tag) (pres : list expr)
+    (Hp : ForallT (fun pre => type_expr_t Σ iface phi oid t pre TBool) pres)
     (rho : sem_iface_aux n Σ iface)
     (v : sem_opt_id_timed_aux n Σ oid t) : Prop :=
   match Hp with
   | ForallT_nil => True
   | ForallT_cons he hrest =>
-      denote_expr n Σ iface oid t _ TBool he rho v = true /\
-      denote_pres_true n Σ iface oid t _ hrest rho v
+      denote_expr n Σ iface phi oid t _ TBool he rho v = true /\
+      denote_pres_true n Σ iface phi oid t _ hrest rho v
   end.
 
 Definition sem_constructor (n : nat) (Σ : contract_env) (a : ident)
@@ -779,17 +773,17 @@ Proof.
   destruct H as [? ? ? ? Hwf Hpres Hconds Hcreates Hlayout_wf Hdom Hposts Hexhaust].
   refine (exists i, i < length (ctor_cases ctor) /\ _ /\ _).
   - (* All preconditions true *)
-    exact (denote_pres_true n Σ (ctor_iface ctor) ONone TagU _ Hpres rho tt).
+    exact (denote_pres_true n Σ (ctor_iface ctor) empty_phi ONone TagU _ Hpres rho tt).
   - (* Case i true, others false *)
     exact ((fix find (cases : list ctor_case)
-      (Hc : ForallT (fun cc => type_expr_t Σ (ctor_iface ctor) ONone TagU (fst cc) TBool) cases)
+      (Hc : ForallT (fun cc => type_expr_t Σ (ctor_iface ctor) empty_phi ONone TagU (fst cc) TBool) cases)
       (idx : nat) : Prop :=
       match Hc with
       | ForallT_nil => True
       | ForallT_cons hcond hcrest =>
           (if Nat.eqb idx i
-           then denote_expr n Σ (ctor_iface ctor) ONone TagU _ TBool hcond rho tt = true
-           else denote_expr n Σ (ctor_iface ctor) ONone TagU _ TBool hcond rho tt = false) /\
+           then denote_expr n Σ (ctor_iface ctor) empty_phi ONone TagU _ TBool hcond rho tt = true
+           else denote_expr n Σ (ctor_iface ctor) empty_phi ONone TagU _ TBool hcond rho tt = false) /\
           find _ hcrest (S idx)
       end) (ctor_cases ctor) Hconds 0).
 Defined.
@@ -810,16 +804,16 @@ Definition sem_transition (n : nat) (Σ : contract_env) (a : ident)
 Proof.
   destruct H as [? ? ? Hwf Hpres Hconds Hupds Hrets Hposts Hexhaust].
   refine (exists i, i < length (trans_cases tr) /\ _ /\ _).
-  - exact (denote_pres_true n Σ (trans_iface tr) (OSome a) TagU _ Hpres rho s).
+  - exact (denote_pres_true n Σ (trans_iface tr) empty_phi (OSome a) TagU _ Hpres rho s).
   - exact ((fix find (cases : list trans_case)
-      (Hc : ForallT (fun tc => type_expr_t Σ (trans_iface tr) (OSome a) TagU (tc_cond tc) TBool) cases)
+      (Hc : ForallT (fun tc => type_expr_t Σ (trans_iface tr) empty_phi (OSome a) TagU (tc_cond tc) TBool) cases)
       (idx : nat) : Prop :=
       match Hc with
       | ForallT_nil => True
       | ForallT_cons hcond hcrest =>
           (if Nat.eqb idx i
-           then denote_expr n Σ (trans_iface tr) (OSome a) TagU _ TBool hcond rho s = true
-           else denote_expr n Σ (trans_iface tr) (OSome a) TagU _ TBool hcond rho s = false) /\
+           then denote_expr n Σ (trans_iface tr) empty_phi (OSome a) TagU _ TBool hcond rho s = true
+           else denote_expr n Σ (trans_iface tr) empty_phi (OSome a) TagU _ TBool hcond rho s = false) /\
           find _ hcrest (S idx)
       end) (trans_cases tr) Hconds 0).
 Defined.

@@ -50,6 +50,7 @@ Proof.
   intros Σ Σ' st Hincl Hwf. destruct Hwf; constructor.
   - destruct H as [v Hv]. exists v. exact (proj1 Hincl _ _ Hv).
   - eapply abi_type_wf_incl; eauto.
+  - assumption.
 Qed.
 
 (* ================================================================= *)
@@ -330,16 +331,177 @@ Proof.
     + rewrite update_neq by auto. exact Hv.
 Qed.
 
+Lemma Σ_empty_storage_wf :
+  Σ_storage_wf Σ_empty.
+Proof.
+  intros d b [x Hx]. unfold Σ_storage_var in Hx.
+  unfold Σ_storage, Σ_empty in Hx; simpl in Hx.
+  destruct Hx as [Hx|Hx]; discriminate.
+Qed.
+
+Lemma type_spec_from_storage_wf :
+  forall sp Σ Σ',
+    type_spec_from sp Σ Σ' ->
+    Σ_storage_wf Σ ->
+    Σ_storage_wf Σ'.
+Proof.
+  intros sp Σ Σ' Hts. induction Hts; intros Hwf.
+  - exact Hwf.
+  - apply IHHts.
+    eapply type_contract_preserves_storage_wf; eauto.
+Qed.
+
 Lemma type_spec_storage_wf :
   forall sp Σ,
     type_spec sp Σ ->
     Σ_storage_wf Σ.
 Proof.
-  intros sp Σ Hts. induction Hts.
-  - intros d b [x Hx]. unfold Σ_storage_var in Hx.
-    unfold Σ_storage, Σ_empty in Hx; simpl in Hx.
-    destruct Hx as [Hx|Hx]; discriminate.
-  - eapply type_contract_preserves_storage_wf; eauto.
+  intros sp Σ Hts. unfold type_spec in Hts.
+  eapply type_spec_from_storage_wf; eauto.
+  apply Σ_empty_storage_wf.
+Qed.
+
+(* ================================================================= *)
+(** ** Case-consistency entailment helpers *)
+
+Lemma eval_and_true_inv :
+  forall ts rho e1 e2 l,
+    eval_expr ts rho (EBopB e1 OpAnd e2) l (VBool true) ->
+    eval_expr ts rho e1 l (VBool true) /\
+    eval_expr ts rho e2 l (VBool true).
+Proof.
+  intros ts rho e1 e2 l H. inv H. simpl in *.
+  destruct b1, b2; simpl in *; try discriminate; eauto.
+Qed.
+
+Lemma eval_or_true_inv :
+  forall ts rho e1 e2 l,
+    eval_expr ts rho (EBopB e1 OpOr e2) l (VBool true) ->
+    eval_expr ts rho e1 l (VBool true) \/
+    eval_expr ts rho e2 l (VBool true).
+Proof.
+  intros ts rho e1 e2 l H. inv H. simpl in *.
+  destruct b1, b2; simpl in *; try discriminate; eauto.
+Qed.
+
+Lemma eval_neg_true_inv :
+  forall ts rho e l,
+    eval_expr ts rho (ENeg e) l (VBool true) ->
+    eval_expr ts rho e l (VBool false).
+Proof.
+  intros ts rho e l H. inv H. simpl in *.
+  destruct b; simpl in *; try discriminate; auto.
+Qed.
+
+Lemma eval_all_false_expr_sound :
+  forall ts rho es l,
+    eval_expr ts rho (all_false_expr es) l (VBool true) ->
+    forall i,
+      i < length es ->
+      eval_expr ts rho (nth i es (EBool false)) l (VBool false).
+Proof.
+  intros ts rho es. induction es as [|e es IH]; intros l Hall i Hi.
+  - simpl in Hi. lia.
+  - simpl in Hall. destruct (eval_and_true_inv _ _ _ _ _ Hall) as [Hneg Hall'].
+    destruct i as [|i].
+    + simpl. apply eval_neg_true_inv. exact Hneg.
+    + simpl. apply IH; [exact Hall' | simpl in Hi; lia].
+Qed.
+
+Lemma eval_exactly_one_expr_sound :
+  forall ts rho es l,
+    eval_expr ts rho (exactly_one_expr es) l (VBool true) ->
+    exists j,
+      j < length es /\
+      eval_expr ts rho (nth j es (EBool false)) l (VBool true) /\
+      forall i,
+        i <> j ->
+        i < length es ->
+        eval_expr ts rho (nth i es (EBool false)) l (VBool false).
+Proof.
+  intros ts rho es. induction es as [|e es IH]; intros l Hexact.
+  - simpl in Hexact. inv Hexact.
+  - simpl in Hexact. destruct (eval_or_true_inv _ _ _ _ _ Hexact) as [Hleft | Hright].
+    + destruct (eval_and_true_inv _ _ _ _ _ Hleft) as [He Hall].
+      exists 0. split; [simpl; lia | split; [simpl; exact He |]].
+      intros [|i] Hneq Hi; [contradiction |].
+      simpl. eapply eval_all_false_expr_sound; eauto. simpl in Hi. lia.
+    + destruct (eval_and_true_inv _ _ _ _ _ Hright) as [Hneg Hexact_tail].
+      apply eval_neg_true_inv in Hneg.
+      destruct (IH _ Hexact_tail) as [j [Hj [Hj_true Hj_false]]].
+      exists (S j). split; [simpl; lia | split; [simpl; exact Hj_true |]].
+      intros [|i] Hneq Hi.
+      * exact Hneg.
+      * simpl. apply Hj_false; [intro Heq; apply Hneq; congruence | simpl in Hi; lia].
+Qed.
+
+Lemma nth_ctor_case_conditions :
+  forall cases i,
+    nth i (ctor_case_conditions cases) (EBool false) =
+    fst (nth i cases (EBool false, [])).
+Proof.
+  induction cases as [|c cases IH]; intros [|i]; simpl; auto.
+Qed.
+
+Lemma nth_trans_case_conditions :
+  forall cases i,
+    nth i (trans_case_conditions cases) (EBool false) =
+    tc_cond (nth i cases tc_default).
+Proof.
+  induction cases as [|c cases IH]; intros [|i]; simpl; auto.
+Qed.
+
+Lemma case_consistency_entailment_sound :
+  forall Σ iface phi oid cases s rho l,
+    semantic_entailment Σ iface phi oid
+      (case_consistency_exprs (trans_case_conditions cases)) ->
+    env_well_typed Σ rho s iface ->
+    loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
+    exists j,
+      j < length cases /\
+      eval_expr (TSUntimed s) rho (tc_cond (nth j cases tc_default)) l (VBool true) /\
+      forall i,
+        i <> j ->
+        i < length cases ->
+        eval_expr (TSUntimed s) rho (tc_cond (nth i cases tc_default)) l (VBool false).
+Proof.
+  intros Σ iface phi oid cases s rho l Hent Henv Hloc Hphi.
+  specialize (Hent s rho l Henv Hloc Hphi).
+  unfold case_consistency_exprs in Hent. inv Hent. inv H2.
+  destruct (eval_exactly_one_expr_sound _ _ _ _ H1) as [j [Hj [Htrue Hfalse]]].
+  unfold trans_case_conditions in *.
+  exists j. rewrite length_map in Hj. split; [exact Hj |].
+  rewrite nth_trans_case_conditions in Htrue.
+  split; [exact Htrue |].
+  intros i Hneq Hi. rewrite <- nth_trans_case_conditions.
+  apply Hfalse; [exact Hneq | rewrite length_map; exact Hi].
+Qed.
+
+Lemma ctor_case_consistency_entailment_sound :
+  forall Σ iface pres cases s rho,
+    semantic_entailment Σ iface pres ONone
+      (case_consistency_exprs (ctor_case_conditions cases)) ->
+    env_well_typed Σ rho s iface ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p dummy_loc (VBool true)) pres ->
+    exists j,
+      j < length cases /\
+      eval_expr (TSUntimed s) rho (fst (nth j cases (EBool false, []))) dummy_loc (VBool true) /\
+      forall i,
+        i <> j ->
+        i < length cases ->
+        eval_expr (TSUntimed s) rho (fst (nth i cases (EBool false, []))) dummy_loc (VBool false).
+Proof.
+  intros Σ iface pres cases s rho Hent Henv Hphi.
+  specialize (Hent s rho dummy_loc Henv I Hphi).
+  unfold case_consistency_exprs in Hent. inv Hent. inv H2.
+  destruct (eval_exactly_one_expr_sound _ _ _ _ H1) as [j [Hj [Htrue Hfalse]]].
+  unfold ctor_case_conditions in *.
+  exists j. rewrite length_map in Hj. split; [exact Hj |].
+  rewrite nth_ctor_case_conditions in Htrue.
+  split; [exact Htrue |].
+  intros i Hneq Hi. rewrite <- nth_ctor_case_conditions.
+  apply Hfalse; [exact Hneq | rewrite length_map; exact Hi].
 Qed.
 
 (* ================================================================= *)
@@ -378,23 +540,25 @@ Qed.
 (** ** References & Expression Type Safety (Untimed) (Lemmas 6.2/6.3) *)
 
 Lemma ref_expr_typesafety_untimed :
-  (forall Σ iface k oid t r sty,
-    type_ref Σ iface k oid t r sty -> t = TagU ->
+  (forall Σ iface phi k oid t r sty,
+    type_ref Σ iface phi k oid t r sty -> t = TagU ->
     forall s rho l, env_well_typed Σ rho s iface -> loc_has_opt_type Σ l s oid ->
+      Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
       exists v, eval_ref (TSUntimed s) rho r l v RTU /\ has_slot_type Σ v s sty) /\
-  (forall Σ iface oid t e bt,
-    type_expr Σ iface oid t e bt -> t = TagU ->
+  (forall Σ iface phi oid t e bt,
+    type_expr Σ iface phi oid t e bt -> t = TagU ->
     forall s rho l, env_well_typed Σ rho s iface -> loc_has_opt_type Σ l s oid ->
+      Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
       exists v, eval_expr (TSUntimed s) rho e l v /\ has_base_type v bt).
 Proof.
   apply type_ref_expr_mutind.
   { (* T_Calldata *)
-    intros Σ iface oid t x alpha Hlk _ s rho l Henv Hloc.
+    intros Σ iface phi oid t x alpha Hlk _ s rho l Henv Hloc Hphi.
     destruct Henv as (_ & Hvars & _).
     destruct (Hvars _ _ Hlk) as [v [Hv Htv]].
     exists v. split; [apply E_Calldata; exact Hv | constructor; exact Htv]. }
   { (* T_Storage *)
-    intros Σ iface a x sty layout Hsto Hlk Hni Hnc Hno Hncv _ s rho l Henv Hloc.
+    intros Σ iface phi a x sty layout Hsto Hlk Hni Hnc Hno Hncv _ s rho l Henv Hloc Hphi.
     assert (Hrho : rho x = None) by (eapply env_rho_none; eauto).
     simpl in Hloc. inv Hloc.
     match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
@@ -411,20 +575,20 @@ Proof.
   { intros; discriminate. }
   { intros; discriminate. }
   { (* T_Coerce *)
-    intros Σ iface k oid t r a _ IH HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]].
+    intros Σ iface phi k oid t r a _ IH HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]].
     exists v. split; [apply E_Coerce; exact Hev |].
     inv Htv. match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
     constructor. econstructor; eauto. }
   { (* T_Upcast *)
-    intros Σ iface k oid t r a _ IH HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]].
+    intros Σ iface phi k oid t r a _ IH HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]].
     exists v. split; [exact Hev |].
     inv Htv. match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
     do 3 constructor. }
   { (* T_Field *)
-    intros Σ iface k oid t r a x sty _ IH Hssv HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]].
+    intros Σ iface phi k oid t r a x sty _ IH Hssv HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]].
     inv Htv. match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
     match goal with
     | [Hvdom : forall _, _ <-> _,
@@ -435,9 +599,9 @@ Proof.
       unfold state_var_force in Hvars; rewrite Hfv in Hvars; exact Hvars
     end. }
   { (* T_MapIndex *)
-    intros Σ iface k oid t r e bt mu _ IHr _ IHe HeqU s rho l Henv Hloc. subst.
-    destruct (IHr eq_refl s rho l Henv Hloc) as [vr [Hevr Htvr]].
-    destruct (IHe eq_refl s rho l Henv Hloc) as [ve [Heve Htve]].
+    intros Σ iface phi k oid t r e bt mu _ IHr _ IHe HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IHr eq_refl s rho l Henv Hloc Hphi) as [vr [Hevr Htvr]].
+    destruct (IHe eq_refl s rho l Henv Hloc Hphi) as [ve [Heve Htve]].
     inv Htvr. match goal with [Hm : has_mapping_type _ _ |- _] => inv Hm end.
     - inv Htve. exists (f n). split;
       [eapply E_RefMapping; eauto; reflexivity |].
@@ -452,35 +616,35 @@ Proof.
       constructor. match goal with [H : forall _, has_mapping_type _ _ |- _] =>
         apply H end. }
   { (* T_Environment *)
-    intros Σ iface oid ev alpha Htyp HeqU s rho l Henv Hloc. subst.
+    intros Σ iface phi oid ev alpha Htyp HeqU s rho l Henv Hloc Hphi. subst.
     destruct (ethenv_typesafety _ _ _ _ _ _ _ _ Htyp Henv Hloc) as [v [Hev Htv]].
     exists v. split; [apply E_Environment; exact Hev | constructor; exact Htv]. }
   { (* T_Int *)
-    intros Σ iface oid t n it Hin _ s rho l Henv Hloc.
+    intros Σ iface phi oid t n it Hin _ s rho l Henv Hloc Hphi.
     exists (VInt n). split; [constructor | constructor; auto]. }
   { (* T_Bool *)
-    intros Σ iface oid t b _ s rho l Henv Hloc.
+    intros Σ iface phi oid t b _ s rho l Henv Hloc Hphi.
     exists (VBool b). split; [constructor | constructor]. }
   { (* T_Ref *)
-    intros Σ iface oid t k r bt _ IH HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]].
+    intros Σ iface phi oid t k r bt _ IH HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]].
     inv Htv. match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
     eexists. split; [eapply E_Ref; eauto | auto]. }
   { (* T_Addr *)
-    intros Σ iface oid k r a _ IH _ s rho l Henv Hloc.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]].
+    intros Σ iface phi oid k r a _ IH _ s rho l Henv Hloc Hphi.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]].
     inv Htv. match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
     eexists. split; [eapply E_Addr; eauto | constructor]. }
   { (* T_Range *)
-    intros Σ iface oid t e it1 it2 _ IH HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]]. inv Htv.
+    intros Σ iface phi oid t e it1 it2 _ IH HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]]. inv Htv.
     destruct (classic (in_range it1 n)).
     - exists (VBool true). split; [eapply E_RangeTrue; eauto | constructor].
     - exists (VBool false). split; [eapply E_RangeFalse; eauto | constructor]. }
   { (* T_BopI *)
-    intros Σ iface oid t e1 op e2 it1 it2 _ IH1 _ IH2 HeqU s rho l Henv Hloc. subst.
-    destruct (IH1 eq_refl s rho l Henv Hloc) as [v1 [Hev1 Htv1]].
-    destruct (IH2 eq_refl s rho l Henv Hloc) as [v2 [Hev2 Htv2]].
+    intros Σ iface phi oid t e1 op e2 it1 it2 _ IH1 _ IH2 HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH1 eq_refl s rho l Henv Hloc Hphi) as [v1 [Hev1 Htv1]].
+    destruct (IH2 eq_refl s rho l Henv Hloc Hphi) as [v2 [Hev2 Htv2]].
     inv Htv1. inv Htv2.
     destruct (int_binop_dec op OpDiv) as [->|Hnd].
     - destruct (Z.eq_dec n0 0) as [->|Hnz].
@@ -493,74 +657,85 @@ Proof.
       + exists (VInt (eval_int_binop op n n0)). split;
         [eapply E_BopI; eauto | constructor; simpl; auto]. }
   { (* T_NumConv *)
-    intros Σ iface oid t e it _ IH HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]]. inv Htv.
-    exists (VInt n). split; [exact Hev | constructor; simpl; auto]. }
+    intros Σ iface phi oid t e it1 it2 _ IH Hconv HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]]. inv Htv.
+    destruct Hconv as [-> | [_ Hent]].
+    - exists (VInt n). split; [exact Hev | constructor; simpl; auto].
+    - specialize (Hent s rho l Henv Hloc Hphi).
+      inv Hent. inv H2.
+      assert (VInt n = VInt n0) by (eapply expr_determinism; eauto).
+      inv H. exists (VInt n0). split; [exact Hev | constructor; auto]. }
   { (* T_BopB *)
-    intros Σ iface oid t e1 op e2 _ IH1 _ IH2 HeqU s rho l Henv Hloc. subst.
-    destruct (IH1 eq_refl s rho l Henv Hloc) as [v1 [Hev1 Htv1]].
-    destruct (IH2 eq_refl s rho l Henv Hloc) as [v2 [Hev2 Htv2]].
+    intros Σ iface phi oid t e1 op e2 _ IH1 _ IH2 HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH1 eq_refl s rho l Henv Hloc Hphi) as [v1 [Hev1 Htv1]].
+    destruct (IH2 eq_refl s rho l Henv Hloc Hphi) as [v2 [Hev2 Htv2]].
     inv Htv1. inv Htv2.
     exists (VBool (eval_bool_binop op b b0)). split;
     [eapply E_BopB; eauto | constructor]. }
   { (* T_Neg *)
-    intros Σ iface oid t e _ IH HeqU s rho l Henv Hloc. subst.
-    destruct (IH eq_refl s rho l Henv Hloc) as [v [Hev Htv]]. inv Htv.
+    intros Σ iface phi oid t e _ IH HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH eq_refl s rho l Henv Hloc Hphi) as [v [Hev Htv]]. inv Htv.
     exists (VBool (negb b)). split; [eapply E_Neg; eauto | constructor]. }
   { (* T_Cmp *)
-    intros Σ iface oid t e1 op e2 it _ IH1 _ IH2 HeqU s rho l Henv Hloc. subst.
-    destruct (IH1 eq_refl s rho l Henv Hloc) as [v1 [Hev1 Htv1]].
-    destruct (IH2 eq_refl s rho l Henv Hloc) as [v2 [Hev2 Htv2]].
+    intros Σ iface phi oid t e1 op e2 it _ IH1 _ IH2 HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH1 eq_refl s rho l Henv Hloc Hphi) as [v1 [Hev1 Htv1]].
+    destruct (IH2 eq_refl s rho l Henv Hloc Hphi) as [v2 [Hev2 Htv2]].
     inv Htv1. inv Htv2.
     exists (VBool (eval_cmp op n n0)). split;
     [eapply E_Cmp; eauto | constructor]. }
   { (* T_ITE *)
-    intros Σ iface oid t e1 e2 e3 bt _ IH1 _ IH2 _ IH3 HeqU s rho l Henv Hloc. subst.
-    destruct (IH1 eq_refl s rho l Henv Hloc) as [vc [Hevc Htvc]]. inv Htvc.
+    intros Σ iface phi oid t e1 e2 e3 bt _ IH1 _ IH2 _ IH3 HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH1 eq_refl s rho l Henv Hloc Hphi) as [vc [Hevc Htvc]]. inv Htvc.
     destruct b.
-    - destruct (IH2 eq_refl s rho l Henv Hloc) as [v2 [Hev2 Htv2]].
+    - destruct (IH2 eq_refl s rho l Henv Hloc Hphi) as [v2 [Hev2 Htv2]].
       exists v2. split; [eapply E_ITETrue; eauto | exact Htv2].
-    - destruct (IH3 eq_refl s rho l Henv Hloc) as [v3 [Hev3 Htv3]].
+    - destruct (IH3 eq_refl s rho l Henv Hloc Hphi) as [v3 [Hev3 Htv3]].
       exists v3. split; [eapply E_ITEFalse; eauto | exact Htv3]. }
   { (* T_Eq *)
-    intros Σ iface oid t e1 e2 bt _ IH1 _ IH2 HeqU s rho l Henv Hloc. subst.
-    destruct (IH1 eq_refl s rho l Henv Hloc) as [v1 [Hev1 Htv1]].
-    destruct (IH2 eq_refl s rho l Henv Hloc) as [v2 [Hev2 Htv2]].
+    intros Σ iface phi oid t e1 e2 bt _ IH1 _ IH2 HeqU s rho l Henv Hloc Hphi. subst.
+    destruct (IH1 eq_refl s rho l Henv Hloc Hphi) as [v1 [Hev1 Htv1]].
+    destruct (IH2 eq_refl s rho l Henv Hloc Hphi) as [v2 [Hev2 Htv2]].
     destruct (classic (v1 = v2)) as [->|Hne].
     - exists (VBool true). split; [eapply E_EqTrue; eauto | constructor].
     - exists (VBool false). split; [eapply E_EqFalse; eauto | constructor]. }
 Qed.
 
 Lemma ref_typesafety_untimed :
-  forall Σ iface oid k r sty s rho l,
-    type_ref Σ iface k oid TagU r sty ->
+  forall Σ iface phi oid k r sty s rho l,
+    type_ref Σ iface phi k oid TagU r sty ->
     env_well_typed Σ rho s iface ->
     loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     exists v,
       eval_ref (TSUntimed s) rho r l v RTU /\
       has_slot_type Σ v s sty.
 Proof.
-  intros. exact (proj1 ref_expr_typesafety_untimed _ _ _ _ _ _ _ H eq_refl _ _ _ H0 H1).
+  intros Σ iface phi oid k r sty s rho l Hty Henv Hloc Hphi.
+  exact (proj1 ref_expr_typesafety_untimed
+    Σ iface phi k oid TagU r sty Hty eq_refl s rho l Henv Hloc Hphi).
 Qed.
 
 Lemma expr_typesafety_untimed :
-  forall Σ iface oid e bt s rho l,
-    type_expr Σ iface oid TagU e bt ->
+  forall Σ iface phi oid e bt s rho l,
+    type_expr Σ iface phi oid TagU e bt ->
     env_well_typed Σ rho s iface ->
     loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     exists v,
       eval_expr (TSUntimed s) rho e l v /\
       has_base_type v bt.
 Proof.
-  intros. exact (proj2 ref_expr_typesafety_untimed _ _ _ _ _ _ H eq_refl _ _ _ H0 H1).
+  intros Σ iface phi oid e bt s rho l Hty Henv Hloc Hphi.
+  exact (proj2 ref_expr_typesafety_untimed
+    Σ iface phi oid TagU e bt Hty eq_refl s rho l Henv Hloc Hphi).
 Qed.
 
 (* ================================================================= *)
 (** ** References & Expression Type Safety (Timed) (Lemmas 6.4/6.5) *)
 
 Lemma ref_expr_typesafety_timed :
-  (forall Σ iface k oid t r sty,
-    type_ref Σ iface k oid t r sty -> t = TagT ->
+  (forall Σ iface phi k oid t r sty,
+    type_ref Σ iface phi k oid t r sty -> t = TagT ->
     forall s_pre s_post rho l,
       env_well_typed Σ rho s_pre iface -> env_well_typed Σ rho s_post iface ->
       loc_has_opt_type Σ l s_pre oid -> loc_has_opt_type Σ l s_post oid ->
@@ -569,8 +744,8 @@ Lemma ref_expr_typesafety_timed :
         (tp = RTPre \/ tp = RTPost) /\
         (tp = RTPre -> has_slot_type Σ v s_pre sty) /\
         (tp = RTPost -> has_slot_type Σ v s_post sty)) /\
-  (forall Σ iface oid t e bt,
-    type_expr Σ iface oid t e bt -> t = TagT ->
+  (forall Σ iface phi oid t e bt,
+    type_expr Σ iface phi oid t e bt -> t = TagT ->
     forall s_pre s_post rho l,
       env_well_typed Σ rho s_pre iface -> env_well_typed Σ rho s_post iface ->
       loc_has_opt_type Σ l s_pre oid -> loc_has_opt_type Σ l s_post oid ->
@@ -580,7 +755,7 @@ Lemma ref_expr_typesafety_timed :
 Proof.
   apply type_ref_expr_mutind.
   { (* T_Calldata *)
-    intros Σ iface oid t x alpha Hlk _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
+    intros Σ iface phi oid t x alpha Hlk _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
     destruct Henv_pre as (_ & Hvars & _).
     destruct (Hvars _ _ Hlk) as [v [Hv Htv]].
     exists v, RTPre. split; [apply E_CalldataTimed; exact Hv |].
@@ -590,7 +765,7 @@ Proof.
     { intros; discriminate. } }
   { (* T_Storage *) intros; discriminate. }
   { (* T_StoragePre *)
-    intros Σ iface a x sty layout Hsto Hlk Hni Hnc Hno Hncv _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
+    intros Σ iface phi a x sty layout Hsto Hlk Hni Hnc Hno Hncv _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
     assert (Hrho : rho x = None) by (eapply env_rho_none; eauto).
     simpl in Hloc_pre. inv Hloc_pre.
     match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
@@ -610,7 +785,7 @@ Proof.
         unfold state_var_force in Hvars; rewrite Hw in Hvars; exact Hvars end. }
     { intros; discriminate. } }
   { (* T_StoragePost *)
-    intros Σ iface a x sty layout Hsto Hlk Hni Hnc Hno Hncv _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
+    intros Σ iface phi a x sty layout Hsto Hlk Hni Hnc Hno Hncv _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
     assert (Hrho : rho x = None) by (eapply env_rho_none; eauto).
     simpl in Hloc_post. inv Hloc_post.
     match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
@@ -630,7 +805,7 @@ Proof.
         specialize (Hvars _ _ Hssv);
         unfold state_var_force in Hvars; rewrite Hw in Hvars; exact Hvars end. } }
   { (* T_Coerce *)
-    intros Σ iface k oid t r a _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi k oid t r a _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [tp [Hev [Hor [Hpre Hpost]]]]].
     exists v, tp. split; [apply E_Coerce; exact Hev |].
     split; [exact Hor |].
@@ -642,7 +817,7 @@ Proof.
       match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
       constructor. econstructor; eauto. } }
   { (* T_Upcast *)
-    intros Σ iface k oid t r a _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi k oid t r a _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [tp [Hev [Hor [Hpre Hpost]]]]].
     exists v, tp. split; [exact Hev |].
     split; [exact Hor |].
@@ -654,7 +829,7 @@ Proof.
       match goal with [Ha : has_abi_type _ _ _ _ |- _] => inv Ha end.
       do 3 constructor. } }
   { (* T_Field *)
-    intros Σ iface k oid t r a x sty _ IH Hssv HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi k oid t r a x sty _ IH Hssv HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [tp [Hev [Hor [Hpre Hpost]]]]].
     destruct Hor as [-> | ->].
     { (* RTPre *)
@@ -688,7 +863,7 @@ Proof.
           specialize (Hvars _ _ Hssv);
           unfold state_var_force in Hvars; rewrite Hfv in Hvars; exact Hvars end. } } }
   { (* T_MapIndex *)
-    intros Σ iface k oid t r e bt mu _ IHr _ IHe HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi k oid t r e bt mu _ IHr _ IHe HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IHr eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [vr [tp [Hevr [Hor [Hpre_r Hpost_r]]]]].
     destruct (IHe eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [ve [Heve Htve]].
     destruct Hor as [-> | ->].
@@ -742,13 +917,13 @@ Proof.
             apply H end. } } } }
   { (* T_Environment: t = TagU, contradicts t = TagT *) intros; discriminate. }
   { (* T_Int *)
-    intros Σ iface oid t n it Hin _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
+    intros Σ iface phi oid t n it Hin _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
     exists (VInt n). split; [constructor | constructor; auto]. }
   { (* T_Bool *)
-    intros Σ iface oid t b _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
+    intros Σ iface phi oid t b _ s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post.
     exists (VBool b). split; [constructor | constructor]. }
   { (* T_Ref *)
-    intros Σ iface oid t k r bt _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t k r bt _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [tp [Hev [Hor [Hpre Hpost]]]]].
     destruct Hor as [-> | ->].
     { assert (Htv := Hpre eq_refl). inv Htv.
@@ -759,13 +934,13 @@ Proof.
       eexists. split; [eapply E_Ref; eauto | auto]. } }
   { (* T_Addr: TagU only *) intros; discriminate. }
   { (* T_Range *)
-    intros Σ iface oid t e it1 it2 _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e it1 it2 _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [Hev Htv]]. inv Htv.
     destruct (classic (in_range it1 n)).
     { exists (VBool true). split; [eapply E_RangeTrue; eauto | constructor]. }
     { exists (VBool false). split; [eapply E_RangeFalse; eauto | constructor]. } }
   { (* T_BopI *)
-    intros Σ iface oid t e1 op e2 it1 it2 _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e1 op e2 it1 it2 _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH1 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v1 [Hev1 Htv1]].
     destruct (IH2 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v2 [Hev2 Htv2]].
     inv Htv1. inv Htv2.
@@ -780,29 +955,30 @@ Proof.
       { exists (VInt (eval_int_binop op n n0)). split;
         [eapply E_BopI; eauto | constructor; simpl; auto]. } } }
   { (* T_NumConv *)
-    intros Σ iface oid t e it _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e it1 it2 _ IH Hconv HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [Hev Htv]]. inv Htv.
+    destruct Hconv as [-> | [Htag _]]; [|discriminate].
     exists (VInt n). split; [exact Hev | constructor; simpl; auto]. }
   { (* T_BopB *)
-    intros Σ iface oid t e1 op e2 _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e1 op e2 _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH1 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v1 [Hev1 Htv1]].
     destruct (IH2 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v2 [Hev2 Htv2]].
     inv Htv1. inv Htv2.
     exists (VBool (eval_bool_binop op b b0)). split;
     [eapply E_BopB; eauto | constructor]. }
   { (* T_Neg *)
-    intros Σ iface oid t e _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e _ IH HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v [Hev Htv]]. inv Htv.
     exists (VBool (negb b)). split; [eapply E_Neg; eauto | constructor]. }
   { (* T_Cmp *)
-    intros Σ iface oid t e1 op e2 it _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e1 op e2 it _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH1 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v1 [Hev1 Htv1]].
     destruct (IH2 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v2 [Hev2 Htv2]].
     inv Htv1. inv Htv2.
     exists (VBool (eval_cmp op n n0)). split;
     [eapply E_Cmp; eauto | constructor]. }
   { (* T_ITE *)
-    intros Σ iface oid t e1 e2 e3 bt _ IH1 _ IH2 _ IH3 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e1 e2 e3 bt _ IH1 _ IH2 _ IH3 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH1 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [vc [Hevc Htvc]]. inv Htvc.
     destruct b.
     { destruct (IH2 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v2 [Hev2 Htv2]].
@@ -810,7 +986,7 @@ Proof.
     { destruct (IH3 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v3 [Hev3 Htv3]].
       exists v3. split; [eapply E_ITEFalse; eauto | exact Htv3]. } }
   { (* T_Eq *)
-    intros Σ iface oid t e1 e2 bt _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
+    intros Σ iface phi oid t e1 e2 bt _ IH1 _ IH2 HeqT s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post. subst.
     destruct (IH1 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v1 [Hev1 Htv1]].
     destruct (IH2 eq_refl s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post) as [v2 [Hev2 Htv2]].
     destruct (classic (v1 = v2)) as [->|Hne].
@@ -819,8 +995,8 @@ Proof.
 Qed.
 
 Lemma ref_typesafety_timed :
-  forall Σ iface oid k r sty s_pre s_post rho l,
-    type_ref Σ iface k oid TagT r sty ->
+  forall Σ iface phi oid k r sty s_pre s_post rho l,
+    type_ref Σ iface phi k oid TagT r sty ->
     env_well_typed Σ rho s_pre iface ->
     env_well_typed Σ rho s_post iface ->
     loc_has_opt_type Σ l s_pre oid ->
@@ -831,12 +1007,15 @@ Lemma ref_typesafety_timed :
       (tp = RTPre -> has_slot_type Σ v s_pre sty) /\
       (tp = RTPost -> has_slot_type Σ v s_post sty).
 Proof.
-  intros. exact (proj1 ref_expr_typesafety_timed _ _ _ _ _ _ _ H eq_refl _ _ _ _ H0 H1 H2 H3).
+  intros Σ iface phi oid k r sty s_pre s_post rho l Hty Henv_pre Henv_post Hloc_pre Hloc_post.
+  exact (proj1 ref_expr_typesafety_timed
+    Σ iface phi k oid TagT r sty Hty eq_refl
+    s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post).
 Qed.
 
 Lemma expr_typesafety_timed :
-  forall Σ iface oid e bt s_pre s_post rho l,
-    type_expr Σ iface oid TagT e bt ->
+  forall Σ iface phi oid e bt s_pre s_post rho l,
+    type_expr Σ iface phi oid TagT e bt ->
     env_well_typed Σ rho s_pre iface ->
     env_well_typed Σ rho s_post iface ->
     loc_has_opt_type Σ l s_pre oid ->
@@ -845,7 +1024,28 @@ Lemma expr_typesafety_timed :
       eval_expr (TSTimed s_pre s_post) rho e l v /\
       has_base_type v bt.
 Proof.
-  intros. exact (proj2 ref_expr_typesafety_timed _ _ _ _ _ _ H eq_refl _ _ _ _ H0 H1 H2 H3).
+  intros Σ iface phi oid e bt s_pre s_post rho l Hty Henv_pre Henv_post Hloc_pre Hloc_post.
+  exact (proj2 ref_expr_typesafety_timed
+    Σ iface phi oid TagT e bt Hty eq_refl
+    s_pre s_post rho l Henv_pre Henv_post Hloc_pre Hloc_post).
+Qed.
+
+Lemma return_expr_typesafety_timed :
+  forall Σ iface phi oid ret ret_ty s_pre s_post rho l,
+    type_return_expr Σ iface phi oid TagT ret ret_ty ->
+    env_well_typed Σ rho s_pre iface ->
+    env_well_typed Σ rho s_post iface ->
+    loc_has_opt_type Σ l s_pre oid ->
+    loc_has_opt_type Σ l s_post oid ->
+    exists rv,
+      eval_return_expr (TSTimed s_pre s_post) rho ret l rv.
+Proof.
+  intros Σ iface phi oid ret ret_ty s_pre s_post rho l Hty Henv_pre Henv_post Hloc_pre Hloc_post.
+  destruct ret as [e|], ret_ty as [alpha|]; simpl in Hty; try contradiction.
+  - destruct (expr_typesafety_timed _ _ _ _ _ _ _ _ _ _ Hty Henv_pre Henv_post Hloc_pre Hloc_post)
+      as [v [Hev _]].
+    exists (Some v). constructor. exact Hev.
+  - exists None. constructor.
 Qed.
 
 (* ================================================================= *)
@@ -904,20 +1104,36 @@ Proof.
     inv Hvals. destruct (value_eqb k (VAddr a)); auto.
 Qed.
 
+Lemma eval_phi_storage_weak :
+  forall s s' rho l phi,
+    state_incl s s' ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
+    Forall (fun p => eval_expr (TSUntimed s') rho p l (VBool true)) phi.
+Proof.
+  intros s s' rho l phi Hincl Hphi.
+  induction Hphi as [|p phi Hp Hrest IH]; constructor.
+  - apply (sem_storage_weak_expr (TSUntimed s) (TSUntimed s') rho p l (VBool true)).
+    + simpl. exact Hincl.
+    + exact Hp.
+  - exact IH.
+Qed.
+
 Lemma eval_binding_keys_typed :
-  forall (bindings : list (expr * map_expr)) Σ iface oid bt s rho l,
-    Forall (fun p => type_expr Σ iface oid TagU (fst p) bt) bindings ->
+  forall (bindings : list (expr * map_expr)) Σ iface phi oid bt s rho l,
+    Forall (fun p => type_expr Σ iface phi oid TagU (fst p) bt) bindings ->
     env_well_typed Σ rho s iface ->
     loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     exists keys,
       Forall2 (fun p k => eval_expr (TSUntimed s) rho (fst p) l k) bindings keys /\
       Forall (fun v => has_base_type v bt) keys.
 Proof.
-  induction bindings as [|[e m] rest IH]; intros Σ iface oid bt s rho l Hall Henv Hloc.
+  induction bindings as [|[e m] rest IH]; intros Σ iface phi oid bt s rho l Hall Henv Hloc Hphi.
   - exists []. split; constructor.
   - inv Hall. simpl in H1.
-    destruct (expr_typesafety_untimed _ _ _ _ _ _ _ _ H1 Henv Hloc) as [v [Hev Htv]].
-    destruct (IH _ _ _ _ _ _ _ H2 Henv Hloc) as [ks [Heks Htks]].
+    destruct (expr_typesafety_untimed Σ iface phi oid e bt s rho l H1 Henv Hloc Hphi)
+      as [v [Hev Htv]].
+    destruct (IH Σ iface phi oid bt s rho l H2 Henv Hloc Hphi) as [ks [Heks Htks]].
     exists (v :: ks). split; constructor; auto.
 Qed.
 
@@ -938,15 +1154,16 @@ Qed.
 
 Lemma build_map_typed :
   forall bt mu keys vals,
-    default_value_typable mu ->
+    mapping_type_wf (MMapping bt mu) ->
     Forall (fun v => has_mapping_type v mu) vals ->
     exists f,
       build_map_from_bindings keys vals (MMapping bt mu) = Some f /\
       has_mapping_type f (MMapping bt mu).
 Proof.
-  intros bt mu keys vals Hdef Htvals.
+  intros bt mu keys vals Hwf Htvals.
+  destruct Hwf as [_ Hmu].
   assert (Hdefm : has_mapping_type (default_value mu) mu)
-    by (apply default_has_mapping_type; exact Hdef).
+    by (apply default_has_mapping_type; exact Hmu).
   destruct bt; simpl; eexists; (split; [reflexivity|]).
   - constructor. intros n Hin. apply lookup_or_default_typed; auto.
   - constructor. intros b. apply lookup_or_default_typed; auto.
@@ -975,52 +1192,53 @@ Proof.
 Qed.
 
 Lemma mapexpr_typesafety_aux :
-  forall Σ iface oid m mu,
-    type_mapexpr Σ iface oid m mu ->
+  forall Σ iface phi oid m mu,
+    type_mapexpr Σ iface phi oid m mu ->
     forall s rho l,
       env_well_typed Σ rho s iface ->
       loc_has_opt_type Σ l s oid ->
+      Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
       exists v,
         eval_mapexpr (TSUntimed s) rho m l v /\
         has_mapping_type v mu.
 Proof.
-  fix IH 6.
-  intros Σ iface oid m mu Htyp.
-  destruct Htyp; intros s rho l Henv Hloc.
+  fix IH 7.
+  intros Σ iface phi oid m mu Htyp.
+  destruct Htyp; intros s rho l Henv Hloc Hphi.
   - (* T_Exp *)
-    match goal with [He : type_expr _ _ _ _ _ _ |- _] =>
-      destruct (expr_typesafety_untimed _ _ _ _ _ _ _ _ He Henv Hloc) as [v [Hev Htv]] end.
+    match goal with [He : type_expr _ _ _ _ _ _ _ |- _] =>
+      destruct (expr_typesafety_untimed _ _ _ _ _ _ _ _ _ He Henv Hloc Hphi) as [v [Hev Htv]] end.
     exists v. split; [apply E_MExp; exact Hev | constructor; exact Htv].
   - (* T_Mapping *)
-    match goal with [H : default_value_typable _ |- _] => rename H into Hd end.
-    match goal with [H : Forall (fun p => type_expr _ _ _ _ (fst p) _) _ |- _] => rename H into Hkeys_ty end.
-    match goal with [H : Forall (fun p => type_mapexpr _ _ _ (snd p) _) _ |- _] => rename H into Hvals_ty end.
-    destruct (eval_binding_keys_typed _ _ _ _ _ _ _ _ Hkeys_ty Henv Hloc) as [keys [Hkeys Htkeys]].
+    match goal with [H : mapping_type_wf (MMapping _ _) |- _] => rename H into Hmwf end.
+    match goal with [H : Forall (fun p => type_expr _ _ _ _ _ (fst p) _) _ |- _] => rename H into Hkeys_ty end.
+    match goal with [H : Forall (fun p => type_mapexpr _ _ _ _ (snd p) _) _ |- _] => rename H into Hvals_ty end.
+    destruct (eval_binding_keys_typed _ _ _ _ _ _ _ _ _ Hkeys_ty Henv Hloc Hphi) as [keys [Hkeys Htkeys]].
     assert (Hvals_ih : Forall (fun p =>
       exists v, eval_mapexpr (TSUntimed s) rho (snd p) l v /\ has_mapping_type v mu) bindings).
-    { clear Hkeys_ty Hd Hkeys Htkeys keys.
+    { clear Hkeys_ty Hmwf Hkeys Htkeys keys.
       induction Hvals_ty as [|p rest Hm Hrest IHF].
       { constructor. }
       { constructor.
-        { apply (IH _ _ _ _ _ Hm _ _ _ Henv Hloc). }
+        { apply (IH _ _ _ _ _ _ Hm _ _ _ Henv Hloc Hphi). }
         { apply IHF. } } }
     destruct (eval_binding_vals_realized _ _ _ _ _ Hvals_ih) as [vals [Hvals Htvals]].
-    destruct (build_map_typed bt mu keys vals Hd Htvals) as [fv [Hbuild Htfv]].
+    destruct (build_map_typed bt mu keys vals Hmwf Htvals) as [fv [Hbuild Htfv]].
     exists fv. split; [eapply E_Mapping; eauto | exact Htfv].
   - (* T_MappingUpd *)
-    match goal with [Hr : type_ref _ _ _ _ _ _ (SMapping (MMapping _ _)) |- _] =>
-      destruct (ref_typesafety_untimed _ _ _ _ _ _ _ _ _ Hr Henv Hloc) as [vold [Hevold Htvold]] end.
+    match goal with [Hr : type_ref _ _ _ _ _ _ _ (SMapping (MMapping _ _)) |- _] =>
+      destruct (ref_typesafety_untimed _ _ _ _ _ _ _ _ _ _ Hr Henv Hloc Hphi) as [vold [Hevold Htvold]] end.
     apply slot_mapping_inv in Htvold.
-    match goal with [H : Forall (fun p => type_expr _ _ _ _ (fst p) _) _ |- _] => rename H into Hkeys_ty end.
-    match goal with [H : Forall (fun p => type_mapexpr _ _ _ (snd p) _) _ |- _] => rename H into Hvals_ty end.
-    destruct (eval_binding_keys_typed _ _ _ _ _ _ _ _ Hkeys_ty Henv Hloc) as [keys [Hkeys Htkeys]].
+    match goal with [H : Forall (fun p => type_expr _ _ _ _ _ (fst p) _) _ |- _] => rename H into Hkeys_ty end.
+    match goal with [H : Forall (fun p => type_mapexpr _ _ _ _ (snd p) _) _ |- _] => rename H into Hvals_ty end.
+    destruct (eval_binding_keys_typed _ _ _ _ _ _ _ _ _ Hkeys_ty Henv Hloc Hphi) as [keys [Hkeys Htkeys]].
     assert (Hvals_ih : Forall (fun p =>
       exists v, eval_mapexpr (TSUntimed s) rho (snd p) l v /\ has_mapping_type v mu) bindings).
     { clear Hkeys_ty Htvold Hkeys Htkeys keys Hevold vold.
       induction Hvals_ty as [|p rest Hm Hrest IHF].
       { constructor. }
       { constructor.
-        { apply (IH _ _ _ _ _ Hm _ _ _ Henv Hloc). }
+        { apply (IH _ _ _ _ _ _ Hm _ _ _ Henv Hloc Hphi). }
         { apply IHF. } } }
     destruct (eval_binding_vals_realized _ _ _ _ _ Hvals_ih) as [vals [Hvals Htvals]].
     destruct (update_map_typed _ _ keys vals _ Htvold Htvals) as [fv [Hupd Htfv]].
@@ -1028,10 +1246,11 @@ Proof.
 Qed.
 
 Lemma mapexpr_typesafety :
-  forall Σ iface oid m mu s rho l,
-    type_mapexpr Σ iface oid m mu ->
+  forall Σ iface phi oid m mu s rho l,
+    type_mapexpr Σ iface phi oid m mu ->
     env_well_typed Σ rho s iface ->
     loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     exists v,
       eval_mapexpr (TSUntimed s) rho m l v /\
       has_mapping_type v mu.
@@ -1291,13 +1510,14 @@ Qed.
 (** SE type safety given that constructors evaluate.
     The ctor_eval_prop hypothesis is discharged later by Acc induction. *)
 Lemma se_typesafety_with_ctors :
-  forall Σ iface oid se sty,
+  forall Σ iface phi oid se sty,
     ctor_eval_prop Σ ->
     Σ_well_typed Σ ->
-    type_slotexpr Σ iface oid se sty ->
+    type_slotexpr Σ iface phi oid se sty ->
     forall s rho l,
       env_well_typed Σ rho s iface ->
       loc_has_opt_type Σ l s oid ->
+      Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
       exists v s',
         eval_slotexpr (Σ_cnstr Σ) s rho se l v s' /\
         has_slot_type Σ v s' sty /\
@@ -1305,19 +1525,28 @@ Lemma se_typesafety_with_ctors :
         (forall v' st', has_slot_type Σ v' s st' -> has_slot_type Σ v' s' st') /\
         creates_typed Σ s s'.
 Proof.
-  intros Σ iface oid se sty Hctors Hswt Htyp.
+  intros Σ iface phi oid se sty Hctors Hswt Htyp.
   induction Htyp using type_slotexpr_ind2;
-    intros s rho l Henv Hloc.
+    intros s rho l Henv Hloc Hphi.
   - (* T_SlotMap *)
-    destruct (mapexpr_typesafety _ _ _ _ _ _ _ _ H Henv Hloc) as [v [Hev Htv]].
+    destruct (mapexpr_typesafety _ _ _ _ _ _ _ _ _ H Henv Hloc Hphi) as [v [Hev Htv]].
     exists v, s. refine (conj _ (conj _ (conj _ (conj _ _)))).
     + apply E_SlotMap; exact Hev.
     + constructor; exact Htv.
     + intros l' ls' Hl'; exact Hl'.
     + auto.
     + apply creates_typed_refl.
+  - (* T_SlotBase *)
+    destruct (expr_typesafety_untimed _ _ _ _ _ _ _ _ _ H Henv Hloc Hphi)
+      as [v [Hev Htv]].
+    exists v, s. refine (conj _ (conj _ (conj _ (conj _ _)))).
+    + apply E_SlotMap. apply E_MExp. exact Hev.
+    + constructor. constructor. exact Htv.
+    + intros l' ls' Hl'; exact Hl'.
+    + auto.
+    + apply creates_typed_refl.
   - (* T_SlotRef *)
-    destruct (ref_typesafety_untimed _ _ _ _ _ _ _ _ _ H Henv Hloc) as [v [Hev Htv]].
+    destruct (ref_typesafety_untimed _ _ _ _ _ _ _ _ _ _ H Henv Hloc Hphi) as [v [Hev Htv]].
     exists v, s. refine (conj _ (conj _ (conj _ (conj _ _)))).
     + apply E_SlotRef with (tp := RTU); exact Hev.
     + exact Htv.
@@ -1325,7 +1554,7 @@ Proof.
     + auto.
     + apply creates_typed_refl.
   - (* T_SlotAddr *)
-    destruct (IHHtyp Hctors Hswt s rho l Henv Hloc) as [v [s' [Hev [Htv [Hincl [Hpres Hct]]]]]].
+    destruct (IHHtyp Hctors Hswt s rho l Henv Hloc Hphi) as [v [s' [Hev [Htv [Hincl [Hpres Hct]]]]]].
     exists v, s'. refine (conj _ (conj _ (conj Hincl (conj Hpres Hct)))).
     + apply E_SlotAddr; exact Hev.
     + apply slot_contract_inv in Htv. constructor. exact Htv.
@@ -1335,29 +1564,32 @@ Proof.
     assert (Hse_eval : forall s0 rho0 l0,
       env_well_typed Σ rho0 s0 iface ->
       loc_has_opt_type Σ l0 s0 oid ->
+      Forall (fun p => eval_expr (TSUntimed s0) rho0 p l0 (VBool true)) phi ->
       exists vals s_final,
         eval_slotexpr_list (Σ_cnstr Σ) s0 rho0 ses l0 vals s_final /\
         Forall2 (fun v alpha => has_abi_type Σ v s_final alpha) vals (map snd (ctor_iface ctor)) /\
         state_incl s0 s_final /\
         (forall v' st', has_slot_type Σ v' s0 st' -> has_slot_type Σ v' s_final st') /\
         creates_typed Σ s0 s_final).
-    { clear Hcl Hnp HP4 H1.
-      induction HIH as [|se0 alpha0 rses ralphas Hse0 _ IHfa];
-        intros s0 rho0 l0 Henv0 Hloc0.
-      - exists [], s0. refine (conj _ (conj _ (conj _ (conj _ _)))).
-        + constructor.
-        + constructor.
-        + intros l' ls' Hl'; exact Hl'.
-        + auto.
-        + apply creates_typed_refl.
-      - destruct (Hse0 Hctors Hswt s0 rho0 l0 Henv0 Hloc0)
-          as [v0 [s1 [Hev0 [Htv0 [Hincl01 [Hpres01 Hct01]]]]]].
-        assert (Henv1 : env_well_typed Σ rho0 s1 iface)
-          by (eapply valuetyp_storage_weak_env; eauto).
-        assert (Hloc1 : loc_has_opt_type Σ l0 s1 oid)
-          by (eapply loc_has_opt_type_weak; eauto).
-        destruct (IHfa s1 rho0 l0 Henv1 Hloc1)
-          as [vs [sf [Hevs [Htvs [Hincl1f [Hpres1f Hct1f]]]]]].
+	    { clear Hcl Hnp HP4 H1.
+	      induction HIH as [|se0 alpha0 rses ralphas Hse0 _ IHfa];
+	        intros s0 rho0 l0 Henv0 Hloc0 Hphi0.
+	      - exists [], s0. refine (conj _ (conj _ (conj _ (conj _ _)))).
+	        + constructor.
+	        + constructor.
+	        + intros l' ls' Hl'; exact Hl'.
+	        + auto.
+	        + apply creates_typed_refl.
+	      - destruct (Hse0 Hctors Hswt s0 rho0 l0 Henv0 Hloc0 Hphi0)
+	          as [v0 [s1 [Hev0 [Htv0 [Hincl01 [Hpres01 Hct01]]]]]].
+	        assert (Henv1 : env_well_typed Σ rho0 s1 iface)
+	          by (eapply valuetyp_storage_weak_env; eauto).
+	        assert (Hloc1 : loc_has_opt_type Σ l0 s1 oid)
+	          by (eapply loc_has_opt_type_weak; eauto).
+	        assert (Hphi1 : Forall (fun p => eval_expr (TSUntimed s1) rho0 p l0 (VBool true)) phi)
+	          by (eapply eval_phi_storage_weak; eauto).
+	        destruct (IHfa s1 rho0 l0 Henv1 Hloc1 Hphi1)
+	          as [vs [sf [Hevs [Htvs [Hincl1f [Hpres1f Hct1f]]]]]].
         exists (v0 :: vs), sf. refine (conj _ (conj _ (conj _ (conj _ _)))).
         + eapply E_SlotListCons; eauto.
         + constructor.
@@ -1366,12 +1598,15 @@ Proof.
         + intros l' ls' Hl'. apply Hincl1f. apply Hincl01. exact Hl'.
         + intros v' st' Hv'. apply Hpres1f. apply Hpres01. exact Hv'.
         + eapply creates_typed_trans; eauto. }
-    destruct (Hse_eval s rho l Henv Hloc)
+    destruct (Hse_eval s rho l Henv Hloc Hphi)
       as [vals [s_final [Hevl [Htvals [Hincl_sf [Hpres_sf Hct_sf]]]]]].
     set (rho' := build_ctor_env (ctor_iface ctor) vals l (env_origin rho) (VInt 0%Z)).
+    assert (Hzero : eval_slotexpr (Σ_cnstr Σ) s_final rho zero_callvalue_slot_expr l (VInt 0%Z) s_final).
+    { unfold zero_callvalue_slot_expr. apply E_SlotMap. apply E_MExp. constructor. }
     assert (Hiffs : Forall (fun pre =>
       eval_expr (TSUntimed s_final) rho' pre dummy_loc (VBool true))
-      (ctor_iff ctor)) by (apply HP4 with (s := s); auto).
+      (ctor_iff ctor)).
+    { exact (HP4 s rho l vals s_final (VInt 0%Z) s_final Henv Hloc Hphi Hevl Hzero). }
     assert (Henv_rho' : env_well_typed Σ rho' s_final (ctor_iface ctor)).
     { apply build_ctor_env_well_typed.
       - exact Htvals.
@@ -1397,29 +1632,32 @@ Proof.
     assert (Hse_eval : forall s0 rho0 l0,
       env_well_typed Σ rho0 s0 iface ->
       loc_has_opt_type Σ l0 s0 oid ->
+      Forall (fun p => eval_expr (TSUntimed s0) rho0 p l0 (VBool true)) phi ->
       exists vals s_final,
         eval_slotexpr_list (Σ_cnstr Σ) s0 rho0 ses l0 vals s_final /\
         Forall2 (fun v alpha => has_abi_type Σ v s_final alpha) vals (map snd (ctor_iface ctor)) /\
         state_incl s0 s_final /\
         (forall v' st', has_slot_type Σ v' s0 st' -> has_slot_type Σ v' s_final st') /\
         creates_typed Σ s0 s_final).
-    { clear Hcl Hpay Hval IHHtyp H1.
-      induction HIH as [|se0 alpha0 rses ralphas Hse0 _ IHfa];
-        intros s0 rho0 l0 Henv0 Hloc0.
-      - exists [], s0. refine (conj _ (conj _ (conj _ (conj _ _)))).
-        + constructor.
-        + constructor.
-        + intros l' ls' Hl'; exact Hl'.
-        + auto.
-        + apply creates_typed_refl.
-      - destruct (Hse0 Hctors Hswt s0 rho0 l0 Henv0 Hloc0)
-          as [v0 [s1 [Hev0 [Htv0 [Hincl01 [Hpres01 Hct01]]]]]].
-        assert (Henv1 : env_well_typed Σ rho0 s1 iface)
-          by (eapply valuetyp_storage_weak_env; eauto).
-        assert (Hloc1 : loc_has_opt_type Σ l0 s1 oid)
-          by (eapply loc_has_opt_type_weak; eauto).
-        destruct (IHfa s1 rho0 l0 Henv1 Hloc1)
-          as [vs [sf [Hevs [Htvs [Hincl1f [Hpres1f Hct1f]]]]]].
+	    { clear Hcl Hpay Hval IHHtyp H1.
+	      induction HIH as [|se0 alpha0 rses ralphas Hse0 _ IHfa];
+	        intros s0 rho0 l0 Henv0 Hloc0 Hphi0.
+	      - exists [], s0. refine (conj _ (conj _ (conj _ (conj _ _)))).
+	        + constructor.
+	        + constructor.
+	        + intros l' ls' Hl'; exact Hl'.
+	        + auto.
+	        + apply creates_typed_refl.
+	      - destruct (Hse0 Hctors Hswt s0 rho0 l0 Henv0 Hloc0 Hphi0)
+	          as [v0 [s1 [Hev0 [Htv0 [Hincl01 [Hpres01 Hct01]]]]]].
+	        assert (Henv1 : env_well_typed Σ rho0 s1 iface)
+	          by (eapply valuetyp_storage_weak_env; eauto).
+	        assert (Hloc1 : loc_has_opt_type Σ l0 s1 oid)
+	          by (eapply loc_has_opt_type_weak; eauto).
+	        assert (Hphi1 : Forall (fun p => eval_expr (TSUntimed s1) rho0 p l0 (VBool true)) phi)
+	          by (eapply eval_phi_storage_weak; eauto).
+	        destruct (IHfa s1 rho0 l0 Henv1 Hloc1 Hphi1)
+	          as [vs [sf [Hevs [Htvs [Hincl1f [Hpres1f Hct1f]]]]]].
         exists (v0 :: vs), sf. refine (conj _ (conj _ (conj _ (conj _ _)))).
         + eapply E_SlotListCons; eauto.
         + constructor.
@@ -1428,23 +1666,24 @@ Proof.
         + intros l' ls' Hl'. apply Hincl1f. apply Hincl01. exact Hl'.
         + intros v' st' Hv'. apply Hpres1f. apply Hpres01. exact Hv'.
         + eapply creates_typed_trans; eauto. }
-    destruct (Hse_eval s rho l Henv Hloc)
+    destruct (Hse_eval s rho l Henv Hloc Hphi)
       as [vals [s_final [Hevl [Htvals [Hincl_sf [Hpres_sf Hct_sf]]]]]].
     assert (Henv_sf : env_well_typed Σ rho s_final iface)
       by (eapply valuetyp_storage_weak_env; eauto).
     assert (Hloc_sf : loc_has_opt_type Σ l s_final oid)
       by (eapply loc_has_opt_type_weak; eauto).
-    destruct (IHHtyp Hctors Hswt s_final rho l Henv_sf Hloc_sf)
+    assert (Hphi_sf : Forall (fun p => eval_expr (TSUntimed s_final) rho p l (VBool true)) phi)
+      by (eapply eval_phi_storage_weak; eauto).
+    destruct (IHHtyp Hctors Hswt s_final rho l Henv_sf Hloc_sf Hphi_sf)
       as [sv [s_v [Hev_sv [Htv_sv [Hincl_sv [Hpres_sv Hct_sv]]]]]].
     set (rho' := build_ctor_env (ctor_iface ctor) vals l (env_origin rho) sv).
     assert (Hiffs : Forall (fun pre =>
       eval_expr (TSUntimed s_v) rho' pre dummy_loc (VBool true))
       (ctor_iff ctor)).
     { match goal with
-      | [HP4 : forall _ _ _ _ _ _ _, env_well_typed _ _ _ _ -> _ |- _] =>
-        exact (HP4 s rho l vals s_final sv s_v Henv Hloc Hevl Hev_sv)
-      | _ => exact (H4 s rho l vals s_final sv s_v Henv Hloc Hevl Hev_sv)
-      end. }
+	      | [HP4 : semantic_entailment_ctor_call _ _ _ _ _ _ _ _ |- _] =>
+	        exact (HP4 s rho l vals s_final sv s_v Henv Hloc Hphi Hevl Hev_sv)
+	      end. }
     assert (Henv_rho' : env_well_typed Σ rho' s_v (ctor_iface ctor)).
     { apply build_ctor_env_well_typed.
       - eapply Forall2_impl; [|exact Htvals]. intros v0 alpha0 Hv0. apply slot_abi_inv. apply Hpres_sv. constructor. exact Hv0.
@@ -1514,12 +1753,13 @@ Qed.
 
 (** Helper: evaluate a list of creates *)
 Lemma creates_list_eval :
-  forall Σ creates iface,
+  forall Σ creates iface phi,
     ctor_eval_prop Σ ->
     Σ_well_typed Σ ->
-    Forall (fun c : create => type_slotexpr Σ iface ONone (snd c) (fst (fst c))) creates ->
+    Forall (fun c : create => type_slotexpr Σ iface phi ONone (snd c) (fst (fst c))) creates ->
     forall s rho,
       env_well_typed Σ rho s iface ->
+      Forall (fun p => eval_expr (TSUntimed s) rho p dummy_loc (VBool true)) phi ->
       exists s_n bindings,
         eval_create_list (Σ_cnstr Σ) s rho creates dummy_loc s_n bindings /\
         Forall2 (fun (b : ident * value) (c : create) =>
@@ -1529,8 +1769,8 @@ Lemma creates_list_eval :
         (forall v st, has_slot_type Σ v s st -> has_slot_type Σ v s_n st) /\
         creates_typed Σ s s_n.
 Proof.
-  intros Σ creates iface Hctors Hswt Hfa.
-  induction Hfa as [| c creates' Hse _ IH]; intros s rho Henv.
+  intros Σ creates iface phi Hctors Hswt Hfa.
+  induction Hfa as [| c creates' Hse _ IH]; intros s rho Henv Hphi.
   - exists s, []. refine (conj _ (conj _ (conj _ (conj _ _)))).
     + constructor.
     + constructor.
@@ -1538,11 +1778,13 @@ Proof.
     + auto.
     + apply creates_typed_refl.
   - destruct c as [[st x] se]. simpl in Hse.
-    destruct (se_typesafety_with_ctors Σ iface ONone se st Hctors Hswt Hse s rho dummy_loc Henv I)
+    destruct (se_typesafety_with_ctors Σ iface phi ONone se st Hctors Hswt Hse s rho dummy_loc Henv I Hphi)
       as [v [s1 [Hev [Htv [Hincl1 [Hpres1 Hct1]]]]]].
     assert (Henv1 : env_well_typed Σ rho s1 iface)
       by (eapply valuetyp_storage_weak_env; eauto).
-    destruct (IH s1 rho Henv1) as [s_n [bs [Hevs [Hbs [Hincln [Hpresn Hctn]]]]]].
+    assert (Hphi1 : Forall (fun p => eval_expr (TSUntimed s1) rho p dummy_loc (VBool true)) phi)
+      by (eapply eval_phi_storage_weak; eauto).
+    destruct (IH s1 rho Henv1 Hphi1) as [s_n [bs [Hevs [Hbs [Hincln [Hpresn Hctn]]]]]].
     exists s_n, ((x, v) :: bs). refine (conj _ (conj _ (conj _ (conj _ _)))).
     + eapply E_CreateListCons; eauto.
     + constructor.
@@ -1578,28 +1820,31 @@ Proof.
   assert (Hctors' : ctor_eval_prop Σ') by (eapply IHn; eauto; lia).
   (* Extract premises from type_constructor *)
   assert (Hiwf : interface_wf Σ' (ctor_iface ctor)) by (inversion Htc; assumption).
-  assert (Hcreates_ty : Forall (fun cc => type_creates Σ' (ctor_iface ctor) (OSome a) (snd cc) layout)
+  assert (Hcreates_ty : Forall (fun cc =>
+    type_creates Σ' (ctor_iface ctor) (case_phi (ctor_iff ctor) (fst cc))
+      (OSome a) (snd cc) layout)
     (ctor_cases ctor)) by (inversion Htc; assumption).
-  assert (Hcc : forall s0 rho0,
-    Forall (fun pre => eval_expr (TSUntimed s0) rho0 pre dummy_loc (VBool true))
-           (ctor_iff ctor) ->
-    exists j, j < length (ctor_cases ctor) /\
-      eval_expr (TSUntimed s0) rho0 (fst (nth j (ctor_cases ctor) (EBool false, []))) dummy_loc (VBool true) /\
-      forall i, i <> j -> i < length (ctor_cases ctor) ->
-        eval_expr (TSUntimed s0) rho0 (fst (nth i (ctor_cases ctor) (EBool false, []))) dummy_loc (VBool false))
+  assert (Hcc : semantic_entailment Σ' (ctor_iface ctor) (ctor_iff ctor) ONone
+    (case_consistency_exprs (ctor_case_conditions (ctor_cases ctor))))
     by (inversion Htc; assumption).
   (* Transfer env from Σ to Σ' *)
   assert (Henv' : env_well_typed Σ' rho s (ctor_iface ctor)).
   { eapply env_well_typed_Σ_down; eauto. }
   (* Case consistency gives active case j *)
-  destruct (Hcc s rho Hiffs) as [j [Hj [Hcond_j Hcond_others]]].
+  destruct (ctor_case_consistency_entailment_sound _ _ _ _ _ _ Hcc Henv' Hiffs)
+    as [j [Hj [Hcond_j Hcond_others]]].
   set (case_j := nth j (ctor_cases ctor) (EBool false, [])) in *.
   (* Get creates typing for case j *)
-  assert (Hcreates_j_ty : type_creates Σ' (ctor_iface ctor) (OSome a) (snd case_j) layout)
+  assert (Hcreates_j_ty : type_creates Σ' (ctor_iface ctor)
+    (case_phi (ctor_iff ctor) (fst case_j)) (OSome a) (snd case_j) layout)
     by (eapply Forall_nth; eauto).
-  inversion Hcreates_j_ty as [? ? ? ? ? Hlayout_eq Hbal Hswf_creates Hse_types].
+  inversion Hcreates_j_ty as [? ? ? ? ? ? Hlayout_eq Hbal Hswf_creates Hse_types].
+  assert (Hphi_j : Forall (fun p => eval_expr (TSUntimed s) rho p dummy_loc (VBool true))
+    (case_phi (ctor_iff ctor) (fst case_j))).
+  { unfold case_phi. constructor; assumption. }
   (* Evaluate creates in Σ' *)
-  destruct (creates_list_eval Σ' (snd case_j) (ctor_iface ctor) Hctors' Hwt' Hse_types s rho Henv')
+  destruct (creates_list_eval Σ' (snd case_j) (ctor_iface ctor)
+    (case_phi (ctor_iff ctor) (fst case_j)) Hctors' Hwt' Hse_types s rho Henv' Hphi_j)
     as [s_n [bindings [Heval_cl [Hfa2 [Hincl_n [Hpres_n Hct_n]]]]]].
   (* Lift to Σ_cnstr Σ via cmap mono *)
   assert (Heval_cl_Σ : eval_create_list (Σ_cnstr Σ) s rho (snd case_j) dummy_loc s_n bindings).
@@ -1677,13 +1922,14 @@ Qed.
 (** ** Slot Expression Type Safety (Lemma 6.7) *)
 
 Lemma se_typesafety :
-  forall Σ iface oid se sty,
+  forall Σ iface phi oid se sty,
     Σ_wf Σ ->
     Σ_well_typed Σ ->
-    type_slotexpr Σ iface oid se sty ->
+    type_slotexpr Σ iface phi oid se sty ->
     forall s rho l,
       env_well_typed Σ rho s iface ->
       loc_has_opt_type Σ l s oid ->
+      Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
       exists v s',
         eval_slotexpr (Σ_cnstr Σ) s rho se l v s' /\
         has_slot_type Σ v s' sty /\
@@ -1691,18 +1937,33 @@ Lemma se_typesafety :
         (forall v' st', has_slot_type Σ v' s st' -> has_slot_type Σ v' s' st') /\
         creates_typed Σ s s'.
 Proof.
-  intros Σ iface oid se sty Hwf Hwt Htyp.
-  exact (se_typesafety_with_ctors Σ iface oid se sty
+  intros Σ iface phi oid se sty Hwf Hwt Htyp.
+  exact (se_typesafety_with_ctors Σ iface phi oid se sty
            (all_ctors_evaluate Σ Hwf Hwt) Hwt Htyp).
 Qed.
 
 (* ================================================================= *)
 (** ** Update Type Safety (Lemma 6.9) *)
 
+Lemma type_ref_tagS_phi_change :
+  forall Σ iface phi phi' oid t r sty,
+    type_ref Σ iface phi TagS oid t r sty ->
+    type_ref Σ iface phi' TagS oid t r sty.
+Proof.
+  intros Σ iface phi phi' oid t r sty Hty.
+  remember TagS as k eqn:Hk.
+  revert phi' Hk.
+  induction Hty; intros phi' Hk; try discriminate.
+  - eapply T_Storage; eauto.
+  - eapply T_StoragePre; eauto.
+  - eapply T_StoragePost; eauto.
+  - subst. econstructor; eauto.
+Qed.
+
 Lemma ref_storage_insert :
-  forall Σ iface a r sty s rho l,
+  forall Σ iface phi a r sty s rho l,
     Σ_wf Σ ->
-    type_ref Σ iface TagS (OSome a) TagU r sty ->
+    type_ref Σ iface phi TagS (OSome a) TagU r sty ->
     env_well_typed Σ rho s iface ->
     has_slot_type Σ (VAddr l) s (SContract a) ->
     forall v,
@@ -1713,7 +1974,7 @@ Lemma ref_storage_insert :
         (forall l', state_dom s l' -> state_dom s' l') /\
         (forall v' st, has_slot_type Σ v' s st -> has_slot_type Σ v' s' st).
 Proof.
-  intros Σ iface a r sty s rho l Hwf Href Henv Hloc v Hv.
+  intros Σ iface phi a r sty s rho l Hwf Href Henv Hloc v Hv.
   remember TagS as k eqn:Hk. remember (OSome a) as oid eqn:Hoid.
   remember TagU as t eqn:Ht.
   induction Href; try discriminate.
@@ -1734,7 +1995,11 @@ Proof.
     { intros v' st Hv'. eapply update_preserves_typing; eauto. }
   - (* T_Field: r = RField r0 x *)
     subst k. subst oid. subst t.
-    destruct (ref_typesafety_untimed _ _ _ _ _ _ _ _ _ Href Henv Hloc)
+    assert (Href_empty : type_ref Σ iface empty_phi TagS (OSome a) TagU r (SContract a0)).
+    { eapply type_ref_tagS_phi_change; eauto. }
+    destruct (ref_typesafety_untimed
+      Σ iface empty_phi (OSome a) TagS r (SContract a0) s rho l
+      Href_empty Henv Hloc (Forall_nil _))
       as [vr [Hevr Htvr]].
     assert (Htvr_copy := Htvr).
     inv Htvr. match goal with [Habi : has_abi_type _ _ _ _ |- _] => inv Habi end.
@@ -1754,17 +2019,18 @@ Proof.
 Qed.
 
 Lemma update_exprs_typesafety :
-  forall Σ iface a upds s rho l,
+  forall Σ iface phi a upds s rho l,
     Σ_wf Σ ->
     Σ_well_typed Σ ->
-    Forall (fun u => type_update Σ iface (OSome a) u) upds ->
+    Forall (fun u => type_update Σ iface phi (OSome a) u) upds ->
     env_well_typed Σ rho s iface ->
     has_slot_type Σ (VAddr l) s (SContract a) ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     exists vals s_n,
       eval_update_exprs (Σ_cnstr Σ) s rho upds l vals s_n /\
       Forall2 (fun v u =>
         exists sty,
-          type_ref Σ iface TagS (OSome a) TagU (fst u) sty /\
+          type_ref Σ iface phi TagS (OSome a) TagU (fst u) sty /\
           has_slot_type Σ v s_n sty) vals upds /\
       state_incl s s_n /\
       env_well_typed Σ rho s_n iface /\
@@ -1772,9 +2038,9 @@ Lemma update_exprs_typesafety :
       (forall v st, has_slot_type Σ v s st -> has_slot_type Σ v s_n st) /\
       creates_typed Σ s s_n.
 Proof.
-  intros Σ iface a upds. intros s rho l Hwf Hwt Hfa.
+  intros Σ iface phi a upds. intros s rho l Hwf Hwt Hfa.
   revert s rho l.
-  induction Hfa as [|u upds' Hupd _ IH]; intros s rho l Henv Hloc.
+  induction Hfa as [|u upds' Hupd _ IH]; intros s rho l Henv Hloc Hphi.
   - exists [], s.
     refine (conj _ (conj _ (conj _ (conj _ (conj _ (conj _ _)))))).
     + constructor.
@@ -1785,12 +2051,15 @@ Proof.
     + auto.
     + apply creates_typed_refl.
   - destruct u as [r0 se0].
-    inversion Hupd as [? ? ? ? ? st Href Hse]; subst.
-    destruct (se_typesafety _ _ _ _ _ Hwf Hwt Hse s rho l Henv Hloc)
+    inversion Hupd as [? ? ? ? ? ? st Href Hse]; subst.
+    destruct (se_typesafety _ _ _ _ _ _ Hwf Hwt Hse s rho l Henv Hloc Hphi)
       as [v [s1 [Hev [Htv [Hincl1 [Hpres1 Hct1]]]]]].
+    assert (Hphi1 : Forall (fun p => eval_expr (TSUntimed s1) rho p l (VBool true)) phi)
+      by (eapply eval_phi_storage_weak; eauto).
     destruct (IH s1 rho l
       (valuetyp_storage_weak_env _ _ _ _ _ Hincl1 Henv)
-      (Hpres1 _ _ Hloc))
+      (Hpres1 _ _ Hloc)
+      Hphi1)
       as [vs [sn [Hevs [Htvs [Hincln [Henvn [Hlocn [Hpresn Hctn]]]]]]]].
     exists (v :: vs), sn.
     refine (conj _ (conj _ (conj _ (conj _ (conj _ (conj _ _)))))).
@@ -1806,11 +2075,11 @@ Proof.
 Qed.
 
 Lemma update_inserts_typesafety :
-  forall Σ iface a upds vals s rho l,
+  forall Σ iface phi a upds vals s rho l,
     Σ_wf Σ ->
     Forall2 (fun v u =>
       exists sty,
-        type_ref Σ iface TagS (OSome a) TagU (fst u) sty /\
+        type_ref Σ iface phi TagS (OSome a) TagU (fst u) sty /\
         has_slot_type Σ v s sty) vals upds ->
     env_well_typed Σ rho s iface ->
     has_slot_type Σ (VAddr l) s (SContract a) ->
@@ -1820,19 +2089,19 @@ Lemma update_inserts_typesafety :
       (forall l', state_dom s l' -> state_dom s' l') /\
       (forall v st, has_slot_type Σ v s st -> has_slot_type Σ v s' st).
 Proof.
-  intros Σ iface a upds vals.
+  intros Σ iface phi a upds vals.
   revert upds.
   induction vals as [|v vs IH]; intros [|[r se] upds'] s rho l Hwf Hfa Henv Hloc;
     try (inv Hfa; fail).
   - exists s. refine (conj _ (conj _ (conj _ _))); auto. constructor.
   - inv Hfa.
     destruct H2 as [sty [Href Htv]]. simpl in Href.
-    destruct (ref_storage_insert _ _ _ _ _ _ _ _ Hwf Href Henv Hloc v Htv)
+    destruct (ref_storage_insert _ _ _ _ _ _ _ _ _ Hwf Href Henv Hloc v Htv)
       as [s1 [Hins [Hloc1 [Hdom1 Hpres1]]]].
     assert (Henv1 : env_well_typed Σ rho s1 iface)
       by (eapply env_well_typed_pres; eauto).
     assert (Hvals1 : Forall2 (fun v0 u =>
-      exists st, type_ref Σ iface TagS (OSome a) TagU (fst u) st /\
+      exists st, type_ref Σ iface phi TagS (OSome a) TagU (fst u) st /\
                  has_slot_type Σ v0 s1 st) vs upds').
     { eapply Forall2_impl; [|exact H4].
       intros v0 u0 [st0 [Hr0 Ht0]]. eexists; eauto. }
@@ -1846,12 +2115,13 @@ Proof.
 Qed.
 
 Lemma update_typesafety :
-  forall Σ iface a upds s rho l,
+  forall Σ iface phi a upds s rho l,
     Σ_wf Σ ->
     Σ_well_typed Σ ->
-    type_updates Σ iface (OSome a) upds ->
+    type_updates Σ iface phi (OSome a) upds ->
     env_well_typed Σ rho s iface ->
     has_slot_type Σ (VAddr l) s (SContract a) ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     exists s',
       eval_updates (Σ_cnstr Σ) s rho upds l s' /\
       has_slot_type Σ (VAddr l) s' (SContract a) /\
@@ -1859,11 +2129,11 @@ Lemma update_typesafety :
       (forall v st, has_slot_type Σ v s st -> has_slot_type Σ v s' st) /\
       creates_typed Σ s s'.
 Proof.
-  intros Σ iface a upds s rho l Hwf Hwt Htyp Henv Hloc.
+  intros Σ iface phi a upds s rho l Hwf Hwt Htyp Henv Hloc Hphi.
   inv Htyp.
-  destruct (update_exprs_typesafety _ _ _ _ _ _ _ Hwf Hwt H Henv Hloc)
+  destruct (update_exprs_typesafety _ _ _ _ _ _ _ _ Hwf Hwt H Henv Hloc Hphi)
     as [vals [s_n [Hevs [Htvs [Hincl_n [Henv_n [Hloc_n [Hpres_n Hct_n]]]]]]]].
-  destruct (update_inserts_typesafety _ _ _ _ _ _ _ _ Hwf Htvs Henv_n Hloc_n)
+  destruct (update_inserts_typesafety _ _ _ _ _ _ _ _ _ Hwf Htvs Henv_n Hloc_n)
     as [s' [Hins [Hloc' [Hdom' Hpres']]]].
   exists s'. refine (conj _ (conj _ (conj _ (conj _ _)))).
   - econstructor; eauto.
@@ -1925,21 +2195,31 @@ Proof.
   intros Σ a tr s rho l Hwf Hwt Htyp Henv Hloc Hiffs.
   inv Htyp.
   (* Case consistency gives the active case index j *)
-  destruct (H5 s rho l Henv Hloc Hiffs) as [j [Hj [Hcond_j Hcond_others]]].
+  assert (Hcase_ent : semantic_entailment Σ (trans_iface tr) (trans_iff tr) (OSome a)
+    (case_consistency_exprs (trans_case_conditions (trans_cases tr)))).
+  { match goal with
+    | [H : semantic_entailment _ _ _ _ _ |- _] => exact H
+    end. }
+  destruct (case_consistency_entailment_sound _ _ _ _ _ _ _ _ Hcase_ent Henv Hloc Hiffs)
+    as [j [Hj [Hcond_j Hcond_others]]].
   (* Evaluate updates for case j *)
-  assert (Hupd_j : type_updates Σ (trans_iface tr) (OSome a)
+  assert (Hupd_j : type_updates Σ (trans_iface tr)
+    (case_phi (trans_iff tr) (tc_cond (nth j (trans_cases tr) tc_default))) (OSome a)
     (tc_updates (nth j (trans_cases tr) tc_default))).
   { eapply Forall_nth; eauto. }
-  destruct (update_typesafety _ _ _ _ _ _ _ Hwf Hwt Hupd_j Henv Hloc)
+  assert (Hphi_j : Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true))
+    (case_phi (trans_iff tr) (tc_cond (nth j (trans_cases tr) tc_default)))).
+  { unfold case_phi. constructor; assumption. }
+  destruct (update_typesafety _ _ _ _ _ _ _ _ Hwf Hwt Hupd_j Henv Hloc Hphi_j)
     as [s' [Heval_upd [Hloc' [Hdom' [Hpres' Hct']]]]].
   (* Evaluate return expression in timed state (s, s') *)
-  assert (Hret_typed : type_expr Σ (trans_iface tr) (OSome a) TagT
-    (tc_return (nth j (trans_cases tr) tc_default)) TAddress).
+  assert (Hret_typed : type_return_expr Σ (trans_iface tr) empty_phi (OSome a) TagT
+    (tc_return (nth j (trans_cases tr) tc_default)) (trans_rettype tr)).
   { eapply Forall_nth; eauto. }
   assert (Henv' : env_well_typed Σ rho s' (trans_iface tr))
     by (eapply env_well_typed_pres; eauto).
-  destruct (expr_typesafety_timed _ _ _ _ _ _ _ _ _ Hret_typed Henv Henv' Hloc Hloc')
-    as [v [Hev_ret Htv_ret]].
+  destruct (return_expr_typesafety_timed _ _ _ _ _ _ _ _ _ _ Hret_typed Henv Henv' Hloc Hloc')
+    as [v Hev_ret].
   exists v, s'. split; [|split; [|split]].
   - constructor; auto. econstructor; eauto.
   - exact Hdom'.

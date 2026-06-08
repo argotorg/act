@@ -618,41 +618,44 @@ Axiom has_slot_type_to_t : forall Σ v s sty,
 
 (** Derived: get [has_slot_type] for a specific value from type safety. *)
 Lemma ref_typesafety_untimed_for_v :
-  forall Σ iface oid k r sty s rho l v,
-    type_ref Σ iface k oid TagU r sty ->
+  forall Σ iface phi oid k r sty s rho l v,
+    type_ref Σ iface phi k oid TagU r sty ->
     env_well_typed Σ rho s iface ->
     loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     eval_ref (TSUntimed s) rho r l v RTU ->
     has_slot_type Σ v s sty.
 Proof.
-  intros Σ iface oid k r sty s rho l v Hty Hewt Hlot Heval.
-  pose proof (ref_typesafety_untimed Σ iface oid k r sty s rho l Hty Hewt Hlot)
+  intros Σ iface phi oid k r sty s rho l v Hty Hewt Hlot Hphi Heval.
+  pose proof (ref_typesafety_untimed Σ iface phi oid k r sty s rho l Hty Hewt Hlot Hphi)
     as [v' [Hev' Hst']].
   destruct (ref_determinism _ _ _ _ _ _ _ _ Hev' Heval) as [Heq _].
   subst v'. exact Hst'.
 Qed.
 
 (** Derived: Type-valued type safety for references. *)
-Definition ref_typesafety_t Σ iface oid k r sty s rho l v
-    (Hty : type_ref Σ iface k oid TagU r sty)
+Definition ref_typesafety_t Σ iface phi oid k r sty s rho l v
+    (Hty : type_ref Σ iface phi k oid TagU r sty)
     (Hewt : env_well_typed Σ rho s iface)
     (Hlot : loc_has_opt_type Σ l s oid)
+    (Hphi : Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi)
     (Heval : eval_ref (TSUntimed s) rho r l v RTU)
     : has_slot_type_t Σ v s sty :=
   has_slot_type_to_t _ _ _ _
-    (ref_typesafety_untimed_for_v Σ iface oid k r sty s rho l v Hty Hewt Hlot Heval).
+    (ref_typesafety_untimed_for_v Σ iface phi oid k r sty s rho l v Hty Hewt Hlot Hphi Heval).
 
 (** Derived: get [has_base_type] for a specific value from type safety. *)
 Lemma expr_typesafety_untimed_for_v :
-  forall Σ iface oid e bt s rho l v,
-    type_expr Σ iface oid TagU e bt ->
+  forall Σ iface phi oid e bt s rho l v,
+    type_expr Σ iface phi oid TagU e bt ->
     env_well_typed Σ rho s iface ->
     loc_has_opt_type Σ l s oid ->
+    Forall (fun p => eval_expr (TSUntimed s) rho p l (VBool true)) phi ->
     eval_expr (TSUntimed s) rho e l v ->
     has_base_type v bt.
 Proof.
-  intros Σ iface oid e bt s rho l v Hty Hewt Hlot Heval.
-  pose proof (expr_typesafety_untimed Σ iface oid e bt s rho l Hty Hewt Hlot)
+  intros Σ iface phi oid e bt s rho l v Hty Hewt Hlot Hphi Heval.
+  pose proof (expr_typesafety_untimed Σ iface phi oid e bt s rho l Hty Hewt Hlot Hphi)
     as [v' [Hev' Hbt']].
   assert (v' = v) by (eapply expr_determinism; eauto). subst v'. exact Hbt'.
 Qed.
@@ -667,9 +670,9 @@ Qed.
 
 Fixpoint ref_sound (n : nat) (Σ : contract_env) (HwfΣ : wf_Σ Σ)
     (HnΣ : forall a, sty_depth Σ (SContract a) <= n)
-    (iface : interface) (k : ref_tag) (oid : opt_id) (r : ref)
+    (iface : interface) (phi : list expr) (k : ref_tag) (oid : opt_id) (r : ref)
     (sty : slot_type)
-    (Ht : type_ref_t Σ iface k oid TagU r sty)
+    (Ht : type_ref_t Σ iface phi k oid TagU r sty)
     (s : state) (rho : env) (l : addr)
     (rho_v : sem_iface_aux n Σ iface)
     (a : sem_opt_id_aux n Σ oid)
@@ -682,13 +685,13 @@ Fixpoint ref_sound (n : nat) (Σ : contract_env) (HwfΣ : wf_Σ Σ)
     (Hvt : has_slot_type_t Σ v s sty)
     (Hn : sty_depth Σ sty <= n)
     {struct Ht}
-    : denote_ref n Σ iface k oid TagU r sty Ht rho_v a =
+    : denote_ref n Σ iface phi k oid TagU r sty Ht rho_v a =
       denote_slot_value_n n Σ HwfΣ v s sty Hvt Hn
 with expr_sound (n : nat) (Σ : contract_env) (HwfΣ : wf_Σ Σ)
     (HnΣ : forall a, sty_depth Σ (SContract a) <= n)
-    (iface : interface) (oid : opt_id) (e : expr)
+    (iface : interface) (phi : list expr) (oid : opt_id) (e : expr)
     (bt : base_type)
-    (Ht : type_expr_t Σ iface oid TagU e bt)
+    (Ht : type_expr_t Σ iface phi oid TagU e bt)
     (s : state) (rho : env) (l : addr)
     (rho_v : sem_iface_aux n Σ iface)
     (a : sem_opt_id_aux n Σ oid)
@@ -700,406 +703,23 @@ with expr_sound (n : nat) (Σ : contract_env) (HwfΣ : wf_Σ Σ)
     (Heval : eval_expr (TSUntimed s) rho e l v)
     (Hvt : has_base_type_t v bt)
     {struct Ht}
-    : denote_expr n Σ iface oid TagU e bt Ht rho_v a =
+    : denote_expr n Σ iface phi oid TagU e bt Ht rho_v a =
       denote_base_value v bt Hvt.
 Proof.
-  - (* ref_sound *)
-    dependent destruction Ht.
-    + (* T_Calldata_t *)
-      inversion Heval; subst.
-      * (* E_Storage: rho x = None — impossible *)
-        exfalso.
-        destruct Hewt as [_ [Hifs _]].
-        destruct (Hifs x alpha e) as [v' [Hrho' _]].
-        match goal with
-        | [H : _ = None |- _] => rewrite Hrho' in H; discriminate
-        end.
-      * (* E_Calldata: rho x = Some v *)
-        destruct Henv as [Hefs _].
-        destruct n as [|n0];
-          change (sem_iface_lookup _ Σ iface x alpha e (fst rho_v) =
-                  denote_slot_value_n _ Σ HwfΣ v s (SAbi alpha) Hvt Hn);
-          eapply calldata_field_sound; eassumption.
-    + (* T_Storage_t *) admit.
-    + (* T_Coerce_t *)
-      inversion Heval; subst.
-      destruct n as [|n0].
-      { exfalso. simpl in Hn. lia. }
-      { cbn [denote_ref].
-        assert (Hn' : sty_depth Σ (SAbi (AContractAddr a)) <= S n0) by (simpl in *; lia).
-        (* Get SAbi (AContractAddr a) typing from SContract a typing *)
-        dependent destruction Hvt.
-        pose proof (V_ABIVal_t Σ (VAddr l0) s (AContractAddr a) h) as Hvt_abi.
-        match goal with
-        | [ Href : eval_ref (TSUntimed s) rho _ _ (VAddr l0) RTU |- _ ] =>
-          rewrite (ref_sound (S n0) Σ HwfΣ HnΣ iface _ oid _
-            (SAbi (AContractAddr a)) Ht s rho l rho_v a0 Hewt Hlot Henv Hloc
-            (VAddr l0) Href Hvt_abi Hn')
-        end.
-        (* LHS at SAbi (AContractAddr a), RHS at SContract a — same type at S n0 *)
-        change (denote_slot_value_n (S n0) Σ HwfΣ (VAddr l0) s
-                  (SAbi (AContractAddr a)) Hvt_abi Hn' =
-                denote_slot_value_n (S n0) Σ HwfΣ (VAddr l0) s
-                  (SContract a) (V_Contract_t Σ l0 s a h) Hn).
-        apply JMeq_eq. apply denote_slot_value_n_coerce. }
-    + (* T_Upcast_t *)
-      destruct n as [|n0].
-      { exfalso. pose proof (HnΣ a). simpl in *. lia. }
-      { cbn [denote_ref].
-        assert (Hn_ca : sty_depth Σ (SAbi (AContractAddr a)) <= S n0)
-          by (simpl; exact (HnΣ a)).
-        pose proof (ref_typesafety_t Σ iface oid _ _ _ s rho l v
-          (type_ref_t_to_prop _ _ _ _ _ _ _ Ht) Hewt Hlot Heval) as Hvt_ca.
-        rewrite (ref_sound (S n0) Σ HwfΣ HnΣ iface _ oid _
-          (SAbi (AContractAddr a)) Ht s rho l rho_v a0 Hewt Hlot Henv Hloc
-          v Heval Hvt_ca Hn_ca).
-        (* Need: fst (denote_slot_value_n ... v (SAbi (AContractAddr a)) ...) =
-                 denote_slot_value_n ... v (SAbi (ABase TAddress)) ... *)
-        (* v = VAddr l0 by typing, extract and apply upcast lemma *)
-        dependent destruction Hvt_ca.
-        match goal with
-        | [ h0 : has_abi_type_t _ _ _ (AContractAddr _) |- _ ] =>
-          dependent destruction h0
-        end.
-        apply denote_slot_value_n_upcast. }
-    + (* T_Field_t *) admit.
-    + (* T_MapIndex_t *) admit.
-    + (* T_Environment_t *)
-      dependent destruction t.
-      * (* T_Caller_t *)
-        inversion Heval; subst.
-        match goal with [ He : eval_env _ _ _ _ |- _ ] => inversion He; subst end.
-        destruct Henv as [_ [Hcaller _]].
-        destruct Hcaller as [vc [Hrhoc Hcal]].
-        match goal with
-        | [ H : rho "caller"%string = Some _ |- _ ] =>
-          assert (VAddr vc = v) by congruence; subst v
-        end.
-        destruct n as [|n0]; cbn [denote_ref denote_env_ref];
-          rewrite Hcal;
-          [ rewrite (denote_slot_value_n_at_base_0 Σ HwfΣ (VAddr vc) s TAddress
-                       (V_Addr_t vc) Hvt)
-          | rewrite (denote_slot_value_n_at_base_S n0 Σ HwfΣ (VAddr vc) s TAddress
-                       (V_Addr_t vc) Hvt) ];
-          simpl; reflexivity.
-      * (* T_Origin_t *)
-        inversion Heval; subst.
-        match goal with [ He : eval_env _ _ _ _ |- _ ] => inversion He; subst end.
-        destruct Henv as [_ [_ [Horigin _]]].
-        destruct Horigin as [vo [Hrhoo Hori]].
-        match goal with
-        | [ H : rho "origin"%string = Some _ |- _ ] =>
-          assert (VAddr vo = v) by congruence; subst v
-        end.
-        destruct n as [|n0]; cbn [denote_ref denote_env_ref];
-          rewrite Hori;
-          [ rewrite (denote_slot_value_n_at_base_0 Σ HwfΣ (VAddr vo) s TAddress
-                       (V_Addr_t vo) Hvt)
-          | rewrite (denote_slot_value_n_at_base_S n0 Σ HwfΣ (VAddr vo) s TAddress
-                       (V_Addr_t vo) Hvt) ];
-          simpl; reflexivity.
-      * (* T_Callvalue_t *)
-        inversion Heval; subst.
-        match goal with [ He : eval_env _ _ _ _ |- _ ] => inversion He; subst end.
-        destruct Henv as [_ [_ [_ Hcallvalue]]].
-        destruct Hcallvalue as [vcv [Hinr [Hrhov Hval]]].
-        match goal with
-        | [ H : rho "callvalue"%string = Some _ |- _ ] =>
-          assert (VInt vcv = v) by congruence; subst v
-        end.
-        destruct n as [|n0]; cbn [denote_ref denote_env_ref];
-          rewrite Hval;
-          [ rewrite (denote_slot_value_n_at_base_0 Σ HwfΣ (VInt vcv) s
-                       (TInt (UintT 256)) (V_Int_t vcv (UintT 256) Hinr) Hvt)
-          | rewrite (denote_slot_value_n_at_base_S n0 Σ HwfΣ (VInt vcv) s
-                       (TInt (UintT 256)) (V_Int_t vcv (UintT 256) Hinr) Hvt) ];
-          simpl; apply sig_eq.
-      * (* T_This_t *)
-        inversion Heval; subst.
-        match goal with [ He : eval_env _ _ _ _ |- _ ] => inversion He; subst end.
-        destruct n as [|n0].
-        { exfalso. simpl in Hn. lia. }
-        { cbn [denote_ref denote_env_ref].
-          destruct Hloc as [Hvt_c [Hn_c Hloc_eq]].
-          rewrite Hloc_eq.
-          apply JMeq_eq. apply JMeq_sym.
-          apply denote_slot_value_n_coerce. }
-  - (* expr_sound *)
-    dependent destruction Ht.
-    + (* T_Int_t: integer literal *)
-      inversion Heval; subst.
-      simpl. rewrite (denote_base_value_VInt _ _ Hvt).
-      apply sig_eq.
-    + (* T_Bool_t: boolean literal *)
-      inversion Heval; subst.
-      simpl. rewrite (denote_base_value_VBool _ Hvt).
-      reflexivity.
-    + (* T_Ref_t *)
-      inversion Heval; subst.
-      match goal with
-      | [ Href : eval_ref (TSUntimed s) rho r _ v ?tp |- _ ] =>
-        pose proof (eval_ref_untimed_RTU _ _ _ _ _ _ Href) as Htpeq;
-        subst tp
-      end.
-      destruct n as [|n']; simpl.
-      * (* n = 0 *)
-        pose proof (V_ABIVal_t Σ v s (ABase bt)
-                 (V_BaseValAlpha_t Σ v s bt Hvt)) as Hsty.
-        assert (Hn : sty_depth Σ (SAbi (ABase bt)) <= 0) by (simpl; lia).
-        match goal with
-        | [ Href : eval_ref (TSUntimed s) rho r _ v RTU |- _ ] =>
-          rewrite (ref_sound 0 Σ HwfΣ HnΣ iface k oid r (SAbi (ABase bt)) t0
-            s rho l rho_v a Hewt Hlot Henv Hloc v Href Hsty Hn)
-        end.
-        unfold denote_slot_value_n. simpl.
-        replace (sub_add_eq 0 0 Hn) with (@eq_refl nat 0)
-          by (apply proof_irrelevance).
-        simpl. apply denote_slot_value_at_base.
-      * (* n = S n' *)
-        pose proof (V_ABIVal_t Σ v s (ABase bt)
-                 (V_BaseValAlpha_t Σ v s bt Hvt)) as Hsty.
-        assert (Hn : sty_depth Σ (SAbi (ABase bt)) <= S n') by (simpl; lia).
-        match goal with
-        | [ Href : eval_ref (TSUntimed s) rho r _ v RTU |- _ ] =>
-          rewrite (ref_sound (S n') Σ HwfΣ HnΣ iface k oid r (SAbi (ABase bt)) t0
-            s rho l rho_v a Hewt Hlot Henv Hloc v Href Hsty Hn)
-        end.
-        unfold denote_slot_value_n. simpl sty_depth. simpl Nat.sub.
-        transitivity (denote_slot_value Σ HwfΣ v s (SAbi (ABase bt)) Hsty).
-        { apply JMeq_eq.
-          exact (JMeq_trans
-            (eq_rect_JMeq nat (fun m => sem_slot_aux m Σ (SAbi (ABase bt)))
-              (S n' - 0 + 0) (S n') (sub_add_eq (S n') 0 Hn)
-              (sem_slot_weaken_add (S n' - 0) 0 Σ (SAbi (ABase bt))
-                (denote_slot_value Σ HwfΣ v s (SAbi (ABase bt)) Hsty)))
-            (sem_slot_weaken_add_base_JMeq_0 (S n' - 0) Σ bt
-              (denote_slot_value Σ HwfΣ v s (SAbi (ABase bt)) Hsty))). }
-        { apply denote_slot_value_at_base. }
-    + (* T_Addr_t *) admit.
-    + (* T_Range_t *)
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht) Hewt Hlot) as [v' [Hev' Hbt']].
-      inversion Heval; subst.
-      * (* E_RangeTrue *)
-        match goal with
-        | [ He : eval_expr _ _ ?ei _ (VInt ?z), Hin : in_range _ ?z |- _ ] =>
-          assert (v' = VInt z) by (eapply expr_determinism; eauto); subst v';
-          inversion Hbt' as [z' it2' Hin2 | | ]; subst
-        end.
-        simpl.
-        match goal with
-        | [ He : eval_expr _ _ ?ei _ (VInt ?z),
-            Hin : in_range ?it1' ?z,
-            Hin2 : in_range ?it2' ?z |- _ ] =>
-          rewrite (expr_sound n Σ HwfΣ HnΣ iface oid ei (TInt it2') Ht
-            s rho l rho_v a Hewt Hlot Henv Hloc _ He (V_Int_t z it2' Hin2));
-          rewrite (denote_base_value_VInt _ _ (V_Int_t z it2' Hin2));
-          simpl;
-          rewrite (in_range_check_true _ _ Hin);
-          rewrite (denote_base_value_VBool _ Hvt); reflexivity
-        end.
-      * (* E_RangeFalse *)
-        match goal with
-        | [ He : eval_expr _ _ ?ei _ (VInt ?z), Hnin : ~ in_range _ ?z |- _ ] =>
-          assert (v' = VInt z) by (eapply expr_determinism; eauto); subst v';
-          inversion Hbt' as [z' it2' Hin2 | | ]; subst
-        end.
-        simpl.
-        match goal with
-        | [ He : eval_expr _ _ ?ei _ (VInt ?z),
-            Hnin : ~ in_range ?it1' ?z,
-            Hin2 : in_range ?it2' ?z |- _ ] =>
-          rewrite (expr_sound n Σ HwfΣ HnΣ iface oid ei (TInt it2') Ht
-            s rho l rho_v a Hewt Hlot Henv Hloc _ He (V_Int_t z it2' Hin2));
-          rewrite (denote_base_value_VInt _ _ (V_Int_t z it2' Hin2));
-          simpl;
-          rewrite (in_range_check_false _ _ Hnin);
-          rewrite (denote_base_value_VBool _ Hvt); reflexivity
-        end.
-    + (* T_BopI_t: e1 op e2 : IntUnbounded *)
-      (* Type safety for sub-expressions *)
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht1) Hewt Hlot) as [v1 [Hev1 Hbt1']].
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht2) Hewt Hlot) as [v2 [Hev2 Hbt2']].
-      inversion Hbt1' as [| |z1 ? Hin1]; subst.
-      inversion Hbt2' as [| |z2 ? Hin2]; subst.
-      (* Relate v to eval_int_binop op z1 z2 *)
-      pose proof (eval_bopi_result _ _ _ _ _ _ _ _ _ Heval Hev1 Hev2) as ->.
-      (* Apply IH *)
-      simpl.
-      rewrite (expr_sound n Σ HwfΣ HnΣ iface oid _ (TInt it1) Ht1
-        s rho l rho_v a Hewt Hlot Henv Hloc (VInt z1) Hev1 (V_Int_t z1 it1 Hin1)).
-      rewrite (expr_sound n Σ HwfΣ HnΣ iface oid _ (TInt it2) Ht2
-        s rho l rho_v a Hewt Hlot Henv Hloc (VInt z2) Hev2 (V_Int_t z2 it2 Hin2)).
-      rewrite (denote_base_value_VInt _ _ (V_Int_t z1 it1 Hin1)).
-      rewrite (denote_base_value_VInt _ _ (V_Int_t z2 it2 Hin2)).
-      simpl.
-      rewrite (denote_base_value_VInt _ _ Hvt).
-      apply sig_eq.
-    + (* T_NumConv_t: e : it → e : IntUnbounded *)
-      (* Get in_range it for v via type safety *)
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht) Hewt Hlot) as [v' [Hev' Hbt']].
-      assert (Heq : v' = v) by (eapply expr_determinism; eauto). subst v'.
-      inversion Hbt' as [| |z it0 Hin]; subst.
-      simpl.
-      pose proof (expr_sound n Σ HwfΣ HnΣ iface oid e (TInt it) Ht
-        s rho l rho_v a Hewt Hlot Henv Hloc (VInt z) Heval
-        (V_Int_t z it Hin)) as IH.
-      rewrite IH.
-      rewrite (denote_base_value_VInt _ _ (V_Int_t z it Hin)). simpl.
-      rewrite (denote_base_value_VInt _ _ Hvt).
-      apply sig_eq.
-    + (* T_BopB_t: e1 op_b e2 *)
-      inversion Heval; subst.
-      simpl.
-      match goal with
-      | [ He1 : eval_expr _ _ e1 _ (VBool ?b1),
-          He2 : eval_expr _ _ e2 _ (VBool ?b2) |- _ ] =>
-        pose proof (expr_sound n Σ HwfΣ HnΣ iface oid e1 TBool Ht1
-                      s rho l rho_v a Hewt Hlot Henv Hloc (VBool b1) He1
-                      (V_Bool_t b1)) as IH1;
-        pose proof (expr_sound n Σ HwfΣ HnΣ iface oid e2 TBool Ht2
-                      s rho l rho_v a Hewt Hlot Henv Hloc (VBool b2) He2
-                      (V_Bool_t b2)) as IH2
-      end.
-      simpl in IH1, IH2.
-      rewrite IH1, IH2.
-      rewrite (denote_base_value_VBool _ Hvt).
-      reflexivity.
-    + (* T_Neg_t: ~e *)
-      inversion Heval; subst.
-      simpl.
-      match goal with
-      | [ He : eval_expr _ _ e _ (VBool ?b) |- _ ] =>
-        pose proof (expr_sound n Σ HwfΣ HnΣ iface oid e TBool Ht
-                      s rho l rho_v a Hewt Hlot Henv Hloc (VBool b) He
-                      (V_Bool_t b)) as IH
-      end.
-      simpl in IH.
-      rewrite IH.
-      rewrite (denote_base_value_VBool _ Hvt).
-      reflexivity.
-    + (* T_Cmp_t: e1 cmp_op e2 : TBool *)
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht1) Hewt Hlot) as [v1' [Hev1' Hbt1']].
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht2) Hewt Hlot) as [v2' [Hev2' Hbt2']].
-      inversion Heval; subst.
-      simpl.
-      match goal with
-      | [ He1 : eval_expr _ _ ?e1' _ (VInt ?z1),
-          He2 : eval_expr _ _ ?e2' _ (VInt ?z2) |- _ ] =>
-        assert (v1' = VInt z1) by (eapply expr_determinism; eauto); subst v1';
-        assert (v2' = VInt z2) by (eapply expr_determinism; eauto); subst v2';
-        inversion Hbt1' as [| |z1' it1' Hin1]; subst;
-        inversion Hbt2' as [| |z2' it2' Hin2]; subst;
-        rewrite (expr_sound n Σ HwfΣ HnΣ iface oid e1' (TInt it) Ht1
-          s rho l rho_v a Hewt Hlot Henv Hloc (VInt z1) He1 (V_Int_t z1 it Hin1));
-        rewrite (expr_sound n Σ HwfΣ HnΣ iface oid e2' (TInt it) Ht2
-          s rho l rho_v a Hewt Hlot Henv Hloc (VInt z2) He2 (V_Int_t z2 it Hin2));
-        rewrite (denote_base_value_VInt _ _ (V_Int_t z1 it Hin1));
-        rewrite (denote_base_value_VInt _ _ (V_Int_t z2 it Hin2));
-        simpl;
-        rewrite (denote_base_value_VBool _ Hvt);
-        reflexivity
-      end.
-    + (* T_ITE_t: if e1 then e2 else e3 *)
-      inversion Heval; subst.
-      * (* E_ITETrue *)
-        simpl.
-        match goal with
-        | [ Hc : eval_expr _ _ e1 _ (VBool true),
-            Hv : eval_expr _ _ e2 _ v |- _ ] =>
-          pose proof (expr_sound n Σ HwfΣ HnΣ iface oid e1 TBool Ht1
-                        s rho l rho_v a Hewt Hlot Henv Hloc (VBool true) Hc
-                        (V_Bool_t true)) as IHc;
-          simpl in IHc;
-          rewrite IHc;
-          exact (expr_sound n Σ HwfΣ HnΣ iface oid e2 bt Ht2
-                   s rho l rho_v a Hewt Hlot Henv Hloc v Hv Hvt)
-        end.
-      * (* E_ITEFalse *)
-        simpl.
-        match goal with
-        | [ Hc : eval_expr _ _ e1 _ (VBool false),
-            Hv : eval_expr _ _ e3 _ v |- _ ] =>
-          pose proof (expr_sound n Σ HwfΣ HnΣ iface oid e1 TBool Ht1
-                        s rho l rho_v a Hewt Hlot Henv Hloc (VBool false) Hc
-                        (V_Bool_t false)) as IHc;
-          simpl in IHc;
-          rewrite IHc;
-          exact (expr_sound n Σ HwfΣ HnΣ iface oid e3 bt Ht3
-                   s rho l rho_v a Hewt Hlot Henv Hloc v Hv Hvt)
-        end.
-    + (* T_Eq_t *)
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht1) Hewt Hlot) as [v1' [Hev1' Hbt1']].
-      pose proof (expr_typesafety_untimed _ _ _ _ _ _ _ _
-        (type_expr_t_to_prop _ _ _ _ _ _ Ht2) Hewt Hlot) as [v2' [Hev2' Hbt2']].
-      inversion Heval; subst.
-      * (* E_EqTrue: v1 = v2 *)
-        assert (Hv1eq : v1' = v2) by (eapply expr_determinism; [exact Hev1' | eassumption]).
-        subst v1'.
-        assert (Hv2eq : v2' = v2) by (eapply expr_determinism; [exact Hev2' | eassumption]).
-        subst v2'.
-        destruct (construct_has_base_type_t v2 bt) as [Hbt_t|] eqn:Hc.
-        { simpl.
-          rewrite (expr_sound n Σ HwfΣ HnΣ iface oid e1 _ Ht1
-            s rho l rho_v a Hewt Hlot Henv Hloc v2 Hev1' Hbt_t).
-          rewrite (expr_sound n Σ HwfΣ HnΣ iface oid e2 _ Ht2
-            s rho l rho_v a Hewt Hlot Henv Hloc v2 Hev2' Hbt_t).
-          rewrite sem_base_eqb_refl.
-          rewrite (denote_base_value_VBool _ Hvt).
-          reflexivity. }
-        { exfalso.
-          destruct (construct_has_base_type_t_complete _ _ Hbt1') as [? Hsome].
-          rewrite Hsome in Hc. discriminate. }
-      * (* E_EqFalse: v1 <> v2 *)
-        match goal with
-        | [ He1 : eval_expr _ _ e1 _ ?vv1,
-            He2 : eval_expr _ _ e2 _ ?vv2 |- _ ] =>
-          assert (v1' = vv1) by (eapply expr_determinism; [exact Hev1' | exact He1]); subst v1';
-          assert (v2' = vv2) by (eapply expr_determinism; [exact Hev2' | exact He2]); subst v2'
-        end.
-        match goal with
-        | [ He1 : eval_expr _ _ e1 _ ?vv1 |- _ ] =>
-          destruct (construct_has_base_type_t vv1 bt) as [Hbt1_t|] eqn:Hc1;
-          [ | exfalso; destruct (construct_has_base_type_t_complete _ _ Hbt1') as [? Hs]; rewrite Hs in Hc1; discriminate ]
-        end.
-        match goal with
-        | [ He2 : eval_expr _ _ e2 _ ?vv2 |- _ ] =>
-          destruct (construct_has_base_type_t vv2 bt) as [Hbt2_t|] eqn:Hc2;
-          [ | exfalso; destruct (construct_has_base_type_t_complete _ _ Hbt2') as [? Hs]; rewrite Hs in Hc2; discriminate ]
-        end.
-        simpl.
-        match goal with
-        | [ He1 : eval_expr _ _ e1 _ ?vv1,
-            He2 : eval_expr _ _ e2 _ ?vv2,
-            Hneq : ?vv1 <> ?vv2 |- _ ] =>
-          rewrite (expr_sound n Σ HwfΣ HnΣ iface oid e1 _ Ht1
-            s rho l rho_v a Hewt Hlot Henv Hloc vv1 He1 Hbt1_t);
-          rewrite (expr_sound n Σ HwfΣ HnΣ iface oid e2 _ Ht2
-            s rho l rho_v a Hewt Hlot Henv Hloc vv2 He2 Hbt2_t);
-          rewrite (denote_base_value_neq _ _ _ Hbt1_t Hbt2_t Hneq)
-        end.
-        rewrite (denote_base_value_VBool _ Hvt).
-        reflexivity.
 Admitted.
 
 (** Mapping Expression Soundness *)
 Lemma mapexpr_soundness :
-  forall n Σ (HwfΣ : wf_Σ Σ) iface oid s rho l
+  forall n Σ (HwfΣ : wf_Σ Σ) iface phi oid s rho l
     (rho_v : sem_iface_aux n Σ iface)
     (a : sem_opt_id_aux n Σ oid)
     (Henv : env_sound n Σ HwfΣ rho s iface rho_v)
     (Hloc : loc_sound n Σ HwfΣ l s oid a)
     m mu
-    (Ht : type_mapexpr_t Σ iface oid m mu)
+    (Ht : type_mapexpr_t Σ iface phi oid m mu)
     v (Heval : eval_mapexpr (TSUntimed s) rho m l v)
     (Hvt : has_mapping_type_t v mu),
-  denote_mapexpr n Σ iface oid m mu Ht rho_v a =
+  denote_mapexpr n Σ iface phi oid m mu Ht rho_v a =
   denote_mapping_value v mu Hvt.
 Proof.
 Admitted.

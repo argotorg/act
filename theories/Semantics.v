@@ -479,19 +479,27 @@ Inductive eval_updates : state -> env -> list update -> addr -> state -> Prop :=
 (** Accessors for trans_case components *)
 Definition tc_cond (tc : trans_case) : expr := fst (fst tc).
 Definition tc_updates (tc : trans_case) : list update := snd (fst tc).
-Definition tc_return (tc : trans_case) : expr := snd tc.
+Definition tc_return (tc : trans_case) : option expr := snd tc.
 
-Definition tc_default : trans_case := (EBool false, [], EBool false).
+Definition tc_default : trans_case := (EBool false, [], None).
+
+Inductive eval_return_expr : timed_state -> env -> option expr -> addr ->
+                             option value -> Prop :=
+  | E_ReturnNone : forall ts rho l,
+      eval_return_expr ts rho None l None
+  | E_ReturnSome : forall ts rho e l v,
+      eval_expr ts rho e l v ->
+      eval_return_expr ts rho (Some e) l (Some v).
 
 Inductive eval_trans_cases : state -> env -> list trans_case -> addr ->
-                             value -> state -> Prop :=
+                             option value -> state -> Prop :=
   | E_TransCases : forall s rho cases j l v s',
       j < length cases ->
       eval_expr (TSUntimed s) rho (tc_cond (nth j cases tc_default)) l (VBool true) ->
       (forall i, i <> j -> i < length cases ->
         eval_expr (TSUntimed s) rho (tc_cond (nth i cases tc_default)) l (VBool false)) ->
       eval_updates s rho (tc_updates (nth j cases tc_default)) l s' ->
-      eval_expr (TSTimed s s') rho (tc_return (nth j cases tc_default)) l v ->
+      eval_return_expr (TSTimed s s') rho (tc_return (nth j cases tc_default)) l v ->
       eval_trans_cases s rho cases l v s'.
 
 (* ================================================================= *)
@@ -509,7 +517,7 @@ Inductive eval_constructor : state -> env -> constructor -> ident ->
 (** ** Semantics of Transitions *)
 
 Inductive eval_transition : state -> env -> transition -> addr ->
-                            value -> state -> Prop :=
+                            option value -> state -> Prop :=
   | E_Trans : forall s rho tr l v s',
       Forall (fun pre => eval_expr (TSUntimed s) rho pre l (VBool true))
              (trans_iff tr) ->
@@ -983,6 +991,16 @@ Lemma updates_determinism :
     s1 = s2.
 Proof. intros. eapply updates_det; eauto. Qed.
 
+Lemma return_expr_determinism :
+  forall ts rho oe l v1 v2,
+    eval_return_expr ts rho oe l v1 ->
+    eval_return_expr ts rho oe l v2 ->
+    v1 = v2.
+Proof.
+  intros. inv H; inv H0; auto.
+  f_equal. eapply expr_determinism; eauto.
+Qed.
+
 (** Determinism of Transition Cases *)
 Lemma trans_cases_determinism :
   forall cmap s rho cases l v1 s1 v2 s2,
@@ -1004,7 +1022,7 @@ Proof.
   | [Hu1 : eval_updates _ _ _ _ _ ?s1, Hu2 : eval_updates _ _ _ _ _ ?s2 |- _] =>
     assert (s1 = s2) by (eapply updates_determinism; eauto); subst
   end.
-  split; auto. eapply expr_determinism; eauto.
+  split; auto. eapply return_expr_determinism; eauto.
 Qed.
 
 (** Determinism of Constructor Evaluation *)

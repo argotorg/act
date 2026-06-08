@@ -128,8 +128,8 @@ Definition update := (ref * slot_expr)%type.
 (** Constructor case: case e: creates [...] *)
 Definition ctor_case := (expr * list create)%type.
 
-(** Transition case: case e: updates [...] returns e *)
-Definition trans_case := (expr * list update * expr)%type.
+(** Transition case: case e: updates [...] returns e? *)
+Definition trans_case := (expr * list update * option expr)%type.
 
 (* ================================================================= *)
 (** ** Constructors and Transitions *)
