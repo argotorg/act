@@ -95,7 +95,7 @@ test-cabal: src/*.hs
 tests/%.parse.pass:
 	./bin/act parse --file tests/$* > tests/$*.parsed.hs.out
 	diff tests/$*.parsed.hs.out tests/$*.parsed.hs
-	rm tests/$*.parsed.hs
+	rm tests/$*.parsed.hs.out
 
 tests/%.parse.fail:
 	./bin/act parse --file tests/$* && exit 1 || echo 0
