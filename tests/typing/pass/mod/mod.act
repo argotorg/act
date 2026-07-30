@@ -1,0 +1,16 @@
+contract Remainder
+
+constructor()
+
+creates
+   uint x := 0
+
+transition rem(uint a, uint b) : uint
+
+iff
+   1 <= b
+
+updates
+  x := a % b
+
+returns a % b
