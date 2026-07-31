@@ -1,0 +1,3538 @@
+// Regression test for the SMT-session stderr deadlock.
+//
+// Synthetic on purpose: 320 trivial behaviours mean 320+ solver queries,
+// each preceded by (reset). Before the fix, (reset) wiped the (set-logic ALL)
+// preamble, so the solver emitted a warning block (~270 bytes with cvc5) per
+// query onto a stderr pipe that nothing ever read. Past the pipe's capacity
+// (as low as 8KB under pipe-buffer pressure, 64KB by default) the solver
+// blocks in write(), act blocks in poll(), and act type hangs forever at
+// zero CPU. This file generates ~86KB of pre-fix warning volume - past any
+// kernel's pipe capacity. Post-fix (stderr drained + preamble re-sent after
+// every reset) it must simply typecheck to completion.
+
+contract StressSmtSession
+
+constructor()
+
+creates
+
+  uint256 acc := 0
+
+transition probe0(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 1)
+
+updates
+
+returns x + 1
+
+
+transition probe1(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 2)
+
+updates
+
+returns x + 2
+
+
+transition probe2(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 3)
+
+updates
+
+returns x + 3
+
+
+transition probe3(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 4)
+
+updates
+
+returns x + 4
+
+
+transition probe4(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 5)
+
+updates
+
+returns x + 5
+
+
+transition probe5(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 6)
+
+updates
+
+returns x + 6
+
+
+transition probe6(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 7)
+
+updates
+
+returns x + 7
+
+
+transition probe7(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 8)
+
+updates
+
+returns x + 8
+
+
+transition probe8(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 9)
+
+updates
+
+returns x + 9
+
+
+transition probe9(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 10)
+
+updates
+
+returns x + 10
+
+
+transition probe10(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 11)
+
+updates
+
+returns x + 11
+
+
+transition probe11(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 12)
+
+updates
+
+returns x + 12
+
+
+transition probe12(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 13)
+
+updates
+
+returns x + 13
+
+
+transition probe13(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 14)
+
+updates
+
+returns x + 14
+
+
+transition probe14(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 15)
+
+updates
+
+returns x + 15
+
+
+transition probe15(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 16)
+
+updates
+
+returns x + 16
+
+
+transition probe16(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 17)
+
+updates
+
+returns x + 17
+
+
+transition probe17(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 18)
+
+updates
+
+returns x + 18
+
+
+transition probe18(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 19)
+
+updates
+
+returns x + 19
+
+
+transition probe19(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 20)
+
+updates
+
+returns x + 20
+
+
+transition probe20(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 21)
+
+updates
+
+returns x + 21
+
+
+transition probe21(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 22)
+
+updates
+
+returns x + 22
+
+
+transition probe22(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 23)
+
+updates
+
+returns x + 23
+
+
+transition probe23(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 24)
+
+updates
+
+returns x + 24
+
+
+transition probe24(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 25)
+
+updates
+
+returns x + 25
+
+
+transition probe25(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 26)
+
+updates
+
+returns x + 26
+
+
+transition probe26(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 27)
+
+updates
+
+returns x + 27
+
+
+transition probe27(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 28)
+
+updates
+
+returns x + 28
+
+
+transition probe28(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 29)
+
+updates
+
+returns x + 29
+
+
+transition probe29(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 30)
+
+updates
+
+returns x + 30
+
+
+transition probe30(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 31)
+
+updates
+
+returns x + 31
+
+
+transition probe31(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 32)
+
+updates
+
+returns x + 32
+
+
+transition probe32(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 33)
+
+updates
+
+returns x + 33
+
+
+transition probe33(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 34)
+
+updates
+
+returns x + 34
+
+
+transition probe34(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 35)
+
+updates
+
+returns x + 35
+
+
+transition probe35(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 36)
+
+updates
+
+returns x + 36
+
+
+transition probe36(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 37)
+
+updates
+
+returns x + 37
+
+
+transition probe37(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 38)
+
+updates
+
+returns x + 38
+
+
+transition probe38(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 39)
+
+updates
+
+returns x + 39
+
+
+transition probe39(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 40)
+
+updates
+
+returns x + 40
+
+
+transition probe40(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 41)
+
+updates
+
+returns x + 41
+
+
+transition probe41(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 42)
+
+updates
+
+returns x + 42
+
+
+transition probe42(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 43)
+
+updates
+
+returns x + 43
+
+
+transition probe43(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 44)
+
+updates
+
+returns x + 44
+
+
+transition probe44(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 45)
+
+updates
+
+returns x + 45
+
+
+transition probe45(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 46)
+
+updates
+
+returns x + 46
+
+
+transition probe46(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 47)
+
+updates
+
+returns x + 47
+
+
+transition probe47(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 48)
+
+updates
+
+returns x + 48
+
+
+transition probe48(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 49)
+
+updates
+
+returns x + 49
+
+
+transition probe49(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 50)
+
+updates
+
+returns x + 50
+
+
+transition probe50(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 51)
+
+updates
+
+returns x + 51
+
+
+transition probe51(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 52)
+
+updates
+
+returns x + 52
+
+
+transition probe52(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 53)
+
+updates
+
+returns x + 53
+
+
+transition probe53(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 54)
+
+updates
+
+returns x + 54
+
+
+transition probe54(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 55)
+
+updates
+
+returns x + 55
+
+
+transition probe55(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 56)
+
+updates
+
+returns x + 56
+
+
+transition probe56(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 57)
+
+updates
+
+returns x + 57
+
+
+transition probe57(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 58)
+
+updates
+
+returns x + 58
+
+
+transition probe58(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 59)
+
+updates
+
+returns x + 59
+
+
+transition probe59(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 60)
+
+updates
+
+returns x + 60
+
+
+transition probe60(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 61)
+
+updates
+
+returns x + 61
+
+
+transition probe61(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 62)
+
+updates
+
+returns x + 62
+
+
+transition probe62(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 63)
+
+updates
+
+returns x + 63
+
+
+transition probe63(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 64)
+
+updates
+
+returns x + 64
+
+
+transition probe64(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 65)
+
+updates
+
+returns x + 65
+
+
+transition probe65(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 66)
+
+updates
+
+returns x + 66
+
+
+transition probe66(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 67)
+
+updates
+
+returns x + 67
+
+
+transition probe67(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 68)
+
+updates
+
+returns x + 68
+
+
+transition probe68(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 69)
+
+updates
+
+returns x + 69
+
+
+transition probe69(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 70)
+
+updates
+
+returns x + 70
+
+
+transition probe70(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 71)
+
+updates
+
+returns x + 71
+
+
+transition probe71(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 72)
+
+updates
+
+returns x + 72
+
+
+transition probe72(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 73)
+
+updates
+
+returns x + 73
+
+
+transition probe73(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 74)
+
+updates
+
+returns x + 74
+
+
+transition probe74(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 75)
+
+updates
+
+returns x + 75
+
+
+transition probe75(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 76)
+
+updates
+
+returns x + 76
+
+
+transition probe76(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 77)
+
+updates
+
+returns x + 77
+
+
+transition probe77(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 78)
+
+updates
+
+returns x + 78
+
+
+transition probe78(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 79)
+
+updates
+
+returns x + 79
+
+
+transition probe79(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 80)
+
+updates
+
+returns x + 80
+
+
+transition probe80(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 81)
+
+updates
+
+returns x + 81
+
+
+transition probe81(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 82)
+
+updates
+
+returns x + 82
+
+
+transition probe82(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 83)
+
+updates
+
+returns x + 83
+
+
+transition probe83(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 84)
+
+updates
+
+returns x + 84
+
+
+transition probe84(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 85)
+
+updates
+
+returns x + 85
+
+
+transition probe85(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 86)
+
+updates
+
+returns x + 86
+
+
+transition probe86(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 87)
+
+updates
+
+returns x + 87
+
+
+transition probe87(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 88)
+
+updates
+
+returns x + 88
+
+
+transition probe88(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 89)
+
+updates
+
+returns x + 89
+
+
+transition probe89(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 90)
+
+updates
+
+returns x + 90
+
+
+transition probe90(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 91)
+
+updates
+
+returns x + 91
+
+
+transition probe91(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 92)
+
+updates
+
+returns x + 92
+
+
+transition probe92(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 93)
+
+updates
+
+returns x + 93
+
+
+transition probe93(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 94)
+
+updates
+
+returns x + 94
+
+
+transition probe94(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 95)
+
+updates
+
+returns x + 95
+
+
+transition probe95(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 96)
+
+updates
+
+returns x + 96
+
+
+transition probe96(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 97)
+
+updates
+
+returns x + 97
+
+
+transition probe97(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 98)
+
+updates
+
+returns x + 98
+
+
+transition probe98(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 99)
+
+updates
+
+returns x + 99
+
+
+transition probe99(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 100)
+
+updates
+
+returns x + 100
+
+
+transition probe100(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 101)
+
+updates
+
+returns x + 101
+
+
+transition probe101(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 102)
+
+updates
+
+returns x + 102
+
+
+transition probe102(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 103)
+
+updates
+
+returns x + 103
+
+
+transition probe103(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 104)
+
+updates
+
+returns x + 104
+
+
+transition probe104(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 105)
+
+updates
+
+returns x + 105
+
+
+transition probe105(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 106)
+
+updates
+
+returns x + 106
+
+
+transition probe106(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 107)
+
+updates
+
+returns x + 107
+
+
+transition probe107(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 108)
+
+updates
+
+returns x + 108
+
+
+transition probe108(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 109)
+
+updates
+
+returns x + 109
+
+
+transition probe109(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 110)
+
+updates
+
+returns x + 110
+
+
+transition probe110(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 111)
+
+updates
+
+returns x + 111
+
+
+transition probe111(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 112)
+
+updates
+
+returns x + 112
+
+
+transition probe112(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 113)
+
+updates
+
+returns x + 113
+
+
+transition probe113(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 114)
+
+updates
+
+returns x + 114
+
+
+transition probe114(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 115)
+
+updates
+
+returns x + 115
+
+
+transition probe115(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 116)
+
+updates
+
+returns x + 116
+
+
+transition probe116(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 117)
+
+updates
+
+returns x + 117
+
+
+transition probe117(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 118)
+
+updates
+
+returns x + 118
+
+
+transition probe118(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 119)
+
+updates
+
+returns x + 119
+
+
+transition probe119(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 120)
+
+updates
+
+returns x + 120
+
+
+transition probe120(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 121)
+
+updates
+
+returns x + 121
+
+
+transition probe121(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 122)
+
+updates
+
+returns x + 122
+
+
+transition probe122(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 123)
+
+updates
+
+returns x + 123
+
+
+transition probe123(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 124)
+
+updates
+
+returns x + 124
+
+
+transition probe124(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 125)
+
+updates
+
+returns x + 125
+
+
+transition probe125(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 126)
+
+updates
+
+returns x + 126
+
+
+transition probe126(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 127)
+
+updates
+
+returns x + 127
+
+
+transition probe127(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 128)
+
+updates
+
+returns x + 128
+
+
+transition probe128(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 129)
+
+updates
+
+returns x + 129
+
+
+transition probe129(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 130)
+
+updates
+
+returns x + 130
+
+
+transition probe130(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 131)
+
+updates
+
+returns x + 131
+
+
+transition probe131(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 132)
+
+updates
+
+returns x + 132
+
+
+transition probe132(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 133)
+
+updates
+
+returns x + 133
+
+
+transition probe133(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 134)
+
+updates
+
+returns x + 134
+
+
+transition probe134(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 135)
+
+updates
+
+returns x + 135
+
+
+transition probe135(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 136)
+
+updates
+
+returns x + 136
+
+
+transition probe136(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 137)
+
+updates
+
+returns x + 137
+
+
+transition probe137(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 138)
+
+updates
+
+returns x + 138
+
+
+transition probe138(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 139)
+
+updates
+
+returns x + 139
+
+
+transition probe139(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 140)
+
+updates
+
+returns x + 140
+
+
+transition probe140(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 141)
+
+updates
+
+returns x + 141
+
+
+transition probe141(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 142)
+
+updates
+
+returns x + 142
+
+
+transition probe142(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 143)
+
+updates
+
+returns x + 143
+
+
+transition probe143(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 144)
+
+updates
+
+returns x + 144
+
+
+transition probe144(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 145)
+
+updates
+
+returns x + 145
+
+
+transition probe145(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 146)
+
+updates
+
+returns x + 146
+
+
+transition probe146(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 147)
+
+updates
+
+returns x + 147
+
+
+transition probe147(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 148)
+
+updates
+
+returns x + 148
+
+
+transition probe148(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 149)
+
+updates
+
+returns x + 149
+
+
+transition probe149(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 150)
+
+updates
+
+returns x + 150
+
+
+transition probe150(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 151)
+
+updates
+
+returns x + 151
+
+
+transition probe151(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 152)
+
+updates
+
+returns x + 152
+
+
+transition probe152(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 153)
+
+updates
+
+returns x + 153
+
+
+transition probe153(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 154)
+
+updates
+
+returns x + 154
+
+
+transition probe154(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 155)
+
+updates
+
+returns x + 155
+
+
+transition probe155(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 156)
+
+updates
+
+returns x + 156
+
+
+transition probe156(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 157)
+
+updates
+
+returns x + 157
+
+
+transition probe157(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 158)
+
+updates
+
+returns x + 158
+
+
+transition probe158(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 159)
+
+updates
+
+returns x + 159
+
+
+transition probe159(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 160)
+
+updates
+
+returns x + 160
+
+
+transition probe160(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 161)
+
+updates
+
+returns x + 161
+
+
+transition probe161(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 162)
+
+updates
+
+returns x + 162
+
+
+transition probe162(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 163)
+
+updates
+
+returns x + 163
+
+
+transition probe163(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 164)
+
+updates
+
+returns x + 164
+
+
+transition probe164(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 165)
+
+updates
+
+returns x + 165
+
+
+transition probe165(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 166)
+
+updates
+
+returns x + 166
+
+
+transition probe166(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 167)
+
+updates
+
+returns x + 167
+
+
+transition probe167(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 168)
+
+updates
+
+returns x + 168
+
+
+transition probe168(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 169)
+
+updates
+
+returns x + 169
+
+
+transition probe169(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 170)
+
+updates
+
+returns x + 170
+
+
+transition probe170(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 171)
+
+updates
+
+returns x + 171
+
+
+transition probe171(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 172)
+
+updates
+
+returns x + 172
+
+
+transition probe172(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 173)
+
+updates
+
+returns x + 173
+
+
+transition probe173(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 174)
+
+updates
+
+returns x + 174
+
+
+transition probe174(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 175)
+
+updates
+
+returns x + 175
+
+
+transition probe175(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 176)
+
+updates
+
+returns x + 176
+
+
+transition probe176(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 177)
+
+updates
+
+returns x + 177
+
+
+transition probe177(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 178)
+
+updates
+
+returns x + 178
+
+
+transition probe178(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 179)
+
+updates
+
+returns x + 179
+
+
+transition probe179(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 180)
+
+updates
+
+returns x + 180
+
+
+transition probe180(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 181)
+
+updates
+
+returns x + 181
+
+
+transition probe181(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 182)
+
+updates
+
+returns x + 182
+
+
+transition probe182(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 183)
+
+updates
+
+returns x + 183
+
+
+transition probe183(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 184)
+
+updates
+
+returns x + 184
+
+
+transition probe184(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 185)
+
+updates
+
+returns x + 185
+
+
+transition probe185(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 186)
+
+updates
+
+returns x + 186
+
+
+transition probe186(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 187)
+
+updates
+
+returns x + 187
+
+
+transition probe187(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 188)
+
+updates
+
+returns x + 188
+
+
+transition probe188(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 189)
+
+updates
+
+returns x + 189
+
+
+transition probe189(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 190)
+
+updates
+
+returns x + 190
+
+
+transition probe190(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 191)
+
+updates
+
+returns x + 191
+
+
+transition probe191(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 192)
+
+updates
+
+returns x + 192
+
+
+transition probe192(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 193)
+
+updates
+
+returns x + 193
+
+
+transition probe193(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 194)
+
+updates
+
+returns x + 194
+
+
+transition probe194(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 195)
+
+updates
+
+returns x + 195
+
+
+transition probe195(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 196)
+
+updates
+
+returns x + 196
+
+
+transition probe196(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 197)
+
+updates
+
+returns x + 197
+
+
+transition probe197(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 198)
+
+updates
+
+returns x + 198
+
+
+transition probe198(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 199)
+
+updates
+
+returns x + 199
+
+
+transition probe199(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 200)
+
+updates
+
+returns x + 200
+
+
+transition probe200(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 201)
+
+updates
+
+returns x + 201
+
+
+transition probe201(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 202)
+
+updates
+
+returns x + 202
+
+
+transition probe202(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 203)
+
+updates
+
+returns x + 203
+
+
+transition probe203(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 204)
+
+updates
+
+returns x + 204
+
+
+transition probe204(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 205)
+
+updates
+
+returns x + 205
+
+
+transition probe205(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 206)
+
+updates
+
+returns x + 206
+
+
+transition probe206(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 207)
+
+updates
+
+returns x + 207
+
+
+transition probe207(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 208)
+
+updates
+
+returns x + 208
+
+
+transition probe208(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 209)
+
+updates
+
+returns x + 209
+
+
+transition probe209(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 210)
+
+updates
+
+returns x + 210
+
+
+transition probe210(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 211)
+
+updates
+
+returns x + 211
+
+
+transition probe211(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 212)
+
+updates
+
+returns x + 212
+
+
+transition probe212(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 213)
+
+updates
+
+returns x + 213
+
+
+transition probe213(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 214)
+
+updates
+
+returns x + 214
+
+
+transition probe214(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 215)
+
+updates
+
+returns x + 215
+
+
+transition probe215(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 216)
+
+updates
+
+returns x + 216
+
+
+transition probe216(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 217)
+
+updates
+
+returns x + 217
+
+
+transition probe217(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 218)
+
+updates
+
+returns x + 218
+
+
+transition probe218(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 219)
+
+updates
+
+returns x + 219
+
+
+transition probe219(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 220)
+
+updates
+
+returns x + 220
+
+
+transition probe220(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 221)
+
+updates
+
+returns x + 221
+
+
+transition probe221(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 222)
+
+updates
+
+returns x + 222
+
+
+transition probe222(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 223)
+
+updates
+
+returns x + 223
+
+
+transition probe223(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 224)
+
+updates
+
+returns x + 224
+
+
+transition probe224(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 225)
+
+updates
+
+returns x + 225
+
+
+transition probe225(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 226)
+
+updates
+
+returns x + 226
+
+
+transition probe226(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 227)
+
+updates
+
+returns x + 227
+
+
+transition probe227(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 228)
+
+updates
+
+returns x + 228
+
+
+transition probe228(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 229)
+
+updates
+
+returns x + 229
+
+
+transition probe229(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 230)
+
+updates
+
+returns x + 230
+
+
+transition probe230(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 231)
+
+updates
+
+returns x + 231
+
+
+transition probe231(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 232)
+
+updates
+
+returns x + 232
+
+
+transition probe232(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 233)
+
+updates
+
+returns x + 233
+
+
+transition probe233(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 234)
+
+updates
+
+returns x + 234
+
+
+transition probe234(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 235)
+
+updates
+
+returns x + 235
+
+
+transition probe235(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 236)
+
+updates
+
+returns x + 236
+
+
+transition probe236(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 237)
+
+updates
+
+returns x + 237
+
+
+transition probe237(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 238)
+
+updates
+
+returns x + 238
+
+
+transition probe238(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 239)
+
+updates
+
+returns x + 239
+
+
+transition probe239(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 240)
+
+updates
+
+returns x + 240
+
+
+transition probe240(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 241)
+
+updates
+
+returns x + 241
+
+
+transition probe241(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 242)
+
+updates
+
+returns x + 242
+
+
+transition probe242(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 243)
+
+updates
+
+returns x + 243
+
+
+transition probe243(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 244)
+
+updates
+
+returns x + 244
+
+
+transition probe244(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 245)
+
+updates
+
+returns x + 245
+
+
+transition probe245(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 246)
+
+updates
+
+returns x + 246
+
+
+transition probe246(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 247)
+
+updates
+
+returns x + 247
+
+
+transition probe247(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 248)
+
+updates
+
+returns x + 248
+
+
+transition probe248(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 249)
+
+updates
+
+returns x + 249
+
+
+transition probe249(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 250)
+
+updates
+
+returns x + 250
+
+
+transition probe250(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 251)
+
+updates
+
+returns x + 251
+
+
+transition probe251(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 252)
+
+updates
+
+returns x + 252
+
+
+transition probe252(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 253)
+
+updates
+
+returns x + 253
+
+
+transition probe253(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 254)
+
+updates
+
+returns x + 254
+
+
+transition probe254(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 255)
+
+updates
+
+returns x + 255
+
+
+transition probe255(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 256)
+
+updates
+
+returns x + 256
+
+
+transition probe256(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 257)
+
+updates
+
+returns x + 257
+
+
+transition probe257(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 258)
+
+updates
+
+returns x + 258
+
+
+transition probe258(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 259)
+
+updates
+
+returns x + 259
+
+
+transition probe259(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 260)
+
+updates
+
+returns x + 260
+
+
+transition probe260(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 261)
+
+updates
+
+returns x + 261
+
+
+transition probe261(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 262)
+
+updates
+
+returns x + 262
+
+
+transition probe262(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 263)
+
+updates
+
+returns x + 263
+
+
+transition probe263(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 264)
+
+updates
+
+returns x + 264
+
+
+transition probe264(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 265)
+
+updates
+
+returns x + 265
+
+
+transition probe265(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 266)
+
+updates
+
+returns x + 266
+
+
+transition probe266(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 267)
+
+updates
+
+returns x + 267
+
+
+transition probe267(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 268)
+
+updates
+
+returns x + 268
+
+
+transition probe268(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 269)
+
+updates
+
+returns x + 269
+
+
+transition probe269(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 270)
+
+updates
+
+returns x + 270
+
+
+transition probe270(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 271)
+
+updates
+
+returns x + 271
+
+
+transition probe271(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 272)
+
+updates
+
+returns x + 272
+
+
+transition probe272(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 273)
+
+updates
+
+returns x + 273
+
+
+transition probe273(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 274)
+
+updates
+
+returns x + 274
+
+
+transition probe274(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 275)
+
+updates
+
+returns x + 275
+
+
+transition probe275(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 276)
+
+updates
+
+returns x + 276
+
+
+transition probe276(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 277)
+
+updates
+
+returns x + 277
+
+
+transition probe277(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 278)
+
+updates
+
+returns x + 278
+
+
+transition probe278(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 279)
+
+updates
+
+returns x + 279
+
+
+transition probe279(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 280)
+
+updates
+
+returns x + 280
+
+
+transition probe280(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 281)
+
+updates
+
+returns x + 281
+
+
+transition probe281(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 282)
+
+updates
+
+returns x + 282
+
+
+transition probe282(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 283)
+
+updates
+
+returns x + 283
+
+
+transition probe283(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 284)
+
+updates
+
+returns x + 284
+
+
+transition probe284(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 285)
+
+updates
+
+returns x + 285
+
+
+transition probe285(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 286)
+
+updates
+
+returns x + 286
+
+
+transition probe286(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 287)
+
+updates
+
+returns x + 287
+
+
+transition probe287(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 288)
+
+updates
+
+returns x + 288
+
+
+transition probe288(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 289)
+
+updates
+
+returns x + 289
+
+
+transition probe289(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 290)
+
+updates
+
+returns x + 290
+
+
+transition probe290(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 291)
+
+updates
+
+returns x + 291
+
+
+transition probe291(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 292)
+
+updates
+
+returns x + 292
+
+
+transition probe292(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 293)
+
+updates
+
+returns x + 293
+
+
+transition probe293(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 294)
+
+updates
+
+returns x + 294
+
+
+transition probe294(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 295)
+
+updates
+
+returns x + 295
+
+
+transition probe295(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 296)
+
+updates
+
+returns x + 296
+
+
+transition probe296(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 297)
+
+updates
+
+returns x + 297
+
+
+transition probe297(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 298)
+
+updates
+
+returns x + 298
+
+
+transition probe298(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 299)
+
+updates
+
+returns x + 299
+
+
+transition probe299(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 300)
+
+updates
+
+returns x + 300
+
+
+transition probe300(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 301)
+
+updates
+
+returns x + 301
+
+
+transition probe301(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 302)
+
+updates
+
+returns x + 302
+
+
+transition probe302(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 303)
+
+updates
+
+returns x + 303
+
+
+transition probe303(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 304)
+
+updates
+
+returns x + 304
+
+
+transition probe304(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 305)
+
+updates
+
+returns x + 305
+
+
+transition probe305(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 306)
+
+updates
+
+returns x + 306
+
+
+transition probe306(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 307)
+
+updates
+
+returns x + 307
+
+
+transition probe307(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 308)
+
+updates
+
+returns x + 308
+
+
+transition probe308(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 309)
+
+updates
+
+returns x + 309
+
+
+transition probe309(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 310)
+
+updates
+
+returns x + 310
+
+
+transition probe310(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 311)
+
+updates
+
+returns x + 311
+
+
+transition probe311(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 312)
+
+updates
+
+returns x + 312
+
+
+transition probe312(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 313)
+
+updates
+
+returns x + 313
+
+
+transition probe313(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 314)
+
+updates
+
+returns x + 314
+
+
+transition probe314(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 315)
+
+updates
+
+returns x + 315
+
+
+transition probe315(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 316)
+
+updates
+
+returns x + 316
+
+
+transition probe316(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 317)
+
+updates
+
+returns x + 317
+
+
+transition probe317(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 318)
+
+updates
+
+returns x + 318
+
+
+transition probe318(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 319)
+
+updates
+
+returns x + 319
+
+
+transition probe319(uint256 x) : uint256
+
+iff
+
+  inRange(uint256, x + 320)
+
+updates
+
+returns x + 320
