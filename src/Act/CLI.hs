@@ -153,7 +153,7 @@ parse' f jsn = do
   fs <- processSources jsn f
   contents <- flip zip fs <$> mapM readFile fs
   let parsed = traverse (\(content,source) -> (,source) <$> (errorSource source $ parse $ lexer content)) contents
-  validation (prettyErrs contents) print parsed
+  validation (prettyErrs (Just contents)) print parsed
 
 type' :: Maybe FilePath -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f jsn solver' smttimeout' debug' = do
@@ -213,7 +213,7 @@ equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout deb
       checkContracts solvers store cmap
     case res of
       Success _ -> pure ()
-      Failure err -> prettyErrs [("","")] (second ("",) <$> err)
+      Failure err -> prettyErrs Nothing (second ("",) <$> err)
   where
 
     -- Creates maps of storage layout modes and bytecodes, for all contracts contained in the given Act specification
@@ -395,7 +395,7 @@ toCode fromFile t = case BS16.decodeBase16Untyped (encodeUtf8 (stripSuffixIf "\n
 
 -- | Fail on error, or proceed with continuation
 proceed :: Validate err => [(String,FilePath)] -> err (NonEmpty (Pn, (FilePath, String))) a -> (a -> IO ()) -> IO ()
-proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
+proceed contents comp continue = validation (prettyErrs (Just contents)) continue (comp ^. revalidate)
 
 compile :: [(String, FilePath)] -> Error (FilePath ,String) (Act, [Constraint Timed])
 compile = pure . (first annotate) <==< pure . (\(acts, cnstr) -> (acts, (checkIntegerBoundsAct acts) ++ cnstr))

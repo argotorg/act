@@ -88,8 +88,6 @@ test-invariant: parser compiler $(invariant_pass:=.invariant.pass) $(invariant_f
 test-postcondition: parser compiler $(postcondition_pass:=.postcondition.pass) $(postcondition_fail:=.postcondition.fail)
 test-equiv: parser compiler $(hevm_pass:=.hevm.pass) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_pass:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
 test-equiv-fast: parser compiler $(hevm_fast:=.hevm.pass.fast) $(hevm_vy_pass:=.hevm.vy.pass) $(hevm_multi_fast:=.hevm.multi.pass) $(hevm_fail:=.hevm.fail)
-test-cabal: src/*.hs
-	cabal v2-run test
 
 # Just checks parsing
 tests/%.parse.pass:
@@ -143,4 +141,4 @@ tests/hevm/pass/%.act.hevm.pass.fast:
 	./bin/act equiv --spec tests/hevm/pass/$*.act --sol tests/hevm/pass/$*.sol --solver bitwuzla --smttimeout 100000000
 
 test-ci: test-parse test-type test-rocq test-equiv-fast
-test: test-ci test-cabal
+test: test-ci

@@ -2,7 +2,7 @@ cabal-version: 2.2
 
 name:       act
 version:    0.2.0
-authors:    Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, dxo, Martin Lundfall
+author:    Lefteris Lazaropoulos, Zoe Paraskevopoulou, Anja Petkovic Komel, Sophie Rain, dxo, Martin Lundfall
 maintainer: zoe.paraskevopoulou@argot.org
 
 flag ci
@@ -89,23 +89,3 @@ executable act
   build-depends:      act
   if os(darwin)
       extra-libraries: c++
-
--- Test-Suite test
---   import:           common
---   type:             exitcode-stdio-1.0
---   default-language: Haskell2010
---   main-is:          Main.hs
---   hs-source-dirs:   src/Test
---   other-modules:    Decompile
---   build-depends:    act,
---                     pretty-simple          >= 2.2,
---                     quickcheck-instances   >= 0.3,
---                     quickcheck-transformer >= 0.3,
---                     tasty-hunit            >= 0.10,
---                     tasty-expected-failure,
---                     tasty-quickcheck       >= 0.10,
---                     QuickCheck             >= 2.13.2,
---                     tasty                  >= 1.2,
---                     here                   >= 1.2
---   if os(darwin)
---       extra-libraries: c++
