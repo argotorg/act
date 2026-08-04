@@ -104,6 +104,7 @@ data Command w
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
+                    , numsolvers :: w ::: Maybe Int            <?> "Number of solver instances to run in parallel (default: number of cores)"
                     }
  deriving (Generic)
 
@@ -132,9 +133,9 @@ main = do
       Lean f jsn solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         lean' f jsn solver'' smttimeout' debug'
-      Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' -> do
+      Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' numsolvers' -> do
         solver'' <- parseSolver solver'
-        equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug'
+        equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug' numsolvers'
 
 
 ---------------------------------
@@ -199,10 +200,17 @@ lean' f jsn solver' smttimeout' debug' = do
     TIO.putStr $ lean spec'
 
 
-equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' = do
+equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> Maybe Int -> IO ()
+equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' numsolvers' = do
   let config = if debug' then debugActConfig else defaultActConfig
-  cores <- liftM fromIntegral getNumProcessors
+  -- Each solver instance is a persistent process whose memory grows with the
+  -- queries it has seen, so the useful instance count is bounded by RAM rather
+  -- than by cores: on a 32-core/61GiB machine 32 bitwuzla instances reached
+  -- ~1.6GiB each on an equivalence-heavy spec. Default to the core count and
+  -- let callers dial it down.
+  cores <- case numsolvers' of
+             Just n | n > 0 -> pure (fromIntegral n)
+             _ -> liftM fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processEquivSources sources' actspec sol' vy' code' initcode' layout'
   specsContents <- flip zip actspecs <$> mapM readFile actspecs
   proceed specsContents (compile specsContents) $ \(Act store contracts, constraints) -> do
