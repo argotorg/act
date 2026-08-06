@@ -64,6 +64,7 @@ act equiv --spec <PATH_TO_SPEC> --code <RUNTIME_BYTECODE> --initcode <CONSTR_BYT
 | `--solver` | `cvc5\|z3\|bitwuzla` | `cvc5` | SMT solver to use for verification |
 | `--smttimeout` | Integer (ms) | `20000` | Timeout for each SMT query in milliseconds |
 | `--debug` | Boolean | `false` | Print verbose output including raw SMT queries |
+| `--numsolvers` | Integer | number of cores | Number of solver instances to run in parallel |
 
 <!-- | `--code` | ByteString | - | Runtime bytecode (hexadecimal) for direct verification | -->
 <!-- | `--initcode` | ByteString | - | Constructor bytecode (hexadecimal) | -->
