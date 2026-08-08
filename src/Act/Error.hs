@@ -87,8 +87,8 @@ concatError def = \case
   x:xs -> foldl (*>) x xs
 
 
-prettyErrs :: Traversable t => [(String, FilePath)] -> t (Pn, (FilePath, String)) -> IO ()
-prettyErrs sources errs = mapM_ prettyErr errs >> exitFailure
+prettyErrs :: Traversable t => Maybe [(String, FilePath)] -> t (Pn, (FilePath, String)) -> IO ()
+prettyErrs (Just sources) errs = mapM_ prettyErr errs >> exitFailure
   where
   prettyErr (pn, (_, msg)) | pn == nowhere = do
     hPutStrLn stderr "Internal error:"
@@ -115,3 +115,10 @@ prettyErrs sources errs = mapM_ prettyErr errs >> exitFailure
       safeDrop _ [] = []
       safeDrop _ [a] = [a]
       safeDrop n (_:xs) = safeDrop (n-1) xs
+prettyErrs Nothing errs = mapM_ prettyErr errs >> exitFailure
+  where
+  prettyErr (pn, (_, msg)) | pn == nowhere = do
+    hPutStrLn stderr "Internal error:"
+    hPutStrLn stderr msg
+  prettyErr (_, (_, msg)) = do
+    hPutStrLn stderr msg
