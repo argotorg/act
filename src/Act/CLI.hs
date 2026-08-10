@@ -105,6 +105,7 @@ data Command w
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
+                    , numsolvers :: w ::: Maybe Int            <?> "Number of solver instances to run in parallel (default: number of cores)"
                     }
  deriving (Generic)
 
@@ -138,9 +139,9 @@ main = do
       Lean f jsn solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         lean' f jsn solver'' smttimeout' debug'
-      Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' -> do
+      Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' numsolvers' -> do
         solver'' <- parseSolver solver'
-        equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug'
+        equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug' numsolvers'
 
 
 ---------------------------------
@@ -205,10 +206,12 @@ lean' f jsn solver' smttimeout' debug' = do
     TIO.putStr $ lean spec'
 
 
-equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' = do
+equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> Maybe Int -> IO ()
+equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' numsolvers' = do
   let config = if debug' then debugActConfig else defaultActConfig
-  cores <- liftM fromIntegral getNumProcessors
+  cores <- case numsolvers' of
+             Just n | n > 0 -> pure (fromIntegral n)
+             _ -> liftM fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processEquivSources sources' actspec sol' vy' code' initcode' layout'
   specsContents <- flip zip actspecs <$> mapM readFile actspecs
   proceed specsContents (compile specsContents) $ \(Act store contracts, constraints) -> do
