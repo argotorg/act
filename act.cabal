@@ -86,10 +86,7 @@ executable act
   main-is:            Main.hs
   hs-source-dirs:     src/CLI
   default-language:   Haskell2010
-  -- -threaded is required for the solver pool to run in parallel: on the
-  -- non-threaded RTS getNumProcessors reports 1, so `withSolvers` spawns a
-  -- single solver instance and every mapConcurrently serialises. -N sizes
-  -- the RTS to the available cores at startup.
+  -- Enable multicore execution, using all available cores by default.
   ghc-options:        -threaded "-with-rtsopts=-N"
   build-depends:      act
   if os(darwin)
