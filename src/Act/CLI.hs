@@ -215,7 +215,14 @@ equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout deb
     checkTypeConstraints specsContents solver' timeout debug' constraints
     checkUpdateAliasing (Act store contracts) solver' timeout debug'
     cmap <- createContractMap contracts inputsMap
-    res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
+    -- --smttimeout is documented (and used by `act type`) in milliseconds,
+    -- but withSolvers takes seconds: hevm's mkTimeout multiplies by 1000 for
+    -- the solver flag. Passing milliseconds through unconverted turned a 60s
+    -- budget into 60000s, so hard queries never timed out - they blocked the
+    -- solver instance until the whole run was abandoned. Round up so small
+    -- values do not become 0 (no limit).
+    let timeoutSecs = (\t -> naturalFromInteger (max 1 ((t + 999) `div` 1000))) <$> timeout
+    res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 timeoutSecs $ \solvers ->
       checkContracts solvers store cmap
     case res of
       Success _ -> pure ()
