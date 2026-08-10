@@ -203,11 +203,6 @@ lean' f jsn solver' smttimeout' debug' = do
 equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> Maybe Int -> IO ()
 equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' numsolvers' = do
   let config = if debug' then debugActConfig else defaultActConfig
-  -- Each solver instance is a persistent process whose memory grows with the
-  -- queries it has seen, so the useful instance count is bounded by RAM rather
-  -- than by cores: on a 32-core/61GiB machine 32 bitwuzla instances reached
-  -- ~1.6GiB each on an equivalence-heavy spec. Default to the core count and
-  -- let callers dial it down.
   cores <- case numsolvers' of
              Just n | n > 0 -> pure (fromIntegral n)
              _ -> liftM fromIntegral getNumProcessors
