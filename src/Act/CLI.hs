@@ -19,6 +19,7 @@ import GHC.Generics
 import System.Exit ( exitFailure )
 import System.Process
 import System.FilePath
+import System.IO (hSetBuffering, BufferMode(LineBuffering), stdout)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Validation
 import qualified Data.Map as Map
@@ -119,6 +120,11 @@ deriving instance Show (Command Unwrapped)
 
 main :: IO ()
 main = do
+    -- Line-buffer stdout: when output is a pipe or file, GHC block-buffers it,
+    -- so progress messages ("Checking behavior ...") only appear once a 8KiB
+    -- block fills or the process exits. On long equiv runs that makes a healthy
+    -- run indistinguishable from a hung one.
+    hSetBuffering stdout LineBuffering
     cmd <- unwrapRecord "Act -- Smart contract specifier"
     case cmd of
       Lex f jsn -> lex' f jsn
