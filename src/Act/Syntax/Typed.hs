@@ -456,6 +456,7 @@ instance ToJSON a => ToJSON (Case a t) where
 
 instance ToJSON Interface where
   toJSON (Interface x decls) = object [ "kind" .= String "Interface"
+                                      , "id" .=  pack (show x)
                                       , "args" .= toJSON decls
                                       ]
 
