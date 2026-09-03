@@ -19,6 +19,7 @@ import GHC.Generics
 import System.Exit ( exitFailure )
 import System.Process
 import System.FilePath
+import System.IO (hSetBuffering, BufferMode(LineBuffering), stdout)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Validation
 import qualified Data.Map as Map
@@ -104,6 +105,7 @@ data Command w
                     , solver     :: w ::: Maybe Text           <?> "SMT solver: cvc5 (default) or z3"
                     , smttimeout :: w ::: Maybe Integer        <?> "Timeout given to SMT solver in milliseconds (default: 20000)"
                     , debug      :: w ::: Bool                 <?> "Print verbose SMT output (default: False)"
+                    , numsolvers :: w ::: Maybe Int            <?> "Number of solver instances to run in parallel (default: number of cores)"
                     }
  deriving (Generic)
 
@@ -119,6 +121,11 @@ deriving instance Show (Command Unwrapped)
 
 main :: IO ()
 main = do
+    -- Line-buffer stdout: when output is a pipe or file, GHC block-buffers it,
+    -- so progress messages ("Checking behavior ...") only appear once a 8KiB
+    -- block fills or the process exits. On long equiv runs that makes a healthy
+    -- run indistinguishable from a hung one.
+    hSetBuffering stdout LineBuffering
     cmd <- unwrapRecord "Act -- Smart contract specifier"
     case cmd of
       Lex f jsn -> lex' f jsn
@@ -132,9 +139,9 @@ main = do
       Lean f jsn solver' smttimeout' debug' -> do
         solver'' <- parseSolver solver'
         lean' f jsn solver'' smttimeout' debug'
-      Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' -> do
+      Equiv spec' sol' vy' code' initcode' layout' sources' solver' smttimeout' debug' numsolvers' -> do
         solver'' <- parseSolver solver'
-        equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug'
+        equivCheck spec' sol' vy' code' initcode' layout' sources' solver'' smttimeout' debug' numsolvers'
 
 
 ---------------------------------
@@ -153,7 +160,7 @@ parse' f jsn = do
   fs <- processSources jsn f
   contents <- flip zip fs <$> mapM readFile fs
   let parsed = traverse (\(content,source) -> (,source) <$> (errorSource source $ parse $ lexer content)) contents
-  validation (prettyErrs contents) print parsed
+  validation (prettyErrs (Just contents)) print parsed
 
 type' :: Maybe FilePath -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
 type' f jsn solver' smttimeout' debug' = do
@@ -199,21 +206,30 @@ lean' f jsn solver' smttimeout' debug' = do
     TIO.putStr $ lean spec'
 
 
-equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> IO ()
-equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' = do
+equivCheck :: Maybe FilePath -> Maybe FilePath -> Maybe FilePath -> Maybe String -> Maybe String -> Maybe String -> Maybe FilePath -> Solvers.Solver -> Maybe Integer -> Bool -> Maybe Int -> IO ()
+equivCheck actspec sol' vy' code' initcode' layout' sources' solver' timeout debug' numsolvers' = do
   let config = if debug' then debugActConfig else defaultActConfig
-  cores <- liftM fromIntegral getNumProcessors
+  cores <- case numsolvers' of
+             Just n | n > 0 -> pure (fromIntegral n)
+             _ -> liftM fromIntegral getNumProcessors
   (actspecs, inputsMap) <- processEquivSources sources' actspec sol' vy' code' initcode' layout'
   specsContents <- flip zip actspecs <$> mapM readFile actspecs
   proceed specsContents (compile specsContents) $ \(Act store contracts, constraints) -> do
     checkTypeConstraints specsContents solver' timeout debug' constraints
     checkUpdateAliasing (Act store contracts) solver' timeout debug'
     cmap <- createContractMap contracts inputsMap
-    res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 (naturalFromInteger <$> timeout) $ \solvers ->
+    -- --smttimeout is documented (and used by `act type`) in milliseconds,
+    -- but withSolvers takes seconds: hevm's mkTimeout multiplies by 1000 for
+    -- the solver flag. Passing milliseconds through unconverted turned a 60s
+    -- budget into 60000s, so hard queries never timed out - they blocked the
+    -- solver instance until the whole run was abandoned. Round up so small
+    -- values do not become 0 (no limit).
+    let timeoutSecs = (\t -> naturalFromInteger (max 1 ((t + 999) `div` 1000))) <$> timeout
+    res <- runEnv (Env config) $ Solvers.withSolvers solver' cores 1 timeoutSecs $ \solvers ->
       checkContracts solvers store cmap
     case res of
       Success _ -> pure ()
-      Failure err -> prettyErrs [("","")] (second ("",) <$> err)
+      Failure err -> prettyErrs Nothing (second ("",) <$> err)
   where
 
     -- Creates maps of storage layout modes and bytecodes, for all contracts contained in the given Act specification
@@ -395,7 +411,7 @@ toCode fromFile t = case BS16.decodeBase16Untyped (encodeUtf8 (stripSuffixIf "\n
 
 -- | Fail on error, or proceed with continuation
 proceed :: Validate err => [(String,FilePath)] -> err (NonEmpty (Pn, (FilePath, String))) a -> (a -> IO ()) -> IO ()
-proceed contents comp continue = validation (prettyErrs contents) continue (comp ^. revalidate)
+proceed contents comp continue = validation (prettyErrs (Just contents)) continue (comp ^. revalidate)
 
 compile :: [(String, FilePath)] -> Error (FilePath ,String) (Act, [Constraint Timed])
 compile = pure . (first annotate) <==< pure . (\(acts, cnstr) -> (acts, (checkIntegerBoundsAct acts) ++ cnstr))

@@ -21,10 +21,12 @@ import Data.Type.Equality ((:~:)(..), testEquality)
 import Data.List
 import qualified Data.List.NonEmpty as NonEmpty
 import Control.Monad
+import Control.Concurrent (forkIO)
+import Control.Exception (evaluate)
 import Control.Applicative ((<|>))
 import Control.Monad.Reader
 import Prettyprinter hiding (Doc)
-import GHC.IO.Handle (Handle, hGetLine, hPutStr, hFlush)
+import GHC.IO.Handle (Handle, hGetLine, hPutStr, hFlush, hGetContents)
 
 import Act.Syntax
 import Act.Syntax.TypedExplicit hiding (array)
@@ -283,7 +285,9 @@ runQuery solver query@(Inv (Invariant _ _ _ predicate) (ctor, ctorSMT) behvs) = 
 checkSat :: SolverInstance -> (SolverInstance -> IO Model) -> SMTExp -> IO SMTResult
 checkSat solver modelFn smt = do
   -- traceM $ "Entailment SMT Query:\n" <> renderString (prettyAnsi smt)
-  err <- sendLines solver ("(reset)" : (lines . show . prettyAnsi $ smt))
+  -- (reset) clears the logic configured at spawn time, so every query after
+  -- the first ran without (set-logic ALL) - re-send the preamble each time.
+  err <- sendLines solver (("(reset)" : smtPreamble) <> (lines . show . prettyAnsi $ smt))
   case err of
     Nothing -> do
       sat <- sendCommand solver "(check-sat)"
@@ -326,6 +330,12 @@ spawnSolver :: SMTConfig -> IO SolverInstance
 spawnSolver config@(SMTConfig solver _ _) = do
   let cmd = (proc (show solver) (solverArgs config)) { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
   (Just stdin, Just stdout, Just stderr, process) <- createProcess cmd
+  -- Drain stderr continuously: solvers emit warnings there, and nothing
+  -- else ever reads this pipe. Once ~64KB accumulate the solver blocks in
+  -- write() mid-session and the whole typechecker deadlocks (act in poll,
+  -- solver in pipe write, both at zero CPU). Large specs hit this reliably
+  -- via cvc5's set-logic warnings re-emitted after every (reset).
+  _ <- forkIO . void $ hGetContents stderr >>= \out -> evaluate (length out)
   let solverInstance = SolverInstance solver stdin stdout stderr process
 
   _ <- sendCommand solverInstance "(set-option :print-success true)"

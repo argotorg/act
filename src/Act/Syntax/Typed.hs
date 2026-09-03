@@ -529,6 +529,7 @@ instance ToJSON (Exp a t) where
   toJSON (Exp _ a b) = symbol "^" a b
   toJSON (Mul _ a b) = symbol "*" a b
   toJSON (Div _ a b) = symbol "/" a b
+  toJSON (Mod _ a b) = symbol "%" a b
   toJSON (LitInt _ a) = object [ "literal" .= pack (show a)
                                , "type" .= pack "int" ]
   toJSON (IntMin _ a) = object [ "literal" .= pack (show $ intmin a)
@@ -594,7 +595,6 @@ instance ToJSON (Exp a t) where
                                              , "valueType" .= show vt
                                              , "entries" .= toJSON kvs ]
 
-  toJSON v = error $ "todo: json ast for: " <> show v
 
 
 
