@@ -1,0 +1,659 @@
+{
+    "contracts": [
+        {
+            "behaviours": [
+                {
+                    "cases": [
+                        {
+                            "body": [
+                                [
+                                    {
+                                        "location": {
+                                            "contract": "TwoPartyAgreement",
+                                            "kind": "SVar",
+                                            "svar": "state",
+                                            "time": "Pre"
+                                        },
+                                        "value": {
+                                            "literal": "1",
+                                            "type": "int"
+                                        }
+                                    }
+                                ],
+                                null
+                            ],
+                            "caseCondition": {
+                                "literal": "True",
+                                "type": "bool"
+                            }
+                        }
+                    ],
+                    "contract": "TwoPartyAgreement",
+                    "interface": {
+                        "args": [],
+                        "id": "AlexPn 191 10 18",
+                        "kind": "Interface"
+                    },
+                    "kind": "Behaviour",
+                    "name": "accept",
+                    "postConditions": [],
+                    "preConditions": [
+                        {
+                            "args": [
+                                {
+                                    "ethEnv": "Callvalue",
+                                    "type": "int"
+                                },
+                                {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                },
+                                {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "counterparty",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "timing": "TInteger 256 Unsigned",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "state",
+                                        "time": "Pre"
+                                    }
+                                },
+                                {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "type": "Address"
+                                },
+                                {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "counterparty",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "size": "256",
+                                    "type": "UInt"
+                                },
+                                {
+                                    "timing": "TInteger 256 Unsigned",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "state",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "size": "256",
+                                    "type": "UInt"
+                                },
+                                {
+                                    "ethEnv": "Callvalue",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "type": "Address"
+                                },
+                                {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        }
+                    ]
+                },
+                {
+                    "cases": [
+                        {
+                            "body": [
+                                [
+                                    {
+                                        "location": {
+                                            "contract": "TwoPartyAgreement",
+                                            "kind": "SVar",
+                                            "svar": "state",
+                                            "time": "Pre"
+                                        },
+                                        "value": {
+                                            "literal": "2",
+                                            "type": "int"
+                                        }
+                                    }
+                                ],
+                                null
+                            ],
+                            "caseCondition": {
+                                "literal": "True",
+                                "type": "bool"
+                            }
+                        }
+                    ],
+                    "contract": "TwoPartyAgreement",
+                    "interface": {
+                        "args": [],
+                        "id": "AlexPn 278 19 19",
+                        "kind": "Interface"
+                    },
+                    "kind": "Behaviour",
+                    "name": "execute",
+                    "postConditions": [],
+                    "preConditions": [
+                        {
+                            "args": [
+                                {
+                                    "ethEnv": "Callvalue",
+                                    "type": "int"
+                                },
+                                {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                },
+                                {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "proposer",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "timing": "TInteger 256 Unsigned",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "state",
+                                        "time": "Pre"
+                                    }
+                                },
+                                {
+                                    "literal": "1",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "type": "Address"
+                                },
+                                {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "proposer",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "size": "256",
+                                    "type": "UInt"
+                                },
+                                {
+                                    "timing": "TInteger 256 Unsigned",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "state",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "size": "256",
+                                    "type": "UInt"
+                                },
+                                {
+                                    "ethEnv": "Callvalue",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "type": "Address"
+                                },
+                                {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        }
+                    ]
+                },
+                {
+                    "cases": [
+                        {
+                            "body": [
+                                [
+                                    {
+                                        "location": {
+                                            "contract": "TwoPartyAgreement",
+                                            "kind": "SVar",
+                                            "svar": "state",
+                                            "time": "Pre"
+                                        },
+                                        "value": {
+                                            "literal": "3",
+                                            "type": "int"
+                                        }
+                                    }
+                                ],
+                                null
+                            ],
+                            "caseCondition": {
+                                "literal": "True",
+                                "type": "bool"
+                            }
+                        }
+                    ],
+                    "contract": "TwoPartyAgreement",
+                    "interface": {
+                        "args": [],
+                        "id": "AlexPn 360 28 18",
+                        "kind": "Interface"
+                    },
+                    "kind": "Behaviour",
+                    "name": "cancel",
+                    "postConditions": [],
+                    "preConditions": [
+                        {
+                            "args": [
+                                {
+                                    "ethEnv": "Callvalue",
+                                    "type": "int"
+                                },
+                                {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                },
+                                {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "proposer",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "timing": "TInteger 256 Unsigned",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "state",
+                                        "time": "Pre"
+                                    }
+                                },
+                                {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "=="
+                        },
+                        {
+                            "args": [
+                                {
+                                    "type": "Address"
+                                },
+                                {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "proposer",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "size": "256",
+                                    "type": "UInt"
+                                },
+                                {
+                                    "timing": "TInteger 256 Unsigned",
+                                    "var": {
+                                        "contract": "TwoPartyAgreement",
+                                        "kind": "SVar",
+                                        "svar": "state",
+                                        "time": "Pre"
+                                    }
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "size": "256",
+                                    "type": "UInt"
+                                },
+                                {
+                                    "ethEnv": "Callvalue",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        },
+                        {
+                            "args": [
+                                {
+                                    "type": "Address"
+                                },
+                                {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                }
+                            ],
+                            "arity": 2,
+                            "symbol": "inrange"
+                        }
+                    ]
+                }
+            ],
+            "constructor": {
+                "cases": [
+                    {
+                        "body": [
+                            {
+                                "location": {
+                                    "contract": "TwoPartyAgreement",
+                                    "kind": "SVar",
+                                    "svar": "BALANCE",
+                                    "time": "Pre"
+                                },
+                                "value": {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            },
+                            {
+                                "location": {
+                                    "contract": "TwoPartyAgreement",
+                                    "kind": "SVar",
+                                    "svar": "proposer",
+                                    "time": "Pre"
+                                },
+                                "value": {
+                                    "ethEnv": "Caller",
+                                    "type": "int"
+                                }
+                            },
+                            {
+                                "location": {
+                                    "contract": "TwoPartyAgreement",
+                                    "kind": "SVar",
+                                    "svar": "counterparty",
+                                    "time": "Pre"
+                                },
+                                "value": {
+                                    "timing": "TAddress",
+                                    "var": {
+                                        "abitype": {
+                                            "abitype": {
+                                                "type": "Address"
+                                            },
+                                            "kind": "AbiArgument"
+                                        },
+                                        "kind": "Var",
+                                        "var": "_counterparty"
+                                    }
+                                }
+                            },
+                            {
+                                "location": {
+                                    "contract": "TwoPartyAgreement",
+                                    "kind": "SVar",
+                                    "svar": "state",
+                                    "time": "Pre"
+                                },
+                                "value": {
+                                    "literal": "0",
+                                    "type": "int"
+                                }
+                            }
+                        ],
+                        "caseCondition": {
+                            "literal": "True",
+                            "type": "bool"
+                        }
+                    }
+                ],
+                "contract": "TwoPartyAgreement",
+                "interface": {
+                    "args": [
+                        {
+                            "abitype": {
+                                "abitype": {
+                                    "type": "Address"
+                                },
+                                "kind": "AbiArgument"
+                            },
+                            "id": "\"_counterparty\"",
+                            "kind": "Declaration"
+                        }
+                    ],
+                    "id": "AlexPn 39 3 12",
+                    "kind": "Interface"
+                },
+                "invariants": [],
+                "kind": "Constructor",
+                "postConditions": [],
+                "preConditions": [
+                    {
+                        "args": [
+                            {
+                                "ethEnv": "Callvalue",
+                                "type": "int"
+                            },
+                            {
+                                "literal": "0",
+                                "type": "int"
+                            }
+                        ],
+                        "arity": 2,
+                        "symbol": "=="
+                    },
+                    {
+                        "args": [
+                            {
+                                "type": "Address"
+                            },
+                            {
+                                "timing": "TAddress",
+                                "var": {
+                                    "abitype": {
+                                        "abitype": {
+                                            "type": "Address"
+                                        },
+                                        "kind": "AbiArgument"
+                                    },
+                                    "kind": "Var",
+                                    "var": "_counterparty"
+                                }
+                            }
+                        ],
+                        "arity": 2,
+                        "symbol": "inrange"
+                    },
+                    {
+                        "args": [
+                            {
+                                "size": "256",
+                                "type": "UInt"
+                            },
+                            {
+                                "ethEnv": "Callvalue",
+                                "type": "int"
+                            }
+                        ],
+                        "arity": 2,
+                        "symbol": "inrange"
+                    },
+                    {
+                        "args": [
+                            {
+                                "type": "Address"
+                            },
+                            {
+                                "ethEnv": "Caller",
+                                "type": "int"
+                            }
+                        ],
+                        "arity": 2,
+                        "symbol": "inrange"
+                    }
+                ]
+            },
+            "kind": "Contract"
+        }
+    ],
+    "kind": "Act",
+    "store": {
+        "kind": "Storages",
+        "storages": {
+            "TwoPartyAgreement": {
+                "BALANCE": [
+                    {
+                        "size": "256",
+                        "type": "UInt"
+                    },
+                    -1
+                ],
+                "counterparty": [
+                    {
+                        "type": "Address"
+                    },
+                    1
+                ],
+                "proposer": [
+                    {
+                        "type": "Address"
+                    },
+                    0
+                ],
+                "state": [
+                    {
+                        "size": "256",
+                        "type": "UInt"
+                    },
+                    2
+                ]
+            }
+        }
+    }
+}

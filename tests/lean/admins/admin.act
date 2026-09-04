@@ -1,0 +1,47 @@
+contract Admins
+
+constructor(address _admin1, address _admin2)
+   creates
+      address admin1 := _admin1
+      address admin2 := _admin2
+
+
+transition admin1() : address
+   returns admin1
+
+transition admin2() : address
+   returns admin2
+
+
+contract Asset
+
+constructor(uint256 _value)
+creates
+    Admins admins := new Admins(CALLER, ORIGIN)
+    mapping(address => uint256) balanceOf := [THIS => _value]
+
+
+transition assetTransfer(uint256 amt, address recipient) : bool
+   iff CALLER == admins.admin1 or CALLER == admins.admin2
+      inRange(uint256, balanceOf[THIS] - amt)
+      THIS != recipient ==> inRange(uint256, balanceOf[recipient] + amt)
+
+   case THIS != recipient:
+      updates
+         balanceOf := balanceOf[
+                        THIS => balanceOf[THIS] - amt,
+                        recipient   => balanceOf[recipient]   + amt ]
+      returns true
+
+   case THIS == recipient:
+      returns true
+
+
+transition setAdmins(address new_admin1, address new_admin2)
+   case CALLER == admins.admin1 or CALLER == admins.admin2:
+      updates
+         admins := new Admins(new_admin1, new_admin2)
+   case not (CALLER == admins.admin1 or CALLER == admins.admin2):
+
+transition balanceOf(address idx) : uint256
+   returns balanceOf[idx]
