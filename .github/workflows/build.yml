@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
             accept-flake-config = true
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         with:
           name: dapp
           skipPush: true
