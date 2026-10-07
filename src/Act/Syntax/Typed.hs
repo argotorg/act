@@ -456,7 +456,6 @@ instance ToJSON a => ToJSON (Case a t) where
 
 instance ToJSON Interface where
   toJSON (Interface x decls) = object [ "kind" .= String "Interface"
-                                      , "id" .=  pack (show x)
                                       , "args" .= toJSON decls
                                       ]
 
@@ -575,7 +574,7 @@ instance ToJSON (Exp a t) where
   toJSON (ByEnv _ a) = object [ "ethEnv" .= pack (show a)
                               , "type" .= pack "bytestring" ]
   toJSON (VarRef _ t a) = object [ "var"  .= toJSON a
-                                 , "timing" .= show t ]
+                                 , "type" .= toJSON t ]
   toJSON (Create _ f xs v) = object [ "symbol" .= pack "create"
                                     , "arity"  .= Data.Aeson.Types.Number (fromIntegral $ length xs)
                                     , "args"   .= Data.Aeson.Array (fromList [object [ "fun" .=  String (pack f) ], toJSON xs])
